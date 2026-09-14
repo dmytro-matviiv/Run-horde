@@ -47,7 +47,7 @@ func _ready() -> void:
 	hero.apply_hero_def(HeroPool.get_def(GameState.selected_hero_id))
 	# apply_meta_upgrades може одразу емітити leveled_up (бонусні рівні
 	# від "Стартового рівня") — сигнал має бути підключений до цього.
-	hero.apply_meta_upgrades(GameState.meta_upgrade_levels)
+	hero.apply_meta_upgrades(GameState.get_hero_meta_levels(GameState.selected_hero_id))
 
 	spawner.setup(enemy_pool, crystal_pool, enemy_projectile_pool, hero, self, _on_enemy_died)
 

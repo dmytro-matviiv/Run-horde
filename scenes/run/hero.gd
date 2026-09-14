@@ -78,6 +78,11 @@ var _meta_pickup_radius_bonus := 0.0
 # мета-бонусу, теж додається в _recompute_derived_stats().
 var _hero_move_speed_percent := 0.0
 
+# Унікальні таланти (свій прогрес на кожного героя, GameState.hero_meta_levels).
+var _meta_talent_bolt_pierce := 0
+var _meta_talent_extra_blades := 0
+var _meta_talent_aura_power := 0
+
 var _orbital_blades: Array[Node] = []
 var _aura_level := 0
 var _aura_tick_left := 0.0
@@ -101,10 +106,10 @@ func apply_hero_def(def: HeroDef) -> void:
 	match def.bonus_weapon:
 		&"orbital_blades":
 			upgrade_levels[&"orbital_blades"] = 1
-			_apply_orbital_blades(1)
+			_rebuild_orbital_blades()
 		&"damage_aura":
 			upgrade_levels[&"damage_aura"] = 1
-			_apply_damage_aura(1)
+			_rebuild_aura()
 
 ## Викликається один раз на старті рану (run.gd), до того як гравець
 ## взяв хоч один апгрейд у рані. Мета-рівні йдуть з GameState.
@@ -122,8 +127,14 @@ func apply_meta_upgrades(meta_levels: Dictionary) -> void:
 	_meta_luck_percent = 0.04 * meta_levels.get(&"meta_luck", 0)
 	_meta_pickup_radius_bonus = 8.0 * meta_levels.get(&"meta_pickup_radius", 0)
 
+	_meta_talent_bolt_pierce = meta_levels.get(&"talent_bolt_pierce", 0)
+	_meta_talent_extra_blades = meta_levels.get(&"talent_extra_blades", 0)
+	_meta_talent_aura_power = meta_levels.get(&"talent_aura_power", 0)
+
 	_recompute_derived_stats()
 	_update_pickup_shapes()
+	_rebuild_orbital_blades()
+	_rebuild_aura()
 
 	# "Стартовий рівень" — це не просто вище число, а реальні "безкоштовні"
 	# рівні: гравець одразу вибирає апгрейд за кожен з них, так само як
@@ -282,8 +293,6 @@ func apply_upgrade(id: StringName) -> void:
 	match id:
 		&"weapon_cooldown":
 			_cooldown_multiplier = clampf(1.0 - 0.1 * new_level, 0.4, 1.0)
-		&"weapon_pierce":
-			_pierce_bonus = new_level
 		&"weapon_multishot":
 			_extra_projectiles = new_level
 		&"weapon_ricochet":
@@ -307,10 +316,10 @@ func apply_upgrade(id: StringName) -> void:
 			_magnet_radius_bonus = 40.0 * new_level
 			_update_pickup_shapes()
 		&"orbital_blades":
-			_apply_orbital_blades(new_level)
+			_rebuild_orbital_blades()
 		&"damage_aura":
-			_apply_damage_aura(new_level)
-		&"weapon_damage", &"move_speed", &"gold_gain":
+			_rebuild_aura()
+		&"weapon_damage", &"weapon_pierce", &"move_speed", &"gold_gain":
 			pass   # рахуються нижче в _recompute_derived_stats()
 	_recompute_derived_stats()
 
@@ -322,26 +331,38 @@ func _recompute_derived_stats() -> void:
 	_damage_multiplier = 1.0 + 0.15 * get_upgrade_level(&"weapon_damage") + _meta_damage_percent
 	_move_speed_multiplier = 1.0 + 0.08 * get_upgrade_level(&"move_speed") + _meta_move_speed_percent + _hero_move_speed_percent
 	_gold_multiplier = 1.0 + 0.15 * get_upgrade_level(&"gold_gain") + _meta_gold_percent
+	_pierce_bonus = get_upgrade_level(&"weapon_pierce") + _meta_talent_bolt_pierce
 
 func _update_pickup_shapes() -> void:
 	var radius := Balance.HERO_PICKUP_RADIUS + _pickup_radius_bonus + _meta_pickup_radius_bonus
 	(pickup_shape.shape as CircleShape2D).radius = radius
 	(magnet_shape.shape as CircleShape2D).radius = radius + _magnet_radius_bonus
 
-## Перебудовує всі клинки заново, щоб рівномірно розподілити кут
-## між ними (простіше, ніж дораховувати кут лише для нового клинка).
-func _apply_orbital_blades(new_level: int) -> void:
+## Кількість клинків = рівень апгрейду цього рану + талант героя
+## (Клинкова Вартова: "Вихор Клинків"). Перебудовує всі клинки заново,
+## щоб рівномірно розподілити кут між ними — простіше, ніж
+## дораховувати кут лише для нового клинка.
+func _rebuild_orbital_blades() -> void:
+	var total_level := get_upgrade_level(&"orbital_blades") + _meta_talent_extra_blades
 	for blade in _orbital_blades:
 		blade.queue_free()
 	_orbital_blades.clear()
-	for i in new_level:
+	if total_level <= 0:
+		return
+	for i in total_level:
 		var blade: Node = ORBITAL_BLADE_SCENE.instantiate()
 		add_child(blade)
-		var angle_offset := TAU / float(new_level) * i
+		var angle_offset := TAU / float(total_level) * i
 		blade.setup(self, ORBITAL_RADIUS, angle_offset, ORBITAL_ANGULAR_SPEED, ORBITAL_DAMAGE)
 		_orbital_blades.append(blade)
 
-func _apply_damage_aura(new_level: int) -> void:
-	_aura_level = new_level
+## Рівень аури = рівень апгрейду цього рану + талант героя
+## (Ember Priestess: "Багаття Люті").
+func _rebuild_aura() -> void:
+	var total_level := get_upgrade_level(&"damage_aura") + _meta_talent_aura_power
+	_aura_level = total_level
+	if total_level <= 0:
+		damage_aura_shape.disabled = true
+		return
 	damage_aura_shape.disabled = false
-	(damage_aura_shape.shape as CircleShape2D).radius = AURA_BASE_RADIUS + AURA_RADIUS_PER_LEVEL * (new_level - 1)
+	(damage_aura_shape.shape as CircleShape2D).radius = AURA_BASE_RADIUS + AURA_RADIUS_PER_LEVEL * (total_level - 1)

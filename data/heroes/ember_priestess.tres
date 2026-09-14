@@ -12,3 +12,4 @@ unlock_cost = 8000
 bonus_max_hp = -15.0
 move_speed_percent = 0.15
 bonus_weapon = "damage_aura"
+unique_talent_id = &"talent_aura_power"

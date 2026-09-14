@@ -7,6 +7,10 @@ extends Node
 ##
 ## 7 мета-апгрейдів зі статами + розблокування/вибір героя
 ## (HeroPool) — усе разом розділ 6 ТЗ.
+##
+## Золото — спільне на всіх героїв, а самі рівні апгрейдів/талантів —
+## окремі для кожного (hero_meta_levels: hero_id -> {upgrade_id: рівень}).
+## Так прокачка Клинкової Вартової не впливає на Жрицю Багаття.
 
 const META_UPGRADE_MAX_LEVELS := {
 	&"meta_max_hp": 10,
@@ -16,10 +20,14 @@ const META_UPGRADE_MAX_LEVELS := {
 	&"meta_gold_gain": 10,
 	&"meta_luck": 5,
 	&"meta_start_level": 3,
+	# Унікальні таланти — по одному на героя (HeroDef.unique_talent_id).
+	&"talent_bolt_pierce": 3,
+	&"talent_extra_blades": 2,
+	&"talent_aura_power": 3,
 }
 
 var gold := 0
-var meta_upgrade_levels: Dictionary = {}   # StringName -> int
+var hero_meta_levels: Dictionary = {}   # StringName (hero_id) -> Dictionary (StringName -> int)
 
 # Дані останнього завершеного рану — для екрана результатів.
 # У сейв не пишуться, живуть лише до наступного рану.
@@ -67,10 +75,15 @@ func _ready() -> void:
 	SaveManager.load_game()
 	_compute_offline_gold()
 
+## Сума рівнів усіх апгрейдів/талантів усіх героїв разом — використовує
+## лише формула офлайн-золота (розділ 7 ТЗ), як загальний показник
+## того, скільки гравець уже вклав у прогрес.
 func get_total_meta_levels() -> int:
 	var total := 0
-	for id in meta_upgrade_levels:
-		total += meta_upgrade_levels[id]
+	for hero_id in hero_meta_levels:
+		var levels: Dictionary = hero_meta_levels[hero_id]
+		for id in levels:
+			total += levels[id]
 	return total
 
 ## Рахує офлайн-золото за час з останнього виходу (обмежено
@@ -123,25 +136,30 @@ func add_gold(amount: int) -> void:
 	gold += amount
 	SaveManager.save_game()
 
-func get_meta_level(id: StringName) -> int:
-	return meta_upgrade_levels.get(id, 0)
+func get_hero_meta_levels(hero_id: StringName) -> Dictionary:
+	return hero_meta_levels.get(hero_id, {})
+
+func get_meta_level(hero_id: StringName, id: StringName) -> int:
+	return get_hero_meta_levels(hero_id).get(id, 0)
 
 func get_meta_max_level(id: StringName) -> int:
 	return META_UPGRADE_MAX_LEVELS.get(id, 0)
 
-func get_meta_upgrade_cost(id: StringName) -> int:
-	return Balance.meta_upgrade_cost(get_meta_level(id) + 1)
+func get_meta_upgrade_cost(hero_id: StringName, id: StringName) -> int:
+	return Balance.meta_upgrade_cost(get_meta_level(hero_id, id) + 1)
 
 ## Повертає true, якщо купівлю здійснено (вистачило золота й ще не
-## досягнуто максимального рівня).
-func buy_meta_upgrade(id: StringName) -> bool:
-	var current_level := get_meta_level(id)
+## досягнуто максимального рівня для ЦЬОГО героя).
+func buy_meta_upgrade(hero_id: StringName, id: StringName) -> bool:
+	var current_level := get_meta_level(hero_id, id)
 	if current_level >= get_meta_max_level(id):
 		return false
-	var cost := get_meta_upgrade_cost(id)
+	var cost := get_meta_upgrade_cost(hero_id, id)
 	if gold < cost:
 		return false
 	gold -= cost
-	meta_upgrade_levels[id] = current_level + 1
+	if not hero_meta_levels.has(hero_id):
+		hero_meta_levels[hero_id] = {}
+	hero_meta_levels[hero_id][id] = current_level + 1
 	SaveManager.save_game()
 	return true

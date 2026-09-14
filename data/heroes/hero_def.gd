@@ -14,3 +14,8 @@ class_name HeroDef
 @export var bonus_max_hp: float = 0.0
 @export var move_speed_percent: float = 0.0
 @export_enum("none", "orbital_blades", "damage_aura") var bonus_weapon: String = "none"
+
+## Унікальний мета-талант цього героя (id з meta_upgrades.gd::TALENTS).
+## На відміну від 7 спільних статів — прокачується окремо для кожного
+## героя і бачить його лише власник.
+@export var unique_talent_id: StringName

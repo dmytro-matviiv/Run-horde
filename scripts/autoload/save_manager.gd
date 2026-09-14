@@ -1,18 +1,18 @@
 extends Node
 
 ## Автозавантаження: читає й пише прогрес гравця (GameState) у
-## user://save.json. schema_version дозволяє в майбутньому мігрувати
-## старі сейви замість того, щоб ламати прогрес гравців при оновленні
-## структури файлу.
+## user://save.json. schema_version дозволяє мігрувати старі сейви
+## замість того, щоб ламати прогрес гравців при оновленні структури
+## файлу.
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SCHEMA_VERSION := 1
+const CURRENT_SCHEMA_VERSION := 2
 
 func save_game() -> void:
 	var data := {
 		"schema_version": CURRENT_SCHEMA_VERSION,
 		"gold": GameState.gold,
-		"meta_upgrade_levels": _keys_to_string(GameState.meta_upgrade_levels),
+		"hero_meta_levels": _hero_levels_to_json(GameState.hero_meta_levels),
 		"last_seen_timestamp": GameState.last_seen_timestamp,
 		"last_chest_claim_timestamp": GameState.last_chest_claim_timestamp,
 		"unlocked_hero_ids": _stringnames_to_strings(GameState.unlocked_hero_ids),
@@ -37,20 +37,28 @@ func load_game() -> void:
 		return
 	var data: Dictionary = _migrate(parsed)
 	GameState.gold = data.get("gold", 0)
-	GameState.meta_upgrade_levels = _keys_to_string_name(data.get("meta_upgrade_levels", {}))
+	GameState.hero_meta_levels = _hero_levels_from_json(data.get("hero_meta_levels", {}))
 	GameState.last_seen_timestamp = data.get("last_seen_timestamp", 0)
 	GameState.last_chest_claim_timestamp = data.get("last_chest_claim_timestamp", 0)
 	GameState.unlocked_hero_ids = _strings_to_stringnames(data.get("unlocked_hero_ids", ["runewielder"]))
 	GameState.selected_hero_id = StringName(data.get("selected_hero_id", "runewielder"))
 
-## Міграція між версіями схеми сейву. Зараз версія лише одна (1),
-## тож функція нічого не робить — сюди додаватимуться кроки міграції,
-## коли з'явиться версія 2, а не буде ламати сейви гравців, зроблені
-## на версії 1.
+## Міграція між версіями схеми сейву — кожна пройдена версія лишає
+## сейв у форматі наступної, тому старі сейви ніколи не ламаються.
 func _migrate(data: Dictionary) -> Dictionary:
 	var version: int = data.get("schema_version", 1)
-	if version < CURRENT_SCHEMA_VERSION:
-		pass
+	if version < 2:
+		data = _migrate_v1_to_v2(data)
+	return data
+
+## v1 мав один спільний meta_upgrade_levels на всіх героїв разом; v2 —
+## окремий прогрес на кожного героя (hero_meta_levels). Переносимо
+## старі рівні на runewielder, щоб гравці не втратили вже куплене.
+func _migrate_v1_to_v2(data: Dictionary) -> Dictionary:
+	if data.has("meta_upgrade_levels") and not data.has("hero_meta_levels"):
+		data["hero_meta_levels"] = {"runewielder": data["meta_upgrade_levels"]}
+	data.erase("meta_upgrade_levels")
+	data["schema_version"] = 2
 	return data
 
 ## JSON не вміє StringName-ключі — переводимо в String перед записом.
@@ -61,7 +69,7 @@ func _keys_to_string(dict: Dictionary) -> Dictionary:
 	return result
 
 ## І назад у StringName після читання, бо саме такі ключі очікує
-## Hero.upgrade_levels/GameState.meta_upgrade_levels.
+## Hero.upgrade_levels/GameState.hero_meta_levels.
 func _keys_to_string_name(dict: Dictionary) -> Dictionary:
 	var result := {}
 	for key in dict:
@@ -80,4 +88,18 @@ func _strings_to_stringnames(arr: Array) -> Array:
 	var result := []
 	for item in arr:
 		result.append(StringName(item))
+	return result
+
+## hero_meta_levels — словник словників (hero_id -> {upgrade_id: рівень}),
+## обидва рівні ключів треба перевести в String для JSON і назад.
+func _hero_levels_to_json(dict: Dictionary) -> Dictionary:
+	var result := {}
+	for hero_id in dict:
+		result[str(hero_id)] = _keys_to_string(dict[hero_id])
+	return result
+
+func _hero_levels_from_json(dict: Dictionary) -> Dictionary:
+	var result := {}
+	for hero_id in dict:
+		result[StringName(hero_id)] = _keys_to_string_name(dict[hero_id])
 	return result

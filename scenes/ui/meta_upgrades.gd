@@ -1,11 +1,13 @@
 extends Control
 
 ## Екран мета-прогресії ("база"): тут гравець між ранами витрачає
-## золото на постійні бонуси (GameState.buy_meta_upgrade). Список
-## відповідає розділу 6 ТЗ. Розблокування/вибір героя — окремий
-## екран, scenes/ui/heroes.tscn.
+## золото на постійні бонуси для ПОТОЧНОГО обраного героя
+## (GameState.selected_hero_id). Золото спільне на всіх, але рівні
+## апгрейдів/талантів — окремі для кожного героя (GameState.buy_meta_upgrade
+## бере hero_id). 7 спільних статів відповідають розділу 6 ТЗ + один
+## унікальний талант героя (HeroDef.unique_talent_id, з TALENTS нижче).
 
-const UPGRADES := [
+const GENERIC_UPGRADES := [
 	{"id": &"meta_max_hp", "title": "Здоров'я", "per_level": "+10 HP"},
 	{"id": &"meta_damage", "title": "Шкода", "per_level": "+5%"},
 	{"id": &"meta_move_speed", "title": "Швидкість", "per_level": "+3%"},
@@ -15,22 +17,39 @@ const UPGRADES := [
 	{"id": &"meta_start_level", "title": "Стартовий рівень", "per_level": "+1 рівень старту"},
 ]
 
+## Унікальні таланти — по одному на героя, id збігається з
+## HeroDef.unique_talent_id. Ефект застосовує Hero.apply_meta_upgrades().
+const TALENTS := {
+	&"talent_bolt_pierce": {"title": "Пробивна Руна", "per_level": "+1 пробиття магічного болта"},
+	&"talent_extra_blades": {"title": "Вихор Клинків", "per_level": "+1 орбітальний клинок"},
+	&"talent_aura_power": {"title": "Багаття Люті", "per_level": "+радіус і шкода аури"},
+}
+
+@onready var hero_label: Label = $VBoxContainer/HeroLabel
 @onready var gold_label: Label = $VBoxContainer/GoldLabel
 @onready var rows_container: VBoxContainer = $VBoxContainer/ScrollContainer/RowsContainer
 
+var _hero_id: StringName
+
 func _ready() -> void:
+	_hero_id = GameState.selected_hero_id
+	hero_label.text = "Таланти: %s" % HeroPool.get_def(_hero_id).title
 	_rebuild()
 
 func _rebuild() -> void:
 	gold_label.text = "Золото: %d" % GameState.gold
 	for child in rows_container.get_children():
 		child.queue_free()
-	for upgrade in UPGRADES:
-		rows_container.add_child(_build_row(upgrade))
+	for upgrade in GENERIC_UPGRADES:
+		rows_container.add_child(_build_row(upgrade.id, upgrade.title, upgrade.per_level))
 
-func _build_row(upgrade: Dictionary) -> Control:
-	var id: StringName = upgrade.id
-	var level := GameState.get_meta_level(id)
+	var talent_id := HeroPool.get_def(_hero_id).unique_talent_id
+	if talent_id != &"" and TALENTS.has(talent_id):
+		var talent: Dictionary = TALENTS[talent_id]
+		rows_container.add_child(_build_row(talent_id, talent.title, talent.per_level))
+
+func _build_row(id: StringName, title: String, per_level: String) -> Control:
+	var level := GameState.get_meta_level(_hero_id, id)
 	var max_level := GameState.get_meta_max_level(id)
 
 	var row := HBoxContainer.new()
@@ -38,7 +57,7 @@ func _build_row(upgrade: Dictionary) -> Control:
 
 	var info := Label.new()
 	info.custom_minimum_size = Vector2(400, 0)
-	info.text = "%s (%s) — рівень %d/%d" % [upgrade.title, upgrade.per_level, level, max_level]
+	info.text = "%s (%s) — рівень %d/%d" % [title, per_level, level, max_level]
 	row.add_child(info)
 
 	var buy_button := Button.new()
@@ -47,7 +66,7 @@ func _build_row(upgrade: Dictionary) -> Control:
 		buy_button.text = "Максимум"
 		buy_button.disabled = true
 	else:
-		var cost := GameState.get_meta_upgrade_cost(id)
+		var cost := GameState.get_meta_upgrade_cost(_hero_id, id)
 		buy_button.text = "Купити (%d)" % cost
 		buy_button.disabled = GameState.gold < cost
 		buy_button.pressed.connect(_on_buy_pressed.bind(id))
@@ -56,7 +75,7 @@ func _build_row(upgrade: Dictionary) -> Control:
 	return row
 
 func _on_buy_pressed(id: StringName) -> void:
-	GameState.buy_meta_upgrade(id)
+	GameState.buy_meta_upgrade(_hero_id, id)
 	_rebuild()
 
 func _on_back_pressed() -> void:

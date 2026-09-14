@@ -12,3 +12,4 @@ unlock_cost = 0
 bonus_max_hp = 0.0
 move_speed_percent = 0.0
 bonus_weapon = "none"
+unique_talent_id = &"talent_bolt_pierce"

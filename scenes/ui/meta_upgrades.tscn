@@ -35,6 +35,11 @@ theme_override_font_sizes/font_size = 32
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "Апгрейди бази"
 
+[node name="HeroLabel" type="Label" parent="VBoxContainer"]
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
+text = "Таланти: Руновод"
+
 [node name="GoldLabel" type="Label" parent="VBoxContainer"]
 theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
