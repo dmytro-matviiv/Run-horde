@@ -163,13 +163,23 @@ func _unhandled_input(event: InputEvent) -> void:
 			_move_direction = Vector2.ZERO
 
 func _physics_process(delta: float) -> void:
-	velocity = _move_direction * Balance.HERO_MOVE_SPEED * _move_speed_multiplier
+	velocity = _get_move_direction() * Balance.HERO_MOVE_SPEED * _move_speed_multiplier
 	move_and_slide()
 	_process_weapon(delta)
 	_process_contact_damage()
 	_process_regen(delta)
 	_process_magnet(delta)
 	_process_aura(delta)
+
+## Стрілки — для зручного тестування на ПК, паралельно з джойстиком
+## від дотику/миші (ui_left/right/up/down — вбудовані дії Godot,
+## змінювати InputMap не треба). Якщо стрілки не натиснуті — керує
+## звичайний джойстик.
+func _get_move_direction() -> Vector2:
+	var keyboard_direction := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	if keyboard_direction != Vector2.ZERO:
+		return keyboard_direction
+	return _move_direction
 
 func _process_weapon(delta: float) -> void:
 	_weapon_cooldown_left -= delta
