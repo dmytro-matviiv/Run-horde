@@ -38,10 +38,12 @@ func _ready() -> void:
 	var crystal_pool := ObjectPool.new(CRYSTAL_SCENE, crystal_container, 20)
 
 	hero.setup(projectile_pool)
-	hero.apply_meta_upgrades(GameState.meta_upgrade_levels)
 	hero.died.connect(_on_hero_died)
 	hero.leveled_up.connect(_on_hero_leveled_up)
 	hero.gold_collected.connect(_on_gold_collected)
+	# apply_meta_upgrades може одразу емітити leveled_up (бонусні рівні
+	# від "Стартового рівня") — сигнал має бути підключений до цього.
+	hero.apply_meta_upgrades(GameState.meta_upgrade_levels)
 
 	spawner.setup(enemy_pool, crystal_pool, hero, self, _on_enemy_died)
 

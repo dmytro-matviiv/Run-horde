@@ -102,6 +102,12 @@ func apply_meta_upgrades(meta_levels: Dictionary) -> void:
 	_recompute_derived_stats()
 	_update_pickup_shapes()
 
+	# "Стартовий рівень" — це не просто вище число, а реальні "безкоштовні"
+	# рівні: гравець одразу вибирає апгрейд за кожен з них, так само як
+	# при звичайному левел-апі, і аж потім починає збирати XP далі.
+	if start_level > 0:
+		leveled_up.emit(start_level)
+
 ## "Удача" з мета-прогресії — підмішує шанс, що на левел-апі
 ## запропонують уже взяту нову зброю (UpgradePool).
 func get_luck_bonus() -> float:
