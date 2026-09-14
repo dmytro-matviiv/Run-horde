@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/heroes/hero_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ember_priestess"
+title = "Жриця Багаття"
+description = "Починає з вогняною аурою навколо себе. Прудкіша й крихкіша."
+color = Color(0.95, 0.35, 0.55, 1)
+unlock_cost = 8000
+bonus_max_hp = -15.0
+move_speed_percent = 0.15
+bonus_weapon = "damage_aura"

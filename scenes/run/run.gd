@@ -44,6 +44,7 @@ func _ready() -> void:
 	hero.died.connect(_on_hero_died)
 	hero.leveled_up.connect(_on_hero_leveled_up)
 	hero.gold_collected.connect(_on_gold_collected)
+	hero.apply_hero_def(HeroPool.get_def(GameState.selected_hero_id))
 	# apply_meta_upgrades може одразу емітити leveled_up (бонусні рівні
 	# від "Стартового рівня") — сигнал має бути підключений до цього.
 	hero.apply_meta_upgrades(GameState.meta_upgrade_levels)

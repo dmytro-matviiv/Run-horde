@@ -5,9 +5,8 @@ extends Node
 ## user://save.json читає й пише SaveManager, GameState про формат
 ## файлу нічого не знає.
 ##
-## Тут лише 7 мета-апгрейдів зі статами (розділ 6 ТЗ). Розблокування
-## другого/третього героя свідомо не додане — героїв поки один,
-## розблоковувати нема чого; це Фаза 5.
+## 7 мета-апгрейдів зі статами + розблокування/вибір героя
+## (HeroPool) — усе разом розділ 6 ТЗ.
 
 const META_UPGRADE_MAX_LEVELS := {
 	&"meta_max_hp": 10,
@@ -37,6 +36,32 @@ var pending_offline_gold := 0
 # Скринька на головному екрані (розділ 8 ТЗ) — окремий таймер,
 # не пов'язаний з офлайн-золотом.
 var last_chest_claim_timestamp := 0
+
+# Герої (розділ 6 ТЗ): перший розблокований одразу, інші — за золото.
+var unlocked_hero_ids: Array = [&"runewielder"]
+var selected_hero_id: StringName = &"runewielder"
+
+func is_hero_unlocked(id: StringName) -> bool:
+	return unlocked_hero_ids.has(id)
+
+## Повертає true, якщо розблокування здійснено (вистачило золота й
+## герой ще не розблокований).
+func unlock_hero(id: StringName) -> bool:
+	if is_hero_unlocked(id):
+		return false
+	var def := HeroPool.get_def(id)
+	if gold < def.unlock_cost:
+		return false
+	gold -= def.unlock_cost
+	unlocked_hero_ids.append(id)
+	SaveManager.save_game()
+	return true
+
+func select_hero(id: StringName) -> void:
+	if not is_hero_unlocked(id):
+		return
+	selected_hero_id = id
+	SaveManager.save_game()
 
 func _ready() -> void:
 	SaveManager.load_game()

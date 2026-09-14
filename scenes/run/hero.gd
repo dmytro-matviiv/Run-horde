@@ -28,6 +28,7 @@ const AURA_RADIUS_PER_LEVEL := 15.0
 const AURA_BASE_DAMAGE := 6.0
 const AURA_DAMAGE_PER_LEVEL := 3.0
 
+@onready var sprite: Polygon2D = $Sprite
 @onready var hurt_box: Area2D = $HurtBox
 @onready var pickup_area: Area2D = $PickupArea
 @onready var pickup_shape: CollisionShape2D = $PickupArea/PickupShape
@@ -73,6 +74,10 @@ var _meta_gold_percent := 0.0
 var _meta_luck_percent := 0.0
 var _meta_pickup_radius_bonus := 0.0
 
+# Бонус конкретного героя (HeroDef.move_speed_percent) — окремо від
+# мета-бонусу, теж додається в _recompute_derived_stats().
+var _hero_move_speed_percent := 0.0
+
 var _orbital_blades: Array[Node] = []
 var _aura_level := 0
 var _aura_tick_left := 0.0
@@ -82,6 +87,24 @@ func _ready() -> void:
 
 func setup(projectile_pool: ObjectPool) -> void:
 	_projectile_pool = projectile_pool
+
+## Викликається один раз на старті рану, до apply_meta_upgrades().
+## Базовий магічний болт є в усіх героїв однаково — різницю робить
+## стартовий бонус (HeroDef.bonus_weapon) і стати. Записуємо рівень
+## бонус-зброї в upgrade_levels, щоб UpgradePool бачив її вже взятою
+## (level 1) і міг далі пропонувати прокачати, а не "взяти вперше".
+func apply_hero_def(def: HeroDef) -> void:
+	sprite.color = def.color
+	max_hp += def.bonus_max_hp
+	current_hp = max_hp
+	_hero_move_speed_percent = def.move_speed_percent
+	match def.bonus_weapon:
+		&"orbital_blades":
+			upgrade_levels[&"orbital_blades"] = 1
+			_apply_orbital_blades(1)
+		&"damage_aura":
+			upgrade_levels[&"damage_aura"] = 1
+			_apply_damage_aura(1)
 
 ## Викликається один раз на старті рану (run.gd), до того як гравець
 ## взяв хоч один апгрейд у рані. Мета-рівні йдуть з GameState.
@@ -297,7 +320,7 @@ func apply_upgrade(id: StringName) -> void:
 ## щоб один не перезаписував інший.
 func _recompute_derived_stats() -> void:
 	_damage_multiplier = 1.0 + 0.15 * get_upgrade_level(&"weapon_damage") + _meta_damage_percent
-	_move_speed_multiplier = 1.0 + 0.08 * get_upgrade_level(&"move_speed") + _meta_move_speed_percent
+	_move_speed_multiplier = 1.0 + 0.08 * get_upgrade_level(&"move_speed") + _meta_move_speed_percent + _hero_move_speed_percent
 	_gold_multiplier = 1.0 + 0.15 * get_upgrade_level(&"gold_gain") + _meta_gold_percent
 
 func _update_pickup_shapes() -> void:

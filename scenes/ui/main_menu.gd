@@ -47,6 +47,9 @@ func _on_play_pressed() -> void:
 func _on_upgrades_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/meta_upgrades.tscn")
 
+func _on_heroes_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/heroes.tscn")
+
 func _on_chest_pressed() -> void:
 	AdsManager.show_rewarded_ad(_on_chest_ad_reward)
 

@@ -15,6 +15,8 @@ func save_game() -> void:
 		"meta_upgrade_levels": _keys_to_string(GameState.meta_upgrade_levels),
 		"last_seen_timestamp": GameState.last_seen_timestamp,
 		"last_chest_claim_timestamp": GameState.last_chest_claim_timestamp,
+		"unlocked_hero_ids": _stringnames_to_strings(GameState.unlocked_hero_ids),
+		"selected_hero_id": str(GameState.selected_hero_id),
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -38,6 +40,8 @@ func load_game() -> void:
 	GameState.meta_upgrade_levels = _keys_to_string_name(data.get("meta_upgrade_levels", {}))
 	GameState.last_seen_timestamp = data.get("last_seen_timestamp", 0)
 	GameState.last_chest_claim_timestamp = data.get("last_chest_claim_timestamp", 0)
+	GameState.unlocked_hero_ids = _strings_to_stringnames(data.get("unlocked_hero_ids", ["runewielder"]))
+	GameState.selected_hero_id = StringName(data.get("selected_hero_id", "runewielder"))
 
 ## Міграція між версіями схеми сейву. Зараз версія лише одна (1),
 ## тож функція нічого не робить — сюди додаватимуться кроки міграції,
@@ -62,4 +66,18 @@ func _keys_to_string_name(dict: Dictionary) -> Dictionary:
 	var result := {}
 	for key in dict:
 		result[StringName(key)] = dict[key]
+	return result
+
+## Те саме, що _keys_to_string()/_keys_to_string_name(), але для
+## елементів масиву (GameState.unlocked_hero_ids) замість ключів словника.
+func _stringnames_to_strings(arr: Array) -> Array:
+	var result := []
+	for item in arr:
+		result.append(str(item))
+	return result
+
+func _strings_to_stringnames(arr: Array) -> Array:
+	var result := []
+	for item in arr:
+		result.append(StringName(item))
 	return result

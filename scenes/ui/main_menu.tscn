@@ -50,6 +50,11 @@ custom_minimum_size = Vector2(220, 56)
 theme_override_font_sizes/font_size = 24
 text = "Апгрейди"
 
+[node name="HeroesButton" type="Button" parent="CenterContainer/VBoxContainer"]
+custom_minimum_size = Vector2(220, 56)
+theme_override_font_sizes/font_size = 24
+text = "Герої"
+
 [node name="ChestButton" type="Button" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(220, 56)
 theme_override_font_sizes/font_size = 18
@@ -57,4 +62,5 @@ text = "Скринька (реклама)"
 
 [connection signal="pressed" from="CenterContainer/VBoxContainer/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/UpgradesButton" to="." method="_on_upgrades_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/HeroesButton" to="." method="_on_heroes_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ChestButton" to="." method="_on_chest_pressed"]
