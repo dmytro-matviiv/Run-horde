@@ -33,7 +33,7 @@ const OWNED_WEAPON_BOOST_CHANCE := 0.2
 ## яких гравець ще не вичерпав. З ~20% шансом підмішує вже взяту
 ## нову зброю (орбітальні клинки/аура), щоб гравець міг стабільніше
 ## прокачувати те, що вже почав будувати, а не тільки нові речі.
-static func pick_choices(current_levels: Dictionary) -> Array[UpgradeDef]:
+static func pick_choices(current_levels: Dictionary, luck_bonus: float = 0.0) -> Array[UpgradeDef]:
 	var available: Array[UpgradeDef] = []
 	for upgrade in ALL_UPGRADES:
 		var current_level: int = current_levels.get(upgrade.id, 0)
@@ -45,7 +45,7 @@ static func pick_choices(current_levels: Dictionary) -> Array[UpgradeDef]:
 	for i in mini(CHOICES_COUNT, available.size()):
 		result.append(available[i])
 
-	if result.size() == CHOICES_COUNT and randf() < OWNED_WEAPON_BOOST_CHANCE:
+	if result.size() == CHOICES_COUNT and randf() < OWNED_WEAPON_BOOST_CHANCE + luck_bonus:
 		var owned_weapon := _pick_owned_new_weapon(current_levels)
 		if owned_weapon != null and not result.has(owned_weapon):
 			result[randi() % result.size()] = owned_weapon

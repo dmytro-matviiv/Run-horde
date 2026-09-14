@@ -4,12 +4,14 @@ class_name Run
 ## Кореневий контролер рану: створює пули ворогів/снарядів/кристалів,
 ## веде відлік часу рану, оновлює HUD, показує екран вибору апгрейду
 ## на левел-апі (ставлячи дерево сцени на паузу) й реагує на смерть
-## героя.
+## героя або перемогу (дожив до Balance.RUN_DURATION). В обох випадках
+## банкує зібране золото в GameState і переходить на екран результатів.
 
 const ENEMY_SCENE := preload("res://scenes/run/enemy.tscn")
 const PROJECTILE_SCENE := preload("res://scenes/run/projectile.tscn")
 const CRYSTAL_SCENE := preload("res://scenes/run/xp_crystal.tscn")
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
+const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 
 @onready var hero: CharacterBody2D = $Hero
 @onready var enemy_container: Node2D = $EnemyContainer
@@ -26,6 +28,7 @@ const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
 var _elapsed_time := 0.0
 var _run_active := true
 var _gold_total := 0
+var _kills_total := 0
 
 func _ready() -> void:
 	# Попередньо створюємо частину інстансів (preload_count), щоб перші
@@ -35,11 +38,12 @@ func _ready() -> void:
 	var crystal_pool := ObjectPool.new(CRYSTAL_SCENE, crystal_container, 20)
 
 	hero.setup(projectile_pool)
+	hero.apply_meta_upgrades(GameState.meta_upgrade_levels)
 	hero.died.connect(_on_hero_died)
 	hero.leveled_up.connect(_on_hero_leveled_up)
 	hero.gold_collected.connect(_on_gold_collected)
 
-	spawner.setup(enemy_pool, crystal_pool, hero, self)
+	spawner.setup(enemy_pool, crystal_pool, hero, self, _on_enemy_died)
 
 	game_over_label.visible = false
 	_update_hud()
@@ -49,6 +53,8 @@ func _process(delta: float) -> void:
 		return
 	_elapsed_time += delta
 	_update_hud()
+	if _elapsed_time >= Balance.RUN_DURATION:
+		_end_run(true)
 
 func get_elapsed_minutes() -> float:
 	return _elapsed_time / 60.0
@@ -64,6 +70,9 @@ func _update_hud() -> void:
 func _on_gold_collected(amount: int) -> void:
 	_gold_total += amount
 
+func _on_enemy_died() -> void:
+	_kills_total += 1
+
 ## За один підбір кристала теоретично можна перестрибнути й кілька
 ## рівнів — тоді питаємо про апгрейд послідовно, по одному вибору.
 func _on_hero_leveled_up(levels_gained: int) -> void:
@@ -71,7 +80,7 @@ func _on_hero_leveled_up(levels_gained: int) -> void:
 		await _show_level_up_choice()
 
 func _show_level_up_choice() -> void:
-	var choices := UpgradePool.pick_choices(hero.upgrade_levels)
+	var choices := UpgradePool.pick_choices(hero.upgrade_levels, hero.get_luck_bonus())
 	if choices.is_empty():
 		return
 	get_tree().paused = true
@@ -85,6 +94,23 @@ func _show_level_up_choice() -> void:
 	get_tree().paused = false
 
 func _on_hero_died() -> void:
+	_end_run(false)
+
+## Смерть ніколи не марна — золото банкується в GameState в обох
+## випадках (перемога/смерть), а не лише при вдалому забігу.
+func _end_run(victory: bool) -> void:
+	if not _run_active:
+		return
 	_run_active = false
 	spawner.set_process(false)
+	game_over_label.text = "Перемога!" if victory else "Ви загинули"
 	game_over_label.visible = true
+	GameState.add_gold(_gold_total)
+	GameState.last_run_gold = _gold_total
+	GameState.last_run_kills = _kills_total
+	GameState.last_run_time = _elapsed_time
+	GameState.last_run_victory = victory
+	get_tree().create_timer(1.2).timeout.connect(_go_to_results)
+
+func _go_to_results() -> void:
+	get_tree().change_scene_to_file(RESULTS_SCENE_PATH)

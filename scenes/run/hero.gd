@@ -64,6 +64,15 @@ var _magnet_radius_bonus := 0.0
 var _gold_multiplier := 1.0
 var _xp_multiplier := 1.0
 
+# Мета-бонуси з GameState — виставляються один раз apply_meta_upgrades()
+# на старті рану і додаються до відповідних множників у
+# _recompute_derived_stats(), а не перезаписують їх.
+var _meta_damage_percent := 0.0
+var _meta_move_speed_percent := 0.0
+var _meta_gold_percent := 0.0
+var _meta_luck_percent := 0.0
+var _meta_pickup_radius_bonus := 0.0
+
 var _orbital_blades: Array[Node] = []
 var _aura_level := 0
 var _aura_tick_left := 0.0
@@ -73,6 +82,30 @@ func _ready() -> void:
 
 func setup(projectile_pool: ObjectPool) -> void:
 	_projectile_pool = projectile_pool
+
+## Викликається один раз на старті рану (run.gd), до того як гравець
+## взяв хоч один апгрейд у рані. Мета-рівні йдуть з GameState.
+func apply_meta_upgrades(meta_levels: Dictionary) -> void:
+	var hp_level: int = meta_levels.get(&"meta_max_hp", 0)
+	var start_level: int = meta_levels.get(&"meta_start_level", 0)
+
+	max_hp += 10.0 * hp_level
+	current_hp = max_hp
+	level = 1 + start_level
+
+	_meta_damage_percent = 0.05 * meta_levels.get(&"meta_damage", 0)
+	_meta_move_speed_percent = 0.03 * meta_levels.get(&"meta_move_speed", 0)
+	_meta_gold_percent = 0.07 * meta_levels.get(&"meta_gold_gain", 0)
+	_meta_luck_percent = 0.04 * meta_levels.get(&"meta_luck", 0)
+	_meta_pickup_radius_bonus = 8.0 * meta_levels.get(&"meta_pickup_radius", 0)
+
+	_recompute_derived_stats()
+	_update_pickup_shapes()
+
+## "Удача" з мета-прогресії — підмішує шанс, що на левел-апі
+## запропонують уже взяту нову зброю (UpgradePool).
+func get_luck_bonus() -> float:
+	return _meta_luck_percent
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
@@ -213,8 +246,6 @@ func apply_upgrade(id: StringName) -> void:
 	var new_level: int = get_upgrade_level(id) + 1
 	upgrade_levels[id] = new_level
 	match id:
-		&"weapon_damage":
-			_damage_multiplier = 1.0 + 0.15 * new_level
 		&"weapon_cooldown":
 			_cooldown_multiplier = clampf(1.0 - 0.1 * new_level, 0.4, 1.0)
 		&"weapon_pierce":
@@ -233,13 +264,9 @@ func apply_upgrade(id: StringName) -> void:
 			_armor_flat_reduction = 1.0 * new_level
 		&"iframe_duration":
 			_iframe_bonus = 0.1 * new_level
-		&"move_speed":
-			_move_speed_multiplier = 1.0 + 0.08 * new_level
 		&"pickup_radius":
 			_pickup_radius_bonus = 20.0 * new_level
 			_update_pickup_shapes()
-		&"gold_gain":
-			_gold_multiplier = 1.0 + 0.15 * new_level
 		&"xp_gain":
 			_xp_multiplier = 1.0 + 0.15 * new_level
 		&"crystal_magnet":
@@ -249,9 +276,21 @@ func apply_upgrade(id: StringName) -> void:
 			_apply_orbital_blades(new_level)
 		&"damage_aura":
 			_apply_damage_aura(new_level)
+		&"weapon_damage", &"move_speed", &"gold_gain":
+			pass   # рахуються нижче в _recompute_derived_stats()
+	_recompute_derived_stats()
+
+## Шкода/швидкість/золото залежать одразу з двох джерел — мета-бонусу
+## (раз на весь ран, з apply_meta_upgrades) і апгрейду цього рану —
+## тож рахуємо їх тут заново з обох, а не в окремих гілках match вище,
+## щоб один не перезаписував інший.
+func _recompute_derived_stats() -> void:
+	_damage_multiplier = 1.0 + 0.15 * get_upgrade_level(&"weapon_damage") + _meta_damage_percent
+	_move_speed_multiplier = 1.0 + 0.08 * get_upgrade_level(&"move_speed") + _meta_move_speed_percent
+	_gold_multiplier = 1.0 + 0.15 * get_upgrade_level(&"gold_gain") + _meta_gold_percent
 
 func _update_pickup_shapes() -> void:
-	var radius := Balance.HERO_PICKUP_RADIUS + _pickup_radius_bonus
+	var radius := Balance.HERO_PICKUP_RADIUS + _pickup_radius_bonus + _meta_pickup_radius_bonus
 	(pickup_shape.shape as CircleShape2D).radius = radius
 	(magnet_shape.shape as CircleShape2D).radius = radius + _magnet_radius_bonus
 

@@ -15,6 +15,7 @@ var gold_drop: int
 var _hero: Node2D
 var _pool: ObjectPool
 var _crystal_pool: ObjectPool
+var _on_death: Callable
 var _active := false
 
 func _ready() -> void:
@@ -28,9 +29,10 @@ func set_crystal_pool(crystal_pool: ObjectPool) -> void:
 
 ## Масштабування HP за хвилиною рану винесене сюди, а не в спавнер,
 ## бо це властивість конкретного ворога, а не логіка спавну.
-func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float) -> void:
+func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float, on_death: Callable) -> void:
 	global_position = spawn_position
 	_hero = hero
+	_on_death = on_death
 	current_hp = Balance.ENEMY_HP_BASE + Balance.ENEMY_HP_PER_MINUTE * minute_of_run
 	move_speed = Balance.ENEMY_SPEED
 	contact_damage = Balance.ENEMY_DAMAGE
@@ -69,6 +71,8 @@ func take_damage(amount: float) -> void:
 		_die()
 
 func _die() -> void:
+	if _on_death.is_valid():
+		_on_death.call()
 	if _crystal_pool != null:
 		var crystal: Node = _crystal_pool.acquire()
 		crystal.spawn(global_position, xp_drop, gold_drop)
