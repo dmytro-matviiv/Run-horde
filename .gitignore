@@ -1,0 +1,15 @@
+# Godot 4+ specific ignores
+.godot/
+/android/build/
+
+# Локальні експорт-налаштування (шляхи до SDK/keystore відрізняються на кожній машині)
+export_presets.cfg
+
+# Зібрані білди
+/builds/
+*.apk
+*.aab
+
+# OS
+.DS_Store
+Thumbs.db
