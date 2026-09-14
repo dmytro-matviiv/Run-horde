@@ -7,11 +7,11 @@ extends Node
 var _enemy_pool: ObjectPool
 var _crystal_pool: ObjectPool
 var _hero: Node2D
-var _run: Node
+var _run: Run
 
 var _spawn_accumulator := 0.0
 
-func setup(enemy_pool: ObjectPool, crystal_pool: ObjectPool, hero: Node2D, run: Node) -> void:
+func setup(enemy_pool: ObjectPool, crystal_pool: ObjectPool, hero: Node2D, run: Run) -> void:
 	_enemy_pool = enemy_pool
 	_crystal_pool = crystal_pool
 	_hero = hero
