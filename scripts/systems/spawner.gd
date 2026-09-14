@@ -27,17 +27,19 @@ var _enemy_projectile_pool: ObjectPool
 var _hero: Node2D
 var _run: Run
 var _on_enemy_died: Callable
+var _on_damage_dealt: Callable
 
 var _spawn_accumulator := 0.0
 var _bosses_spawned: Array[bool] = [false, false]
 
-func setup(enemy_pool: ObjectPool, crystal_pool: ObjectPool, enemy_projectile_pool: ObjectPool, hero: Node2D, run: Run, on_enemy_died: Callable) -> void:
+func setup(enemy_pool: ObjectPool, crystal_pool: ObjectPool, enemy_projectile_pool: ObjectPool, hero: Node2D, run: Run, on_enemy_died: Callable, on_damage_dealt: Callable) -> void:
 	_enemy_pool = enemy_pool
 	_crystal_pool = crystal_pool
 	_enemy_projectile_pool = enemy_projectile_pool
 	_hero = hero
 	_run = run
 	_on_enemy_died = on_enemy_died
+	_on_damage_dealt = on_damage_dealt
 
 func _process(delta: float) -> void:
 	var minute := _run.get_elapsed_minutes()
@@ -80,7 +82,7 @@ func _spawn_enemy(minute: float, def: EnemyDef) -> void:
 	var enemy: Node = _enemy_pool.acquire()
 	enemy.set_crystal_pool(_crystal_pool)
 	enemy.set_projectile_pool(_enemy_projectile_pool)
-	enemy.spawn(_random_spawn_position(), _hero, minute, _on_enemy_died, def)
+	enemy.spawn(_random_spawn_position(), _hero, minute, _on_enemy_died, def, _on_damage_dealt)
 
 ## Точка за межами екрана, по колу навколо героя.
 func _random_spawn_position() -> Vector2:

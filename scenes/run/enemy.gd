@@ -24,6 +24,7 @@ var _pool: ObjectPool
 var _crystal_pool: ObjectPool
 var _projectile_pool: ObjectPool
 var _on_death: Callable
+var _on_damage: Callable
 var _active := false
 var _ranged_cooldown_left := 0.0
 
@@ -39,10 +40,11 @@ func set_crystal_pool(crystal_pool: ObjectPool) -> void:
 func set_projectile_pool(projectile_pool: ObjectPool) -> void:
 	_projectile_pool = projectile_pool
 
-func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float, on_death: Callable, def: EnemyDef) -> void:
+func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float, on_death: Callable, def: EnemyDef, on_damage: Callable) -> void:
 	global_position = spawn_position
 	_hero = hero
 	_on_death = on_death
+	_on_damage = on_damage
 	_def = def
 	current_hp = def.hp_base + def.hp_per_minute * minute_of_run
 	xp_drop = def.xp_drop
@@ -110,6 +112,8 @@ func get_contact_damage() -> float:
 func take_damage(amount: float) -> void:
 	if not _active:
 		return
+	if _on_damage.is_valid():
+		_on_damage.call(amount)
 	current_hp -= amount
 	if current_hp <= 0.0:
 		_die()

@@ -8,9 +8,9 @@ class_name Balance
 
 # Герой
 const HERO_MAX_HP := 100.0
-const HERO_MOVE_SPEED := 160.0      # пікселів за секунду
+const HERO_MOVE_SPEED := 170.0      # пікселів за секунду (170: трохи легше тікати від рою)
 const HERO_PICKUP_RADIUS := 60.0
-const HERO_IFRAMES := 0.5           # невразливість після удару, сек
+const HERO_IFRAMES := 0.6           # невразливість після удару, сек
 
 # Базова зброя
 const WEAPON_DAMAGE := 10.0
@@ -23,7 +23,7 @@ const WEAPON_PIERCE := 0            # скільки ворогів пробив
 const ENEMY_PROJECTILE_SPEED := 250.0
 
 # Спавн ворогів
-const SPAWN_RATE_START := 1.5       # ворогів/сек на старті рану
+const SPAWN_RATE_START := 1.0       # ворогів/сек на старті рану (було 1.5 — заскладно на старті)
 const SPAWN_RATE_END := 8.0         # ворогів/сек на 5:00
 const RUN_DURATION := 300.0         # секунд (5 хвилин)
 const SPAWN_RADIUS_FACTOR := 1.2    # множник від половини діагоналі екрана

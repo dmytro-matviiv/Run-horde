@@ -26,11 +26,19 @@ const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 @onready var level_label: Label = $HUD/LevelLabel
 @onready var gold_label: Label = $HUD/GoldLabel
 @onready var game_over_label: Label = $HUD/GameOverLabel
+@onready var debug_label: Label = $HUD/DebugLabel
 
 var _elapsed_time := 0.0
 var _run_active := true
 var _gold_total := 0
 var _kills_total := 0
+
+# Дебаг-оверлей (F3): DPS рахуємо за останню повну секунду, а не
+# накопичувальне середнє — так видно живі коливання по хвилинах.
+var _debug_visible := false
+var _damage_this_second := 0.0
+var _last_second_dps := 0.0
+var _dps_second_timer := 0.0
 
 func _ready() -> void:
 	# Попередньо створюємо частину інстансів (preload_count), щоб перші
@@ -49,18 +57,56 @@ func _ready() -> void:
 	# від "Стартового рівня") — сигнал має бути підключений до цього.
 	hero.apply_meta_upgrades(GameState.get_hero_meta_levels(GameState.selected_hero_id))
 
-	spawner.setup(enemy_pool, crystal_pool, enemy_projectile_pool, hero, self, _on_enemy_died)
+	spawner.setup(enemy_pool, crystal_pool, enemy_projectile_pool, hero, self, _on_enemy_died, _on_damage_dealt)
 
 	game_over_label.visible = false
+	debug_label.visible = false
 	_update_hud()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_F3:
+		_debug_visible = not _debug_visible
+		debug_label.visible = _debug_visible
 
 func _process(delta: float) -> void:
 	if not _run_active:
 		return
 	_elapsed_time += delta
 	_update_hud()
+	_update_dps_window(delta)
+	if _debug_visible:
+		_update_debug_overlay()
 	if _elapsed_time >= Balance.RUN_DURATION:
 		_end_run(true)
+
+func _update_dps_window(delta: float) -> void:
+	_dps_second_timer += delta
+	if _dps_second_timer < 1.0:
+		return
+	_dps_second_timer -= 1.0
+	_last_second_dps = _damage_this_second
+	_damage_this_second = 0.0
+
+func _on_damage_dealt(amount: float) -> void:
+	_damage_this_second += amount
+
+## Простий дебаг-оверлей для балансування (розділ 4 ТЗ): FPS, DPS за
+## останню секунду, скільки ворогів зараз активні на екрані, хвилина
+## рану. Вмикається клавішею F3.
+func _update_debug_overlay() -> void:
+	debug_label.text = "FPS: %d\nDPS: %.0f\nВороги: %d\nХвилина: %.2f" % [
+		Engine.get_frames_per_second(),
+		_last_second_dps,
+		_count_active_enemies(),
+		get_elapsed_minutes(),
+	]
+
+func _count_active_enemies() -> int:
+	var count := 0
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if enemy.visible:
+			count += 1
+	return count
 
 func get_elapsed_minutes() -> float:
 	return _elapsed_time / 60.0
