@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/run/hero.gd" id="1"]
 
@@ -7,6 +7,12 @@ radius = 16.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_pickup"]
 radius = 60.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_magnet"]
+radius = 60.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_aura"]
+radius = 1.0
 
 [node name="Hero" type="CharacterBody2D"]
 collision_layer = 2
@@ -33,3 +39,18 @@ collision_mask = 16
 
 [node name="PickupShape" type="CollisionShape2D" parent="PickupArea"]
 shape = SubResource("CircleShape2D_pickup")
+
+[node name="MagnetArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 16
+
+[node name="MagnetShape" type="CollisionShape2D" parent="MagnetArea"]
+shape = SubResource("CircleShape2D_magnet")
+
+[node name="DamageAura" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 4
+
+[node name="DamageAuraShape" type="CollisionShape2D" parent="DamageAura"]
+shape = SubResource("CircleShape2D_aura")
+disabled = true

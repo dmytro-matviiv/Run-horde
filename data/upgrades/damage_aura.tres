@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/upgrades/upgrade_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"damage_aura"
+title = "Аура шкоди"
+description = "Постійна зона шкоди навколо героя, тікає раз на 0.5с (росте з рівнем)"
+category = "new_weapon"
+max_level = 3

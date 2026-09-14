@@ -1,8 +1,11 @@
 extends Area2D
 
 ## Кристал досвіду/золота: випадає з вбитого ворога, лежить на місці,
-## поки герой не підбере його своєю PickupArea (магнітом виступає її
-## радіус — Balance.HERO_PICKUP_RADIUS).
+## поки не потрапить у PickupArea героя (миттєвий підбір) або в
+## MagnetArea (тоді летить до героя через pull_toward, якщо взято
+## апгрейд "Магніт").
+
+const MAGNET_SPEED := 300.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
@@ -36,3 +39,8 @@ func collect() -> Dictionary:
 	var result := {"xp": xp_value, "gold": gold_value}
 	_pool.release(self)
 	return result
+
+func pull_toward(target_position: Vector2, delta: float) -> void:
+	if not _active:
+		return
+	global_position += global_position.direction_to(target_position) * MAGNET_SPEED * delta

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/upgrades/upgrade_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"orbital_blades"
+title = "Орбітальні клинки"
+description = "Клинок обертається навколо героя і б'є ворогів на контакті (+1 клинок за рівень)"
+category = "new_weapon"
+max_level = 3

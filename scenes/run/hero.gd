@@ -4,18 +4,43 @@ extends CharacterBody2D
 ## притискає палець (або мишу — для тестів на ПК) і тягне в потрібну
 ## сторону, герой рухається в цьому напрямку з силою, пропорційною
 ## відстані відтягування. Зброя стріляє сама по найближчому ворогу.
+##
+## apply_upgrade() застосовує ефект апгрейду рівня: конкретні числа
+## приросту за рівень (наприклад "+15% шкоди") живуть тут, а не в
+## balance.gd, бо це не базові числа гри, а приріст апгрейду поверх
+## них — сам факт "які апгрейди існують" описаний в data/upgrades/*.
 
 signal died
-signal xp_collected(amount: int)
+signal leveled_up(levels_gained: int)
 signal gold_collected(amount: int)
 
 const JOYSTICK_MAX_RADIUS := 80.0   # відстань відтягування для 100% швидкості
 const JOYSTICK_DEAD_ZONE := 4.0     # менші рухи ігноруються як тремтіння пальця
 
+const ORBITAL_BLADE_SCENE := preload("res://scenes/run/orbital_blade.tscn")
+const ORBITAL_RADIUS := 55.0
+const ORBITAL_ANGULAR_SPEED := 2.5
+const ORBITAL_DAMAGE := 8.0
+
+const AURA_TICK_INTERVAL := 0.5
+const AURA_BASE_RADIUS := 50.0
+const AURA_RADIUS_PER_LEVEL := 15.0
+const AURA_BASE_DAMAGE := 6.0
+const AURA_DAMAGE_PER_LEVEL := 3.0
+
 @onready var hurt_box: Area2D = $HurtBox
 @onready var pickup_area: Area2D = $PickupArea
+@onready var pickup_shape: CollisionShape2D = $PickupArea/PickupShape
+@onready var magnet_area: Area2D = $MagnetArea
+@onready var magnet_shape: CollisionShape2D = $MagnetArea/MagnetShape
+@onready var damage_aura: Area2D = $DamageAura
+@onready var damage_aura_shape: CollisionShape2D = $DamageAura/DamageAuraShape
 
 var current_hp: float = Balance.HERO_MAX_HP
+var max_hp: float = Balance.HERO_MAX_HP
+var level := 1
+var xp := 0
+var upgrade_levels: Dictionary = {}   # StringName -> int, рівень кожного взятого апгрейду
 
 var _move_direction := Vector2.ZERO
 var _touch_active := false
@@ -23,6 +48,25 @@ var _touch_start := Vector2.ZERO
 var _invulnerable := false
 var _weapon_cooldown_left := 0.0
 var _projectile_pool: ObjectPool
+
+# Похідні від апгрейдів значення — перераховуються заново в apply_upgrade()
+var _damage_multiplier := 1.0
+var _cooldown_multiplier := 1.0
+var _pierce_bonus := 0
+var _extra_projectiles := 0
+var _ricochet_count := 0
+var _regen_per_second := 0.0
+var _armor_flat_reduction := 0.0
+var _iframe_bonus := 0.0
+var _move_speed_multiplier := 1.0
+var _pickup_radius_bonus := 0.0
+var _magnet_radius_bonus := 0.0
+var _gold_multiplier := 1.0
+var _xp_multiplier := 1.0
+
+var _orbital_blades: Array[Node] = []
+var _aura_level := 0
+var _aura_tick_left := 0.0
 
 func _ready() -> void:
 	pickup_area.area_entered.connect(_on_pickup_area_entered)
@@ -46,10 +90,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_move_direction = Vector2.ZERO
 
 func _physics_process(delta: float) -> void:
-	velocity = _move_direction * Balance.HERO_MOVE_SPEED
+	velocity = _move_direction * Balance.HERO_MOVE_SPEED * _move_speed_multiplier
 	move_and_slide()
 	_process_weapon(delta)
 	_process_contact_damage()
+	_process_regen(delta)
+	_process_magnet(delta)
+	_process_aura(delta)
 
 func _process_weapon(delta: float) -> void:
 	_weapon_cooldown_left -= delta
@@ -59,7 +106,7 @@ func _process_weapon(delta: float) -> void:
 	if target == null:
 		return
 	_fire_at(target)
-	_weapon_cooldown_left = Balance.WEAPON_COOLDOWN
+	_weapon_cooldown_left = Balance.WEAPON_COOLDOWN * _cooldown_multiplier
 
 func _find_nearest_enemy() -> Node2D:
 	var nearest: Node2D = null
@@ -76,9 +123,18 @@ func _find_nearest_enemy() -> Node2D:
 func _fire_at(target: Node2D) -> void:
 	if _projectile_pool == null:
 		return
-	var projectile: Node = _projectile_pool.acquire()
-	var direction := global_position.direction_to(target.global_position)
-	projectile.spawn(global_position, direction)
+	var base_direction := global_position.direction_to(target.global_position)
+	var shots := 1 + _extra_projectiles
+	var spread := deg_to_rad(12.0)
+	var damage := Balance.WEAPON_DAMAGE * _damage_multiplier
+	var pierce := Balance.WEAPON_PIERCE + _pierce_bonus
+	for i in shots:
+		var angle_offset := 0.0
+		if shots > 1:
+			angle_offset = spread * (i - float(shots - 1) / 2.0)
+		var direction := base_direction.rotated(angle_offset)
+		var projectile: Node = _projectile_pool.acquire()
+		projectile.spawn(global_position, direction, damage, pierce, _ricochet_count)
 
 ## Поки герой торкається ворога і не в i-фреймах — щоразу після
 ## закінчення невразливості contact-урон застосовується знову.
@@ -90,8 +146,33 @@ func _process_contact_damage() -> void:
 			take_damage(body.get_contact_damage())
 			break
 
+func _process_regen(delta: float) -> void:
+	if _regen_per_second <= 0.0 or current_hp <= 0.0:
+		return
+	current_hp = minf(current_hp + _regen_per_second * delta, max_hp)
+
+## Кристали в радіусі магніту самі летять до героя, а не чекають,
+## поки герой підійде впритул до радіуса підбору.
+func _process_magnet(delta: float) -> void:
+	for area in magnet_area.get_overlapping_areas():
+		if area.has_method("pull_toward"):
+			area.pull_toward(global_position, delta)
+
+func _process_aura(delta: float) -> void:
+	if _aura_level <= 0:
+		return
+	_aura_tick_left -= delta
+	if _aura_tick_left > 0.0:
+		return
+	_aura_tick_left = AURA_TICK_INTERVAL
+	var damage := AURA_BASE_DAMAGE + AURA_DAMAGE_PER_LEVEL * (_aura_level - 1)
+	for body in damage_aura.get_overlapping_bodies():
+		if body.has_method("take_damage"):
+			body.take_damage(damage)
+
 func take_damage(amount: float) -> void:
-	current_hp -= amount
+	var actual_damage := maxf(1.0, amount - _armor_flat_reduction)
+	current_hp -= actual_damage
 	if current_hp <= 0.0:
 		current_hp = 0.0
 		set_physics_process(false)
@@ -102,12 +183,92 @@ func take_damage(amount: float) -> void:
 func _start_iframes() -> void:
 	_invulnerable = true
 	modulate.a = 0.5
-	await get_tree().create_timer(Balance.HERO_IFRAMES).timeout
+	await get_tree().create_timer(Balance.HERO_IFRAMES + _iframe_bonus).timeout
 	_invulnerable = false
 	modulate.a = 1.0
 
 func _on_pickup_area_entered(area: Area2D) -> void:
-	if area.has_method("collect"):
-		var result: Dictionary = area.collect()
-		xp_collected.emit(result.xp)
-		gold_collected.emit(result.gold)
+	if not area.has_method("collect"):
+		return
+	var result: Dictionary = area.collect()
+	add_xp(result.xp)
+	gold_collected.emit(int(round(result.gold * _gold_multiplier)))
+
+func add_xp(amount: int) -> void:
+	xp += int(round(amount * _xp_multiplier))
+	var levels_gained := 0
+	while xp >= Balance.xp_to_next(level):
+		xp -= Balance.xp_to_next(level)
+		level += 1
+		levels_gained += 1
+	if levels_gained > 0:
+		leveled_up.emit(levels_gained)
+
+func get_upgrade_level(id: StringName) -> int:
+	return upgrade_levels.get(id, 0)
+
+## Застосовує наступний рівень апгрейду id. Викликається один раз на
+## кожен вибір гравця на екрані левел-апу (run.gd, після кліку картки).
+func apply_upgrade(id: StringName) -> void:
+	var new_level: int = get_upgrade_level(id) + 1
+	upgrade_levels[id] = new_level
+	match id:
+		&"weapon_damage":
+			_damage_multiplier = 1.0 + 0.15 * new_level
+		&"weapon_cooldown":
+			_cooldown_multiplier = clampf(1.0 - 0.1 * new_level, 0.4, 1.0)
+		&"weapon_pierce":
+			_pierce_bonus = new_level
+		&"weapon_multishot":
+			_extra_projectiles = new_level
+		&"weapon_ricochet":
+			_ricochet_count = new_level
+		&"max_hp":
+			var added := 20.0
+			max_hp += added
+			current_hp += added
+		&"regen":
+			_regen_per_second = 0.5 * new_level
+		&"armor":
+			_armor_flat_reduction = 1.0 * new_level
+		&"iframe_duration":
+			_iframe_bonus = 0.1 * new_level
+		&"move_speed":
+			_move_speed_multiplier = 1.0 + 0.08 * new_level
+		&"pickup_radius":
+			_pickup_radius_bonus = 20.0 * new_level
+			_update_pickup_shapes()
+		&"gold_gain":
+			_gold_multiplier = 1.0 + 0.15 * new_level
+		&"xp_gain":
+			_xp_multiplier = 1.0 + 0.15 * new_level
+		&"crystal_magnet":
+			_magnet_radius_bonus = 40.0 * new_level
+			_update_pickup_shapes()
+		&"orbital_blades":
+			_apply_orbital_blades(new_level)
+		&"damage_aura":
+			_apply_damage_aura(new_level)
+
+func _update_pickup_shapes() -> void:
+	var radius := Balance.HERO_PICKUP_RADIUS + _pickup_radius_bonus
+	(pickup_shape.shape as CircleShape2D).radius = radius
+	(magnet_shape.shape as CircleShape2D).radius = radius + _magnet_radius_bonus
+
+## Перебудовує всі клинки заново, щоб рівномірно розподілити кут
+## між ними (простіше, ніж дораховувати кут лише для нового клинка).
+func _apply_orbital_blades(new_level: int) -> void:
+	for blade in _orbital_blades:
+		blade.queue_free()
+	_orbital_blades.clear()
+	for i in new_level:
+		var blade: Node = ORBITAL_BLADE_SCENE.instantiate()
+		add_child(blade)
+		var angle_offset := TAU / float(new_level) * i
+		blade.setup(self, ORBITAL_RADIUS, angle_offset, ORBITAL_ANGULAR_SPEED, ORBITAL_DAMAGE)
+		_orbital_blades.append(blade)
+
+func _apply_damage_aura(new_level: int) -> void:
+	_aura_level = new_level
+	damage_aura_shape.disabled = false
+	(damage_aura_shape.shape as CircleShape2D).radius = AURA_BASE_RADIUS + AURA_RADIUS_PER_LEVEL * (new_level - 1)

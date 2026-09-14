@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/upgrades/upgrade_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"max_hp"
+title = "Витривалість"
+description = "+20 максимального здоров'я за рівень"
+category = "defense"
+max_level = 5

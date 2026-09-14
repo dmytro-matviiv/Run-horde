@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/run/orbital_blade.gd" id="1"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_blade"]
+radius = 8.0
+
+[node name="OrbitalBlade" type="Area2D"]
+collision_layer = 8
+collision_mask = 4
+script = ExtResource("1")
+
+[node name="Sprite" type="Polygon2D" parent="."]
+color = Color(0.8, 0.8, 1, 1)
+polygon = PackedVector2Array(0, -8, 8, 0, 0, 8, -8, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_blade")

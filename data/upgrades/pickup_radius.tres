@@ -1,0 +1,11 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/upgrades/upgrade_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pickup_radius"
+title = "Широкі руки"
+description = "+20 радіусу підбору кристалів за рівень"
+category = "utility"
+max_level = 4
