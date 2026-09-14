@@ -209,6 +209,11 @@ func _process_aura(delta: float) -> void:
 		if body.has_method("take_damage"):
 			body.take_damage(damage)
 
+## Потрібен снарядам ворога-лучника й вибуху павука-підривника, щоб
+## теж поважати i-фрейми, а не бити героя в обхід невразливості.
+func is_invulnerable() -> bool:
+	return _invulnerable
+
 func take_damage(amount: float) -> void:
 	var actual_damage := maxf(1.0, amount - _armor_flat_reduction)
 	current_hp -= actual_damage

@@ -9,6 +9,7 @@ class_name Run
 
 const ENEMY_SCENE := preload("res://scenes/run/enemy.tscn")
 const PROJECTILE_SCENE := preload("res://scenes/run/projectile.tscn")
+const ENEMY_PROJECTILE_SCENE := preload("res://scenes/run/enemy_projectile.tscn")
 const CRYSTAL_SCENE := preload("res://scenes/run/xp_crystal.tscn")
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
 const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
@@ -16,6 +17,7 @@ const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 @onready var hero: CharacterBody2D = $Hero
 @onready var enemy_container: Node2D = $EnemyContainer
 @onready var projectile_container: Node2D = $ProjectileContainer
+@onready var enemy_projectile_container: Node2D = $EnemyProjectileContainer
 @onready var crystal_container: Node2D = $CrystalContainer
 @onready var spawner: Node = $Spawner
 @onready var hud: CanvasLayer = $HUD
@@ -35,6 +37,7 @@ func _ready() -> void:
 	# секунди рану не тригерили instantiate() посеред бою.
 	var enemy_pool := ObjectPool.new(ENEMY_SCENE, enemy_container, 20)
 	var projectile_pool := ObjectPool.new(PROJECTILE_SCENE, projectile_container, 10)
+	var enemy_projectile_pool := ObjectPool.new(ENEMY_PROJECTILE_SCENE, enemy_projectile_container, 5)
 	var crystal_pool := ObjectPool.new(CRYSTAL_SCENE, crystal_container, 20)
 
 	hero.setup(projectile_pool)
@@ -45,7 +48,7 @@ func _ready() -> void:
 	# від "Стартового рівня") — сигнал має бути підключений до цього.
 	hero.apply_meta_upgrades(GameState.meta_upgrade_levels)
 
-	spawner.setup(enemy_pool, crystal_pool, hero, self, _on_enemy_died)
+	spawner.setup(enemy_pool, crystal_pool, enemy_projectile_pool, hero, self, _on_enemy_died)
 
 	game_over_label.visible = false
 	_update_hud()

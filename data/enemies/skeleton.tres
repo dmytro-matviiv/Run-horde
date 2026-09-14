@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"skeleton"
+title = "Скелет"
+hp_base = 20.0
+hp_per_minute = 6.0
+damage = 8.0
+speed = 70.0
+xp_drop = 1
+gold_drop = 1
+radius = 14.0
+color = Color(0.9, 0.2, 0.2, 1)
+attack_type = "melee"
+explodes_on_death = false
+min_spawn_minute = 0.0
+spawn_weight = 5.0

@@ -18,13 +18,9 @@ const WEAPON_COOLDOWN := 0.8        # сек між пострілами
 const WEAPON_PROJECTILE_SPEED := 400.0
 const WEAPON_PIERCE := 0            # скільки ворогів пробиває наскрізь
 
-# Вороги (базовий тип)
-const ENEMY_HP_BASE := 20.0
-const ENEMY_HP_PER_MINUTE := 6.0    # HP = BASE + PER_MINUTE * хвилина_рану
-const ENEMY_DAMAGE := 8.0
-const ENEMY_SPEED := 70.0
-const ENEMY_XP_DROP := 1
-const ENEMY_GOLD_DROP := 1
+# Вороги — конкретні стати кожного типу тепер в data/enemies/*.tres
+# (EnemyDef), тут лишається тільки спільне для всіх снарядів ворогів.
+const ENEMY_PROJECTILE_SPEED := 250.0
 
 # Спавн ворогів
 const SPAWN_RATE_START := 1.5       # ворогів/сек на старті рану

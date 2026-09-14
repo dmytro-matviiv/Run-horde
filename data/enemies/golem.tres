@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"golem"
+title = "Голем"
+hp_base = 70.0
+hp_per_minute = 16.0
+damage = 16.0
+speed = 40.0
+xp_drop = 2
+gold_drop = 3
+radius = 22.0
+color = Color(0.5, 0.45, 0.4, 1)
+attack_type = "melee"
+explodes_on_death = false
+min_spawn_minute = 1.0
+spawn_weight = 2.0

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/enemies/enemy_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"boss_bone_king"
+title = "Кістяний Король"
+hp_base = 500.0
+hp_per_minute = 0.0
+damage = 20.0
+speed = 55.0
+xp_drop = 15
+gold_drop = 30
+radius = 36.0
+color = Color(0.85, 0.75, 0.2, 1)
+attack_type = "melee"
+explodes_on_death = false
+min_spawn_minute = 0.0
+spawn_weight = 0.0
