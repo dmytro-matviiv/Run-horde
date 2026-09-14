@@ -29,8 +29,68 @@ var last_run_kills := 0
 var last_run_time := 0.0
 var last_run_victory := false
 
+# Ідл-шар: коли гравця бачили востаннє й скільки золота накопичилось,
+# поки застосунок був закритий (розділ 7 ТЗ).
+var last_seen_timestamp := 0
+var pending_offline_gold := 0
+
+# Скринька на головному екрані (розділ 8 ТЗ) — окремий таймер,
+# не пов'язаний з офлайн-золотом.
+var last_chest_claim_timestamp := 0
+
 func _ready() -> void:
 	SaveManager.load_game()
+	_compute_offline_gold()
+
+func get_total_meta_levels() -> int:
+	var total := 0
+	for id in meta_upgrade_levels:
+		total += meta_upgrade_levels[id]
+	return total
+
+## Рахує офлайн-золото за час з останнього виходу (обмежено
+## Balance.IDLE_MAX_HOURS). Захист від перекрученого годинника: якщо
+## різниця часу від'ємна — нараховуємо нуль, мітку все одно оновлюємо.
+func _compute_offline_gold() -> void:
+	var now := int(Time.get_unix_time_from_system())
+	var elapsed_seconds := now - last_seen_timestamp
+	if last_seen_timestamp <= 0 or elapsed_seconds <= 0:
+		pending_offline_gold = 0
+	else:
+		var capped_hours: float = minf(elapsed_seconds / 3600.0, Balance.IDLE_MAX_HOURS)
+		pending_offline_gold = int(floor(Balance.idle_gold_per_hour(get_total_meta_levels()) * capped_hours))
+	last_seen_timestamp = now
+	SaveManager.save_game()
+
+## Викликає екран "поки тебе не було". multiplier=2 — коли гравець
+## додивився rewarded-рекламу за подвоєння (AdsManager.show_rewarded_ad).
+func claim_offline_gold(multiplier: int = 1) -> void:
+	add_gold(pending_offline_gold * multiplier)
+	pending_offline_gold = 0
+
+func is_chest_available() -> bool:
+	if last_chest_claim_timestamp <= 0:
+		return true
+	var now := int(Time.get_unix_time_from_system())
+	return now - last_chest_claim_timestamp >= int(Balance.CHEST_COOLDOWN_HOURS * 3600.0)
+
+## Скільки секунд лишилось до наступної доступної скриньки (0, якщо
+## вже доступна).
+func get_chest_seconds_left() -> int:
+	if is_chest_available():
+		return 0
+	var now := int(Time.get_unix_time_from_system())
+	var elapsed := now - last_chest_claim_timestamp
+	return int(Balance.CHEST_COOLDOWN_HOURS * 3600.0) - elapsed
+
+## Викликати лише після успішного перегляду rewarded-реклами
+## (AdsManager.show_rewarded_ad). Повертає скільки золота випало.
+func claim_chest_reward() -> int:
+	var reward := randi_range(Balance.CHEST_GOLD_MIN, Balance.CHEST_GOLD_MAX)
+	add_gold(reward)
+	last_chest_claim_timestamp = int(Time.get_unix_time_from_system())
+	SaveManager.save_game()
+	return reward
 
 func add_gold(amount: int) -> void:
 	if amount <= 0:

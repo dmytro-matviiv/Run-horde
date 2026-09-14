@@ -39,3 +39,18 @@ static func xp_to_next(level: int) -> int:
 ## Вартість мета-апгрейду на певному рівні (у золоті).
 static func meta_upgrade_cost(level: int) -> int:
 	return int(round(50 * pow(1.35, level)))
+
+# Ідл-шар
+const IDLE_GOLD_PER_HOUR_BASE := 60.0
+const IDLE_GOLD_PER_LEVEL_PERCENT := 0.15   # приріст gold/год за кожен сумарний рівень мета-апгрейдів
+const IDLE_MAX_HOURS := 8.0                 # ліміт накопичення офлайн-золота
+
+## Скільки золота гривень капає за годину офлайну при сумі рівнів
+## усіх мета-апгрейдів total_meta_levels.
+static func idle_gold_per_hour(total_meta_levels: int) -> float:
+	return IDLE_GOLD_PER_HOUR_BASE * (1.0 + IDLE_GOLD_PER_LEVEL_PERCENT * total_meta_levels)
+
+# Скринька на головному екрані
+const CHEST_COOLDOWN_HOURS := 4.0
+const CHEST_GOLD_MIN := 20
+const CHEST_GOLD_MAX := 80

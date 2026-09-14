@@ -13,6 +13,8 @@ func save_game() -> void:
 		"schema_version": CURRENT_SCHEMA_VERSION,
 		"gold": GameState.gold,
 		"meta_upgrade_levels": _keys_to_string(GameState.meta_upgrade_levels),
+		"last_seen_timestamp": GameState.last_seen_timestamp,
+		"last_chest_claim_timestamp": GameState.last_chest_claim_timestamp,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -34,6 +36,8 @@ func load_game() -> void:
 	var data: Dictionary = _migrate(parsed)
 	GameState.gold = data.get("gold", 0)
 	GameState.meta_upgrade_levels = _keys_to_string_name(data.get("meta_upgrade_levels", {}))
+	GameState.last_seen_timestamp = data.get("last_seen_timestamp", 0)
+	GameState.last_chest_claim_timestamp = data.get("last_chest_claim_timestamp", 0)
 
 ## Міграція між версіями схеми сейву. Зараз версія лише одна (1),
 ## тож функція нічого не робить — сюди додаватимуться кроки міграції,
