@@ -37,15 +37,19 @@ func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float) -> void:
 	xp_drop = Balance.ENEMY_XP_DROP
 	gold_drop = Balance.ENEMY_GOLD_DROP
 
+## disabled міняємо через set_deferred, бо це найчастіше викликається
+## з _die()/_on_body_entered() — тобто просто посеред обробки фізичних
+## колізій. Пряма зміна disabled у цей момент падає з помилкою
+## "flushing queries" — set_deferred відкладає її до безпечного моменту.
 func pool_activate() -> void:
 	_active = true
 	visible = true
-	collision_shape.disabled = false
+	collision_shape.set_deferred("disabled", false)
 
 func pool_deactivate() -> void:
 	_active = false
 	visible = false
-	collision_shape.disabled = true
+	collision_shape.set_deferred("disabled", true)
 	global_position = Vector2(-10000, -10000)
 
 func _physics_process(_delta: float) -> void:

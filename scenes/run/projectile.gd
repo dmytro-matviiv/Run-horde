@@ -35,15 +35,19 @@ func spawn(from_position: Vector2, direction: Vector2, damage: float, pierce: in
 	_lifetime_left = MAX_LIFETIME
 	_last_hit_enemy = null
 
+## disabled міняємо через set_deferred — pool_deactivate() тут
+## викликається прямо з _on_body_entered(), тобто посеред обробки
+## фізичних колізій, де пряма зміна disabled падає з помилкою
+## "flushing queries".
 func pool_activate() -> void:
 	_active = true
 	visible = true
-	collision_shape.disabled = false
+	collision_shape.set_deferred("disabled", false)
 
 func pool_deactivate() -> void:
 	_active = false
 	visible = false
-	collision_shape.disabled = true
+	collision_shape.set_deferred("disabled", true)
 	global_position = Vector2(-10000, -10000)
 
 func _physics_process(delta: float) -> void:

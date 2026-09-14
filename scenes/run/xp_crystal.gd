@@ -22,15 +22,19 @@ func spawn(at_position: Vector2, xp: int, gold: int) -> void:
 	xp_value = xp
 	gold_value = gold
 
+## disabled міняємо через set_deferred — pool_activate() тут
+## викликається з enemy.gd _die(), яка сама викликається посеред
+## обробки фізичних колізій (снаряд поцілив ворога). Пряма зміна
+## disabled у цей момент падає з помилкою "flushing queries".
 func pool_activate() -> void:
 	_active = true
 	visible = true
-	collision_shape.disabled = false
+	collision_shape.set_deferred("disabled", false)
 
 func pool_deactivate() -> void:
 	_active = false
 	visible = false
-	collision_shape.disabled = true
+	collision_shape.set_deferred("disabled", true)
 	global_position = Vector2(-10000, -10000)
 
 ## Викликає герой, коли підбирає кристал. Повертає скільки XP/золота
