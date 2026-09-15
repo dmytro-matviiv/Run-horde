@@ -25,6 +25,9 @@ const TALENTS := {
 	&"talent_aura_power": {"title": "Багаття Люті", "per_level": "+радіус і шкода аури"},
 }
 
+const BOTTOM_MARGIN := 24.0
+
+@onready var content: VBoxContainer = $VBoxContainer
 @onready var hero_label: Label = $VBoxContainer/HeroLabel
 @onready var gold_label: Label = $VBoxContainer/GoldLabel
 @onready var rows_container: VBoxContainer = $VBoxContainer/ScrollContainer/RowsContainer
@@ -35,6 +38,19 @@ func _ready() -> void:
 	_hero_id = GameState.selected_hero_id
 	hero_label.text = "Таланти: %s" % HeroPool.get_def(_hero_id).title
 	_rebuild()
+	# Банер показуємо лише тут — розділ 8 ТЗ: тільки на екрані
+	# мета-прогресії, ніколи під час рану.
+	AdsManager.banner_height_changed.connect(_on_banner_height_changed)
+	AdsManager.show_banner()
+
+func _exit_tree() -> void:
+	AdsManager.banner_height_changed.disconnect(_on_banner_height_changed)
+	AdsManager.hide_banner()
+
+## Банер нативний і малюється поверх гри — відсуваємо вміст угору на
+## його висоту, щоб він не перекривав кнопку "Назад".
+func _on_banner_height_changed(height_px: int) -> void:
+	content.offset_bottom = -(BOTTOM_MARGIN + height_px)
 
 func _rebuild() -> void:
 	gold_label.text = "Золото: %d" % GameState.gold

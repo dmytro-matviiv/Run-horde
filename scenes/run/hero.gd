@@ -259,6 +259,10 @@ func is_invulnerable() -> bool:
 	return _invulnerable
 
 func take_damage(amount: float) -> void:
+	# Вже мертвий — ігноруємо: кілька ударів в один кадр інакше
+	# еміттили б died кілька разів (і відкривали кілька вікон воскресіння).
+	if current_hp <= 0.0:
+		return
 	var actual_damage := maxf(1.0, amount - _armor_flat_reduction)
 	current_hp -= actual_damage
 	if current_hp <= 0.0:
@@ -266,12 +270,19 @@ func take_damage(amount: float) -> void:
 		set_physics_process(false)
 		died.emit()
 	else:
-		_start_iframes()
+		_start_iframes(Balance.HERO_IFRAMES + _iframe_bonus)
 
-func _start_iframes() -> void:
+## Воскресіння за rewarded-рекламу: частина HP і довша невразливість,
+## щоб рій довкола не вбив героя в перший же кадр.
+func revive() -> void:
+	current_hp = max_hp * Balance.REVIVE_HP_FRACTION
+	set_physics_process(true)
+	_start_iframes(Balance.REVIVE_IFRAMES)
+
+func _start_iframes(duration: float) -> void:
 	_invulnerable = true
 	modulate.a = 0.5
-	await get_tree().create_timer(Balance.HERO_IFRAMES + _iframe_bonus).timeout
+	await get_tree().create_timer(duration).timeout
 	_invulnerable = false
 	modulate.a = 1.0
 

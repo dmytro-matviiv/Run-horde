@@ -50,3 +50,10 @@ static func idle_gold_per_hour(total_meta_levels: int) -> float:
 const CHEST_COOLDOWN_HOURS := 4.0
 const CHEST_GOLD_MIN := 20
 const CHEST_GOLD_MAX := 80
+
+# Реклама (розділ 8 ТЗ)
+const INTERSTITIAL_EVERY_N_RUNS := 3
+const INTERSTITIAL_GRACE_RUNS := 3        # у перші N ранів нового гравця — ніколи
+const INTERSTITIAL_MIN_INTERVAL_SEC := 90
+const REVIVE_HP_FRACTION := 0.5           # воскресіння за рекламу — з такою часткою HP
+const REVIVE_IFRAMES := 2.0               # довша невразливість, щоб одразу не вбили знову

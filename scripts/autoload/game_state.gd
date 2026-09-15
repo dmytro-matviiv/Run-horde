@@ -45,6 +45,29 @@ var pending_offline_gold := 0
 # не пов'язаний з офлайн-золотом.
 var last_chest_claim_timestamp := 0
 
+# Реклама (розділ 8 ТЗ). ads_removed виставить покупка remove_ads —
+# вимикає лише банер та interstitial, rewarded лишається.
+var ads_removed := false
+var completed_runs := 0
+var last_interstitial_timestamp := 0
+var last_run_gold_doubled := false
+
+func register_completed_run() -> void:
+	completed_runs += 1
+	SaveManager.save_game()
+
+func is_interstitial_due() -> bool:
+	if ads_removed or completed_runs <= Balance.INTERSTITIAL_GRACE_RUNS:
+		return false
+	if completed_runs % Balance.INTERSTITIAL_EVERY_N_RUNS != 0:
+		return false
+	var now := int(Time.get_unix_time_from_system())
+	return now - last_interstitial_timestamp >= Balance.INTERSTITIAL_MIN_INTERVAL_SEC
+
+func mark_interstitial_shown() -> void:
+	last_interstitial_timestamp = int(Time.get_unix_time_from_system())
+	SaveManager.save_game()
+
 # Герої (розділ 6 ТЗ): перший розблокований одразу, інші — за золото.
 var unlocked_hero_ids: Array = [&"runewielder"]
 var selected_hero_id: StringName = &"runewielder"

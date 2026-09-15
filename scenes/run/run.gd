@@ -12,6 +12,7 @@ const PROJECTILE_SCENE := preload("res://scenes/run/projectile.tscn")
 const ENEMY_PROJECTILE_SCENE := preload("res://scenes/run/enemy_projectile.tscn")
 const CRYSTAL_SCENE := preload("res://scenes/run/xp_crystal.tscn")
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
+const REVIVE_PROMPT_SCENE := preload("res://scenes/ui/revive_prompt.tscn")
 const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 
 @onready var hero: CharacterBody2D = $Hero
@@ -32,6 +33,8 @@ var _elapsed_time := 0.0
 var _run_active := true
 var _gold_total := 0
 var _kills_total := 0
+var _revive_used := false
+var _revive_prompt: Node
 
 # Дебаг-оверлей (F3): DPS рахуємо за останню повну секунду, а не
 # накопичувальне середнє — так видно живі коливання по хвилинах.
@@ -132,6 +135,12 @@ func _on_hero_leveled_up(levels_gained: int) -> void:
 		await _show_level_up_choice()
 
 func _show_level_up_choice() -> void:
+	# Левел-ап і смерть можуть статися в один кадр. Чекаємо, поки закриється
+	# вікно воскресіння, інакше вибір апгрейду зняв би паузу під ним.
+	while _revive_prompt != null:
+		await get_tree().process_frame
+	if not _run_active:
+		return
 	var choices := UpgradePool.pick_choices(hero.upgrade_levels, hero.get_luck_bonus())
 	if choices.is_empty():
 		return
@@ -145,8 +154,40 @@ func _show_level_up_choice() -> void:
 	hero.apply_upgrade(picked_id)
 	get_tree().paused = false
 
+## Перша смерть за ран — пропонуємо воскреснути за rewarded-рекламу
+## (розділ 8 ТЗ: раз на ран). Друга — одразу кінець.
 func _on_hero_died() -> void:
+	if _revive_used:
+		_end_run(false)
+		return
+	_revive_used = true
+	get_tree().paused = true
+	_revive_prompt = REVIVE_PROMPT_SCENE.instantiate()
+	_revive_prompt.process_mode = Node.PROCESS_MODE_ALWAYS
+	hud.add_child(_revive_prompt)
+	_revive_prompt.revive_requested.connect(_on_revive_requested)
+	_revive_prompt.gave_up.connect(_on_revive_declined)
+
+func _on_revive_requested() -> void:
+	AdsManager.show_rewarded_ad(_on_revive_ad_watched, _on_revive_ad_skipped)
+
+func _on_revive_ad_watched() -> void:
+	_close_revive_prompt()
+	hero.revive()
+
+func _on_revive_ad_skipped() -> void:
+	if _revive_prompt != null:
+		_revive_prompt.mark_revive_unavailable()
+
+func _on_revive_declined() -> void:
+	_close_revive_prompt()
 	_end_run(false)
+
+func _close_revive_prompt() -> void:
+	if _revive_prompt != null:
+		_revive_prompt.queue_free()
+		_revive_prompt = null
+	get_tree().paused = false
 
 ## Смерть ніколи не марна — золото банкується в GameState в обох
 ## випадках (перемога/смерть), а не лише при вдалому забігу.
@@ -162,7 +203,12 @@ func _end_run(victory: bool) -> void:
 	GameState.last_run_kills = _kills_total
 	GameState.last_run_time = _elapsed_time
 	GameState.last_run_victory = victory
+	GameState.last_run_gold_doubled = false
+	GameState.register_completed_run()
 	get_tree().create_timer(1.2).timeout.connect(_go_to_results)
 
 func _go_to_results() -> void:
+	# Interstitial — між раном і результатами, щоб не переривати бій.
+	if GameState.is_interstitial_due():
+		AdsManager.show_interstitial()
 	get_tree().change_scene_to_file(RESULTS_SCENE_PATH)

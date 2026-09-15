@@ -7,6 +7,7 @@ extends Control
 signal closed
 
 @onready var amount_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/AmountLabel
+@onready var claim_double_button: Button = $CenterContainer/Panel/MarginContainer/VBoxContainer/ClaimDoubleButton
 
 func _ready() -> void:
 	amount_label.text = "+%d золота" % GameState.pending_offline_gold
@@ -16,11 +17,16 @@ func _on_claim_pressed() -> void:
 	_close()
 
 func _on_claim_double_pressed() -> void:
-	AdsManager.show_rewarded_ad(_on_ad_reward_granted)
+	claim_double_button.disabled = true
+	AdsManager.show_rewarded_ad(_on_ad_reward_granted, _on_ad_skipped)
 
 func _on_ad_reward_granted() -> void:
 	GameState.claim_offline_gold(2)
 	_close()
+
+## Ролик не завантажився або його закрили — звичайне "Забрати" лишається.
+func _on_ad_skipped() -> void:
+	claim_double_button.text = "Реклама недоступна"
 
 func _close() -> void:
 	closed.emit()

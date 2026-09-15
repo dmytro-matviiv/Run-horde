@@ -17,6 +17,9 @@ func save_game() -> void:
 		"last_chest_claim_timestamp": GameState.last_chest_claim_timestamp,
 		"unlocked_hero_ids": _stringnames_to_strings(GameState.unlocked_hero_ids),
 		"selected_hero_id": str(GameState.selected_hero_id),
+		"ads_removed": GameState.ads_removed,
+		"completed_runs": GameState.completed_runs,
+		"last_interstitial_timestamp": GameState.last_interstitial_timestamp,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -42,6 +45,9 @@ func load_game() -> void:
 	GameState.last_chest_claim_timestamp = data.get("last_chest_claim_timestamp", 0)
 	GameState.unlocked_hero_ids = _strings_to_stringnames(data.get("unlocked_hero_ids", ["runewielder"]))
 	GameState.selected_hero_id = StringName(data.get("selected_hero_id", "runewielder"))
+	GameState.ads_removed = data.get("ads_removed", false)
+	GameState.completed_runs = data.get("completed_runs", 0)
+	GameState.last_interstitial_timestamp = data.get("last_interstitial_timestamp", 0)
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає
 ## сейв у форматі наступної, тому старі сейви ніколи не ламаються.
