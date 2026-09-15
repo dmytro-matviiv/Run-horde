@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+	<!-- Тимчасова іконка-заглушка (реальний арт — пізніше, Фаза 7). Лише щоб Android-експорт мав що показати. -->
+	<rect width="128" height="128" rx="24" fill="#14141c"/>
+	<circle cx="64" cy="64" r="40" fill="none" stroke="#33ccff" stroke-width="6"/>
+	<path d="M64 34 L78 64 L64 94 L50 64 Z" fill="#33ccff"/>
+</svg>
