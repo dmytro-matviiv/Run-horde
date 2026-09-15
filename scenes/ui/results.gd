@@ -37,7 +37,7 @@ func _on_double_gold_watched() -> void:
 	_refresh_stats()
 
 func _on_double_gold_skipped() -> void:
-	double_gold_button.text = "Реклама недоступна"
+	double_gold_button.text = "Нагороду не отримано"
 
 func _on_retry_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/run/run.tscn")

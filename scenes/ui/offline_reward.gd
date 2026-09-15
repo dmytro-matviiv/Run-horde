@@ -26,7 +26,7 @@ func _on_ad_reward_granted() -> void:
 
 ## Ролик не завантажився або його закрили — звичайне "Забрати" лишається.
 func _on_ad_skipped() -> void:
-	claim_double_button.text = "Реклама недоступна"
+	claim_double_button.text = "Нагороду не отримано"
 
 func _close() -> void:
 	closed.emit()

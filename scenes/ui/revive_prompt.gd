@@ -17,7 +17,7 @@ func _on_revive_pressed() -> void:
 ## Ролик не завантажився або його закрили достроково — вікно лишається,
 ## щоб гравець міг завершити ран.
 func mark_revive_unavailable() -> void:
-	revive_button.text = "Воскресіння недоступне"
+	revive_button.text = "Воскресіння не отримано"
 	revive_button.disabled = true
 
 func _on_give_up_pressed() -> void:

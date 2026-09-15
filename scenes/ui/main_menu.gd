@@ -66,5 +66,5 @@ func _on_chest_ad_reward() -> void:
 	_update_chest_button()
 
 func _on_chest_ad_skipped() -> void:
-	chest_button.text = "Реклама недоступна"
+	chest_button.text = "Нагороду не отримано"
 	_chest_message_left = CHEST_MESSAGE_SEC
