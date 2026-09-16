@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"frost_staff"
+title = "Посох Криги"
+description = "Кидає крижане поле: воно шкодить і сильно сповільнює всіх усередині."
+hero_id = &"runewielder"
+cost_gems = 300
+archetype = "ground_zone"
+damage = 6.0
+cooldown = 2.2
+color = Color(0.55, 0.9, 1, 1)
+zone_radius = 90.0
+zone_duration = 4.0
+status = &"slow"
+status_power = 0.5
+status_duration = 1.0

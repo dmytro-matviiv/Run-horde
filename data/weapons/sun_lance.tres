@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"sun_lance"
+title = "Сонячний Спис"
+description = "Промінь світла прошиває всіх на своєму шляху й лишає їх горіти."
+hero_id = &"ember_priestess"
+cost_gems = 450
+archetype = "projectile"
+damage = 22.0
+cooldown = 1.4
+color = Color(1, 0.95, 0.5, 1)
+projectile_speed = 600.0
+pierce = 8
+projectile_scale = 1.6
+status = &"burn"
+status_power = 5.0
+status_duration = 3.0

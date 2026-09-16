@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"staff_meteor"
+title = "Посох Метеора"
+description = "Повільний метеор, що вибухає по площі й підпалює всіх у радіусі вибуху."
+hero_id = &"runewielder"
+cost_gems = 400
+archetype = "aoe_projectile"
+damage = 26.0
+cooldown = 1.6
+color = Color(1, 0.45, 0.15, 1)
+projectile_speed = 260.0
+projectile_scale = 1.8
+aoe_radius = 95.0
+status = &"burn"
+status_power = 7.0
+status_duration = 3.0

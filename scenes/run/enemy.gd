@@ -28,6 +28,13 @@ var _on_damage: Callable
 var _active := false
 var _ranged_cooldown_left := 0.0
 
+# Статус-ефекти (StatusEffects): id -> {"power": float, "left": float}.
+# Отрута й горіння шкодять щосекунди, сповільнення ріже швидкість,
+# мітка збільшує отриману шкоду. Все разом дає гравцю видимий
+# зворотний зв'язок: підсвічений ворог = на ньому щось висить.
+var _statuses: Dictionary = {}
+var _dot_tick_left := 0.0
+
 func _ready() -> void:
 	add_to_group("enemies")
 
@@ -50,6 +57,9 @@ func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float, on_death
 	xp_drop = def.xp_drop
 	gold_drop = def.gold_drop
 	_ranged_cooldown_left = RANGED_ATTACK_COOLDOWN * 0.5
+	_statuses.clear()
+	_dot_tick_left = 0.0
+	modulate = Color.WHITE
 
 	var shape := CircleShape2D.new()
 	shape.radius = def.radius
@@ -75,14 +85,73 @@ func pool_deactivate() -> void:
 func _physics_process(delta: float) -> void:
 	if not _active or _hero == null:
 		return
+	_process_statuses(delta)
+	if not _active:
+		return   # згорів/отруївся на цьому кадрі — вже в пулі
 	if _def.attack_type == "ranged":
 		_process_ranged(delta)
 	else:
 		_process_melee()
 
 func _process_melee() -> void:
-	velocity = global_position.direction_to(_hero.global_position) * _def.speed
+	velocity = global_position.direction_to(_get_chase_position()) * get_move_speed()
 	move_and_slide()
+
+## Коли асасин у димовій завісі, вороги його не бачать і біжать туди,
+## де бачили востаннє, — саме це робить завісу помітною для гравця.
+func _get_chase_position() -> Vector2:
+	if _hero.has_method("is_stealthed") and _hero.is_stealthed():
+		return _hero.get_last_seen_position()
+	return _hero.global_position
+
+## Вішає статус-ефект. Повторне накладання не додається, а поновлює
+## тривалість і лишає сильніший ефект — інакше десяток снарядів
+## складався б у нездоланну отруту.
+func apply_status(id: StringName, power: float, duration: float) -> void:
+	if id == &"" or duration <= 0.0:
+		return
+	var current: Dictionary = _statuses.get(id, {"power": 0.0, "left": 0.0})
+	_statuses[id] = {
+		"power": maxf(current.power, power),
+		"left": maxf(current.left, duration),
+	}
+	_update_status_tint()
+
+func has_status(id: StringName) -> bool:
+	return _statuses.has(id)
+
+## Швидкість з урахуванням сповільнення (0.5 = -50%).
+func get_move_speed() -> float:
+	var slow: float = _statuses.get(StatusEffects.SLOW, {}).get("power", 0.0)
+	return _def.speed * (1.0 - clampf(slow, 0.0, 0.85))
+
+func _process_statuses(delta: float) -> void:
+	if _statuses.is_empty():
+		return
+	var expired: Array = []
+	for id in _statuses:
+		_statuses[id].left -= delta
+		if _statuses[id].left <= 0.0:
+			expired.append(id)
+	for id in expired:
+		_statuses.erase(id)
+	if not expired.is_empty():
+		_update_status_tint()
+
+	# Шкода від отрути/горіння — раз на секунду, а не щокадру: так
+	# числа в балансі читаються як "шкода за секунду".
+	_dot_tick_left -= delta
+	if _dot_tick_left > 0.0:
+		return
+	_dot_tick_left = 1.0
+	var dot := 0.0
+	for id in [StatusEffects.POISON, StatusEffects.BURN]:
+		dot += _statuses.get(id, {}).get("power", 0.0)
+	if dot > 0.0:
+		take_damage(dot)
+
+func _update_status_tint() -> void:
+	modulate = StatusEffects.get_tint(_statuses.keys())
 
 ## Тримається на RANGED_ATTACK_RANGE від героя й періодично стріляє,
 ## замість того щоб іти в контактну атаку впритул.
@@ -112,15 +181,19 @@ func get_contact_damage() -> float:
 func take_damage(amount: float) -> void:
 	if not _active:
 		return
+	# Мітка (коса асасина) робить ворога вразливішим — множник тут,
+	# щоб діяв на будь-яке джерело шкоди, а не лише на зброю.
+	var mark: float = _statuses.get(StatusEffects.MARK, {}).get("power", 0.0)
+	var final_damage := amount * (1.0 + mark)
 	if _on_damage.is_valid():
-		_on_damage.call(amount)
-	current_hp -= amount
+		_on_damage.call(final_damage)
+	current_hp -= final_damage
 	if current_hp <= 0.0:
 		_die()
 
 func _die() -> void:
 	if _on_death.is_valid():
-		_on_death.call()
+		_on_death.call(global_position)
 	if _def.explodes_on_death:
 		_explode()
 	if _crystal_pool != null:

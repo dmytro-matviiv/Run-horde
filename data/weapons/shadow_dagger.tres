@@ -1,0 +1,16 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"shadow_dagger"
+title = "Тіньовий Кинджал"
+description = "Стартова зброя асасина: дуже швидкі кидки кинджалів."
+hero_id = &"void_assassin"
+cost_gems = 0
+archetype = "projectile"
+damage = 8.0
+cooldown = 0.5
+color = Color(0.75, 0.5, 1, 1)
+projectile_speed = 520.0

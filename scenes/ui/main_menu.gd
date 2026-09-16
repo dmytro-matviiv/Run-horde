@@ -59,6 +59,9 @@ func _on_upgrades_pressed() -> void:
 func _on_heroes_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/heroes.tscn")
 
+func _on_weapons_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/weapons.tscn")
+
 func _on_shop_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/shop.tscn")
 

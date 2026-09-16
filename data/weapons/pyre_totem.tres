@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pyre_totem"
+title = "Багаття"
+description = "Ставить вогнище: воно довго горить на місці й спалює всіх, хто в нього зайшов."
+hero_id = &"ember_priestess"
+cost_gems = 350
+archetype = "ground_zone"
+damage = 8.0
+cooldown = 2.0
+color = Color(1, 0.35, 0.1, 1)
+zone_radius = 85.0
+zone_duration = 5.0
+status = &"burn"
+status_power = 6.0
+status_duration = 2.0

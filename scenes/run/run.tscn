@@ -18,6 +18,8 @@ position = Vector2(576, 324)
 
 [node name="CrystalContainer" type="Node2D" parent="."]
 
+[node name="EffectContainer" type="Node2D" parent="."]
+
 [node name="Spawner" type="Node" parent="."]
 script = ExtResource("3")
 
@@ -58,6 +60,15 @@ offset_bottom = 132.0
 theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
 text = "Золото: 0"
+
+[node name="AbilityLabel" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 132.0
+offset_right = 420.0
+offset_bottom = 160.0
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.75, 0.6, 1, 1)
+text = ""
 
 [node name="DebugLabel" type="Label" parent="HUD"]
 visible = false

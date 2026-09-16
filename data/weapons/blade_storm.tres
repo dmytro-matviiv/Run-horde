@@ -1,0 +1,18 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"blade_storm"
+title = "Вихор Смерті"
+description = "Чотири клинки без упину крутяться навколо героїні й ріжуть усіх, хто підійшов, — навіть тих, хто вже впритул."
+hero_id = &"blade_warden"
+cost_gems = 450
+archetype = "orbit_storm"
+damage = 9.0
+cooldown = 0.35
+color = Color(0.85, 0.55, 0.15, 1)
+orbit_count = 4
+orbit_radius = 80.0
+orbit_speed = 3.6

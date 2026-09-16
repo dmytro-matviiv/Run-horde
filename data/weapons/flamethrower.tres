@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"flamethrower"
+title = "Вогнемет"
+description = "Струмінь полум'я конусом: б'є всіх перед собою й підпалює їх."
+hero_id = &"ember_priestess"
+cost_gems = 400
+archetype = "cone"
+damage = 7.0
+cooldown = 1.3
+color = Color(1, 0.5, 0.1, 1)
+cone_angle_deg = 70.0
+cone_range = 200.0
+cone_duration = 0.8
+status = &"burn"
+status_power = 8.0
+status_duration = 2.5

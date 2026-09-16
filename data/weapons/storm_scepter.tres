@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"storm_scepter"
+title = "Жезл Грози"
+description = "Блискавка перестрибує з ворога на ворога й сповільнює уражених."
+hero_id = &"runewielder"
+cost_gems = 350
+archetype = "chain"
+damage = 14.0
+cooldown = 1.0
+color = Color(0.6, 0.85, 1, 1)
+chain_targets = 4
+chain_range = 230.0
+status = &"slow"
+status_power = 0.35
+status_duration = 2.0

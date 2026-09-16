@@ -8,7 +8,9 @@ class_name Run
 ## банкує зібране золото в GameState і переходить на екран результатів.
 
 const ENEMY_SCENE := preload("res://scenes/run/enemy.tscn")
-const PROJECTILE_SCENE := preload("res://scenes/run/projectile.tscn")
+const PROJECTILE_SCENE := preload("res://scenes/run/weapon_projectile.tscn")
+const BLAST_SCENE := preload("res://scenes/run/aoe_blast.tscn")
+const GROUND_ZONE_SCENE := preload("res://scenes/run/ground_zone.tscn")
 const ENEMY_PROJECTILE_SCENE := preload("res://scenes/run/enemy_projectile.tscn")
 const CRYSTAL_SCENE := preload("res://scenes/run/xp_crystal.tscn")
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
@@ -18,6 +20,7 @@ const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 @onready var hero: CharacterBody2D = $Hero
 @onready var enemy_container: Node2D = $EnemyContainer
 @onready var projectile_container: Node2D = $ProjectileContainer
+@onready var effect_container: Node2D = $EffectContainer
 @onready var enemy_projectile_container: Node2D = $EnemyProjectileContainer
 @onready var crystal_container: Node2D = $CrystalContainer
 @onready var spawner: Node = $Spawner
@@ -28,6 +31,7 @@ const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 @onready var gold_label: Label = $HUD/GoldLabel
 @onready var game_over_label: Label = $HUD/GameOverLabel
 @onready var debug_label: Label = $HUD/DebugLabel
+@onready var ability_label: Label = $HUD/AbilityLabel
 
 var _elapsed_time := 0.0
 var _run_active := true
@@ -48,14 +52,20 @@ func _ready() -> void:
 	# секунди рану не тригерили instantiate() посеред бою.
 	var enemy_pool := ObjectPool.new(ENEMY_SCENE, enemy_container, 20)
 	var projectile_pool := ObjectPool.new(PROJECTILE_SCENE, projectile_container, 10)
+	# Вибухи й зони на землі — нова система зброї (WeaponModule) і
+	# класові уміння беруть їх звідси.
+	var blast_pool := ObjectPool.new(BLAST_SCENE, effect_container, 8)
+	var zone_pool := ObjectPool.new(GROUND_ZONE_SCENE, effect_container, 4)
 	var enemy_projectile_pool := ObjectPool.new(ENEMY_PROJECTILE_SCENE, enemy_projectile_container, 5)
 	var crystal_pool := ObjectPool.new(CRYSTAL_SCENE, crystal_container, 20)
 
-	hero.setup(projectile_pool)
+	hero.setup(projectile_pool, blast_pool, zone_pool)
 	hero.died.connect(_on_hero_died)
 	hero.leveled_up.connect(_on_hero_leveled_up)
 	hero.gold_collected.connect(_on_gold_collected)
 	hero.apply_hero_def(HeroPool.get_def(GameState.selected_hero_id))
+	# Чим саме б'ється герой, вирішено ще в меню — в магазині зброї.
+	hero.equip_weapon(WeaponPool.get_def(GameState.get_equipped_weapon_id(GameState.selected_hero_id)))
 	# apply_meta_upgrades може одразу емітити leveled_up (бонусні рівні
 	# від "Стартового рівня") — сигнал має бути підключений до цього.
 	hero.apply_meta_upgrades(GameState.get_hero_meta_levels(GameState.selected_hero_id))
@@ -92,6 +102,7 @@ func _update_dps_window(delta: float) -> void:
 
 func _on_damage_dealt(amount: float) -> void:
 	_damage_this_second += amount
+	hero.notify_damage_dealt(amount)
 
 ## Простий дебаг-оверлей для балансування (розділ 4 ТЗ): FPS, DPS за
 ## останню секунду, скільки ворогів зараз активні на екрані, хвилина
@@ -121,12 +132,28 @@ func _update_hud() -> void:
 	hp_label.text = "HP: %d / %d" % [int(hero.current_hp), int(hero.max_hp)]
 	level_label.text = "Рівень %d (XP %d/%d)" % [hero.level, hero.xp, Balance.xp_to_next(hero.level)]
 	gold_label.text = "Золото: %d" % _gold_total
+	_update_ability_label()
+
+## Смужка класового вміння: гравець має бачити, коли вміння ось-ось
+## спрацює (рунна нова, ривок люті, клони асасина).
+func _update_ability_label() -> void:
+	var ability: HeroAbility = hero.get_ability()
+	if ability == null:
+		ability_label.visible = false
+		return
+	var filled := int(round(ability.get_charge_ratio() * 10.0))
+	ability_label.text = "%s  [%s%s]" % [
+		ability.get_status_text(),
+		"|".repeat(filled),
+		".".repeat(10 - filled),
+	]
 
 func _on_gold_collected(amount: int) -> void:
 	_gold_total += amount
 
-func _on_enemy_died() -> void:
+func _on_enemy_died(at_position: Vector2) -> void:
 	_kills_total += 1
+	hero.notify_enemy_killed(at_position)
 
 ## За один підбір кристала теоретично можна перестрибнути й кілька
 ## рівнів — тоді питаємо про апгрейд послідовно, по одному вибору.

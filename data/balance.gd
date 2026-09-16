@@ -12,11 +12,9 @@ const HERO_MOVE_SPEED := 170.0      # пікселів за секунду (170:
 const HERO_PICKUP_RADIUS := 60.0
 const HERO_IFRAMES := 0.6           # невразливість після удару, сек
 
-# Базова зброя
-const WEAPON_DAMAGE := 10.0
-const WEAPON_COOLDOWN := 0.8        # сек між пострілами
-const WEAPON_PROJECTILE_SPEED := 400.0
-const WEAPON_PIERCE := 0            # скільки ворогів пробиває наскрізь
+# Зброя тепер описана окремими ресурсами в data/weapons/*.tres
+# (WeaponDef): шкода, кулдаун, швидкість снаряда й архетип атаки
+# належать конкретній зброї, а не грі загалом.
 
 # Вороги — конкретні стати кожного типу тепер в data/enemies/*.tres
 # (EnemyDef), тут лишається тільки спільне для всіх снарядів ворогів.

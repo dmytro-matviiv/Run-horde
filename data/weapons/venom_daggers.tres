@@ -1,0 +1,21 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"venom_daggers"
+title = "Отруйні Кинджали"
+description = "Віяло з трьох кинджалів; отрута продовжує роз'їдати ворога після влучання."
+hero_id = &"void_assassin"
+cost_gems = 450
+archetype = "projectile"
+damage = 7.0
+cooldown = 0.75
+color = Color(0.5, 1, 0.5, 1)
+projectile_speed = 480.0
+shots = 3
+spread_deg = 16.0
+status = &"poison"
+status_power = 11.0
+status_duration = 4.0

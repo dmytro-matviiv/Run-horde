@@ -1,0 +1,17 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/heroes/hero_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"void_assassin"
+title = "Асасин Порожнечі"
+description = "Преміум-герой за геми. Мітить ціль, кличе тіньових клонів і зникає в димовій завісі, коли справи кепські."
+color = Color(0.6, 0.35, 0.95, 1)
+unlock_cost = 0
+gem_cost = 900
+bonus_max_hp = -15.0
+move_speed_percent = 0.18
+bonus_weapon = "none"
+ability_id = &"shadow_kit"
+unique_talent_id = &"talent_shadow_clones"

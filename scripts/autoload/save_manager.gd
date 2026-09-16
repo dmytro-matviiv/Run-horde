@@ -6,7 +6,7 @@ extends Node
 ## файлу.
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SCHEMA_VERSION := 3
+const CURRENT_SCHEMA_VERSION := 4
 
 func save_game() -> void:
 	var data := {
@@ -23,6 +23,8 @@ func save_game() -> void:
 		"gems": GameState.gems,
 		"install_timestamp": GameState.install_timestamp,
 		"claimed_starter_packs": _stringnames_to_strings(GameState.claimed_starter_packs),
+		"owned_weapon_ids": _stringnames_to_strings(GameState.owned_weapon_ids),
+		"equipped_weapon_ids": _keys_to_string(_values_to_strings(GameState.equipped_weapon_ids)),
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -54,6 +56,8 @@ func load_game() -> void:
 	GameState.gems = data.get("gems", 0)
 	GameState.install_timestamp = data.get("install_timestamp", 0)
 	GameState.claimed_starter_packs = _strings_to_stringnames(data.get("claimed_starter_packs", []))
+	GameState.owned_weapon_ids = _strings_to_stringnames(data.get("owned_weapon_ids", []))
+	GameState.equipped_weapon_ids = _keys_to_string_name(_values_to_stringnames(data.get("equipped_weapon_ids", {})))
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає
 ## сейв у форматі наступної, тому старі сейви ніколи не ламаються.
@@ -63,6 +67,8 @@ func _migrate(data: Dictionary) -> Dictionary:
 		data = _migrate_v1_to_v2(data)
 	if version < 3:
 		data = _migrate_v2_to_v3(data)
+	if version < 4:
+		data = _migrate_v3_to_v4(data)
 	return data
 
 ## v1 мав один спільний meta_upgrade_levels на всіх героїв разом; v2 —
@@ -83,6 +89,28 @@ func _migrate_v2_to_v3(data: Dictionary) -> Dictionary:
 		data["install_timestamp"] = 1
 	data["schema_version"] = 3
 	return data
+
+## v4 додав зброю. Старому сейву просто дописуємо порожні списки —
+## герой і далі б'ється стартовою зброєю, поки гравець не купить іншу.
+func _migrate_v3_to_v4(data: Dictionary) -> Dictionary:
+	data["owned_weapon_ids"] = data.get("owned_weapon_ids", [])
+	data["equipped_weapon_ids"] = data.get("equipped_weapon_ids", {})
+	data["schema_version"] = 4
+	return data
+
+## У словнику "герой -> зброя" в String треба перевести не лише ключі,
+## а й значення (теж StringName).
+func _values_to_strings(dict: Dictionary) -> Dictionary:
+	var result := {}
+	for key in dict:
+		result[key] = str(dict[key])
+	return result
+
+func _values_to_stringnames(dict: Dictionary) -> Dictionary:
+	var result := {}
+	for key in dict:
+		result[key] = StringName(dict[key])
+	return result
 
 ## JSON не вміє StringName-ключі — переводимо в String перед записом.
 func _keys_to_string(dict: Dictionary) -> Dictionary:

@@ -9,6 +9,7 @@ const ALL_HEROES: Array[HeroDef] = [
 	preload("res://data/heroes/runewielder.tres"),
 	preload("res://data/heroes/blade_warden.tres"),
 	preload("res://data/heroes/ember_priestess.tres"),
+	preload("res://data/heroes/void_assassin.tres"),
 ]
 
 static func get_def(id: StringName) -> HeroDef:

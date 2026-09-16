@@ -23,6 +23,7 @@ const TALENTS := {
 	&"talent_bolt_pierce": {"title": "Пробивна Руна", "per_level": "+1 пробиття магічного болта"},
 	&"talent_extra_blades": {"title": "Вихор Клинків", "per_level": "+1 орбітальний клинок"},
 	&"talent_aura_power": {"title": "Багаття Люті", "per_level": "+радіус і шкода аури"},
+	&"talent_shadow_clones": {"title": "Володар Тіней", "per_level": "клони приходять частіше й б'ють сильніше"},
 }
 
 const BOTTOM_MARGIN := 24.0

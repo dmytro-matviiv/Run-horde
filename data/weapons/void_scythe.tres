@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"void_scythe"
+title = "Коса Порожнечі"
+description = "Розмашистий удар косою за спиною й перед собою — майже повне коло."
+hero_id = &"void_assassin"
+cost_gems = 500
+archetype = "melee_arc"
+damage = 30.0
+cooldown = 0.8
+color = Color(0.6, 0.3, 0.9, 1)
+melee_arc_deg = 200.0
+melee_range = 130.0
+status = &"mark"
+status_power = 0.25
+status_duration = 3.0

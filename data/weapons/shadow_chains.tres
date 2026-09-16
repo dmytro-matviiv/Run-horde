@@ -1,0 +1,20 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"shadow_chains"
+title = "Тіньові Ланцюги"
+description = "Ланцюг темряви перестрибує між п'ятьма ворогами й труїть кожного."
+hero_id = &"void_assassin"
+cost_gems = 550
+archetype = "chain"
+damage = 15.0
+cooldown = 1.1
+color = Color(0.45, 0.25, 0.8, 1)
+chain_targets = 5
+chain_range = 240.0
+status = &"poison"
+status_power = 8.0
+status_duration = 3.0

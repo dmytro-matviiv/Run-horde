@@ -1,0 +1,16 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"war_blade"
+title = "Метальний Клинок"
+description = "Стартова зброя вартової: швидкий клинок по найближчому ворогу."
+hero_id = &"blade_warden"
+cost_gems = 0
+archetype = "projectile"
+damage = 11.0
+cooldown = 0.85
+color = Color(0.9, 0.9, 0.95, 1)
+projectile_speed = 430.0

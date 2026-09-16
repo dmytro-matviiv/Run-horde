@@ -24,6 +24,7 @@ const META_UPGRADE_MAX_LEVELS := {
 	&"talent_bolt_pierce": 3,
 	&"talent_extra_blades": 2,
 	&"talent_aura_power": 3,
+	&"talent_shadow_clones": 3,
 }
 
 var gold := 0
@@ -159,6 +160,54 @@ func mark_interstitial_shown() -> void:
 # Герої (розділ 6 ТЗ): перший розблокований одразу, інші — за золото.
 var unlocked_hero_ids: Array = [&"runewielder"]
 var selected_hero_id: StringName = &"runewielder"
+
+## Преміум-герой купується за геми, а не за золото (HeroDef.gem_cost).
+func unlock_hero_with_gems(id: StringName) -> bool:
+	if is_hero_unlocked(id):
+		return false
+	var def := HeroPool.get_def(id)
+	if def.gem_cost <= 0 or not spend_gems(def.gem_cost):
+		return false
+	unlocked_hero_ids.append(id)
+	SaveManager.save_game()
+	return true
+
+# Зброя (WeaponPool). Стартова зброя героя безкоштовна й доступна
+# завжди; решту купують за геми. Спорядження — окреме на кожного
+# героя: сокира вартової не з'являється в руках жриці.
+var owned_weapon_ids: Array = []          # StringName
+var equipped_weapon_ids: Dictionary = {}  # StringName (hero_id) -> StringName (weapon_id)
+
+func is_weapon_owned(id: StringName) -> bool:
+	return WeaponPool.get_def(id).cost_gems <= 0 or owned_weapon_ids.has(id)
+
+## Повертає true, якщо зброю куплено (вистачило гемів і її ще не було).
+func buy_weapon(id: StringName) -> bool:
+	if is_weapon_owned(id):
+		return false
+	var def := WeaponPool.get_def(id)
+	if not spend_gems(def.cost_gems):
+		return false
+	owned_weapon_ids.append(id)
+	SaveManager.save_game()
+	return true
+
+## Спорядити зброю героєві. Чужу зброю (іншого героя) взяти не можна —
+## асортимент у кожного свій.
+func equip_weapon(hero_id: StringName, weapon_id: StringName) -> bool:
+	var def := WeaponPool.get_def(weapon_id)
+	if def.hero_id != hero_id or not is_weapon_owned(weapon_id):
+		return false
+	equipped_weapon_ids[hero_id] = weapon_id
+	SaveManager.save_game()
+	return true
+
+## Чим герой б'ється зараз. Якщо нічого не спорядили — стартова зброя.
+func get_equipped_weapon_id(hero_id: StringName) -> StringName:
+	var equipped: StringName = equipped_weapon_ids.get(hero_id, &"")
+	if equipped != &"" and is_weapon_owned(equipped):
+		return equipped
+	return WeaponPool.get_starter_for_hero(hero_id).id
 
 func is_hero_unlocked(id: StringName) -> bool:
 	return unlocked_hero_ids.has(id)

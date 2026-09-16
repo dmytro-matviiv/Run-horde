@@ -12,4 +12,5 @@ unlock_cost = 0
 bonus_max_hp = 0.0
 move_speed_percent = 0.0
 bonus_weapon = "none"
+ability_id = &"rune_charge"
 unique_talent_id = &"talent_bolt_pierce"

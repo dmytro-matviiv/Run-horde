@@ -1,0 +1,18 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"harpoon_glaive"
+title = "Глефа"
+description = "Важка глефа прошиває наскрізь цілий рядок ворогів."
+hero_id = &"blade_warden"
+cost_gems = 300
+archetype = "projectile"
+damage = 17.0
+cooldown = 1.0
+color = Color(0.7, 0.95, 0.8, 1)
+projectile_speed = 520.0
+pierce = 4
+projectile_scale = 1.4
