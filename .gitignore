@@ -13,3 +13,6 @@ export_presets.cfg
 # OS
 .DS_Store
 Thumbs.db
+
+# Завантажені архіви з наборами арту (сирці, у гру не йдуть)
+/assets_incoming/
