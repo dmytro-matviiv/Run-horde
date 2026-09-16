@@ -40,8 +40,20 @@ var _ranged_cooldown_left := 0.0
 var _statuses: Dictionary = {}
 var _dot_tick_left := 0.0
 
+## Анімація: хода, замах, здригання від удару й згасання при смерті.
+## Ворог не зникає миттєво — спершу дограє смерть, аж потім
+## повертається в пул.
+var _animator: SpriteAnimator
+var _dying := false
+var _melee_swing_left := 0.0
+
+const MELEE_SWING_INTERVAL := 0.9   # як часто ворог замахується впритул
+const MELEE_SWING_RANGE := 46.0
+
 func _ready() -> void:
 	add_to_group("enemies")
+	_animator = SpriteAnimator.new()
+	add_child(_animator)
 
 func set_pool(pool: ObjectPool) -> void:
 	_pool = pool
@@ -62,8 +74,12 @@ func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float, on_death
 	xp_drop = def.xp_drop
 	gold_drop = def.gold_drop
 	_ranged_cooldown_left = RANGED_ATTACK_COOLDOWN * 0.5
+	if not is_in_group("enemies"):
+		add_to_group("enemies")
 	_statuses.clear()
 	_dot_tick_left = 0.0
+	_dying = false
+	_melee_swing_left = 0.0
 	modulate = Color.WHITE
 
 	var shape := CircleShape2D.new()
@@ -85,6 +101,8 @@ func _apply_art(def: EnemyDef) -> void:
 	art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / float(def.texture.get_height()))
 	art.visible = true
 	sprite.visible = false
+	_animator.setup(art, def.texture, def.texture_back)
+	_animator.reset()
 
 ## disabled міняємо через set_deferred — pool_deactivate() тут
 ## викликається з _die(), тобто посеред обробки фізичних колізій,
@@ -101,6 +119,12 @@ func pool_deactivate() -> void:
 	global_position = Vector2(-10000, -10000)
 
 func _physics_process(delta: float) -> void:
+	if _dying:
+		# Дограємо смерть і лише тоді віддаємо вузол у пул.
+		if _animator.is_death_finished():
+			_dying = false
+			_pool.release(self)
+		return
 	if not _active or _hero == null:
 		return
 	_process_statuses(delta)
@@ -112,8 +136,22 @@ func _physics_process(delta: float) -> void:
 		_process_melee()
 
 func _process_melee() -> void:
-	velocity = global_position.direction_to(_get_chase_position()) * get_move_speed()
+	var direction := global_position.direction_to(_get_chase_position())
+	velocity = direction * get_move_speed()
 	move_and_slide()
+	_animator.set_move_direction(direction)
+	_process_melee_swing(direction)
+
+## Замах перед ударом: гравець бачить, що ворог його зараз дістане,
+## а не просто "втикається" в героя.
+func _process_melee_swing(direction: Vector2) -> void:
+	_melee_swing_left -= get_physics_process_delta_time()
+	if _melee_swing_left > 0.0:
+		return
+	if global_position.distance_to(_hero.global_position) > MELEE_SWING_RANGE:
+		return
+	_melee_swing_left = MELEE_SWING_INTERVAL
+	_animator.play_attack(direction)
 
 ## Коли асасин у димовій завісі, вороги його не бачать і біжать туди,
 ## де бачили востаннє, — саме це робить завісу помітною для гравця.
@@ -166,10 +204,14 @@ func _process_statuses(delta: float) -> void:
 	for id in [StatusEffects.POISON, StatusEffects.BURN]:
 		dot += _statuses.get(id, {}).get("power", 0.0)
 	if dot > 0.0:
-		take_damage(dot)
+		# Отрута й горіння цокають щосекунди на кожному ворогові — якщо
+		# їх озвучувати, виходить безперервний тріск.
+		take_damage(dot, false)
 
 func _update_status_tint() -> void:
-	modulate = StatusEffects.get_tint(_statuses.keys())
+	# Колір статусу тримає аніматор: інакше здригання від удару
+	# затирало б підсвітку отрути чи горіння.
+	_animator.set_base_tint(StatusEffects.get_tint(_statuses.keys()))
 
 ## Тримається на RANGED_ATTACK_RANGE від героя й періодично стріляє,
 ## замість того щоб іти в контактну атаку впритул.
@@ -181,8 +223,10 @@ func _process_ranged(delta: float) -> void:
 		velocity = Vector2.ZERO
 	move_and_slide()
 
+	_animator.set_move_direction(velocity.normalized() if velocity.length() > 1.0 else Vector2.ZERO)
 	_ranged_cooldown_left -= delta
 	if _ranged_cooldown_left <= 0.0 and distance <= RANGED_ATTACK_RANGE * 1.3:
+		_animator.play_attack(global_position.direction_to(_hero.global_position))
 		_fire_at_hero()
 		_ranged_cooldown_left = RANGED_ATTACK_COOLDOWN
 
@@ -196,14 +240,16 @@ func _fire_at_hero() -> void:
 func get_contact_damage() -> float:
 	return _def.damage
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, play_sound: bool = true) -> void:
 	if not _active:
 		return
 	# Мітка (коса асасина) робить ворога вразливішим — множник тут,
 	# щоб діяв на будь-яке джерело шкоди, а не лише на зброю.
 	var mark: float = _statuses.get(StatusEffects.MARK, {}).get("power", 0.0)
 	var final_damage := amount * (1.0 + mark)
-	AudioManager.play(&"hit")
+	if play_sound:
+		AudioManager.play(&"hit")
+	_animator.play_hit_flash()
 	if _on_damage.is_valid():
 		_on_damage.call(final_damage)
 	current_hp -= final_damage
@@ -212,6 +258,15 @@ func take_damage(amount: float) -> void:
 
 func _die() -> void:
 	AudioManager.play(&"enemy_death")
+	# Вбивство зараховуємо одразу, а зникає ворог після анімації —
+	# інакше лічильник і нагороди чекали б на картинку.
+	_dying = true
+	_active = false
+	# Труп більше не ціль: поки програється смерть, зброя не має
+	# витрачати на нього постріли.
+	remove_from_group("enemies")
+	collision_shape.set_deferred("disabled", true)
+	_animator.play_death()
 	if _on_death.is_valid():
 		_on_death.call(global_position)
 	if _def.explodes_on_death:
@@ -219,7 +274,6 @@ func _die() -> void:
 	if _crystal_pool != null:
 		var crystal: Node = _crystal_pool.acquire()
 		crystal.spawn(global_position, xp_drop, gold_drop)
-	_pool.release(self)
 
 ## АоЕ-шкода герою, якщо той опинився поруч у момент смерті ворога
 ## (павук-підривник). Поважає i-фрейми героя, як і звичайний контакт.

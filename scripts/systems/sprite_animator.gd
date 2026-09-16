@@ -1,0 +1,157 @@
+extends Node
+class_name SpriteAnimator
+
+## Оживляє один спрайт: крок, дихання на місці, поворот у бік руху,
+## замах при атаці, здригання від удару, згасання при смерті.
+##
+## Зроблено процедурно, а не покадровою мальованою анімацією, свідомо:
+## покадрова вимагала б десятків малюнків на кожного героя й ворога в
+## кожному напрямку. Тут та сама "жива" картинка рухається за
+## математикою — хода з підстрибуванням і нахилом, від чого персонаж
+## перестає "їздити по підлозі".
+##
+## Вигляд спереду/ззаду перемикається двома картинками: йдеш угору —
+## видно спину, йдеш униз — обличчя. Якщо картинки спини ще немає,
+## лишається та, що є, і нічого не ламається.
+
+const STEP_SPEED := 9.0        # частота кроків
+const STEP_HEIGHT := 3.0       # на скільки пікселів підстрибує на кроці
+const STEP_SQUASH := 0.06      # присідання під час кроку
+const SWAY_ANGLE := 0.07       # похитування корпусом, радіани
+const BREATH_SPEED := 2.2
+const BREATH_SCALE := 0.02
+
+const ATTACK_TIME := 0.18
+const ATTACK_LUNGE := 10.0     # ривок у бік цілі під час удару
+const FLASH_TIME := 0.09
+const DEATH_TIME := 0.16
+
+var _sprite: Sprite2D
+var _front: Texture2D
+var _back: Texture2D
+var _base_scale := Vector2.ONE
+var _base_tint := Color.WHITE
+
+var _step_phase := 0.0
+var _move_direction := Vector2.ZERO
+var _facing_back := false
+var _flip := false
+
+var _attack_left := 0.0
+var _attack_aim := Vector2.RIGHT
+var _flash_left := 0.0
+var _death_left := 0.0
+
+## front/back — картинки спереду й ззаду; back може бути null.
+func setup(sprite: Sprite2D, front: Texture2D, back: Texture2D = null) -> void:
+	_sprite = sprite
+	_front = front
+	_back = back
+	_base_scale = sprite.scale
+	_base_tint = sprite.modulate
+	if front != null:
+		sprite.texture = front
+
+## Напрямок руху (нульовий — стоїмо). Викликає власник щокадру.
+func set_move_direction(direction: Vector2) -> void:
+	_move_direction = direction
+	if direction.length() < 0.1:
+		return
+	# Ліворуч/праворуч — дзеркалимо ту саму картинку; вгору/вниз —
+	# міняємо спину на обличчя.
+	if absf(direction.x) > 0.25:
+		_flip = direction.x < 0.0
+	if direction.y < -0.35:
+		_facing_back = true
+	elif direction.y > 0.35:
+		_facing_back = false
+
+## Замах у бік цілі. Викликається на кожен удар зброї чи ворога.
+func play_attack(aim: Vector2) -> void:
+	_attack_aim = aim.normalized()
+	_attack_left = ATTACK_TIME
+
+## Коротке біле здригання — видно, що удар зарахований.
+func play_hit_flash() -> void:
+	_flash_left = FLASH_TIME
+
+## Стискання й згасання перед зникненням (смерть ворога).
+func play_death() -> void:
+	_death_left = DEATH_TIME
+
+func is_death_finished() -> bool:
+	return _death_left <= 0.0
+
+## Колір, до якого все повертається: ним статус-ефекти підсвічують ворога.
+func set_base_tint(tint: Color) -> void:
+	_base_tint = tint
+
+## Повертає все у вихідний стан — потрібно пулу, бо той самий вузол
+## завтра грає іншого ворога.
+func reset() -> void:
+	_step_phase = 0.0
+	_move_direction = Vector2.ZERO
+	_attack_left = 0.0
+	_flash_left = 0.0
+	_death_left = 0.0
+	_facing_back = false
+	_flip = false
+	if _sprite != null:
+		_sprite.position = Vector2.ZERO
+		_sprite.rotation = 0.0
+		_sprite.scale = _base_scale
+		_sprite.modulate = _base_tint
+
+func _process(delta: float) -> void:
+	if _sprite == null or not is_instance_valid(_sprite):
+		return
+
+	if _death_left > 0.0:
+		_death_left -= delta
+		var death_progress := 1.0 - clampf(_death_left / DEATH_TIME, 0.0, 1.0)
+		_sprite.scale = _base_scale * (1.0 - 0.6 * death_progress)
+		_sprite.modulate = _base_tint * Color(1, 1, 1, 1.0 - death_progress)
+		_sprite.rotation = death_progress * 0.6
+		return
+
+	var speed := _move_direction.length()
+	var offset := Vector2.ZERO
+	var scale_factor := Vector2.ONE
+	var rotation_value := 0.0
+
+	if speed > 0.1:
+		# Хода: підстрибування вгору-вниз, присідання й похитування —
+		# три речі разом читаються як крок.
+		_step_phase += delta * STEP_SPEED * clampf(speed, 0.4, 1.0)
+		var bounce := absf(sin(_step_phase))
+		offset.y = -bounce * STEP_HEIGHT
+		scale_factor.y = 1.0 + STEP_SQUASH * (bounce - 0.5)
+		scale_factor.x = 1.0 - STEP_SQUASH * (bounce - 0.5)
+		rotation_value = sin(_step_phase * 0.5) * SWAY_ANGLE
+	else:
+		# Стоїмо — тихо "дихаємо", щоб картинка не була мертвою.
+		_step_phase += delta * BREATH_SPEED
+		scale_factor.y = 1.0 + sin(_step_phase) * BREATH_SCALE
+		scale_factor.x = 1.0 - sin(_step_phase) * BREATH_SCALE * 0.5
+
+	if _attack_left > 0.0:
+		_attack_left -= delta
+		# Ривок уперед і назад: швидкий поштовх у бік цілі.
+		var attack_progress := 1.0 - clampf(_attack_left / ATTACK_TIME, 0.0, 1.0)
+		var punch := sin(attack_progress * PI)
+		offset += _attack_aim * punch * ATTACK_LUNGE
+		scale_factor *= 1.0 + 0.12 * punch
+
+	var tint := _base_tint
+	if _flash_left > 0.0:
+		_flash_left -= delta
+		tint = Color(2.2, 2.2, 2.2, _base_tint.a)
+
+	_sprite.position = offset
+	_sprite.rotation = rotation_value
+	_sprite.scale = Vector2(_base_scale.x * scale_factor.x * (-1.0 if _flip else 1.0), _base_scale.y * scale_factor.y)
+	_sprite.modulate = tint
+
+	var wanted: Texture2D = _back if (_facing_back and _back != null) else _front
+	if wanted != null and _sprite.texture != wanted:
+		_sprite.texture = wanted

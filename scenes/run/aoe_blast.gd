@@ -28,7 +28,10 @@ func spawn(at_position: Vector2, radius: float, damage: float, color: Color, sta
 	_elapsed = 0.0
 	_armed = true
 	visible = true
-	AudioManager.play(&"explosion")
+	# Дрібні спалахи (слід полум'я жриці, хмарки з мітки) не озвучуємо:
+	# вони з'являються постійно й забивали б собою весь бій.
+	if radius >= 70.0:
+		AudioManager.play(&"explosion")
 	CombatQuery.hit_all(CombatQuery.enemies_in_circle(get_world_2d(), at_position, radius), damage, status, status_power, status_duration)
 	queue_redraw()
 

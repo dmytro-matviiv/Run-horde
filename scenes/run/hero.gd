@@ -20,6 +20,11 @@ signal leveled_up(levels_gained: int)
 signal gold_collected(amount: int)
 
 const WEAPON_MODULE_SCRIPT := preload("res://scenes/run/weapon_module.gd")
+const WEAPON_VISUAL_SCENE := preload("res://scenes/run/weapon_visual.tscn")
+
+## Розгін і гальмування: без них герой "телепортується" в напрямку
+## руху й виглядає так, наче ковзає по підлозі, а не йде.
+const ACCELERATION := 1400.0
 
 const JOYSTICK_MAX_RADIUS := 80.0   # відстань відтягування для 100% швидкості
 const JOYSTICK_DEAD_ZONE := 4.0     # менші рухи ігноруються як тремтіння пальця
@@ -63,6 +68,8 @@ var _invulnerable := false
 
 var _weapon: WeaponModule
 var _ability: HeroAbility
+var _animator: SpriteAnimator
+var _weapon_visual: Node2D
 
 # Тимчасові ефекти від класових умінь (ривок люті, димова завіса).
 var _temp_attack_speed_bonus := 0.0
@@ -113,6 +120,10 @@ var _aura_tick_left := 0.0
 
 func _ready() -> void:
 	pickup_area.area_entered.connect(_on_pickup_area_entered)
+	_animator = SpriteAnimator.new()
+	add_child(_animator)
+	_weapon_visual = WEAPON_VISUAL_SCENE.instantiate()
+	add_child(_weapon_visual)
 
 ## Пули приходять з run.gd: снаряди, вибухи й зони на землі потрібні
 ## новій системі зброї та класовим умінням.
@@ -128,6 +139,8 @@ func equip_weapon(def: WeaponDef) -> void:
 	if _weapon == null or def == null:
 		return
 	_weapon.equip(def)
+	# Зброю видно в руках: інша зброя — інший вигляд і інший замах.
+	_weapon_visual.show_weapon(def)
 
 func get_weapon_def() -> WeaponDef:
 	return null if _weapon == null else _weapon.get_def()
@@ -139,7 +152,7 @@ func get_weapon_def() -> WeaponDef:
 ## (level 1) і міг далі пропонувати прокачати, а не "взяти вперше".
 func apply_hero_def(def: HeroDef) -> void:
 	sprite.color = def.color
-	_apply_art(def.texture)
+	_apply_art(def)
 	max_hp += def.bonus_max_hp
 	current_hp = max_hp
 	_hero_move_speed_percent = def.move_speed_percent
@@ -154,13 +167,14 @@ func apply_hero_def(def: HeroDef) -> void:
 
 ## Спрайт замість кольорової фігури. Якщо картинки для героя ще
 ## немає — лишаємо фігуру, гра від цього не ламається.
-func _apply_art(texture: Texture2D) -> void:
-	if texture == null:
+func _apply_art(def: HeroDef) -> void:
+	if def.texture == null:
 		return
-	art.texture = texture
-	art.scale = Vector2.ONE * (ART_HEIGHT / float(texture.get_height()))
+	art.texture = def.texture
+	art.scale = Vector2.ONE * (ART_HEIGHT / float(def.texture.get_height()))
 	art.visible = true
 	sprite.visible = false
+	_animator.setup(art, def.texture, def.texture_back)
 
 ## Викликається один раз на старті рану (run.gd), до того як гравець
 ## взяв хоч один апгрейд у рані. Мета-рівні йдуть з GameState.
@@ -219,8 +233,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			_move_direction = Vector2.ZERO
 
 func _physics_process(delta: float) -> void:
-	velocity = _get_move_direction() * Balance.HERO_MOVE_SPEED * _move_speed_multiplier
+	var direction := _get_move_direction()
+	var target_velocity := direction * Balance.HERO_MOVE_SPEED * _move_speed_multiplier
+	velocity = velocity.move_toward(target_velocity, ACCELERATION * delta)
 	move_and_slide()
+	_animator.set_move_direction(direction)
 	_process_temp_effects(delta)
 	if _weapon != null:
 		_weapon.process_attack(delta, _get_weapon_stats())
@@ -274,6 +291,10 @@ func notify_enemy_killed(at_position: Vector2) -> void:
 		_ability.on_enemy_killed(at_position)
 
 func _on_weapon_attacked(target: Node2D) -> void:
+	if target != null:
+		var aim := global_position.direction_to(target.global_position)
+		_animator.play_attack(aim)
+		_weapon_visual.swing(aim)
 	if _ability != null:
 		_ability.on_attack(target)
 
@@ -363,6 +384,7 @@ func take_damage(amount: float) -> void:
 		return
 	var actual_damage := maxf(1.0, amount - _armor_flat_reduction)
 	current_hp -= actual_damage
+	_animator.play_hit_flash()
 	if _ability != null:
 		_ability.on_hero_damaged(actual_damage)
 	if current_hp > 0.0:

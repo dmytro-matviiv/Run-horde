@@ -20,6 +20,7 @@ class_name EnemyDef
 
 ## Спрайт ворога; якщо не заданий — малюється кольорова фігура.
 @export var texture: Texture2D
+@export var texture_back: Texture2D
 @export_enum("melee", "ranged") var attack_type: String = "melee"
 @export var explodes_on_death: bool = false
 @export var min_spawn_minute: float = 0.0

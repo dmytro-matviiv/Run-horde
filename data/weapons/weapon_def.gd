@@ -26,6 +26,10 @@ var archetype: String = "projectile"
 @export var cooldown: float = 0.8
 @export var color: Color = Color(1, 0.9, 0.2)
 
+## Картинка зброї в руках героя. Поки її немає, зброя малюється
+## простою фігурою за архетипом — але видно, що вона змінилась.
+@export var icon: Texture2D
+
 @export_group("Снаряди")
 @export var projectile_speed: float = 400.0
 @export var projectile_scale: float = 1.0
