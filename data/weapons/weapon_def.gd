@@ -54,6 +54,12 @@ var archetype: String = "projectile"
 @export var orbit_radius: float = 70.0
 @export var orbit_speed: float = 3.0
 
+@export_group("Ефекти")
+## Спалах у момент удару (розсічення сокири, вибух метеора). Беруться
+## з куплених/безкоштовних наборів ефектів — VfxDef описує аркуш кадрів.
+@export var swing_vfx: VfxDef
+@export var hit_vfx: VfxDef
+
 @export_group("Статус-ефект")
 ## Порожній StringName = без ефекту. Решта — StatusEffects.POISON/BURN/SLOW.
 @export var status: StringName

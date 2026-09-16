@@ -31,6 +31,7 @@ var _hero: Node2D
 var _projectile_pool: ObjectPool
 var _blast_pool: ObjectPool
 var _zone_pool: ObjectPool
+var _vfx_pool: ObjectPool
 
 var _def: WeaponDef
 var _cooldown_left := 0.0
@@ -38,11 +39,20 @@ var _storm_blades: Array[Node] = []
 var _flame_cone: Node
 var _last_stats: Dictionary = {}
 
-func setup(hero: Node2D, projectile_pool: ObjectPool, blast_pool: ObjectPool, zone_pool: ObjectPool) -> void:
+func setup(hero: Node2D, projectile_pool: ObjectPool, blast_pool: ObjectPool, zone_pool: ObjectPool, vfx_pool: ObjectPool = null) -> void:
 	_hero = hero
 	_projectile_pool = projectile_pool
 	_blast_pool = blast_pool
 	_zone_pool = zone_pool
+	_vfx_pool = vfx_pool
+
+## Намальований спалах із набору ефектів (VfxDef). Поки набору немає —
+## нічого не відбувається, бій виглядає як раніше.
+func play_vfx(def: VfxDef, at_position: Vector2, rotation_angle: float = 0.0) -> void:
+	if _vfx_pool == null or def == null or def.texture == null:
+		return
+	var vfx: Node = _vfx_pool.acquire()
+	vfx.play(def, at_position, rotation_angle)
 
 func equip(def: WeaponDef) -> void:
 	_def = def
@@ -135,6 +145,7 @@ func _fire_projectiles(aim: Vector2, damage: float) -> void:
 ## пул вибухів живе тут.
 func _on_projectile_explode(at_position: Vector2, damage: float) -> void:
 	spawn_blast(at_position, _def.aoe_radius, damage, _def.color, _def.status, _def.status_power, _def.status_duration)
+	play_vfx(_def.hit_vfx, at_position)
 
 func _fire_cone(aim: Vector2, damage: float) -> void:
 	if _flame_cone != null and is_instance_valid(_flame_cone):
@@ -147,11 +158,13 @@ func _swing_melee(aim: Vector2, damage: float) -> void:
 	var swing: Node = MELEE_ARC_SCENE.instantiate()
 	_hero.add_child(swing)
 	swing.strike(_hero.global_position, aim, _def, damage)
+	play_vfx(_def.swing_vfx, _hero.global_position + aim * _def.melee_range * 0.5, aim.angle())
 
 func _fire_chain(target: Node2D, damage: float) -> void:
 	var chain: Node = CHAIN_LIGHTNING_SCENE.instantiate()
 	add_child(chain)
 	chain.strike(_hero.global_position, target, _def, damage)
+	play_vfx(_def.hit_vfx, target.global_position)
 
 func _drop_zone(at_position: Vector2, damage: float) -> void:
 	if _zone_pool == null:

@@ -29,6 +29,15 @@ const DEATH_TIME := 0.16
 var _sprite: Sprite2D
 var _front: Texture2D
 var _back: Texture2D
+
+# Покадрова анімація з купленого аркуша. Поки її немає, працює лише
+# процедурна (підстрибування, дихання) — гра виглядає прийнятно і без
+# придбаного арту.
+var _has_sheet := false
+var _sheet_fps := 12.0
+var _clips: Dictionary = {}
+var _clip_time := 0.0
+var _current_clip: StringName = &""
 var _base_scale := Vector2.ONE
 var _base_tint := Color.WHITE
 
@@ -51,6 +60,51 @@ func setup(sprite: Sprite2D, front: Texture2D, back: Texture2D = null) -> void:
 	_base_tint = sprite.modulate
 	if front != null:
 		sprite.texture = front
+
+## Вмикає покадрову анімацію: аркуш кадрів і діапазони (від, до) для
+## станів idle/walk/attack/death. Викликається після setup().
+func setup_frames(sheet: Texture2D, hframes: int, vframes: int, fps: float, clips: Dictionary) -> void:
+	if sheet == null or _sprite == null:
+		return
+	_has_sheet = true
+	_sheet_fps = fps
+	_clips = clips
+	_sprite.texture = sheet
+	_sprite.hframes = maxi(hframes, 1)
+	_sprite.vframes = maxi(vframes, 1)
+	_current_clip = &""
+
+func has_frame_animation() -> bool:
+	return _has_sheet
+
+## Який стан показувати зараз: смерть > удар > хода > спокій.
+func _wanted_clip() -> StringName:
+	if _death_left > 0.0 and _clips.has(&"death"):
+		return &"death"
+	if _attack_left > 0.0 and _clips.has(&"attack"):
+		return &"attack"
+	if _move_direction.length() > 0.1 and _clips.has(&"walk"):
+		return &"walk"
+	return &"idle"
+
+func _process_frames(delta: float) -> void:
+	var clip := _wanted_clip()
+	if not _clips.has(clip):
+		return
+	if clip != _current_clip:
+		_current_clip = clip
+		_clip_time = 0.0
+	_clip_time += delta
+	var range_value: Vector2i = _clips[clip]
+	var frames := maxi(range_value.y - range_value.x + 1, 1)
+	var index := int(_clip_time * _sheet_fps)
+	# Удар і смерть грають один раз і застигають на останньому кадрі,
+	# хода й спокій крутяться по колу.
+	if clip == &"attack" or clip == &"death":
+		index = mini(index, frames - 1)
+	else:
+		index = index % frames
+	_sprite.frame = range_value.x + index
 
 ## Напрямок руху (нульовий — стоїмо). Викликає власник щокадру.
 func set_move_direction(direction: Vector2) -> void:
@@ -114,12 +168,19 @@ func _process(delta: float) -> void:
 		_sprite.rotation = death_progress * 0.6
 		return
 
+	if _has_sheet:
+		_process_frames(delta)
+
 	var speed := _move_direction.length()
 	var offset := Vector2.ZERO
 	var scale_factor := Vector2.ONE
 	var rotation_value := 0.0
 
-	if speed > 0.1:
+	# Якщо кроки вже намальовані на аркуші, процедурне підстрибування
+	# лише заважало б — лишаємо дзеркалення, ривок і спалах.
+	if _has_sheet:
+		pass
+	elif speed > 0.1:
 		# Хода: підстрибування вгору-вниз, присідання й похитування —
 		# три речі разом читаються як крок.
 		_step_phase += delta * STEP_SPEED * clampf(speed, 0.4, 1.0)
@@ -152,6 +213,9 @@ func _process(delta: float) -> void:
 	_sprite.scale = Vector2(_base_scale.x * scale_factor.x * (-1.0 if _flip else 1.0), _base_scale.y * scale_factor.y)
 	_sprite.modulate = tint
 
+	# На аркуші кадрів текстуру міняти не можна — там уже всі кадри.
+	if _has_sheet:
+		return
 	var wanted: Texture2D = _back if (_facing_back and _back != null) else _front
 	if wanted != null and _sprite.texture != wanted:
 		_sprite.texture = wanted

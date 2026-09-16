@@ -127,10 +127,10 @@ func _ready() -> void:
 
 ## Пули приходять з run.gd: снаряди, вибухи й зони на землі потрібні
 ## новій системі зброї та класовим умінням.
-func setup(projectile_pool: ObjectPool, blast_pool: ObjectPool, zone_pool: ObjectPool) -> void:
+func setup(projectile_pool: ObjectPool, blast_pool: ObjectPool, zone_pool: ObjectPool, vfx_pool: ObjectPool = null) -> void:
 	_weapon = WEAPON_MODULE_SCRIPT.new()
 	add_child(_weapon)
-	_weapon.setup(self, projectile_pool, blast_pool, zone_pool)
+	_weapon.setup(self, projectile_pool, blast_pool, zone_pool, vfx_pool)
 	_weapon.attacked.connect(_on_weapon_attacked)
 
 ## Спорядити зброю (WeaponPool). Викликається на старті рану з тим,
@@ -168,13 +168,38 @@ func apply_hero_def(def: HeroDef) -> void:
 ## Спрайт замість кольорової фігури. Якщо картинки для героя ще
 ## немає — лишаємо фігуру, гра від цього не ламається.
 func _apply_art(def: HeroDef) -> void:
-	if def.texture == null:
+	# Три рівні: куплений аркуш кадрів -> одна картинка -> кольорова
+	# фігура. Кожен наступний працює, поки немає попереднього.
+	if def.sheet == null and def.texture == null:
 		return
-	art.texture = def.texture
-	art.scale = Vector2.ONE * (ART_HEIGHT / float(def.texture.get_height()))
 	art.visible = true
 	sprite.visible = false
+	if def.texture != null:
+		art.texture = def.texture
+		art.scale = Vector2.ONE * (ART_HEIGHT / float(def.texture.get_height()))
 	_animator.setup(art, def.texture, def.texture_back)
+	_apply_sheet(def.sheet, def.sheet_hframes, def.sheet_vframes, def.sheet_fps,
+		def.clip_idle, def.clip_walk, def.clip_attack, def.clip_death)
+
+## Вмикає покадрову анімацію з купленого аркуша, якщо він заданий.
+## Кадр масштабуємо по висоті ОДНОГО кадру, а не всього аркуша.
+func _apply_sheet(sheet: Texture2D, hframes: int, vframes: int, fps: float,
+		idle: Vector2i, walk: Vector2i, attack: Vector2i, death: Vector2i) -> void:
+	if sheet == null:
+		return
+	var clips := {}
+	if idle != Vector2i.ZERO:
+		clips[&"idle"] = idle
+	if walk != Vector2i.ZERO:
+		clips[&"walk"] = walk
+	if attack != Vector2i.ZERO:
+		clips[&"attack"] = attack
+	if death != Vector2i.ZERO:
+		clips[&"death"] = death
+	art.visible = true
+	sprite.visible = false
+	art.scale = Vector2.ONE * (ART_HEIGHT / maxf(float(sheet.get_height()) / maxf(float(vframes), 1.0), 1.0))
+	_animator.setup_frames(sheet, hframes, vframes, fps, clips)
 
 ## Викликається один раз на старті рану (run.gd), до того як гравець
 ## взяв хоч один апгрейд у рані. Мета-рівні йдуть з GameState.

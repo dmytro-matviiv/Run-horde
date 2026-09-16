@@ -93,15 +93,31 @@ func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float, on_death
 ## Один і той самий вузол із пулу щоразу грає іншого ворога, тому
 ## картинку (або її відсутність) переставляємо на кожен спавн.
 func _apply_art(def: EnemyDef) -> void:
-	if def.texture == null:
+	# Як і в героя: аркуш кадрів -> одна картинка -> кольорова фігура.
+	if def.sheet == null and def.texture == null:
 		art.visible = false
 		sprite.visible = true
 		return
-	art.texture = def.texture
-	art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / float(def.texture.get_height()))
 	art.visible = true
 	sprite.visible = false
+	if def.texture != null:
+		art.texture = def.texture
+		art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / float(def.texture.get_height()))
 	_animator.setup(art, def.texture, def.texture_back)
+	if def.sheet != null:
+		var clips := {}
+		if def.clip_idle != Vector2i.ZERO:
+			clips[&"idle"] = def.clip_idle
+		if def.clip_walk != Vector2i.ZERO:
+			clips[&"walk"] = def.clip_walk
+		if def.clip_attack != Vector2i.ZERO:
+			clips[&"attack"] = def.clip_attack
+		if def.clip_death != Vector2i.ZERO:
+			clips[&"death"] = def.clip_death
+		# Масштаб рахуємо по висоті ОДНОГО кадру, а не всього аркуша.
+		var frame_height := maxf(float(def.sheet.get_height()) / maxf(float(def.sheet_vframes), 1.0), 1.0)
+		art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / frame_height)
+		_animator.setup_frames(def.sheet, def.sheet_hframes, def.sheet_vframes, def.sheet_fps, clips)
 	_animator.reset()
 
 ## disabled міняємо через set_deferred — pool_deactivate() тут

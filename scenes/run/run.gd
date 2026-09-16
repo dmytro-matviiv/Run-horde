@@ -11,6 +11,7 @@ const ENEMY_SCENE := preload("res://scenes/run/enemy.tscn")
 const PROJECTILE_SCENE := preload("res://scenes/run/weapon_projectile.tscn")
 const BLAST_SCENE := preload("res://scenes/run/aoe_blast.tscn")
 const GROUND_ZONE_SCENE := preload("res://scenes/run/ground_zone.tscn")
+const VFX_SCENE := preload("res://scenes/run/vfx_player.tscn")
 const ENEMY_PROJECTILE_SCENE := preload("res://scenes/run/enemy_projectile.tscn")
 const CRYSTAL_SCENE := preload("res://scenes/run/xp_crystal.tscn")
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
@@ -56,10 +57,12 @@ func _ready() -> void:
 	# класові уміння беруть їх звідси.
 	var blast_pool := ObjectPool.new(BLAST_SCENE, effect_container, 8)
 	var zone_pool := ObjectPool.new(GROUND_ZONE_SCENE, effect_container, 4)
+	# Намальовані спалахи з наборів ефектів (порожньо, поки набору немає).
+	var vfx_pool := ObjectPool.new(VFX_SCENE, effect_container, 6)
 	var enemy_projectile_pool := ObjectPool.new(ENEMY_PROJECTILE_SCENE, enemy_projectile_container, 5)
 	var crystal_pool := ObjectPool.new(CRYSTAL_SCENE, crystal_container, 20)
 
-	hero.setup(projectile_pool, blast_pool, zone_pool)
+	hero.setup(projectile_pool, blast_pool, zone_pool, vfx_pool)
 	hero.died.connect(_on_hero_died)
 	hero.leveled_up.connect(_on_hero_leveled_up)
 	hero.gold_collected.connect(_on_gold_collected)

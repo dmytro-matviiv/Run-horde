@@ -21,6 +21,21 @@ class_name EnemyDef
 ## Спрайт ворога; якщо не заданий — малюється кольорова фігура.
 @export var texture: Texture2D
 @export var texture_back: Texture2D
+
+@export_group("Спрайт-лист (куплений набір)")
+## Якщо тут лежить аркуш кадрів — персонаж анімується ПОКАДРОВО, як у
+## справжніх іграх, а не лише процедурним похитуванням. Порожньо —
+## лишається одна картинка й процедурна анімація.
+@export var sheet: Texture2D
+@export var sheet_hframes: int = 1
+@export var sheet_vframes: int = 1
+@export var sheet_fps: float = 12.0
+## Діапазони кадрів (від, до) для кожного стану. (0, 0) = стану немає.
+@export var clip_idle: Vector2i = Vector2i.ZERO
+@export var clip_walk: Vector2i = Vector2i.ZERO
+@export var clip_attack: Vector2i = Vector2i.ZERO
+@export var clip_death: Vector2i = Vector2i.ZERO
+
 @export_enum("melee", "ranged") var attack_type: String = "melee"
 @export var explodes_on_death: bool = false
 @export var min_spawn_minute: float = 0.0

@@ -26,6 +26,21 @@ class_name HeroDef
 @export var move_speed_percent: float = 0.0
 @export_enum("none", "orbital_blades", "damage_aura") var bonus_weapon: String = "none"
 
+
+@export_group("Спрайт-лист (куплений набір)")
+## Якщо тут лежить аркуш кадрів — персонаж анімується ПОКАДРОВО, як у
+## справжніх іграх, а не лише процедурним похитуванням. Порожньо —
+## лишається одна картинка й процедурна анімація.
+@export var sheet: Texture2D
+@export var sheet_hframes: int = 1
+@export var sheet_vframes: int = 1
+@export var sheet_fps: float = 12.0
+## Діапазони кадрів (від, до) для кожного стану. (0, 0) = стану немає.
+@export var clip_idle: Vector2i = Vector2i.ZERO
+@export var clip_walk: Vector2i = Vector2i.ZERO
+@export var clip_attack: Vector2i = Vector2i.ZERO
+@export var clip_death: Vector2i = Vector2i.ZERO
+
 ## Класове вміння (AbilityPool.ABILITIES) — головна причина грати
 ## саме за цього героя: рунна нова, ривок люті, фенікс, тіні асасина.
 @export var ability_id: StringName
