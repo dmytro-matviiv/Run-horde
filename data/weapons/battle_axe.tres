@@ -1,6 +1,7 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/vfx/wind_slash.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -15,3 +16,4 @@ cooldown = 0.9
 color = Color(1, 0.8, 0.3, 1)
 melee_arc_deg = 140.0
 melee_range = 120.0
+swing_vfx = ExtResource("2")

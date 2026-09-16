@@ -20,7 +20,7 @@ func set_pool(pool: ObjectPool) -> void:
 	_pool = pool
 
 ## rotation_angle — куди "дивиться" ефект (для розсічень і променів).
-func play(def: VfxDef, at_position: Vector2, rotation_angle: float = 0.0) -> void:
+func play(def: VfxDef, at_position: Vector2, rotation_angle: float = 0.0, scale_multiplier: float = 1.0) -> void:
 	if def == null or def.texture == null:
 		return
 	_def = def
@@ -33,7 +33,7 @@ func play(def: VfxDef, at_position: Vector2, rotation_angle: float = 0.0) -> voi
 	sprite.vframes = maxi(def.vframes, 1)
 	sprite.frame = def.frame_start
 	sprite.modulate = def.modulate_color
-	sprite.scale = Vector2.ONE * (def.height / maxf(float(def.texture.get_height()) / float(sprite.vframes), 1.0))
+	sprite.scale = Vector2.ONE * (def.height * scale_multiplier / maxf(float(def.texture.get_height()) / float(sprite.vframes), 1.0))
 	visible = true
 
 func pool_activate() -> void:

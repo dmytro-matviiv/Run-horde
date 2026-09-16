@@ -48,11 +48,11 @@ func setup(hero: Node2D, projectile_pool: ObjectPool, blast_pool: ObjectPool, zo
 
 ## Намальований спалах із набору ефектів (VfxDef). Поки набору немає —
 ## нічого не відбувається, бій виглядає як раніше.
-func play_vfx(def: VfxDef, at_position: Vector2, rotation_angle: float = 0.0) -> void:
+func play_vfx(def: VfxDef, at_position: Vector2, rotation_angle: float = 0.0, scale_multiplier: float = 1.0) -> void:
 	if _vfx_pool == null or def == null or def.texture == null:
 		return
 	var vfx: Node = _vfx_pool.acquire()
-	vfx.play(def, at_position, rotation_angle)
+	vfx.play(def, at_position, rotation_angle, scale_multiplier)
 
 func equip(def: WeaponDef) -> void:
 	_def = def
@@ -139,7 +139,7 @@ func _fire_projectiles(aim: Vector2, damage: float) -> void:
 		if shots > 1:
 			angle_offset = spread * (i - float(shots - 1) / 2.0)
 		var projectile: Node = _projectile_pool.acquire()
-		projectile.spawn(_hero.global_position, aim.rotated(angle_offset), _def, damage, pierce, ricochet, _on_projectile_explode)
+		projectile.spawn(_hero.global_position, aim.rotated(angle_offset), _def, damage, pierce, ricochet, _on_projectile_explode, _on_projectile_hit)
 
 ## Снаряд вибухає не сам — він лише повідомляє модулю, де саме, бо
 ## пул вибухів живе тут.
@@ -147,12 +147,18 @@ func _on_projectile_explode(at_position: Vector2, damage: float) -> void:
 	spawn_blast(at_position, _def.aoe_radius, damage, _def.color, _def.status, _def.status_power, _def.status_duration)
 	play_vfx(_def.hit_vfx, at_position)
 
+## Влучання звичайного снаряда: спалах у точці удару. Менший за
+## вибух метеора, бо це просто попадання кулі.
+func _on_projectile_hit(at_position: Vector2, direction: Vector2) -> void:
+	play_vfx(_def.hit_vfx, at_position, direction.angle(), 0.5)
+
 func _fire_cone(aim: Vector2, damage: float) -> void:
 	if _flame_cone != null and is_instance_valid(_flame_cone):
 		return
 	_flame_cone = FLAME_CONE_SCENE.instantiate()
 	_hero.add_child(_flame_cone)
 	_flame_cone.ignite(aim, _def, damage)
+	play_vfx(_def.swing_vfx, _hero.global_position + aim * _def.cone_range * 0.4, aim.angle())
 
 func _swing_melee(aim: Vector2, damage: float) -> void:
 	var swing: Node = MELEE_ARC_SCENE.instantiate()
@@ -171,6 +177,7 @@ func _drop_zone(at_position: Vector2, damage: float) -> void:
 		return
 	var zone: Node = _zone_pool.acquire()
 	zone.spawn(at_position, _def, damage)
+	play_vfx(_def.hit_vfx, at_position, 0.0, 1.2)
 
 ## Вихор ріже все коло навколо героя, а не лише точки, де зараз
 ## клинки: інакше ворог, що притиснувся впритул, проходив би між ними.

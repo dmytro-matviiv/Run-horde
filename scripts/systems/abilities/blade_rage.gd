@@ -8,6 +8,8 @@ class_name BladeRageAbility
 ## Це головна причина грати за ближній бій: чим гарячіший бій, тим
 ## частіші ривки.
 
+const DASH_VFX := preload("res://data/vfx/wind_slash.tres")
+
 const RAGE_PER_DAMAGE_DEALT := 0.35
 const RAGE_PER_DAMAGE_TAKEN := 2.5
 const RAGE_NEEDED := 100.0
@@ -51,6 +53,7 @@ func _dash() -> void:
 	for i in range(1, DASH_STEPS + 1):
 		var point := start + direction * (DASH_DISTANCE * float(i) / DASH_STEPS)
 		weapon.spawn_blast(point, DASH_BLAST_RADIUS, damage, Color(1.0, 0.75, 0.3))
+	weapon.play_vfx(DASH_VFX, start + direction * DASH_DISTANCE * 0.5, direction.angle(), 1.5)
 	hero.dash_to(start + direction * DASH_DISTANCE)
 	hero.grant_iframes(DASH_IFRAMES)
 	hero.add_temp_attack_speed(ATTACK_SPEED_BONUS, ATTACK_SPEED_DURATION)

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/vfx/vfx_def.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/vfx/fire_slash.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+texture = ExtResource("2")
+hframes = 6
+vframes = 2
+frame_start = 0
+frame_end = 11
+fps = 24.0
+height = 150.0

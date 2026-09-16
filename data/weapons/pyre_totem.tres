@@ -1,6 +1,7 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/vfx/fire_slash.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -18,3 +19,4 @@ zone_duration = 5.0
 status = &"burn"
 status_power = 6.0
 status_duration = 2.0
+hit_vfx = ExtResource("2")

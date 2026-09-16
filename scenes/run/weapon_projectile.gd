@@ -27,6 +27,7 @@ var _status_power := 0.0
 var _status_duration := 0.0
 var _aoe_radius := 0.0
 var _on_explode: Callable   # виклик у WeaponModule: створити вибух з пулу
+var _on_hit: Callable       # виклик у WeaponModule: намальований спалах удару
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
@@ -36,7 +37,7 @@ func set_pool(pool: ObjectPool) -> void:
 
 ## from_position/direction — звідки й куди; решта — параметри зброї
 ## плюс бонуси героя (шкода й пробиття вже враховують апгрейди).
-func spawn(from_position: Vector2, direction: Vector2, def: WeaponDef, damage: float, pierce: int, ricochet: int, on_explode: Callable) -> void:
+func spawn(from_position: Vector2, direction: Vector2, def: WeaponDef, damage: float, pierce: int, ricochet: int, on_explode: Callable, on_hit: Callable = Callable()) -> void:
 	global_position = from_position
 	_direction = direction
 	rotation = direction.angle()
@@ -51,6 +52,7 @@ func spawn(from_position: Vector2, direction: Vector2, def: WeaponDef, damage: f
 	_status_duration = def.status_duration
 	_aoe_radius = def.aoe_radius
 	_on_explode = on_explode
+	_on_hit = on_hit
 	sprite.color = def.color
 	scale = Vector2.ONE * def.projectile_scale
 
@@ -87,6 +89,8 @@ func _on_body_entered(body: Node) -> void:
 		return
 
 	CombatQuery.hit(body, _damage, _status, _status_power, _status_duration)
+	if _on_hit.is_valid():
+		_on_hit.call(global_position, _direction)
 	if _pierce_left > 0:
 		_pierce_left -= 1
 		return

@@ -6,6 +6,10 @@ class_name RuneChargeAbility
 ## навколо героя, який підпалює всіх довкола. Тобто маг грає ритмом:
 ## кілька звичайних пострілів → потужний вибух, і це видно на екрані.
 
+## Намальований спалах із набору ефектів — щоб Рунна Нова не просто
+## наносила шкоду, а виглядала як подія.
+const NOVA_VFX := preload("res://data/vfx/ultimate_slash.tres")
+
 const CHARGE_PER_ATTACK := 1.0
 const CHARGE_NEEDED := 7.0
 const NOVA_RADIUS := 190.0
@@ -25,6 +29,7 @@ func on_attack(_target: Node2D) -> void:
 func _cast_nova() -> void:
 	if weapon == null:
 		return
+	weapon.play_vfx(NOVA_VFX, hero.global_position, 0.0, 1.8)
 	weapon.spawn_blast(
 		hero.global_position,
 		NOVA_RADIUS,

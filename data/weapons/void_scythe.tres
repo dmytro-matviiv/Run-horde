@@ -1,6 +1,7 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/vfx/poison_slash.tres" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -18,3 +19,4 @@ melee_range = 130.0
 status = &"mark"
 status_power = 0.25
 status_duration = 3.0
+swing_vfx = ExtResource("2")

@@ -7,6 +7,8 @@ class_name PhoenixAbility
 ## відродження, який відкидає вибухом усе довкола й повертає частину
 ## HP. Тому за неї грають ті, хто любить "тримати юрбу".
 
+const REBIRTH_VFX := preload("res://data/vfx/fire_slash.tres")
+
 const TRAIL_INTERVAL := 0.7
 const TRAIL_RADIUS := 42.0
 const TRAIL_DAMAGE := 5.0
@@ -45,6 +47,7 @@ func try_prevent_death() -> bool:
 	_rebirth_used = true
 	hero.restore_hp_fraction(REBIRTH_HP_FRACTION)
 	hero.grant_iframes(REBIRTH_IFRAMES)
+	weapon.play_vfx(REBIRTH_VFX, hero.global_position, 0.0, 2.2)
 	weapon.spawn_blast(
 		hero.global_position,
 		REBIRTH_RADIUS,
