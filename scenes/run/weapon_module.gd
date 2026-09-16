@@ -100,6 +100,7 @@ func _find_target() -> Node2D:
 
 func _attack(target: Node2D) -> void:
 	attacked.emit(target)
+	AudioManager.play(&"shoot")
 	var aim := _hero.global_position.direction_to(target.global_position)
 	var damage := _get_damage()
 	match _def.archetype:

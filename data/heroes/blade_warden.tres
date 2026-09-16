@@ -1,6 +1,7 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/heroes/hero_def.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/hero_blade_warden.png" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -14,3 +15,4 @@ move_speed_percent = -0.1
 bonus_weapon = "orbital_blades"
 ability_id = &"blade_rage"
 unique_talent_id = &"talent_extra_blades"
+texture = ExtResource("2")

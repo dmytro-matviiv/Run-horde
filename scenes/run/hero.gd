@@ -35,7 +35,13 @@ const AURA_RADIUS_PER_LEVEL := 15.0
 const AURA_BASE_DAMAGE := 6.0
 const AURA_DAMAGE_PER_LEVEL := 3.0
 
+## Наскільки високим має бути спрайт героя на екрані (px). Картинки
+## генеруються великими, тож масштаб рахуємо від цієї висоти, а не
+## зашиваємо в кожен файл окремо.
+const ART_HEIGHT := 72.0
+
 @onready var sprite: Polygon2D = $Sprite
+@onready var art: Sprite2D = $Art
 @onready var hurt_box: Area2D = $HurtBox
 @onready var pickup_area: Area2D = $PickupArea
 @onready var pickup_shape: CollisionShape2D = $PickupArea/PickupShape
@@ -133,6 +139,7 @@ func get_weapon_def() -> WeaponDef:
 ## (level 1) і міг далі пропонувати прокачати, а не "взяти вперше".
 func apply_hero_def(def: HeroDef) -> void:
 	sprite.color = def.color
+	_apply_art(def.texture)
 	max_hp += def.bonus_max_hp
 	current_hp = max_hp
 	_hero_move_speed_percent = def.move_speed_percent
@@ -144,6 +151,16 @@ func apply_hero_def(def: HeroDef) -> void:
 		&"damage_aura":
 			upgrade_levels[&"damage_aura"] = 1
 			_rebuild_aura()
+
+## Спрайт замість кольорової фігури. Якщо картинки для героя ще
+## немає — лишаємо фігуру, гра від цього не ламається.
+func _apply_art(texture: Texture2D) -> void:
+	if texture == null:
+		return
+	art.texture = texture
+	art.scale = Vector2.ONE * (ART_HEIGHT / float(texture.get_height()))
+	art.visible = true
+	sprite.visible = false
 
 ## Викликається один раз на старті рану (run.gd), до того як гравець
 ## взяв хоч один апгрейд у рані. Мета-рівні йдуть з GameState.
@@ -349,6 +366,7 @@ func take_damage(amount: float) -> void:
 	if _ability != null:
 		_ability.on_hero_damaged(actual_damage)
 	if current_hp > 0.0:
+		AudioManager.play(&"hero_hurt")
 		_start_iframes(Balance.HERO_IFRAMES + _iframe_bonus)
 		return
 	# Останнє слово за класовим умінням: Фенікс жриці скасовує смерть
@@ -356,6 +374,7 @@ func take_damage(amount: float) -> void:
 	if _ability != null and _ability.try_prevent_death():
 		return
 	current_hp = 0.0
+	AudioManager.play(&"hero_death", 0.0)
 	set_physics_process(false)
 	died.emit()
 
@@ -377,6 +396,7 @@ func _on_pickup_area_entered(area: Area2D) -> void:
 	if not area.has_method("collect"):
 		return
 	var result: Dictionary = area.collect()
+	AudioManager.play(&"pickup")
 	add_xp(result.xp)
 	gold_collected.emit(int(round(result.gold * _gold_multiplier)))
 
@@ -388,6 +408,7 @@ func add_xp(amount: int) -> void:
 		level += 1
 		levels_gained += 1
 	if levels_gained > 0:
+		AudioManager.play(&"level_up", 0.0)
 		leveled_up.emit(levels_gained)
 
 func get_upgrade_level(id: StringName) -> int:

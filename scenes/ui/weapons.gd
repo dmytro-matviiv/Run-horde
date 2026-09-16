@@ -63,6 +63,7 @@ func _build_row(def: WeaponDef, equipped_id: StringName) -> Control:
 ## другий клік нічого не додає.
 func _on_buy_pressed(id: StringName) -> void:
 	if GameState.buy_weapon(id):
+		AudioManager.play(&"purchase", 0.0)
 		GameState.equip_weapon(_hero_id, id)
 	_rebuild()
 

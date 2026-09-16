@@ -1,6 +1,7 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/enemies/enemy_def.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/enemy_bat.png" id="2"]
 
 [resource]
 script = ExtResource("1")
@@ -18,3 +19,4 @@ attack_type = "melee"
 explodes_on_death = false
 min_spawn_minute = 0.0
 spawn_weight = 2.5
+texture = ExtResource("2")

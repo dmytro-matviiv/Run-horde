@@ -200,6 +200,7 @@ func _grant(product_id: String) -> void:
 		if GameState.ads_removed:
 			return   # уже видано (повторне відновлення) — сигнал не потрібен
 		GameState.grant_remove_ads()
+	AudioManager.play(&"purchase", 0.0)
 	purchase_granted.emit(product_id)
 
 ## Імітація вікна оплати Google Play на ПК.

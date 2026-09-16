@@ -10,6 +10,10 @@ class_name HeroDef
 @export var title: String
 @export_multiline var description: String
 @export var color: Color = Color(0.2, 0.8, 1)
+
+## Спрайт героя. Поки картинки немає, малюється кольорова фігура —
+## так гра лишається робочою, доки арт готовий не для всіх.
+@export var texture: Texture2D
 ## Ціна в золоті (0 = стартовий герой). Преміум-герой купується не
 ## за золото, а за геми — тоді unlock_cost = 0, а gem_cost > 0.
 @export var unlock_cost: int = 0

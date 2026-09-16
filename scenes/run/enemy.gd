@@ -12,7 +12,12 @@ const RANGED_ATTACK_COOLDOWN := 1.6
 const EXPLOSION_RADIUS := 70.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
+## Спрайт ворога малюємо трохи більшим за його фізичний радіус:
+## крила, зброя й шолом виходять за межі кола зіткнень.
+const ART_SIZE_FACTOR := 3.4
+
 @onready var sprite: Polygon2D = $Sprite
+@onready var art: Sprite2D = $Art
 
 var current_hp: float
 var xp_drop: int
@@ -67,6 +72,19 @@ func spawn(spawn_position: Vector2, hero: Node2D, minute_of_run: float, on_death
 
 	sprite.color = def.color
 	sprite.polygon = _make_polygon(def.radius)
+	_apply_art(def)
+
+## Один і той самий вузол із пулу щоразу грає іншого ворога, тому
+## картинку (або її відсутність) переставляємо на кожен спавн.
+func _apply_art(def: EnemyDef) -> void:
+	if def.texture == null:
+		art.visible = false
+		sprite.visible = true
+		return
+	art.texture = def.texture
+	art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / float(def.texture.get_height()))
+	art.visible = true
+	sprite.visible = false
 
 ## disabled міняємо через set_deferred — pool_deactivate() тут
 ## викликається з _die(), тобто посеред обробки фізичних колізій,
@@ -185,6 +203,7 @@ func take_damage(amount: float) -> void:
 	# щоб діяв на будь-яке джерело шкоди, а не лише на зброю.
 	var mark: float = _statuses.get(StatusEffects.MARK, {}).get("power", 0.0)
 	var final_damage := amount * (1.0 + mark)
+	AudioManager.play(&"hit")
 	if _on_damage.is_valid():
 		_on_damage.call(final_damage)
 	current_hp -= final_damage
@@ -192,6 +211,7 @@ func take_damage(amount: float) -> void:
 		_die()
 
 func _die() -> void:
+	AudioManager.play(&"enemy_death")
 	if _on_death.is_valid():
 		_on_death.call(global_position)
 	if _def.explodes_on_death:

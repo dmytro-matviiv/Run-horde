@@ -134,11 +134,13 @@ func _show_status(text: String) -> void:
 
 func _on_exchange_pressed(index: int) -> void:
 	if GameState.exchange_gems_for_gold(index):
+		AudioManager.play(&"gold", 0.0)
 		_show_status("Обмін виконано: +%d золота" % Balance.GEM_EXCHANGES[index][1])
 	_rebuild()
 
 func _on_starter_pack_pressed(id: StringName) -> void:
 	if GameState.buy_starter_pack(id):
+		AudioManager.play(&"purchase", 0.0)
 		_show_status("Набір отримано!")
 	_rebuild()
 
