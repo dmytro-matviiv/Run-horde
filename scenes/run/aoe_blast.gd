@@ -13,6 +13,10 @@ var _radius := 60.0
 var _color := Color(1, 0.5, 0.2)
 var _elapsed := 0.0
 var _active := false
+# Удар прилітає з call_deferred (WeaponModule.spawn_blast), тобто на
+# кадр пізніше за взяття з пулу. До того вибух не малюємо й не
+# рахуємо час — інакше він встиг би "згаснути" ще до свого удару.
+var _armed := false
 
 func set_pool(pool: ObjectPool) -> void:
 	_pool = pool
@@ -22,20 +26,25 @@ func spawn(at_position: Vector2, radius: float, damage: float, color: Color, sta
 	_radius = radius
 	_color = color
 	_elapsed = 0.0
+	_armed = true
+	visible = true
 	CombatQuery.hit_all(CombatQuery.enemies_in_circle(get_world_2d(), at_position, radius), damage, status, status_power, status_duration)
 	queue_redraw()
 
 func pool_activate() -> void:
 	_active = true
-	visible = true
+	_elapsed = 0.0
+	_armed = false
+	visible = false
 
 func pool_deactivate() -> void:
 	_active = false
+	_armed = false
 	visible = false
 	global_position = Vector2(-10000, -10000)
 
 func _process(delta: float) -> void:
-	if not _active:
+	if not _active or not _armed:
 		return
 	_elapsed += delta
 	queue_redraw()
@@ -43,7 +52,7 @@ func _process(delta: float) -> void:
 		_pool.release(self)
 
 func _draw() -> void:
-	if not _active:
+	if not _active or not _armed:
 		return
 	var progress := clampf(_elapsed / GROW_TIME, 0.0, 1.0)
 	var color := _color

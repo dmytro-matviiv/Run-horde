@@ -79,11 +79,18 @@ func process_attack(delta: float, stats: Dictionary) -> void:
 
 ## Вибухи потрібні не лише зброї, а й умінням героїв (руна-нова,
 ## вибух мітки) — тому пул вибухів роздає модуль.
+##
+## Сам удар відкладаємо на кінець кадру (call_deferred). Інакше
+## виходить нескінченна рекурсія: вибух убиває ворога -> смерть
+## викликає вміння -> вміння створює новий вибух -> той убиває ще
+## когось... і все це ВСЕРЕДИНІ обробки першої смерті, аж поки не
+## переповниться стек. Відкладений виклик перетворює цей ланцюг на
+## послідовність: кожна хвиля вибухів спрацьовує наступним кроком.
 func spawn_blast(at_position: Vector2, radius: float, damage: float, color: Color, status: StringName = &"", status_power: float = 0.0, status_duration: float = 0.0) -> void:
 	if _blast_pool == null:
 		return
 	var blast: Node = _blast_pool.acquire()
-	blast.spawn(at_position, radius, damage, color, status, status_power, status_duration)
+	blast.spawn.call_deferred(at_position, radius, damage, color, status, status_power, status_duration)
 
 func _get_damage() -> float:
 	return _def.damage * float(_last_stats.get("damage_mult", 1.0))

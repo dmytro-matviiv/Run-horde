@@ -20,6 +20,9 @@ const ATTACK_SPEED_BONUS := 0.4
 const ATTACK_SPEED_DURATION := 4.0
 
 var _rage := 0.0
+# Ривок сам завдає шкоди, а шкода знову наповнює лють — без цього
+# запобіжника ривок міг би викликати сам себе, поки не впаде гра.
+var _dashing := false
 
 func on_damage_dealt(amount: float) -> void:
 	_add_rage(amount * RAGE_PER_DAMAGE_DEALT)
@@ -28,11 +31,15 @@ func on_hero_damaged(amount: float) -> void:
 	_add_rage(amount * RAGE_PER_DAMAGE_TAKEN)
 
 func _add_rage(amount: float) -> void:
+	if _dashing:
+		return
 	_rage += amount
 	if _rage < RAGE_NEEDED:
 		return
 	_rage = 0.0
+	_dashing = true
 	_dash()
+	_dashing = false
 
 ## Ривок: героїня зміщується в бік найближчого ворога й лишає за собою
 ## ланцюжок вибухів — тож шкоду отримують усі на шляху, а не лише ціль.
