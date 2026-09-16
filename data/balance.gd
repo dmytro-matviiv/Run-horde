@@ -57,3 +57,27 @@ const INTERSTITIAL_GRACE_RUNS := 3        # у перші N ранів ново�
 const INTERSTITIAL_MIN_INTERVAL_SEC := 90
 const REVIVE_HP_FRACTION := 0.5           # воскресіння за рекламу — з такою часткою HP
 const REVIVE_IFRAMES := 2.0               # довша невразливість, щоб одразу не вбили знову
+
+# Геми й магазин (розділ 8 ТЗ). УСІ ЧИСЛА НИЖЧЕ — ЧЕРНЕТКА: кількості
+# гемів у пакетах, курс обміну й ціни наборів ще має підтвердити замовник.
+# Реальні ціни в гривнях/доларах задаються в Play Console, не тут.
+const GEMS_SMALL := 100                   # gems_small, $0.99
+const GEMS_MEDIUM := 550                  # gems_medium, $4.99 (+10% бонус)
+const GEMS_LARGE := 2400                  # gems_large, $19.99 (+20% бонус)
+
+## Обмін гемів на золото: [скільки гемів, скільки золота]. Більший
+## обмін — вигідніший курс, щоб був сенс міняти оптом.
+const GEM_EXCHANGES := [
+	[50, 1000],
+	[250, 5500],
+	[1000, 24000],
+]
+
+# Стартові набори — кожен можна купити за геми один раз.
+const STARTER_PACK_DELAY_HOURS := 48.0    # показувати через 48 год після встановлення
+const STARTER_ADS_COST_GEMS := 300        # 3000 золота + прибрати рекламу
+const STARTER_ADS_GOLD := 3000
+const STARTER_HERO_COST_GEMS := 100       # Клинкова Вартова + 1000 золота
+const STARTER_HERO_GOLD := 1000
+const STARTER_GOLD_COST_GEMS := 300       # великий запас золота
+const STARTER_GOLD_GOLD := 10000

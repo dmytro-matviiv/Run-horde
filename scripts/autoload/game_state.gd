@@ -52,6 +52,94 @@ var completed_runs := 0
 var last_interstitial_timestamp := 0
 var last_run_gold_doubled := false
 
+## Викликає IapManager після справжньої (або тестової на ПК) покупки
+## remove_ads, а також стартовий набір за геми.
+func grant_remove_ads() -> void:
+	ads_removed = true
+	SaveManager.save_game()
+	AdsManager.hide_banner()
+
+# Геми — преміум-валюта: купуються лише за реальні гроші (IapManager),
+# витрачаються на обмін, стартові набори, а згодом — на зброю й героя.
+var gems := 0
+# Коли гру вперше запустили — від цього рахуються 48 год до стартових наборів.
+var install_timestamp := 0
+var claimed_starter_packs: Array = []   # StringName id вже куплених наборів
+
+const STARTER_PACK_IDS: Array[StringName] = [&"starter_ads", &"starter_hero", &"starter_gold"]
+
+func add_gems(amount: int) -> void:
+	if amount <= 0:
+		return
+	gems += amount
+	SaveManager.save_game()
+
+## Повертає true, якщо гемів вистачило й їх списано.
+func spend_gems(amount: int) -> bool:
+	if amount <= 0 or gems < amount:
+		return false
+	gems -= amount
+	SaveManager.save_game()
+	return true
+
+## index — рядок з Balance.GEM_EXCHANGES. Повертає true, якщо обмін відбувся.
+func exchange_gems_for_gold(index: int) -> bool:
+	if index < 0 or index >= Balance.GEM_EXCHANGES.size():
+		return false
+	var exchange: Array = Balance.GEM_EXCHANGES[index]
+	if not spend_gems(exchange[0]):
+		return false
+	add_gold(exchange[1])
+	return true
+
+## Скільки секунд лишилось, поки стартові набори з'являться в магазині
+## (0 — вже доступні).
+func get_starter_packs_seconds_left() -> int:
+	var now := int(Time.get_unix_time_from_system())
+	var unlock_at := install_timestamp + int(Balance.STARTER_PACK_DELAY_HOURS * 3600.0)
+	return maxi(unlock_at - now, 0)
+
+func is_starter_pack_claimed(id: StringName) -> bool:
+	return claimed_starter_packs.has(id)
+
+func get_starter_pack_cost(id: StringName) -> int:
+	match id:
+		&"starter_ads":
+			return Balance.STARTER_ADS_COST_GEMS
+		&"starter_hero":
+			return Balance.STARTER_HERO_COST_GEMS
+		&"starter_gold":
+			return Balance.STARTER_GOLD_COST_GEMS
+	return 0
+
+## Повертає true, якщо набір куплено. Кожен набір — лише один раз.
+## Якщо частина набору вже є (реклама вже прибрана / герой уже
+## розблокований) — замість неї гравець отримує золото, щоб не платити
+## гемами за порожнє місце.
+func buy_starter_pack(id: StringName) -> bool:
+	if not STARTER_PACK_IDS.has(id) or is_starter_pack_claimed(id):
+		return false
+	if get_starter_packs_seconds_left() > 0:
+		return false
+	if not spend_gems(get_starter_pack_cost(id)):
+		return false
+	claimed_starter_packs.append(id)
+	match id:
+		&"starter_ads":
+			if not ads_removed:
+				grant_remove_ads()
+			add_gold(Balance.STARTER_ADS_GOLD)
+		&"starter_hero":
+			if is_hero_unlocked(&"blade_warden"):
+				add_gold(HeroPool.get_def(&"blade_warden").unlock_cost)
+			else:
+				unlocked_hero_ids.append(&"blade_warden")
+			add_gold(Balance.STARTER_HERO_GOLD)
+		&"starter_gold":
+			add_gold(Balance.STARTER_GOLD_GOLD)
+	SaveManager.save_game()
+	return true
+
 func register_completed_run() -> void:
 	completed_runs += 1
 	SaveManager.save_game()
@@ -96,6 +184,8 @@ func select_hero(id: StringName) -> void:
 
 func _ready() -> void:
 	SaveManager.load_game()
+	if install_timestamp <= 0:
+		install_timestamp = int(Time.get_unix_time_from_system())
 	_compute_offline_gold()
 
 ## Сума рівнів усіх апгрейдів/талантів усіх героїв разом — використовує

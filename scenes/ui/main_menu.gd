@@ -2,12 +2,14 @@ extends Control
 
 ## Головне меню: точка повернення між ранами. "Грати" веде в ран,
 ## "Апгрейди" — на екран мета-прогресії (тут гравець витрачає золото
-## між ранами — наша "база"). Тут же показуємо офлайн-золото
-## (GameState.pending_offline_gold) і скриньку за таймером.
+## між ранами — наша "база"), "Магазин" — геми, обмін і стартові набори.
+## Тут же показуємо офлайн-золото (GameState.pending_offline_gold) і
+## скриньку за таймером.
 
 const OFFLINE_REWARD_SCENE := preload("res://scenes/ui/offline_reward.tscn")
 
 @onready var gold_label: Label = $CenterContainer/VBoxContainer/GoldLabel
+@onready var gems_label: Label = $CenterContainer/VBoxContainer/GemsLabel
 @onready var chest_button: Button = $CenterContainer/VBoxContainer/ChestButton
 
 const CHEST_MESSAGE_SEC := 3.0
@@ -32,6 +34,7 @@ func _process(delta: float) -> void:
 
 func _update_gold_label() -> void:
 	gold_label.text = "Золото: %d" % GameState.gold
+	gems_label.text = "Геми: %d" % GameState.gems
 
 func _update_chest_button() -> void:
 	if GameState.is_chest_available():
@@ -55,6 +58,9 @@ func _on_upgrades_pressed() -> void:
 
 func _on_heroes_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/heroes.tscn")
+
+func _on_shop_pressed() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/shop.tscn")
 
 func _on_chest_pressed() -> void:
 	chest_button.disabled = true

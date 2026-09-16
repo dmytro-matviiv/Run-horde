@@ -6,7 +6,7 @@ extends Node
 ## файлу.
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SCHEMA_VERSION := 2
+const CURRENT_SCHEMA_VERSION := 3
 
 func save_game() -> void:
 	var data := {
@@ -20,6 +20,9 @@ func save_game() -> void:
 		"ads_removed": GameState.ads_removed,
 		"completed_runs": GameState.completed_runs,
 		"last_interstitial_timestamp": GameState.last_interstitial_timestamp,
+		"gems": GameState.gems,
+		"install_timestamp": GameState.install_timestamp,
+		"claimed_starter_packs": _stringnames_to_strings(GameState.claimed_starter_packs),
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -48,6 +51,9 @@ func load_game() -> void:
 	GameState.ads_removed = data.get("ads_removed", false)
 	GameState.completed_runs = data.get("completed_runs", 0)
 	GameState.last_interstitial_timestamp = data.get("last_interstitial_timestamp", 0)
+	GameState.gems = data.get("gems", 0)
+	GameState.install_timestamp = data.get("install_timestamp", 0)
+	GameState.claimed_starter_packs = _strings_to_stringnames(data.get("claimed_starter_packs", []))
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає
 ## сейв у форматі наступної, тому старі сейви ніколи не ламаються.
@@ -55,6 +61,8 @@ func _migrate(data: Dictionary) -> Dictionary:
 	var version: int = data.get("schema_version", 1)
 	if version < 2:
 		data = _migrate_v1_to_v2(data)
+	if version < 3:
+		data = _migrate_v2_to_v3(data)
 	return data
 
 ## v1 мав один спільний meta_upgrade_levels на всіх героїв разом; v2 —
@@ -65,6 +73,15 @@ func _migrate_v1_to_v2(data: Dictionary) -> Dictionary:
 		data["hero_meta_levels"] = {"runewielder": data["meta_upgrade_levels"]}
 	data.erase("meta_upgrade_levels")
 	data["schema_version"] = 2
+	return data
+
+## v3 додав геми й дату встановлення. Сейв, створений до v3, належить
+## гравцю, який уже грав раніше, — мітка 1 (давно) відкриває йому стартові
+## набори одразу, а не змушує чекати 48 год з моменту оновлення гри.
+func _migrate_v2_to_v3(data: Dictionary) -> Dictionary:
+	if not data.has("install_timestamp"):
+		data["install_timestamp"] = 1
+	data["schema_version"] = 3
 	return data
 
 ## JSON не вміє StringName-ключі — переводимо в String перед записом.
