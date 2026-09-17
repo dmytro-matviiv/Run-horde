@@ -1,17 +1,31 @@
-[gd_scene load_steps=19 format=3]
+[gd_scene format=3 uid="uid://bywso83s7rqdi"]
 
-[ext_resource type="Script" path="res://scenes/world/base_island.gd" id="1"]
+[ext_resource type="Script" uid="uid://cv7bpaxy07b08" path="res://scenes/world/base_island.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/world/player_3d.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://v1sgldsckine" path="res://assets/models/environment/Mine.glb" id="2_s4br1"]
 [ext_resource type="PackedScene" path="res://scenes/world/camera_rig.tscn" id="3"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Town Center.glb" id="10"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Barracks.glb" id="11"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Archery Building.glb" id="12"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Pine Trees.glb" id="13"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Rock.glb" id="14"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Mountain.glb" id="15"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Temple.glb" id="16"]
-[ext_resource type="PackedScene" path="res://assets/models/environment/Market Stalls.glb" id="17"]
-[ext_resource type="Script" path="res://scenes/world/interactable.gd" id="18"]
+[ext_resource type="PackedScene" uid="uid://8xj1bvmcchfb" path="res://assets/models/environment/Town Center.glb" id="10"]
+[ext_resource type="PackedScene" uid="uid://cqqxxpe2kk25d" path="res://assets/models/environment/Barracks.glb" id="11"]
+[ext_resource type="PackedScene" uid="uid://do7gf4j6txhsi" path="res://assets/models/environment/Archery Building.glb" id="12"]
+[ext_resource type="PackedScene" uid="uid://f2ej2n3pn42b" path="res://assets/models/environment/Pine Trees.glb" id="13"]
+[ext_resource type="PackedScene" uid="uid://dy138mnexjjly" path="res://assets/models/environment/Rock.glb" id="14"]
+[ext_resource type="PackedScene" uid="uid://bgkwiwy2e0743" path="res://assets/models/environment/Mountain Group.glb" id="14_0ufaf"]
+[ext_resource type="PackedScene" uid="uid://3bl2wycbtndi" path="res://assets/models/environment/Mountain.glb" id="15"]
+[ext_resource type="PackedScene" uid="uid://c3goqlmqjvoy2" path="res://assets/models/environment/Temple.glb" id="16"]
+[ext_resource type="PackedScene" uid="uid://blvms471uh8fc" path="res://assets/models/environment/Market Stalls.glb" id="17"]
+[ext_resource type="Script" uid="uid://bdq5bht1dku81" path="res://scenes/world/interactable.gd" id="18"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_horizon_color = Color(0.646, 0.656, 0.671, 1)
+ground_horizon_color = Color(0.646, 0.656, 0.671, 1)
+
+[sub_resource type="Sky" id="Sky_day"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_day"]
+background_mode = 2
+sky = SubResource("Sky_day")
+tonemap_mode = 2
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(120, 120)
@@ -27,87 +41,69 @@ size = Vector3(120, 1, 120)
 height = 6.0
 radius = 4.5
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
-sky_horizon_color = Color(0.646, 0.656, 0.671, 1)
-ground_horizon_color = Color(0.646, 0.656, 0.671, 1)
-
-[sub_resource type="Sky" id="Sky_day"]
-sky_material = SubResource("ProceduralSkyMaterial_sky")
-
-[sub_resource type="Environment" id="Environment_day"]
-background_mode = 2
-sky = SubResource("Sky_day")
-tonemap_mode = 2
-
-[node name="BaseIsland" type="Node3D"]
+[node name="BaseIsland" type="Node3D" unique_id=564834292]
 script = ExtResource("1")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=882661763]
 environment = SubResource("Environment_day")
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=567595473]
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 18, 0)
 light_energy = 1.1
 shadow_enabled = true
 
-[node name="Ground" type="StaticBody3D" parent="."]
+[node name="Ground" type="StaticBody3D" parent="." unique_id=1627888292]
 
-[node name="GroundMesh" type="MeshInstance3D" parent="Ground"]
+[node name="GroundMesh" type="MeshInstance3D" parent="Ground" unique_id=283541334]
 mesh = SubResource("PlaneMesh_ground")
 surface_material_override/0 = SubResource("StandardMaterial3D_grass")
 
-[node name="GroundShape" type="CollisionShape3D" parent="Ground"]
+[node name="GroundShape" type="CollisionShape3D" parent="Ground" unique_id=1511079304]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 shape = SubResource("BoxShape3D_ground")
 
-[node name="Buildings" type="Node3D" parent="."]
+[node name="Root Scene" parent="Ground" unique_id=226051882 instance=ExtResource("2_s4br1")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.4556665, 0.015435675, 29.798027)
 
-[node name="TownCenter" parent="Buildings" instance=ExtResource("10")]
-transform = Transform3D(3.4, 0, 0, 0, 3.4, 0, 0, 0, 3.4, 0, 0, -14)
+[node name="Root Scene2" parent="Ground" unique_id=307860985 instance=ExtResource("17")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.8779364, 0.006128937, 27.24922)
 
-[node name="Barracks" parent="Buildings" instance=ExtResource("11")]
+[node name="Buildings" type="Node3D" parent="." unique_id=836629704]
+
+[node name="TownCenter" parent="Buildings" unique_id=1210433219 instance=ExtResource("10")]
+transform = Transform3D(3.4, 0, 0, 0, 3.4, 0, 0, 0, 3.4, 1.9571629, 0, -12.207717)
+
+[node name="Barracks" parent="Buildings" unique_id=1665882747 instance=ExtResource("11")]
 transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -13, 0, -4)
 
-[node name="ArcheryBuilding" parent="Buildings" instance=ExtResource("12")]
+[node name="ArcheryBuilding" parent="Buildings" unique_id=588031356 instance=ExtResource("12")]
 transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 13, 0, -4)
 
-[node name="Market" parent="Buildings" instance=ExtResource("17")]
+[node name="Market" parent="Buildings" unique_id=573406404 instance=ExtResource("17")]
 transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, 10, 0, 0)
 
-[node name="PortalTemple" parent="Buildings" instance=ExtResource("16")]
-transform = Transform3D(3.2, 0, 0, 0, 3.2, 0, 0, 0, 3.2, 0, 0, 15)
+[node name="PortalTemple" parent="Buildings" unique_id=1435850137 instance=ExtResource("16")]
+transform = Transform3D(-3.161135, 0, 0.49721858, 0, 3.2, 0, -0.49721858, 0, -3.161135, -1.444314, 0, 34.12681)
 
-[node name="PortalGlow" type="OmniLight3D" parent="Buildings"]
+[node name="PortalGlow" type="OmniLight3D" parent="Buildings" unique_id=1941521662]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 14)
 light_color = Color(0.65, 0.45, 1, 1)
 light_energy = 4.0
 omni_range = 12.0
 
-
-
-
-
-
-
-
-
-
-
-[node name="BarracksZone" type="Area3D" parent="Buildings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.0, 0, -4.0)
+[node name="BarracksZone" type="Area3D" parent="Buildings" unique_id=1781515097]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13, 0, -4)
 collision_layer = 0
 collision_mask = 2
 script = ExtResource("18")
-action = "heroes"
 title = "Герої"
 label_height = 2.2
-label_color = Color(1, 0.92, 0.6, 1)
 
-[node name="Shape" type="CollisionShape3D" parent="Buildings/BarracksZone"]
+[node name="Shape" type="CollisionShape3D" parent="Buildings/BarracksZone" unique_id=1957878007]
 shape = SubResource("CylinderShape3D_zone")
 
-[node name="ArcheryZone" type="Area3D" parent="Buildings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.0, 0, -4.0)
+[node name="ArcheryZone" type="Area3D" parent="Buildings" unique_id=832205881]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13, 0, -4)
 collision_layer = 0
 collision_mask = 2
 script = ExtResource("18")
@@ -116,11 +112,11 @@ title = "Зброя"
 label_height = 2.2
 label_color = Color(0.7, 0.9, 1, 1)
 
-[node name="Shape" type="CollisionShape3D" parent="Buildings/ArcheryZone"]
+[node name="Shape" type="CollisionShape3D" parent="Buildings/ArcheryZone" unique_id=250255626]
 shape = SubResource("CylinderShape3D_zone")
 
-[node name="TownZone" type="Area3D" parent="Buildings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0, -14.0)
+[node name="TownZone" type="Area3D" parent="Buildings" unique_id=1384831600]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -14)
 collision_layer = 0
 collision_mask = 2
 script = ExtResource("18")
@@ -129,11 +125,11 @@ title = "Таланти"
 label_height = 2.6
 label_color = Color(0.8, 1, 0.8, 1)
 
-[node name="Shape" type="CollisionShape3D" parent="Buildings/TownZone"]
+[node name="Shape" type="CollisionShape3D" parent="Buildings/TownZone" unique_id=406116904]
 shape = SubResource("CylinderShape3D_zone")
 
-[node name="MarketZone" type="Area3D" parent="Buildings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.0, 0, 0.0)
+[node name="MarketZone" type="Area3D" parent="Buildings" unique_id=49022146]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 0)
 collision_layer = 0
 collision_mask = 2
 script = ExtResource("18")
@@ -142,11 +138,11 @@ title = "Магазин"
 label_height = 2.0
 label_color = Color(1, 0.8, 0.9, 1)
 
-[node name="Shape" type="CollisionShape3D" parent="Buildings/MarketZone"]
+[node name="Shape" type="CollisionShape3D" parent="Buildings/MarketZone" unique_id=1381772805]
 shape = SubResource("CylinderShape3D_zone")
 
-[node name="PortalZone" type="Area3D" parent="Buildings"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0, 14.0)
+[node name="PortalZone" type="Area3D" parent="Buildings" unique_id=1426079104]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 14)
 collision_layer = 0
 collision_mask = 2
 script = ExtResource("18")
@@ -155,41 +151,41 @@ title = "У ДАНЖ"
 label_height = 2.6
 label_color = Color(0.75, 0.55, 1, 1)
 
-[node name="Shape" type="CollisionShape3D" parent="Buildings/PortalZone"]
+[node name="Shape" type="CollisionShape3D" parent="Buildings/PortalZone" unique_id=1428665757]
 shape = SubResource("CylinderShape3D_zone")
 
-[node name="Nature" type="Node3D" parent="."]
+[node name="Nature" type="Node3D" parent="." unique_id=2012015501]
 
-[node name="PineTrees1" parent="Nature" instance=ExtResource("13")]
+[node name="PineTrees1" parent="Nature" unique_id=72334821 instance=ExtResource("13")]
 transform = Transform3D(3.2, 0, 0, 0, 3.2, 0, 0, 0, 3.2, -16, 0, 12)
 
-[node name="PineTrees2" parent="Nature" instance=ExtResource("13")]
+[node name="PineTrees2" parent="Nature" unique_id=404616076 instance=ExtResource("13")]
 transform = Transform3D(2.8, 0, 0, 0, 2.8, 0, 0, 0, 2.8, 17, 0, 13)
 
-[node name="PineTrees3" parent="Nature" instance=ExtResource("13")]
+[node name="PineTrees3" parent="Nature" unique_id=404636015 instance=ExtResource("13")]
 transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -20, 0, -16)
 
-[node name="Rock1" parent="Nature" instance=ExtResource("14")]
+[node name="Rock1" parent="Nature" unique_id=976435476 instance=ExtResource("14")]
 transform = Transform3D(2.4, 0, 0, 0, 2.4, 0, 0, 0, 2.4, 9, 0, 7)
 
-[node name="Rock2" parent="Nature" instance=ExtResource("14")]
+[node name="Rock2" parent="Nature" unique_id=1644476477 instance=ExtResource("14")]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -8, 0, 8)
 
-[node name="Mountain1" parent="Nature" instance=ExtResource("15")]
+[node name="Mountain1" parent="Nature" unique_id=828587499 instance=ExtResource("15")]
 transform = Transform3D(7, 0, 0, 0, 7, 0, 0, 0, 7, -34, 0, -34)
 
-[node name="Mountain2" parent="Nature" instance=ExtResource("15")]
+[node name="Mountain2" parent="Nature" unique_id=1794650664 instance=ExtResource("15")]
 transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 33, 0, -36)
 
-[node name="Player" parent="." instance=ExtResource("2")]
+[node name="Player" parent="." unique_id=1070700653 instance=ExtResource("2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 6)
 
-[node name="CameraRig" parent="." instance=ExtResource("3")]
+[node name="CameraRig" parent="." unique_id=935521817 instance=ExtResource("3")]
 target_path = NodePath("../Player")
 
-[node name="HUD" type="CanvasLayer" parent="."]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=382772897]
 
-[node name="MenuButton" type="Button" parent="HUD"]
+[node name="MenuButton" type="Button" parent="HUD" unique_id=731809070]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
@@ -201,16 +197,16 @@ grow_horizontal = 0
 theme_override_font_sizes/font_size = 18
 text = "Меню"
 
-[node name="GoldLabel" type="Label" parent="HUD"]
+[node name="GoldLabel" type="Label" parent="HUD" unique_id=932875837]
 offset_left = 16.0
 offset_top = 54.0
 offset_right = 420.0
 offset_bottom = 84.0
-theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(1, 0.86, 0.4, 1)
+theme_override_font_sizes/font_size = 20
 text = "Золото: 0"
 
-[node name="ActionButton" type="Button" parent="HUD"]
+[node name="ActionButton" type="Button" parent="HUD" unique_id=692847144]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
@@ -225,10 +221,16 @@ grow_vertical = 0
 theme_override_font_sizes/font_size = 26
 text = "Будівля"
 
-[node name="HintLabel" type="Label" parent="HUD"]
+[node name="HintLabel" type="Label" parent="HUD" unique_id=513798458]
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 640.0
 offset_bottom = 70.0
 theme_override_font_sizes/font_size = 18
 text = "Джойстик або стрілки — рух. Підійди до будівлі, щоб зайти."
+
+[node name="Root Scene" parent="." unique_id=1216965790 instance=ExtResource("14_0ufaf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.2981994, 0.089441605, 32.438553)
+
+[node name="Root Scene2" parent="." unique_id=1874592375 instance=ExtResource("14_0ufaf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.484354, -0.19919628, 32.12555)

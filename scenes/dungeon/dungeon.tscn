@@ -25,9 +25,14 @@ sky_material = SubResource("ProceduralSkyMaterial_dark")
 background_mode = 2
 sky = SubResource("Sky_dark")
 ambient_light_source = 3
-ambient_light_color = Color(0.34, 0.31, 0.38, 1)
-ambient_light_energy = 0.55
+ambient_light_color = Color(0.4, 0.36, 0.42, 1)
+ambient_light_energy = 0.8
 tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.09, 0.07, 0.08, 1)
+fog_light_energy = 0.4
+fog_density = 0.035
+fog_sky_affect = 0.0
 
 [node name="Dungeon" type="Node3D"]
 script = ExtResource("1")
@@ -44,8 +49,8 @@ navigation_mesh = SubResource("NavigationMesh_dungeon")
 
 [node name="CameraRig" parent="." instance=ExtResource("3")]
 target_path = NodePath("../Player")
-distance = 9.0
-pitch_degrees = -42.0
+distance = 10.5
+pitch_degrees = -48.0
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
@@ -56,6 +61,15 @@ offset_right = 900.0
 offset_bottom = 46.0
 theme_override_font_sizes/font_size = 18
 text = "Данж"
+
+[node name="HealthLabel" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 46.0
+offset_right = 400.0
+offset_bottom = 76.0
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.55, 0.55, 1)
+text = "HP 100 / 100"
 
 [node name="ExitButton" type="Button" parent="HUD"]
 visible = false

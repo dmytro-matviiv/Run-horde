@@ -29,7 +29,7 @@ const ATTACK_ANIMATION_TIME := 0.5
 
 ## Радіус, у якому ворог помічає героя, і більший радіус, у якому вже
 ## не втрачає його з поля зору.
-@export var aggro_range := 14.0
+@export var aggro_range := 11.0
 @export var leash_range := 24.0
 
 @export var attack_range := 2.2
@@ -63,22 +63,38 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying"])
 
 ## Масштабує модель так, щоб її висота дорівнювала target_height.
+##
+## Габарити рахуємо у СВІТОВИХ координатах і переводимо в систему
+## моделі. Локальні габарити тут не годяться: у моделей зі скелетом
+## меш лежить у системі кістки, його власний розмір крихітний — і
+## масштаб виходив у сотню разів більшим за потрібний.
 func _normalize_size() -> void:
+	var bounds := _get_model_bounds()
+	if bounds.size.y <= 0.01:
+		return
+	var factor := target_height / bounds.size.y
+	# Запобіжник на випадок дивних моделей: краще лишити як є, ніж
+	# отримати ворога завбільшки з будинок.
+	if factor < 0.01 or factor > 100.0:
+		push_warning("Дивний масштаб моделі ворога: %f" % factor)
+		return
+	_model.scale = Vector3.ONE * factor
+	# Модель має стояти на підлозі, а не тонути в ній.
+	_model.position.y = -bounds.position.y * factor
+
+func _get_model_bounds() -> AABB:
+	var to_local := _model.global_transform.affine_inverse()
 	var bounds := AABB()
 	var first := true
 	for child in _model.find_children("*", "VisualInstance3D", true, false):
 		var instance := child as VisualInstance3D
-		var child_bounds: AABB = instance.transform * instance.get_aabb()
+		var child_bounds: AABB = to_local * (instance.global_transform * instance.get_aabb())
 		if first:
 			bounds = child_bounds
 			first = false
 		else:
 			bounds = bounds.merge(child_bounds)
-	if bounds.size.y <= 0.01:
-		return
-	_model.scale = Vector3.ONE * (target_height / bounds.size.y)
-	# Модель має стояти на підлозі, а не тонути в ній.
-	_model.position.y = -bounds.position.y * _model.scale.y
+	return bounds
 
 func _ready() -> void:
 	current_hp = max_hp
@@ -181,6 +197,10 @@ func _has_line_of_sight() -> bool:
 
 func _try_attack() -> void:
 	if _attack_left > 0.0:
+		return
+	# Б'ємо лише те, що бачимо: інакше ворог дістає героя крізь стіну,
+	# просто стоячи впритул з іншого боку.
+	if not _has_line_of_sight():
 		return
 	_attack_left = attack_cooldown
 	_play_once(["Punch", "Bite_Front", "Headbutt"])

@@ -35,6 +35,7 @@ const XP_PER_LEVEL := 12
 @onready var enemies_root: Node3D = $Enemies
 @onready var hud: CanvasLayer = $HUD
 @onready var status_label: Label = $HUD/StatusLabel
+@onready var health_label: Label = $HUD/HealthLabel
 @onready var exit_button: Button = $HUD/ExitButton
 
 var _level_index := 0
@@ -60,6 +61,8 @@ func _ready() -> void:
 
 	_spawn_enemies(markers)
 	_setup_hud(level.title)
+	player.died.connect(_on_player_died)
+	player.health_changed.connect(_on_player_health_changed)
 
 	# Вхідна кімната порожня, і перше, що робить гравець, — обирає
 	# здібність. Далі вибір повторюється з кожним новим рівнем.
@@ -185,6 +188,15 @@ func _update_status(title: String = "") -> void:
 	status_label.text = "%s  •  рівень %d  •  досвід %d  •  ворогів %d  •  %s" % [
 		level_title, _hero_level, _xp, _alive_enemies, state,
 	]
+
+## Герой загинув — це має бути видно, а не виглядати як "застряг".
+func _on_player_died() -> void:
+	status_label.text = "Ви загинули. Повертаємось на базу…"
+	await get_tree().create_timer(2.0).timeout
+	get_tree().change_scene_to_file("res://scenes/world/base_island.tscn")
+
+func _on_player_health_changed(current: float, maximum: float) -> void:
+	health_label.text = "HP %d / %d" % [int(current), int(maximum)]
 
 func _on_joystick_moved(direction: Vector2) -> void:
 	player.set_move_input(Vector2(direction.x, -direction.y))
