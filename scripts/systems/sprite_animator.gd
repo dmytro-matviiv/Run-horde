@@ -36,6 +36,9 @@ var _back: Texture2D
 var _has_sheet := false
 var _sheet_fps := 12.0
 var _clips: Dictionary = {}
+## Ті самі стани, але знятi ззаду: на аркуші це просто інші рядки, тож
+## "показати спину" — це взяти інший діапазон кадрів, а не іншу картинку.
+var _back_clips: Dictionary = {}
 var _clip_time := 0.0
 var _current_clip: StringName = &""
 var _base_scale := Vector2.ONE
@@ -63,12 +66,13 @@ func setup(sprite: Sprite2D, front: Texture2D, back: Texture2D = null) -> void:
 
 ## Вмикає покадрову анімацію: аркуш кадрів і діапазони (від, до) для
 ## станів idle/walk/attack/death. Викликається після setup().
-func setup_frames(sheet: Texture2D, hframes: int, vframes: int, fps: float, clips: Dictionary) -> void:
+func setup_frames(sheet: Texture2D, hframes: int, vframes: int, fps: float, clips: Dictionary, back_clips: Dictionary = {}) -> void:
 	if sheet == null or _sprite == null:
 		return
 	_has_sheet = true
 	_sheet_fps = fps
 	_clips = clips
+	_back_clips = back_clips
 	_sprite.texture = sheet
 	_sprite.hframes = maxi(hframes, 1)
 	_sprite.vframes = maxi(vframes, 1)
@@ -95,7 +99,9 @@ func _process_frames(delta: float) -> void:
 		_current_clip = clip
 		_clip_time = 0.0
 	_clip_time += delta
-	var range_value: Vector2i = _clips[clip]
+	# Йде від гравця — беремо кадри, зняті ззаду.
+	var source: Dictionary = _back_clips if (_facing_back and _back_clips.has(clip)) else _clips
+	var range_value: Vector2i = source[clip]
 	var frames := maxi(range_value.y - range_value.x + 1, 1)
 	var index := int(_clip_time * _sheet_fps)
 	# Удар і смерть грають один раз і застигають на останньому кадрі,
@@ -129,9 +135,13 @@ func play_attack(aim: Vector2) -> void:
 func play_hit_flash() -> void:
 	_flash_left = FLASH_TIME
 
-## Стискання й згасання перед зникненням (смерть ворога).
+## Смерть. Якщо в аркуші є намальована смерть — тримаємо ворога на
+## екрані рівно стільки, скільки вона триває; інакше коротке стискання.
 func play_death() -> void:
 	_death_left = DEATH_TIME
+	if _has_sheet and _clips.has(&"death"):
+		var range_value: Vector2i = _clips[&"death"]
+		_death_left = float(range_value.y - range_value.x + 1) / maxf(_sheet_fps, 1.0)
 
 func is_death_finished() -> bool:
 	return _death_left <= 0.0
@@ -162,6 +172,12 @@ func _process(delta: float) -> void:
 
 	if _death_left > 0.0:
 		_death_left -= delta
+		# З намальованою смертю нічого крутити не треба — вона вже
+		# намальована; лишаємо тільки згасання в кінці.
+		if _has_sheet and _clips.has(&"death"):
+			_process_frames(delta)
+			_sprite.modulate = _base_tint * Color(1, 1, 1, clampf(_death_left * 4.0, 0.0, 1.0))
+			return
 		var death_progress := 1.0 - clampf(_death_left / DEATH_TIME, 0.0, 1.0)
 		_sprite.scale = _base_scale * (1.0 - 0.6 * death_progress)
 		_sprite.modulate = _base_tint * Color(1, 1, 1, 1.0 - death_progress)

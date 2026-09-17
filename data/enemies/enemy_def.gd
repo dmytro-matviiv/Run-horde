@@ -36,6 +36,12 @@ class_name EnemyDef
 @export var clip_attack: Vector2i = Vector2i.ZERO
 @export var clip_death: Vector2i = Vector2i.ZERO
 
+## Ті самі стани, зняті ЗЗАДУ (інші рядки того ж аркуша).
+@export var clip_idle_back: Vector2i = Vector2i.ZERO
+@export var clip_walk_back: Vector2i = Vector2i.ZERO
+@export var clip_attack_back: Vector2i = Vector2i.ZERO
+@export var clip_death_back: Vector2i = Vector2i.ZERO
+
 @export_enum("melee", "ranged") var attack_type: String = "melee"
 @export var explodes_on_death: bool = false
 @export var min_spawn_minute: float = 0.0

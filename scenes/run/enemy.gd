@@ -12,9 +12,12 @@ const RANGED_ATTACK_COOLDOWN := 1.6
 const EXPLOSION_RADIUS := 70.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
-## Спрайт ворога малюємо трохи більшим за його фізичний радіус:
-## крила, зброя й шолом виходять за межі кола зіткнень.
-const ART_SIZE_FACTOR := 3.4
+## Спрайт ворога малюємо помітно більшим за його фізичний радіус:
+## по-перше, крила, зброя й шолом виходять за межі кола зіткнень;
+## по-друге, у рендері 3D-моделі навколо персонажа лишається запас
+## порожнечі. З множником 3.4 вороги виглядали дрібними — 5.4 дає
+## розмір, за якого видно, кого саме ти б'єш.
+const ART_SIZE_FACTOR := 5.4
 
 @onready var sprite: Polygon2D = $Sprite
 @onready var art: Sprite2D = $Art
@@ -114,10 +117,19 @@ func _apply_art(def: EnemyDef) -> void:
 			clips[&"attack"] = def.clip_attack
 		if def.clip_death != Vector2i.ZERO:
 			clips[&"death"] = def.clip_death
+		var back_clips := {}
+		if def.clip_idle_back != Vector2i.ZERO:
+			back_clips[&"idle"] = def.clip_idle_back
+		if def.clip_walk_back != Vector2i.ZERO:
+			back_clips[&"walk"] = def.clip_walk_back
+		if def.clip_attack_back != Vector2i.ZERO:
+			back_clips[&"attack"] = def.clip_attack_back
+		if def.clip_death_back != Vector2i.ZERO:
+			back_clips[&"death"] = def.clip_death_back
 		# Масштаб рахуємо по висоті ОДНОГО кадру, а не всього аркуша.
 		var frame_height := maxf(float(def.sheet.get_height()) / maxf(float(def.sheet_vframes), 1.0), 1.0)
 		art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / frame_height)
-		_animator.setup_frames(def.sheet, def.sheet_hframes, def.sheet_vframes, def.sheet_fps, clips)
+		_animator.setup_frames(def.sheet, def.sheet_hframes, def.sheet_vframes, def.sheet_fps, clips, back_clips)
 	_animator.reset()
 
 ## disabled міняємо через set_deferred — pool_deactivate() тут
