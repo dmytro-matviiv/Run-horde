@@ -114,9 +114,11 @@ func _get_world_direction() -> Vector3:
 	if input == Vector2.ZERO:
 		return Vector3.ZERO
 
+	# "Вперед" для камери — це -Z (так влаштований Godot), тому вектор
+	# від'ємний: інакше герой іде рівно в протилежний бік.
 	var camera_yaw := camera_pivot.global_rotation.y
-	var forward := Vector3(sin(camera_yaw), 0.0, cos(camera_yaw))
-	var right := Vector3(forward.z, 0.0, -forward.x)
+	var forward := Vector3(-sin(camera_yaw), 0.0, -cos(camera_yaw))
+	var right := Vector3(-forward.z, 0.0, forward.x)
 	return (right * input.x + forward * input.y) * input.length()
 
 ## Плавний доворот: персонаж не "телепортує" погляд, а повертається з

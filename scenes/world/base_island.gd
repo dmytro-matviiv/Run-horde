@@ -1,55 +1,105 @@
 extends Node3D
 
-## Стартовий острів — база героя. Поки що це "пісочниця": зелений
-## ландшафт, кілька будівель і дерев із набору RTS, герой і камера.
+## Стартовий острів — база героя. Тут гравець ходить між будівлями:
+## казарма відкриває вибір героя, кузня — зброю, храм — таланти,
+## ринок — магазин, а портал веде в данж.
 ##
-## Далі сюди додаються клікабельні будівлі (вибір героя, зброя, таланти)
-## і портал у данж. Розставляти об'єкти можна просто в редакторі Godot:
-## перетягніть будь-яку модель з assets/models/environment у вузол
-## Buildings або Nature — код про них нічого не знає й нічого не зламає.
+## Взаємодія за близькістю: підійшов — унизу з'явилась велика кнопка.
+## На телефоні це зручніше, ніж цілитись пальцем у будинок під кутом
+## камери, і водночас працює мишею на ПК.
 ##
-## Джойстик той самий, що й у 2D-частині гри: на телефоні керування
-## пальцем, на ПК — стрілки.
+## Розставляти світ можна просто в редакторі: перетягніть будь-яку
+## модель з assets/models/environment у вузол Buildings або Nature —
+## код про них нічого не знає, фізику для них він побудує сам.
 
 const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
-
-@onready var player: CharacterBody3D = $Player
-
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 
+## Куди веде кожна будівля. Данж поки що старий, двовимірний — він
+## працює, поки бій не переїде в 3D.
+const ACTION_SCENES := {
+	"heroes": "res://scenes/ui/heroes.tscn",
+	"weapons": "res://scenes/ui/weapons.tscn",
+	"talents": "res://scenes/ui/meta_upgrades.tscn",
+	"shop": "res://scenes/ui/shop.tscn",
+	"portal": "res://scenes/run/run.tscn",
+}
+
+@onready var player: CharacterBody3D = $Player
+@onready var action_button: Button = $HUD/ActionButton
+@onready var gold_label: Label = $HUD/GoldLabel
+
+var _nearby: Interactable
+
 func _ready() -> void:
-	# Моделі з наборів приходять без фізики, тож стінки будуємо самі: по
-	# формі кожного меша. Інакше герой проходив би крізь будинки й гори.
-	# Робимо це кодом, щоб будь-яка модель, яку ви перетягнете в редакторі,
-	# одразу стала твердою — без ручного налаштування.
+	# Моделі з наборів приходять без фізики, тож стінки будуємо самі по
+	# формі мешів. Так будь-яка модель, яку ви перетягнете в редакторі,
+	# одразу стає твердою — без ручного налаштування.
 	_build_collisions($Buildings)
 	_build_collisions($Nature)
 
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
 	$HUD.add_child(joystick)
 	joystick.direction_changed.connect(_on_joystick_moved)
+	# Кнопка дії має бути ПОВЕРХ джойстика, інакше дотик по ній
+	# сприймався б як спроба рухатись.
+	$HUD.move_child(action_button, $HUD.get_child_count() - 1)
+
 	$HUD/MenuButton.pressed.connect(_on_menu_pressed)
+	action_button.pressed.connect(_on_action_pressed)
+	action_button.visible = false
 
-func _on_menu_pressed() -> void:
-	get_tree().change_scene_to_file(MAIN_MENU_PATH)
+	for node in $Buildings.find_children("*", "Interactable", true, false):
+		var interactable := node as Interactable
+		interactable.player_entered.connect(_on_player_entered)
+		interactable.player_exited.connect(_on_player_exited)
 
-## Джойстик дає напрямок в екранних координатах (вниз — це +Y), а рух
-## уперед — це -Z у 3D, тож вісь Y перевертаємо.
+	gold_label.text = "Золото: %d    Геми: %d" % [GameState.gold, GameState.gems]
+
 ## Створює фізичні стінки для всіх мешів усередині вузла.
 func _build_collisions(root: Node) -> void:
 	for child in root.find_children("*", "MeshInstance3D", true, false):
 		(child as MeshInstance3D).create_trimesh_collision()
 
+## Джойстик дає напрямок в екранних координатах (вниз — це +Y), а рух
+## уперед — це -Z у 3D, тож вісь Y перевертаємо.
 func _on_joystick_moved(direction: Vector2) -> void:
 	player.set_move_input(Vector2(direction.x, -direction.y))
 
+func _on_player_entered(interactable: Interactable) -> void:
+	_nearby = interactable
+	action_button.text = interactable.title
+	action_button.visible = true
+
+## Виходимо з зони — кнопка зникає. Перевірка на "ту саму будівлю"
+## потрібна, бо зони можуть перекриватись: вийшовши з однієї, гравець
+## може вже стояти в іншій.
+func _on_player_exited(interactable: Interactable) -> void:
+	if _nearby == interactable:
+		_nearby = null
+		action_button.visible = false
+
+func _on_action_pressed() -> void:
+	if _nearby == null:
+		return
+	var path: String = ACTION_SCENES.get(_nearby.action, "")
+	if path != "":
+		get_tree().change_scene_to_file(path)
+
+func _on_menu_pressed() -> void:
+	get_tree().change_scene_to_file(MAIN_MENU_PATH)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_accept"):
-		player.attack()
+		# Пробіл: якщо стоїмо біля будівлі — заходимо, інакше б'ємо мечем.
+		if _nearby != null:
+			_on_action_pressed()
+		else:
+			player.attack()
 	elif event.is_action_pressed("ui_cancel"):
 		_on_menu_pressed()
 
-## Кнопка "назад" на Android теж повертає в меню.
+## Кнопка "назад" на Android повертає в меню.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		_on_menu_pressed()
