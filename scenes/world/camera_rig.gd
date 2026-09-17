@@ -28,10 +28,16 @@ const MANUAL_HOLD_TIME := 3.0
 ## Чи доводити камеру за рухом автоматично.
 @export var auto_follow := true
 
+## Межі нахилу. Вище горизонту камеру не пускаємо (видно було б порожнє
+## небо й стелю), а прямовисно згори гра перетворюється на план кімнати.
+@export var min_pitch_degrees := -72.0
+@export var max_pitch_degrees := -12.0
+
 @onready var spring_arm: SpringArm3D = $SpringArm3D
 
 var _target: Node3D
 var _yaw := 0.0
+var _pitch := 0.0
 var _manual_left := 0.0
 
 func _ready() -> void:
@@ -39,6 +45,7 @@ func _ready() -> void:
 	spring_arm.spring_length = distance
 	spring_arm.rotation_degrees.x = pitch_degrees
 	_yaw = rotation.y
+	_pitch = deg_to_rad(pitch_degrees)
 	if _target != null:
 		global_position = _target.global_position + Vector3.UP * HEIGHT_OFFSET
 
@@ -46,6 +53,14 @@ func _ready() -> void:
 ## кнопка миші.
 func rotate_by(amount: float) -> void:
 	_yaw = wrapf(_yaw + amount, -PI, PI)
+	_manual_left = MANUAL_HOLD_TIME
+
+## Нахил камери вгору-вниз тим самим пальцем. Автодоведення нахилу не
+## чіпає: висота погляду — справа гравця, і вона лишається такою, як він
+## поставив.
+func pitch_by(amount: float) -> void:
+	_pitch = clampf(_pitch + amount, deg_to_rad(min_pitch_degrees), deg_to_rad(max_pitch_degrees))
+	spring_arm.rotation.x = _pitch
 	_manual_left = MANUAL_HOLD_TIME
 
 func _physics_process(delta: float) -> void:

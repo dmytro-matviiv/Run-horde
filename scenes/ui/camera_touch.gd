@@ -9,10 +9,14 @@ extends Control
 ## зручності тестування, поки немає телефона під рукою.
 
 signal rotate_requested(amount: float)
+signal pitch_requested(amount: float)
 signal tap_attack
 
 ## Скільки радіанів повороту дає один піксель протягування.
+## Вертикаль трохи млявіша за горизонталь: нахил має бути точним, бо
+## його діапазон куди менший, ніж повний оберт навколо героя.
 const ROTATE_PER_PIXEL := 0.006
+const PITCH_PER_PIXEL := 0.004
 
 ## Дотик, коротший за це і без помітного зсуву, вважається ударом, а не
 ## спробою покрутити камеру.
@@ -43,6 +47,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_mouse_button(event)
 	elif event is InputEventMouseMotion and _mouse_rotating:
 		rotate_requested.emit(-event.relative.x * ROTATE_PER_PIXEL)
+		pitch_requested.emit(-event.relative.y * PITCH_PER_PIXEL)
 
 func _handle_touch(index: int, position: Vector2, pressed: bool) -> void:
 	if pressed:
@@ -61,10 +66,13 @@ func _handle_touch(index: int, position: Vector2, pressed: bool) -> void:
 		_touch_index = -1
 
 func _handle_drag(position: Vector2) -> void:
-	var shift := position.x - _last_position.x
-	_travelled += absf(position.x - _last_position.x) + absf(position.y - _last_position.y)
+	var shift := position - _last_position
+	_travelled += absf(shift.x) + absf(shift.y)
 	_last_position = position
-	rotate_requested.emit(-shift * ROTATE_PER_PIXEL)
+	# Один палець робить обидва рухи: вбік — оберт навколо героя,
+	# вгору-вниз — нахил камери.
+	rotate_requested.emit(-shift.x * ROTATE_PER_PIXEL)
+	pitch_requested.emit(-shift.y * PITCH_PER_PIXEL)
 
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_RIGHT:

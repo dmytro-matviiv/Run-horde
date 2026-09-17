@@ -78,6 +78,7 @@ func _setup_hud(title: String) -> void:
 	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
 	hud.add_child(camera_touch)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
+	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
 	camera_touch.tap_attack.connect(player.attack)
 
 	hud.move_child(exit_button, hud.get_child_count() - 1)

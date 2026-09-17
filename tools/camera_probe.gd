@@ -35,6 +35,17 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	print("CAM: герой біжить у напрямку %.2f, камера %.2f (було %.2f)" % [
 		player.get_move_yaw(), rig.rotation.y, before])
+	# Нахил: перевіряємо, що він рухається і не вилітає за межі.
+	var arm: SpringArm3D = rig.get_node("SpringArm3D")
+	var pitch_before := arm.rotation_degrees.x
+	rig.pitch_by(0.4)
+	await get_tree().physics_frame
+	var pitch_after := arm.rotation_degrees.x
+	rig.pitch_by(10.0)   # свідомо забагато — має впертись у межу
+	await get_tree().physics_frame
+	print("CAM: нахил %.1f -> %.1f, після перебору %.1f (межа %.1f)" % [
+		pitch_before, pitch_after, arm.rotation_degrees.x, rig.max_pitch_degrees])
+
 	print("CAM: швидкість %.2f, пройшов %.1f м" % [
 		Vector2(player.velocity.x, player.velocity.z).length(),
 		player.global_position.distance_to(Vector3(38, 0.3, 30))])

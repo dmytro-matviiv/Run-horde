@@ -46,6 +46,7 @@ func _ready() -> void:
 	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
 	$HUD.add_child(camera_touch)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
+	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
 	camera_touch.tap_attack.connect(player.attack)
 	# Кнопка дії має бути ПОВЕРХ джойстика, інакше дотик по ній
 	# сприймався б як спроба рухатись.
