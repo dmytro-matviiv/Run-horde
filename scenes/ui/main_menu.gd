@@ -55,8 +55,10 @@ func _show_offline_reward() -> void:
 	add_child(popup)
 	popup.closed.connect(_update_gold_label)
 
+## "Грати" веде на базу героя — звідти він сам піде в данж через портал.
+## Старий 2D-ран лишається в проєкті, поки бій не переїде в 3D.
 func _on_play_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/run/run.tscn")
+	get_tree().change_scene_to_file("res://scenes/world/base_island.tscn")
 
 func _on_upgrades_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/meta_upgrades.tscn")

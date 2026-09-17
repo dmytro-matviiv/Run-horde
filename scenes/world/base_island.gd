@@ -15,6 +15,8 @@ const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
 
 @onready var player: CharacterBody3D = $Player
 
+const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
+
 func _ready() -> void:
 	# Моделі з наборів приходять без фізики, тож стінки будуємо самі: по
 	# формі кожного меша. Інакше герой проходив би крізь будинки й гори.
@@ -26,6 +28,10 @@ func _ready() -> void:
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
 	$HUD.add_child(joystick)
 	joystick.direction_changed.connect(_on_joystick_moved)
+	$HUD/MenuButton.pressed.connect(_on_menu_pressed)
+
+func _on_menu_pressed() -> void:
+	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
 ## Джойстик дає напрямок в екранних координатах (вниз — це +Y), а рух
 ## уперед — це -Z у 3D, тож вісь Y перевертаємо.
@@ -40,3 +46,10 @@ func _on_joystick_moved(direction: Vector2) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_accept"):
 		player.attack()
+	elif event.is_action_pressed("ui_cancel"):
+		_on_menu_pressed()
+
+## Кнопка "назад" на Android теж повертає в меню.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_menu_pressed()
