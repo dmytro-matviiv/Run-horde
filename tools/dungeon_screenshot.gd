@@ -23,6 +23,11 @@ func _ready() -> void:
 	for i in 200:
 		player.set_move_input(Vector2(0, 1))
 		await get_tree().physics_frame
+	# HIT_DEMO: б'ємо найближчих ворогів, щоб на знімку було видно
+	# червоні смужки здоров'я.
+	for enemy in dungeon.get_node("Enemies").get_children():
+		if enemy.global_position.distance_to(player.global_position) < 18.0:
+			enemy.take_damage(enemy.max_hp * 0.45)
 	await get_tree().create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(OUT_PATH)

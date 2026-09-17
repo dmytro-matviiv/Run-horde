@@ -18,6 +18,11 @@ signal died(position: Vector3, xp_reward: int)
 
 enum Kind {MELEE, RANGED, BOSS}
 
+const HEALTH_BAR_SCRIPT := preload("res://scenes/dungeon/health_bar_3d.gd")
+
+## Колір смужки ворога. Бос отримує ту саму, але помітнішу.
+const ENEMY_BAR_COLOR := Color(0.95, 0.25, 0.25)
+
 const GRAVITY := 20.0
 const ATTACK_ANIMATION_TIME := 0.5
 
@@ -51,6 +56,7 @@ var _animation: AnimationPlayer
 var _attack_left := 0.0
 var _aggro := false
 var _dying := false
+var _health_bar: HealthBar3D
 
 func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_player = player
@@ -61,6 +67,15 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	if not players.is_empty():
 		_animation = players[0]
 		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying"])
+	_add_health_bar()
+
+## Смужка висить трохи вище за голову й ширшає разом із розміром ворога:
+## у боса вона має бути помітною, у дрібноти — не затуляти його самого.
+func _add_health_bar() -> void:
+	_health_bar = HEALTH_BAR_SCRIPT.new()
+	add_child(_health_bar)
+	var is_boss := kind == Kind.BOSS
+	_health_bar.setup(ENEMY_BAR_COLOR, target_height + 0.45, is_boss, 1.0 if not is_boss else 1.8)
 
 ## Масштабує модель так, щоб її висота дорівнювала target_height.
 ##
@@ -222,6 +237,10 @@ func take_damage(amount: float) -> void:
 		return
 	current_hp -= amount
 	_aggro = true   # вдарили — помітив, навіть якщо був далеко
+	# Смужка з'являється від першого ж удару й спадає з кожним тіком.
+	if _health_bar != null:
+		_health_bar.set_ratio(current_hp / max_hp)
+		_health_bar.flash()
 	_play_once(["HitReact", "HitRecieve"])
 	if current_hp <= 0.0:
 		_die()
@@ -229,6 +248,8 @@ func take_damage(amount: float) -> void:
 func _die() -> void:
 	_dying = true
 	velocity = Vector3.ZERO
+	if _health_bar != null:
+		_health_bar.visible = false
 	died.emit(global_position, xp_reward)
 	_play_once(["Death"])
 	# Даємо дограти смерть, а тоді прибираємо.

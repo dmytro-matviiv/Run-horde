@@ -25,6 +25,13 @@ const ATTACK_COOLDOWN := 0.55
 const BASE_DAMAGE := 14.0
 const BASE_MAX_HP := 100.0
 
+const HEALTH_BAR_SCRIPT := preload("res://scenes/dungeon/health_bar_3d.gd")
+
+## Зелена смужка — для своїх: героя й дружніх NPC. На відміну від
+## ворожої, вона видима завжди.
+const ALLY_BAR_COLOR := Color(0.35, 0.9, 0.4)
+const BAR_HEIGHT := 2.1
+
 ## Швидкість, з якої хода переходить у біг (для змішування анімацій).
 const RUN_THRESHOLD := 3.4
 
@@ -45,11 +52,15 @@ var _speed_bonus := 0.0
 var _attack_left := 0.0
 var _dead := false
 var _regen_per_second := 0.0
+var _health_bar: HealthBar3D
 
 func _ready() -> void:
 	_build_animation_tree()
 	animation_tree.active = true
 	_facing_angle = rotation.y
+	_health_bar = HEALTH_BAR_SCRIPT.new()
+	add_child(_health_bar)
+	_health_bar.setup(ALLY_BAR_COLOR, BAR_HEIGHT, true)
 
 ## Дерево анімацій будуємо кодом, а не мишкою в редакторі: так видно
 ## увесь набір станів в одному місці, і його легко переносити на інших
@@ -122,6 +133,7 @@ func _physics_process(delta: float) -> void:
 
 	if _regen_per_second > 0.0 and current_hp > 0.0:
 		current_hp = minf(current_hp + _regen_per_second * delta, max_hp)
+		_update_health_bar()
 		health_changed.emit(current_hp, max_hp)
 
 	move_and_slide()
@@ -217,6 +229,7 @@ func take_damage(amount: float) -> void:
 	if _dead:
 		return
 	current_hp = maxf(current_hp - amount, 0.0)
+	_update_health_bar()
 	health_changed.emit(current_hp, max_hp)
 	if current_hp <= 0.0:
 		_dead = true
@@ -243,4 +256,9 @@ func apply_ability(id: StringName) -> void:
 			# Невідома здібність — просто невелике посилення, щоб вибір
 			# ніколи не був порожнім.
 			_damage *= 1.08
+	_update_health_bar()
 	health_changed.emit(current_hp, max_hp)
+
+func _update_health_bar() -> void:
+	if _health_bar != null:
+		_health_bar.set_ratio(current_hp / max_hp)
