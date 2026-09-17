@@ -173,28 +173,18 @@ func _apply_art(def: HeroDef) -> void:
 		art.texture = def.texture
 		art.scale = Vector2.ONE * (ART_HEIGHT / float(def.texture.get_height()))
 	_animator.setup(art, def.texture, def.texture_back)
-	_apply_sheet(def.sheet, def.sheet_hframes, def.sheet_vframes, def.sheet_fps,
-		def.clip_idle, def.clip_walk, def.clip_attack, def.clip_death)
+	_apply_sheet(def.sheet, def.sheet_fps)
 
-## Вмикає покадрову анімацію з купленого аркуша, якщо він заданий.
-## Кадр масштабуємо по висоті ОДНОГО кадру, а не всього аркуша.
-func _apply_sheet(sheet: Texture2D, hframes: int, vframes: int, fps: float,
-		idle: Vector2i, walk: Vector2i, attack: Vector2i, death: Vector2i) -> void:
+## Вмикає покадрову анімацію, якщо для героя вже є аркуш кадрів.
+## Масштабуємо по висоті ОДНОГО кадру, а не всього аркуша.
+func _apply_sheet(sheet: Texture2D, fps: float) -> void:
 	if sheet == null:
 		return
-	var clips := {}
-	if idle != Vector2i.ZERO:
-		clips[&"idle"] = idle
-	if walk != Vector2i.ZERO:
-		clips[&"walk"] = walk
-	if attack != Vector2i.ZERO:
-		clips[&"attack"] = attack
-	if death != Vector2i.ZERO:
-		clips[&"death"] = death
+	var rows := float(SpriteAnimator.VIEW_ROW_OFFSET.size() * SpriteAnimator.CLIP_ROWS.size())
 	art.visible = true
 	sprite.visible = false
-	art.scale = Vector2.ONE * (ART_HEIGHT / maxf(float(sheet.get_height()) / maxf(float(vframes), 1.0), 1.0))
-	_animator.setup_frames(sheet, hframes, vframes, fps, clips)
+	art.scale = Vector2.ONE * (ART_HEIGHT / maxf(float(sheet.get_height()) / rows, 1.0))
+	_animator.setup_frames(sheet, fps)
 
 ## Викликається один раз на старті рану (run.gd), до того як гравець
 ## взяв хоч один апгрейд у рані. Мета-рівні йдуть з GameState.

@@ -35,10 +35,18 @@ var _back: Texture2D
 # придбаного арту.
 var _has_sheet := false
 var _sheet_fps := 12.0
-var _clips: Dictionary = {}
-## Ті самі стани, але знятi ззаду: на аркуші це просто інші рядки, тож
-## "показати спину" — це взяти інший діапазон кадрів, а не іншу картинку.
-var _back_clips: Dictionary = {}
+## Розкладка аркуша, яку пече tools/model_renderer.gd: 8 колонок і по
+## чотири рядки на кожен ракурс. Знаючи її, аніматор сам рахує, який
+## діапазон кадрів показати, — описам ворогів не треба нічого вказувати.
+const SHEET_COLUMNS := 8
+const CLIP_ROWS := [&"idle", &"walk", &"attack", &"death"]
+const CLIP_FRAMES := {&"idle": 6, &"walk": 8, &"attack": 8, &"death": 8}
+const VIEW_ROW_OFFSET := {&"front": 0, &"side": 4, &"back": 8}
+
+## Наскільки рух має бути "боковим", щоб показати профіль, а не анфас.
+const SIDE_BIAS := 1.15
+
+var _current_view: StringName = &"front"
 var _clip_time := 0.0
 var _current_clip: StringName = &""
 var _base_scale := Vector2.ONE
@@ -71,17 +79,17 @@ func setup(sprite: Sprite2D, front: Texture2D, back: Texture2D = null) -> void:
 
 ## Вмикає покадрову анімацію: аркуш кадрів і діапазони (від, до) для
 ## станів idle/walk/attack/death. Викликається після setup().
-func setup_frames(sheet: Texture2D, hframes: int, vframes: int, fps: float, clips: Dictionary, back_clips: Dictionary = {}) -> void:
+## Вмикає покадрову анімацію з аркуша нашої розкладки (12 рядків).
+func setup_frames(sheet: Texture2D, fps: float) -> void:
 	if sheet == null or _sprite == null:
 		return
 	_has_sheet = true
 	_sheet_fps = fps
-	_clips = clips
-	_back_clips = back_clips
 	_sprite.texture = sheet
-	_sprite.hframes = maxi(hframes, 1)
-	_sprite.vframes = maxi(vframes, 1)
+	_sprite.hframes = SHEET_COLUMNS
+	_sprite.vframes = VIEW_ROW_OFFSET.size() * CLIP_ROWS.size()
 	_current_clip = &""
+	_current_view = &"front"
 
 ## Вимикає показ спини (див. _back_view_enabled).
 func set_back_view_enabled(enabled: bool) -> void:
@@ -94,26 +102,39 @@ func has_frame_animation() -> bool:
 
 ## Який стан показувати зараз: смерть > удар > хода > спокій.
 func _wanted_clip() -> StringName:
-	if _death_left > 0.0 and _clips.has(&"death"):
+	if _death_left > 0.0:
 		return &"death"
-	if _attack_left > 0.0 and _clips.has(&"attack"):
+	if _attack_left > 0.0:
 		return &"attack"
-	if _move_direction.length() > 0.1 and _clips.has(&"walk"):
+	if _move_direction.length() > 0.1:
 		return &"walk"
 	return &"idle"
 
+## Який ракурс показати: профіль, якщо рух переважно вбік; спина, якщо
+## персонаж іде від гравця (і якщо спина взагалі дозволена); інакше анфас.
+func _wanted_view() -> StringName:
+	if _move_direction.length() < 0.1:
+		return _current_view   # стоїть — лишається як був
+	if absf(_move_direction.x) > absf(_move_direction.y) * SIDE_BIAS:
+		return &"side"
+	if _move_direction.y < 0.0 and _back_view_enabled:
+		return &"back"
+	return &"front"
+
 func _process_frames(delta: float) -> void:
 	var clip := _wanted_clip()
-	if not _clips.has(clip):
-		return
-	if clip != _current_clip:
+	var view := _wanted_view()
+	if clip != _current_clip or view != _current_view:
+		# Стан і ракурс міняються разом: інакше при повороті анімація
+		# продовжувалась би з випадкового кадру.
+		if clip != _current_clip:
+			_clip_time = 0.0
 		_current_clip = clip
-		_clip_time = 0.0
+		_current_view = view
 	_clip_time += delta
-	# Йде від гравця — беремо кадри, зняті ззаду.
-	var source: Dictionary = _back_clips if (_facing_back and _back_clips.has(clip)) else _clips
-	var range_value: Vector2i = source[clip]
-	var frames := maxi(range_value.y - range_value.x + 1, 1)
+
+	var row: int = int(VIEW_ROW_OFFSET[view]) + CLIP_ROWS.find(clip)
+	var frames: int = CLIP_FRAMES[clip]
 	var index := int(_clip_time * _sheet_fps)
 	# Удар і смерть грають один раз і застигають на останньому кадрі,
 	# хода й спокій крутяться по колу.
@@ -121,15 +142,14 @@ func _process_frames(delta: float) -> void:
 		index = mini(index, frames - 1)
 	else:
 		index = index % frames
-	_sprite.frame = range_value.x + index
+	_sprite.frame = row * SHEET_COLUMNS + index
 
 ## Напрямок руху (нульовий — стоїмо). Викликає власник щокадру.
 func set_move_direction(direction: Vector2) -> void:
 	_move_direction = direction
 	if direction.length() < 0.1:
 		return
-	# Ліворуч/праворуч — дзеркалимо ту саму картинку; вгору/вниз —
-	# міняємо спину на обличчя.
+	# Ліворуч — дзеркалимо профіль (рендерили лише поворот праворуч).
 	if absf(direction.x) > 0.25:
 		_flip = direction.x < 0.0
 	if not _back_view_enabled:
@@ -152,9 +172,8 @@ func play_hit_flash() -> void:
 ## екрані рівно стільки, скільки вона триває; інакше коротке стискання.
 func play_death() -> void:
 	_death_left = DEATH_TIME
-	if _has_sheet and _clips.has(&"death"):
-		var range_value: Vector2i = _clips[&"death"]
-		_death_left = float(range_value.y - range_value.x + 1) / maxf(_sheet_fps, 1.0)
+	if _has_sheet:
+		_death_left = float(CLIP_FRAMES[&"death"]) / maxf(_sheet_fps, 1.0)
 
 func is_death_finished() -> bool:
 	return _death_left <= 0.0
@@ -187,7 +206,7 @@ func _process(delta: float) -> void:
 		_death_left -= delta
 		# З намальованою смертю нічого крутити не треба — вона вже
 		# намальована; лишаємо тільки згасання в кінці.
-		if _has_sheet and _clips.has(&"death"):
+		if _has_sheet:
 			_process_frames(delta)
 			_sprite.modulate = _base_tint * Color(1, 1, 1, clampf(_death_left * 4.0, 0.0, 1.0))
 			return

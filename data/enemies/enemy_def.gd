@@ -16,6 +16,12 @@ class_name EnemyDef
 @export var xp_drop: int = 1
 @export var gold_drop: int = 1
 @export var radius: float = 14.0
+
+## Висота спрайта на екрані в пікселях. Задаємо явно, а не множником від
+## radius: коло зіткнень і візуальний розмір — різні речі (дракон має
+## бути велетнем, але не мусить мати велетенське коло), і так розмір
+## кожного ворога видно й легко підкрутити.
+@export var art_height: float = 60.0
 @export var color: Color = Color(0.9, 0.2, 0.2)
 
 ## Спрайт ворога; якщо не заданий — малюється кольорова фігура.
@@ -27,20 +33,8 @@ class_name EnemyDef
 ## справжніх іграх, а не лише процедурним похитуванням. Порожньо —
 ## лишається одна картинка й процедурна анімація.
 @export var sheet: Texture2D
-@export var sheet_hframes: int = 1
-@export var sheet_vframes: int = 1
 @export var sheet_fps: float = 12.0
-## Діапазони кадрів (від, до) для кожного стану. (0, 0) = стану немає.
-@export var clip_idle: Vector2i = Vector2i.ZERO
-@export var clip_walk: Vector2i = Vector2i.ZERO
-@export var clip_attack: Vector2i = Vector2i.ZERO
-@export var clip_death: Vector2i = Vector2i.ZERO
 
-## Ті самі стани, зняті ЗЗАДУ (інші рядки того ж аркуша).
-@export var clip_idle_back: Vector2i = Vector2i.ZERO
-@export var clip_walk_back: Vector2i = Vector2i.ZERO
-@export var clip_attack_back: Vector2i = Vector2i.ZERO
-@export var clip_death_back: Vector2i = Vector2i.ZERO
 
 @export_enum("melee", "ranged") var attack_type: String = "melee"
 @export var explodes_on_death: bool = false

@@ -12,13 +12,6 @@ const RANGED_ATTACK_COOLDOWN := 1.6
 const EXPLOSION_RADIUS := 70.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
-## Спрайт ворога малюємо більшим за його фізичний радіус: крила, зброя
-## й роги виходять за межі кола зіткнень, та й у кадрі рендера лишається
-## запас порожнечі. 3.4 було замало (вороги дрібні), 5.4 — забагато
-## (затуляли пів екрана); 4.2 — розмір, за якого ворога добре видно,
-## але він не наступає на камеру.
-const ART_SIZE_FACTOR := 4.2
-
 @onready var sprite: Polygon2D = $Sprite
 @onready var art: Sprite2D = $Art
 
@@ -105,34 +98,17 @@ func _apply_art(def: EnemyDef) -> void:
 	sprite.visible = false
 	if def.texture != null:
 		art.texture = def.texture
-		art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / float(def.texture.get_height()))
+		art.scale = Vector2.ONE * (def.art_height / float(def.texture.get_height()))
 	_animator.setup(art, def.texture, def.texture_back)
 	# Вороги завжди обличчям до гравця: інакше ті, хто підходить знизу,
 	# йшли б до нього спиною й здавалося б, що вони дивляться врізнобіч.
 	_animator.set_back_view_enabled(false)
 	if def.sheet != null:
-		var clips := {}
-		if def.clip_idle != Vector2i.ZERO:
-			clips[&"idle"] = def.clip_idle
-		if def.clip_walk != Vector2i.ZERO:
-			clips[&"walk"] = def.clip_walk
-		if def.clip_attack != Vector2i.ZERO:
-			clips[&"attack"] = def.clip_attack
-		if def.clip_death != Vector2i.ZERO:
-			clips[&"death"] = def.clip_death
-		var back_clips := {}
-		if def.clip_idle_back != Vector2i.ZERO:
-			back_clips[&"idle"] = def.clip_idle_back
-		if def.clip_walk_back != Vector2i.ZERO:
-			back_clips[&"walk"] = def.clip_walk_back
-		if def.clip_attack_back != Vector2i.ZERO:
-			back_clips[&"attack"] = def.clip_attack_back
-		if def.clip_death_back != Vector2i.ZERO:
-			back_clips[&"death"] = def.clip_death_back
 		# Масштаб рахуємо по висоті ОДНОГО кадру, а не всього аркуша.
-		var frame_height := maxf(float(def.sheet.get_height()) / maxf(float(def.sheet_vframes), 1.0), 1.0)
-		art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / frame_height)
-		_animator.setup_frames(def.sheet, def.sheet_hframes, def.sheet_vframes, def.sheet_fps, clips, back_clips)
+		var rows := float(SpriteAnimator.VIEW_ROW_OFFSET.size() * SpriteAnimator.CLIP_ROWS.size())
+		var frame_height := maxf(float(def.sheet.get_height()) / rows, 1.0)
+		art.scale = Vector2.ONE * (def.art_height / frame_height)
+		_animator.setup_frames(def.sheet, def.sheet_fps)
 	_animator.reset()
 
 ## disabled міняємо через set_deferred — pool_deactivate() тут

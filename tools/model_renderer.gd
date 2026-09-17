@@ -8,10 +8,12 @@ extends Node
 ## цього жанру), програється кожна анімація, і кадри знімаються у
 ## прозорі PNG, складені в один аркуш.
 ##
-## РОЗКЛАДКА АРКУША (однакова для всіх монстрів, щоб описи ворогів були
-## простими): 8 колонок, 8 рядків, по рядку на стан:
-##   рядок 0..3 — спокій, хода, атака, смерть (вигляд СПЕРЕДУ)
-##   рядок 4..7 — те саме ЗЗАДУ (коли ворог іде від гравця)
+## РОЗКЛАДКА АРКУША (однакова для всіх монстрів, тож гра знає її напам'ять
+## і описам ворогів не треба перелічувати діапазони кадрів):
+## 8 колонок, 12 рядків — три ракурси по чотири стани:
+##   рядки 0..3  — СПЕРЕДУ (іде на гравця): спокій, хода, атака, смерть
+##   рядки 4..7  — ЗБОКУ (іде ліворуч чи праворуч; ліворуч — дзеркалимо)
+##   рядки 8..11 — ЗЗАДУ (іде від гравця вгору)
 ##
 ## Моделі лежать ПОЗА проєктом (D:/Claude code/assets_incoming) і
 ## читаються напряму з диска. Так сирі файли не потрапляють ні в
@@ -50,7 +52,7 @@ const CLIP_ALIASES := {
 ## Кого рендеримо: файл моделі -> ім'я спрайта в грі.
 const JOBS := [
 	{"model": "Armabee.glb", "id": "armabee"},
-	{"model": "Orc Enemy.glb", "id": "orc"},
+	{"model": "Ghost Skull.glb", "id": "ghost_skull"},
 	{"model": "Wizard.glb", "id": "wizard"},
 	{"model": "Yeti.glb", "id": "yeti"},
 	{"model": "Green Spiky Blob.glb", "id": "spiky_blob"},
@@ -58,7 +60,10 @@ const JOBS := [
 	{"model": "Dragon Evolved.glb", "id": "dragon"},
 ]
 
-const VIEWS := [180.0, 0.0]   # спереду, ззаду
+## Кут повороту моделі для кожного ракурсу. 0° — модель дивиться в
+## камеру (це й перевірено на готових спрайтах), 90° — праворуч,
+## 180° — від камери.
+const VIEWS := [0.0, 90.0, 180.0]
 
 var _viewport: SubViewport
 var _camera: Camera3D
@@ -147,7 +152,8 @@ func _render_monster(job: Dictionary) -> void:
 	await get_tree().process_frame
 	_frame_camera(model)
 
-	var sheet := Image.create(COLUMNS * FRAME_SIZE, COLUMNS * FRAME_SIZE, false, Image.FORMAT_RGBA8)
+	var rows_total := VIEWS.size() * CLIP_ORDER.size()
+	var sheet := Image.create(COLUMNS * FRAME_SIZE, rows_total * FRAME_SIZE, false, Image.FORMAT_RGBA8)
 	var row := 0
 	for view_index in VIEWS.size():
 		model.rotation_degrees = Vector3(0.0, VIEWS[view_index], 0.0)
