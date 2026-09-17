@@ -8,8 +8,9 @@ extends Control
 
 const OFFLINE_REWARD_SCENE := preload("res://scenes/ui/offline_reward.tscn")
 
-@onready var gold_label: Label = $CenterContainer/VBoxContainer/GoldLabel
-@onready var gems_label: Label = $CenterContainer/VBoxContainer/GemsLabel
+@onready var gold_label: Label = $TopBar/GoldLabel
+@onready var gems_label: Label = $TopBar/GemsLabel
+@onready var hero_label: Label = $CenterContainer/VBoxContainer/HeroLabel
 @onready var chest_button: Button = $CenterContainer/VBoxContainer/ChestButton
 
 const CHEST_MESSAGE_SEC := 3.0
@@ -35,6 +36,10 @@ func _process(delta: float) -> void:
 func _update_gold_label() -> void:
 	gold_label.text = "Золото: %d" % GameState.gold
 	gems_label.text = "Геми: %d" % GameState.gems
+	# Видно одразу, ким і чим підеш у бій — щоб не лізти в меню перевіряти.
+	var hero := HeroPool.get_def(GameState.selected_hero_id)
+	var weapon := WeaponPool.get_def(GameState.get_equipped_weapon_id(hero.id))
+	hero_label.text = "%s  •  %s" % [hero.title, weapon.title]
 
 func _update_chest_button() -> void:
 	if GameState.is_chest_available():

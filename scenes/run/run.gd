@@ -16,6 +16,8 @@ const ENEMY_PROJECTILE_SCENE := preload("res://scenes/run/enemy_projectile.tscn"
 const CRYSTAL_SCENE := preload("res://scenes/run/xp_crystal.tscn")
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
 const REVIVE_PROMPT_SCENE := preload("res://scenes/ui/revive_prompt.tscn")
+const PAUSE_MENU_SCENE := preload("res://scenes/ui/pause_menu.tscn")
+const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
 const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 
 @onready var hero: CharacterBody2D = $Hero
@@ -33,6 +35,7 @@ const RESULTS_SCENE_PATH := "res://scenes/ui/results.tscn"
 @onready var game_over_label: Label = $HUD/GameOverLabel
 @onready var debug_label: Label = $HUD/DebugLabel
 @onready var ability_label: Label = $HUD/AbilityLabel
+@onready var joystick: Control = $HUD/VirtualJoystick
 
 var _elapsed_time := 0.0
 var _run_active := true
@@ -40,6 +43,7 @@ var _gold_total := 0
 var _kills_total := 0
 var _revive_used := false
 var _revive_prompt: Node
+var _pause_menu: Node
 
 # Дебаг-оверлей (F3): DPS рахуємо за останню повну секунду, а не
 # накопичувальне середнє — так видно живі коливання по хвилинах.
@@ -75,6 +79,8 @@ func _ready() -> void:
 
 	spawner.setup(enemy_pool, crystal_pool, enemy_projectile_pool, hero, self, _on_enemy_died, _on_damage_dealt)
 
+	joystick.direction_changed.connect(hero.set_move_input)
+
 	game_over_label.visible = false
 	debug_label.visible = false
 	_update_hud()
@@ -83,6 +89,48 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_F3:
 		_debug_visible = not _debug_visible
 		debug_label.visible = _debug_visible
+	elif event.is_action_pressed("ui_cancel"):
+		_on_pause_pressed()
+
+## Кнопка "назад" на Android поводиться як пауза, а не як вихід із гри:
+## інакше гравець випадково втрачав би ран одним дотиком.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_pause_pressed()
+
+## Пауза доступна лише коли гра справді йде: під час вибору апгрейду
+## чи вікна воскресіння дерево вже на паузі й своє вікно вже відкрите.
+func _on_pause_pressed() -> void:
+	if not _run_active or _pause_menu != null or get_tree().paused:
+		return
+	get_tree().paused = true
+	_pause_menu = PAUSE_MENU_SCENE.instantiate()
+	_pause_menu.process_mode = Node.PROCESS_MODE_ALWAYS
+	hud.add_child(_pause_menu)
+	_pause_menu.resumed.connect(_on_pause_resumed)
+	_pause_menu.quit_confirmed.connect(_on_pause_quit)
+
+func _on_pause_resumed() -> void:
+	_close_pause_menu()
+
+func _on_pause_quit() -> void:
+	abandon_run()
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE_PATH)
+
+## Скасування рану: золото цього рану НЕ банкуємо, ран не зараховуємо
+## (тож і реклама між ранами не вилізе). Винесено окремо від переходу
+## в меню, щоб цю поведінку можна було перевірити автотестом, не
+## підміняючи всю сцену.
+func abandon_run() -> void:
+	_run_active = false
+	_gold_total = 0
+	_close_pause_menu()
+
+func _close_pause_menu() -> void:
+	if _pause_menu != null:
+		_pause_menu.queue_free()
+		_pause_menu = null
+	get_tree().paused = false
 
 func _process(delta: float) -> void:
 	if not _run_active:

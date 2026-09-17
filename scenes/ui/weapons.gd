@@ -1,9 +1,14 @@
 extends Control
 
-## Арсенал обраного героя: у кожного героя свій набір зброї (стартова
-## безкоштовна + три за геми). Тут її купують і споряджають — саме
-## спорядженою зброєю герой б'ється в наступному рані
-## (GameState.get_equipped_weapon_id → run.gd → Hero.equip_weapon).
+## Арсенал обраного героя. Кожна зброя — картка: місце під картинку
+## (WeaponIcon), назва, як саме вона б'є, головні числа й дія (купити,
+## спорядити або "вже в руках").
+##
+## У кожного героя свій набір: сокира вартової не з'являється в жриці.
+## Спорядженою зброєю герой б'ється в наступному рані
+## (GameState.get_equipped_weapon_id -> run.gd -> Hero.equip_weapon).
+
+const WEAPON_ICON_SCRIPT := preload("res://scenes/ui/weapon_icon.gd")
 
 const ARCHETYPE_HINTS := {
 	"projectile": "Постріл",
@@ -13,6 +18,13 @@ const ARCHETYPE_HINTS := {
 	"chain": "Ланцюг блискавки",
 	"orbit_storm": "Вихор навколо себе",
 	"ground_zone": "Зона на землі",
+}
+
+const STATUS_HINTS := {
+	&"poison": "отрута",
+	&"burn": "підпал",
+	&"slow": "сповільнення",
+	&"mark": "мітка",
 }
 
 @onready var hero_label: Label = $VBoxContainer/HeroLabel
@@ -27,37 +39,91 @@ func _ready() -> void:
 	_rebuild()
 
 func _rebuild() -> void:
-	gems_label.text = "Геми: %d    Золото: %d" % [GameState.gems, GameState.gold]
+	gems_label.text = "Геми: %d        Золото: %d" % [GameState.gems, GameState.gold]
 	for child in rows_container.get_children():
 		child.queue_free()
 	var equipped := GameState.get_equipped_weapon_id(_hero_id)
 	for def in WeaponPool.get_for_hero(_hero_id):
-		rows_container.add_child(_build_row(def, equipped))
+		rows_container.add_child(_build_card(def, equipped))
 
-func _build_row(def: WeaponDef, equipped_id: StringName) -> Control:
+func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
+	var owned := GameState.is_weapon_owned(def.id)
+	var card := PanelContainer.new()
+	# Споряджену зброю підсвічуємо рамкою її ж кольору — видно з першого погляду.
+	if equipped_id == def.id:
+		card.add_theme_stylebox_override("panel", UiTheme.make_box(UiTheme.PANEL_LIGHT, 14, 3, def.color))
+
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
+	row.add_theme_constant_override("separation", 18)
+	card.add_child(row)
 
-	var info := Label.new()
-	info.custom_minimum_size = Vector2(430, 0)
-	info.text = "%s — %s\n%s" % [def.title, ARCHETYPE_HINTS.get(def.archetype, ""), def.description]
-	info.add_theme_color_override("font_color", def.color)
+	var icon: Control = WEAPON_ICON_SCRIPT.new()
+	icon.setup(def, owned)
+	row.add_child(icon)
+
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 2)
 	row.add_child(info)
 
+	var title := Label.new()
+	title.text = def.title
+	title.add_theme_font_size_override("font_size", 21)
+	title.add_theme_color_override("font_color", def.color if owned else UiTheme.TEXT_DIM)
+	info.add_child(title)
+
+	var kind := Label.new()
+	kind.text = ARCHETYPE_HINTS.get(def.archetype, "")
+	kind.add_theme_font_size_override("font_size", 14)
+	kind.add_theme_color_override("font_color", UiTheme.GEM)
+	info.add_child(kind)
+
+	var stats := Label.new()
+	stats.text = _build_stats_text(def)
+	stats.add_theme_font_size_override("font_size", 14)
+	stats.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	info.add_child(stats)
+
+	var description := Label.new()
+	description.text = def.description
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.custom_minimum_size = Vector2(360, 0)
+	description.add_theme_font_size_override("font_size", 14)
+	description.add_theme_color_override("font_color", UiTheme.TEXT)
+	info.add_child(description)
+
+	row.add_child(_build_action_button(def, equipped_id, owned))
+	return card
+
+## Головні числа зброї людською мовою: скільки б'є, як часто і що
+## лишає на ворогові.
+func _build_stats_text(def: WeaponDef) -> String:
+	var parts: Array[String] = ["Шкода %d" % int(def.damage)]
+	if def.cooldown > 0.0:
+		parts.append("раз на %.1f с" % def.cooldown)
+	if def.shots > 1:
+		parts.append("%d снаряди" % def.shots)
+	if def.pierce > 0:
+		parts.append("пробиває %d" % def.pierce)
+	if def.status != &"" and STATUS_HINTS.has(def.status):
+		parts.append(STATUS_HINTS[def.status])
+	return "   •   ".join(parts)
+
+func _build_action_button(def: WeaponDef, equipped_id: StringName, owned: bool) -> Button:
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(160, 48)
+	button.custom_minimum_size = Vector2(170, 56)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if equipped_id == def.id:
-		button.text = "Споряджено"
+		button.text = "У руках"
 		button.disabled = true
-	elif GameState.is_weapon_owned(def.id):
+	elif owned:
 		button.text = "Спорядити"
 		button.pressed.connect(_on_equip_pressed.bind(def.id))
 	else:
 		button.text = "%d гемів" % def.cost_gems
 		button.disabled = GameState.gems < def.cost_gems
 		button.pressed.connect(_on_buy_pressed.bind(def.id))
-	row.add_child(button)
-	return row
+	return button
 
 ## Куплену зброю одразу вдягаємо — гравець хотів саме її, зайвий
 ## другий клік нічого не додає.

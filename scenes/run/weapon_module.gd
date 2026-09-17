@@ -84,6 +84,10 @@ func process_attack(delta: float, stats: Dictionary) -> void:
 	var target := _find_target()
 	if target == null:
 		return
+	# Кожна зброя б'є лише в межах своєї дальності: сокира не махає в
+	# порожнечу, коли найближчий ворог аж на іншому кінці екрана.
+	if _hero.global_position.distance_to(target.global_position) > _get_attack_range():
+		return
 	_attack(target)
 	_cooldown_left = _def.cooldown * float(stats.get("cooldown_mult", 1.0))
 
@@ -106,7 +110,24 @@ func _get_damage() -> float:
 	return _def.damage * float(_last_stats.get("damage_mult", 1.0))
 
 func _find_target() -> Node2D:
-	return CombatQuery.nearest_enemy(get_tree(), _hero.global_position, 100000.0)
+	return CombatQuery.nearest_enemy(get_tree(), _hero.global_position, _get_attack_range())
+
+## Дальність удару залежить від того, ЯК зброя б'є: у ближнього бою це
+## довжина замаху, у вогнемета — довжина струменя, у блискавки —
+## дальність стрибка, у снарядів — приблизно екран.
+func _get_attack_range() -> float:
+	match _def.archetype:
+		"melee_arc":
+			return _def.melee_range * 0.95
+		"cone":
+			return _def.cone_range * 0.9
+		"chain":
+			return _def.chain_range
+		"ground_zone":
+			return 320.0
+		"orbit_storm":
+			return _def.orbit_radius + STORM_BAND
+	return 760.0   # снаряди: приблизно діагональ екрана
 
 func _attack(target: Node2D) -> void:
 	attacked.emit(target)

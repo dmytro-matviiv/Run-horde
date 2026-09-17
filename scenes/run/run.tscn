@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/run/run.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/run/hero.tscn" id="2"]
 [ext_resource type="Script" path="res://scripts/systems/spawner.gd" id="3"]
 [ext_resource type="Texture2D" path="res://assets/sprites/floor_dungeon.png" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/ui/virtual_joystick.tscn" id="5"]
 
 [node name="Run" type="Node2D"]
 script = ExtResource("1")
@@ -38,6 +39,20 @@ position = Vector2(576, 324)
 script = ExtResource("3")
 
 [node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="VirtualJoystick" parent="HUD" instance=ExtResource("5")]
+
+[node name="PauseButton" type="Button" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -84.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 68.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 22
+text = "II"
 
 [node name="TimerLabel" type="Label" parent="HUD"]
 offset_left = 16.0
@@ -117,3 +132,4 @@ theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
 text = "Ви загинули"
 horizontal_alignment = 1
 vertical_alignment = 1
+[connection signal="pressed" from="HUD/PauseButton" to="." method="_on_pause_pressed"]

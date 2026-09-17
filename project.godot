@@ -26,6 +26,7 @@ SaveManager="*res://scripts/autoload/save_manager.gd"
 AdsManager="*res://scripts/autoload/ads_manager.gd"
 IapManager="*res://scripts/autoload/iap_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
+UiTheme="*res://scripts/autoload/ui_theme.gd"
 
 [editor_plugins]
 

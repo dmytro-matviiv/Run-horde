@@ -26,9 +26,6 @@ const WEAPON_VISUAL_SCENE := preload("res://scenes/run/weapon_visual.tscn")
 ## руху й виглядає так, наче ковзає по підлозі, а не йде.
 const ACCELERATION := 1400.0
 
-const JOYSTICK_MAX_RADIUS := 80.0   # відстань відтягування для 100% швидкості
-const JOYSTICK_DEAD_ZONE := 4.0     # менші рухи ігноруються як тремтіння пальця
-
 const ORBITAL_BLADE_SCENE := preload("res://scenes/run/orbital_blade.tscn")
 const ORBITAL_RADIUS := 55.0
 const ORBITAL_ANGULAR_SPEED := 2.5
@@ -62,8 +59,6 @@ var xp := 0
 var upgrade_levels: Dictionary = {}   # StringName -> int, рівень кожного взятого апгрейду
 
 var _move_direction := Vector2.ZERO
-var _touch_active := false
-var _touch_start := Vector2.ZERO
 var _invulnerable := false
 
 var _weapon: WeaponModule
@@ -242,20 +237,11 @@ func get_meta_talent_level(id: StringName) -> int:
 func get_luck_bonus() -> float:
 	return _meta_luck_percent
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
-		_touch_active = event.pressed
-		if event.pressed:
-			_touch_start = event.position
-		else:
-			_move_direction = Vector2.ZERO
-	elif (event is InputEventScreenDrag or event is InputEventMouseMotion) and _touch_active:
-		var offset: Vector2 = event.position - _touch_start
-		var distance := offset.length()
-		if distance > JOYSTICK_DEAD_ZONE:
-			_move_direction = offset.normalized() * clampf(distance / JOYSTICK_MAX_RADIUS, 0.0, 1.0)
-		else:
-			_move_direction = Vector2.ZERO
+## Напрямок руху ззовні — його дає екранний джойстик (scenes/ui/
+## virtual_joystick.gd). Сам герой дотиків більше не слухає: інакше
+## він і джойстик тлумачили б одні й ті самі події по-різному.
+func set_move_input(direction: Vector2) -> void:
+	_move_direction = direction
 
 func _physics_process(delta: float) -> void:
 	var direction := _get_move_direction()
