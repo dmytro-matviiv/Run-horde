@@ -15,14 +15,13 @@ extends Node3D
 const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 
-## Куди веде кожна будівля. Данж поки що старий, двовимірний — він
-## працює, поки бій не переїде в 3D.
+## Куди веде кожна будівля.
 const ACTION_SCENES := {
 	"heroes": "res://scenes/ui/heroes.tscn",
 	"weapons": "res://scenes/ui/weapons.tscn",
 	"talents": "res://scenes/ui/meta_upgrades.tscn",
 	"shop": "res://scenes/ui/shop.tscn",
-	"portal": "res://scenes/run/run.tscn",
+	"portal": "res://scenes/dungeon/dungeon.tscn",
 }
 
 @onready var player: CharacterBody3D = $Player

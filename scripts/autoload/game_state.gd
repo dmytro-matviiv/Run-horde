@@ -141,6 +141,19 @@ func buy_starter_pack(id: StringName) -> bool:
 	SaveManager.save_game()
 	return true
 
+# Данж (3D). dungeon_level — який рівень зараз обрано, max_dungeon_level
+# — найдальший, куди герой уже дійшов.
+var dungeon_level := 0
+var max_dungeon_level := 0
+
+func unlock_next_dungeon_level() -> void:
+	max_dungeon_level = maxi(max_dungeon_level, dungeon_level + 1)
+	SaveManager.save_game()
+
+func select_dungeon_level(index: int) -> void:
+	dungeon_level = clampi(index, 0, max_dungeon_level)
+	SaveManager.save_game()
+
 func register_completed_run() -> void:
 	completed_runs += 1
 	SaveManager.save_game()

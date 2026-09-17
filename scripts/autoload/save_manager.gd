@@ -6,7 +6,7 @@ extends Node
 ## файлу.
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SCHEMA_VERSION := 4
+const CURRENT_SCHEMA_VERSION := 5
 
 func save_game() -> void:
 	var data := {
@@ -23,6 +23,8 @@ func save_game() -> void:
 		"gems": GameState.gems,
 		"install_timestamp": GameState.install_timestamp,
 		"claimed_starter_packs": _stringnames_to_strings(GameState.claimed_starter_packs),
+		"dungeon_level": GameState.dungeon_level,
+		"max_dungeon_level": GameState.max_dungeon_level,
 		"owned_weapon_ids": _stringnames_to_strings(GameState.owned_weapon_ids),
 		"equipped_weapon_ids": _keys_to_string(_values_to_strings(GameState.equipped_weapon_ids)),
 	}
@@ -56,6 +58,8 @@ func load_game() -> void:
 	GameState.gems = data.get("gems", 0)
 	GameState.install_timestamp = data.get("install_timestamp", 0)
 	GameState.claimed_starter_packs = _strings_to_stringnames(data.get("claimed_starter_packs", []))
+	GameState.dungeon_level = data.get("dungeon_level", 0)
+	GameState.max_dungeon_level = data.get("max_dungeon_level", 0)
 	GameState.owned_weapon_ids = _strings_to_stringnames(data.get("owned_weapon_ids", []))
 	GameState.equipped_weapon_ids = _keys_to_string_name(_values_to_stringnames(data.get("equipped_weapon_ids", {})))
 
@@ -69,6 +73,8 @@ func _migrate(data: Dictionary) -> Dictionary:
 		data = _migrate_v2_to_v3(data)
 	if version < 4:
 		data = _migrate_v3_to_v4(data)
+	if version < 5:
+		data = _migrate_v4_to_v5(data)
 	return data
 
 ## v1 мав один спільний meta_upgrade_levels на всіх героїв разом; v2 —
@@ -88,6 +94,13 @@ func _migrate_v2_to_v3(data: Dictionary) -> Dictionary:
 	if not data.has("install_timestamp"):
 		data["install_timestamp"] = 1
 	data["schema_version"] = 3
+	return data
+
+## v5 додав прогрес данжу: старі сейви починають з першого рівня.
+func _migrate_v4_to_v5(data: Dictionary) -> Dictionary:
+	data["dungeon_level"] = data.get("dungeon_level", 0)
+	data["max_dungeon_level"] = data.get("max_dungeon_level", 0)
+	data["schema_version"] = 5
 	return data
 
 ## v4 додав зброю. Старому сейву просто дописуємо порожні списки —

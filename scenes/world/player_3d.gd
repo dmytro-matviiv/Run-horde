@@ -18,6 +18,13 @@ const DECELERATION := 18.0      # як швидко спиняється
 const ROTATION_SPEED := 12.0    # як швидко довертається в бік руху
 const GRAVITY := 22.0
 
+## Бій. Удар б'є по дузі перед героєм — саме так читається замах мечем.
+const ATTACK_RANGE := 2.6
+const ATTACK_ARC_DEG := 120.0
+const ATTACK_COOLDOWN := 0.55
+const BASE_DAMAGE := 14.0
+const BASE_MAX_HP := 100.0
+
 ## Швидкість, з якої хода переходить у біг (для змішування анімацій).
 const RUN_THRESHOLD := 3.4
 
@@ -25,8 +32,19 @@ const RUN_THRESHOLD := 3.4
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var camera_pivot: Node3D = $CameraPivot
 
+signal died
+signal health_changed(current: float, maximum: float)
+
 var _input_direction := Vector2.ZERO
 var _facing_angle := 0.0
+
+var max_hp := BASE_MAX_HP
+var current_hp := BASE_MAX_HP
+var _damage := BASE_DAMAGE
+var _speed_bonus := 0.0
+var _attack_left := 0.0
+var _dead := false
+var _regen_per_second := 0.0
 
 func _ready() -> void:
 	_build_animation_tree()
@@ -84,11 +102,14 @@ func set_move_input(direction: Vector2) -> void:
 	_input_direction = direction
 
 func _physics_process(delta: float) -> void:
+	_attack_left -= delta
+	if _dead:
+		return
 	var direction := _get_world_direction()
 
 	# Розгін і гальмування: різні швидкості, щоб старт був жвавим, а
 	# зупинка — не миттєвою.
-	var target_speed := RUN_SPEED * clampf(direction.length(), 0.0, 1.0)
+	var target_speed := RUN_SPEED * (1.0 + _speed_bonus) * clampf(direction.length(), 0.0, 1.0)
 	var target_velocity := direction.normalized() * target_speed
 	var rate := ACCELERATION if direction.length() > 0.05 else DECELERATION
 	velocity.x = move_toward(velocity.x, target_velocity.x, rate * delta)
@@ -98,6 +119,10 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= GRAVITY * delta
 	else:
 		velocity.y = 0.0
+
+	if _regen_per_second > 0.0 and current_hp > 0.0:
+		current_hp = minf(current_hp + _regen_per_second * delta, max_hp)
+		health_changed.emit(current_hp, max_hp)
 
 	move_and_slide()
 	_update_facing(direction, delta)
@@ -140,6 +165,65 @@ func _update_animation() -> void:
 			else remap(speed, WALK_SPEED, RUN_SPEED, 1.0, 2.0)
 	animation_tree.set("parameters/Move/blend_position", clampf(blend, 0.0, 2.0))
 
-## Удар мечем — програється поверх руху (окрема гілка OneShot).
+## Удар мечем: анімація поверх руху (гілка OneShot) плюс сама шкода —
+## по всіх ворогах у дузі перед героєм.
 func attack() -> void:
+	if _dead or _attack_left > 0.0:
+		return
+	_attack_left = ATTACK_COOLDOWN
 	animation_tree.set("parameters/AttackShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	_hit_enemies_in_arc()
+
+## Шукаємо ворогів кулею навколо героя й лишаємо тих, хто справді
+## попереду: удар мечем не має діставати тих, хто за спиною.
+func _hit_enemies_in_arc() -> void:
+	var shape := SphereShape3D.new()
+	shape.radius = ATTACK_RANGE
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.transform = Transform3D(Basis(), global_position + Vector3.UP)
+	query.collision_mask = 4          # шар ворогів
+	query.collide_with_bodies = true
+
+	var forward := Vector3(sin(_facing_angle), 0.0, cos(_facing_angle))
+	var half_arc := deg_to_rad(ATTACK_ARC_DEG) * 0.5
+	for hit in get_world_3d().direct_space_state.intersect_shape(query, 16):
+		var body: Variant = hit.get("collider")
+		if body == null or not body.has_method("take_damage"):
+			continue
+		var to_enemy: Vector3 = body.global_position - global_position
+		to_enemy.y = 0.0
+		if to_enemy.length() > 0.01 and forward.angle_to(to_enemy.normalized()) <= half_arc:
+			body.take_damage(_damage)
+
+func take_damage(amount: float) -> void:
+	if _dead:
+		return
+	current_hp = maxf(current_hp - amount, 0.0)
+	health_changed.emit(current_hp, max_hp)
+	if current_hp <= 0.0:
+		_dead = true
+		velocity = Vector3.ZERO
+		died.emit()
+
+## Здібності з вибору на рівні. Ідентифікатори ті самі, що й у
+## 2D-частині гри, тож окремого списку заводити не довелось.
+func apply_ability(id: StringName) -> void:
+	match id:
+		&"weapon_damage":
+			_damage *= 1.25
+		&"weapon_cooldown", &"weapon_multishot":
+			_attack_left = 0.0
+			_damage *= 1.1
+		&"move_speed":
+			_speed_bonus += 0.12
+		&"max_hp":
+			max_hp += 25.0
+			current_hp += 25.0
+		&"regen":
+			_regen_per_second += 1.0
+		_:
+			# Невідома здібність — просто невелике посилення, щоб вибір
+			# ніколи не був порожнім.
+			_damage *= 1.08
+	health_changed.emit(current_hp, max_hp)
