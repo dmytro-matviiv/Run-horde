@@ -61,6 +61,18 @@ func _ready() -> void:
 	_health_bar = HEALTH_BAR_SCRIPT.new()
 	add_child(_health_bar)
 	_health_bar.setup(ALLY_BAR_COLOR, BAR_HEIGHT, true)
+	_add_torch_light()
+
+## Світло, яке герой носить із собою. Це найдешевший спосіб освітити
+## підземелля: одне джерело замість десятків по стінах, і воно завжди
+## там, де гравець дивиться.
+func _add_torch_light() -> void:
+	var light := OmniLight3D.new()
+	light.light_color = Color(1.0, 0.85, 0.65)
+	light.light_energy = 2.6
+	light.omni_range = 18.0
+	light.position = Vector3(0, 1.6, 0)
+	add_child(light)
 
 ## Дерево анімацій будуємо кодом, а не мишкою в редакторі: так видно
 ## увесь набір станів в одному місці, і його легко переносити на інших
