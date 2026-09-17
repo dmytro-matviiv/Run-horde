@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/world/camera_rig.gd" id="1"]
+
+[node name="CameraRig" type="Node3D"]
+script = ExtResource("1")
+distance = 7.0
+pitch_degrees = -34.0
+
+[node name="SpringArm3D" type="SpringArm3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.669, 0.743, 0, -0.743, 0.669, 0, 0, 0)
+spring_length = 7.0
+margin = 0.3
+
+[node name="Camera3D" type="Camera3D" parent="SpringArm3D"]
+fov = 50.0

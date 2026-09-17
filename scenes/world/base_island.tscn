@@ -1,0 +1,105 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scenes/world/base_island.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/world/player_3d.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/world/camera_rig.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://assets/models/environment/Town Center.glb" id="10"]
+[ext_resource type="PackedScene" path="res://assets/models/environment/Barracks.glb" id="11"]
+[ext_resource type="PackedScene" path="res://assets/models/environment/Archery Building.glb" id="12"]
+[ext_resource type="PackedScene" path="res://assets/models/environment/Pine Trees.glb" id="13"]
+[ext_resource type="PackedScene" path="res://assets/models/environment/Rock.glb" id="14"]
+[ext_resource type="PackedScene" path="res://assets/models/environment/Mountain.glb" id="15"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(120, 120)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grass"]
+albedo_color = Color(0.353, 0.588, 0.286, 1)
+roughness = 0.95
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(120, 1, 120)
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_horizon_color = Color(0.646, 0.656, 0.671, 1)
+ground_horizon_color = Color(0.646, 0.656, 0.671, 1)
+
+[sub_resource type="Sky" id="Sky_day"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_day"]
+background_mode = 2
+sky = SubResource("Sky_day")
+tonemap_mode = 2
+ssao_enabled = true
+
+[node name="BaseIsland" type="Node3D"]
+script = ExtResource("1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_day")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 18, 0)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="Ground" type="StaticBody3D" parent="."]
+
+[node name="GroundMesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_grass")
+
+[node name="GroundShape" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_ground")
+
+[node name="Buildings" type="Node3D" parent="."]
+
+[node name="TownCenter" parent="Buildings" instance=ExtResource("10")]
+transform = Transform3D(3.4, 0, 0, 0, 3.4, 0, 0, 0, 3.4, 0, 0, -14)
+
+[node name="Barracks" parent="Buildings" instance=ExtResource("11")]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -13, 0, -4)
+
+[node name="ArcheryBuilding" parent="Buildings" instance=ExtResource("12")]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 13, 0, -4)
+
+[node name="Nature" type="Node3D" parent="."]
+
+[node name="PineTrees1" parent="Nature" instance=ExtResource("13")]
+transform = Transform3D(3.2, 0, 0, 0, 3.2, 0, 0, 0, 3.2, -16, 0, 12)
+
+[node name="PineTrees2" parent="Nature" instance=ExtResource("13")]
+transform = Transform3D(2.8, 0, 0, 0, 2.8, 0, 0, 0, 2.8, 17, 0, 13)
+
+[node name="PineTrees3" parent="Nature" instance=ExtResource("13")]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, -20, 0, -16)
+
+[node name="Rock1" parent="Nature" instance=ExtResource("14")]
+transform = Transform3D(2.4, 0, 0, 0, 2.4, 0, 0, 0, 2.4, 9, 0, 7)
+
+[node name="Rock2" parent="Nature" instance=ExtResource("14")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -8, 0, 8)
+
+[node name="Mountain1" parent="Nature" instance=ExtResource("15")]
+transform = Transform3D(7, 0, 0, 0, 7, 0, 0, 0, 7, -34, 0, -34)
+
+[node name="Mountain2" parent="Nature" instance=ExtResource("15")]
+transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 33, 0, -36)
+
+[node name="Player" parent="." instance=ExtResource("2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 6)
+
+[node name="CameraRig" parent="." instance=ExtResource("3")]
+target_path = NodePath("../Player")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="HintLabel" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 640.0
+offset_bottom = 70.0
+theme_override_font_sizes/font_size = 18
+text = "Стрілки або джойстик — рух. Пробіл — удар мечем."
