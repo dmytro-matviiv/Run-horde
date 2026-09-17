@@ -12,12 +12,12 @@ const RANGED_ATTACK_COOLDOWN := 1.6
 const EXPLOSION_RADIUS := 70.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
-## Спрайт ворога малюємо помітно більшим за його фізичний радіус:
-## по-перше, крила, зброя й шолом виходять за межі кола зіткнень;
-## по-друге, у рендері 3D-моделі навколо персонажа лишається запас
-## порожнечі. З множником 3.4 вороги виглядали дрібними — 5.4 дає
-## розмір, за якого видно, кого саме ти б'єш.
-const ART_SIZE_FACTOR := 5.4
+## Спрайт ворога малюємо більшим за його фізичний радіус: крила, зброя
+## й роги виходять за межі кола зіткнень, та й у кадрі рендера лишається
+## запас порожнечі. 3.4 було замало (вороги дрібні), 5.4 — забагато
+## (затуляли пів екрана); 4.2 — розмір, за якого ворога добре видно,
+## але він не наступає на камеру.
+const ART_SIZE_FACTOR := 4.2
 
 @onready var sprite: Polygon2D = $Sprite
 @onready var art: Sprite2D = $Art
@@ -107,6 +107,9 @@ func _apply_art(def: EnemyDef) -> void:
 		art.texture = def.texture
 		art.scale = Vector2.ONE * (def.radius * ART_SIZE_FACTOR / float(def.texture.get_height()))
 	_animator.setup(art, def.texture, def.texture_back)
+	# Вороги завжди обличчям до гравця: інакше ті, хто підходить знизу,
+	# йшли б до нього спиною й здавалося б, що вони дивляться врізнобіч.
+	_animator.set_back_view_enabled(false)
 	if def.sheet != null:
 		var clips := {}
 		if def.clip_idle != Vector2i.ZERO:

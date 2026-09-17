@@ -48,6 +48,11 @@ var _step_phase := 0.0
 var _move_direction := Vector2.ZERO
 var _facing_back := false
 var _flip := false
+## Чи можна взагалі показувати спину. Для героя — так (гравець веде
+## його вгору й бачить спину, як у справжніх іграх). Для ворогів — ні:
+## вони сходяться до героя з усіх боків, і половина з них ішла б до
+## гравця спиною. Вороги завжди обернені обличчям до екрана.
+var _back_view_enabled := true
 
 var _attack_left := 0.0
 var _attack_aim := Vector2.RIGHT
@@ -77,6 +82,12 @@ func setup_frames(sheet: Texture2D, hframes: int, vframes: int, fps: float, clip
 	_sprite.hframes = maxi(hframes, 1)
 	_sprite.vframes = maxi(vframes, 1)
 	_current_clip = &""
+
+## Вимикає показ спини (див. _back_view_enabled).
+func set_back_view_enabled(enabled: bool) -> void:
+	_back_view_enabled = enabled
+	if not enabled:
+		_facing_back = false
 
 func has_frame_animation() -> bool:
 	return _has_sheet
@@ -121,6 +132,8 @@ func set_move_direction(direction: Vector2) -> void:
 	# міняємо спину на обличчя.
 	if absf(direction.x) > 0.25:
 		_flip = direction.x < 0.0
+	if not _back_view_enabled:
+		return
 	if direction.y < -0.35:
 		_facing_back = true
 	elif direction.y > 0.35:
