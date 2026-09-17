@@ -40,7 +40,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _handle_press(index: int, position: Vector2, pressed: bool) -> void:
 	if pressed:
-		if _active or position.x > size.x * 0.55:
+		if _active or position.x > size.x * 0.5:
 			return   # права половина екрана — не для керування
 		_touch_index = index
 		_origin = position

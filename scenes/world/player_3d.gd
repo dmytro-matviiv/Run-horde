@@ -141,13 +141,30 @@ func _get_world_direction() -> Vector3:
 
 	# "Вперед" для камери — це -Z (так влаштований Godot), тому вектор
 	# від'ємний: інакше герой іде рівно в протилежний бік.
-	var camera_yaw := camera_pivot.global_rotation.y
+	#
+	# Кут беремо з АКТИВНОЇ камери, а не з окремого вузла: камера тепер
+	# обертається (пальцем на телефоні, мишею на ПК або сама за рухом),
+	# і "вперед" має рахуватись від того, що гравець бачить.
+	var camera_yaw := _get_camera_yaw()
 	var forward := Vector3(-sin(camera_yaw), 0.0, -cos(camera_yaw))
 	var right := Vector3(-forward.z, 0.0, forward.x)
 	return (right * input.x + forward * input.y) * input.length()
 
 ## Плавний доворот: персонаж не "телепортує" погляд, а повертається з
 ## обмеженою швидкістю — саме це дає відчуття живого руху на 360°.
+## Кут активної камери; поки її немає (наприклад, у тестах) — нуль.
+func _get_camera_yaw() -> float:
+	var camera := get_viewport().get_camera_3d()
+	return 0.0 if camera == null else camera.global_rotation.y
+
+## Куди герой зараз біжить — цим користується камера, щоб плавно
+## заходити йому за спину.
+func get_move_yaw() -> float:
+	return atan2(velocity.x, velocity.z)
+
+func is_moving() -> bool:
+	return Vector2(velocity.x, velocity.z).length() > 0.6
+
 func _update_facing(direction: Vector3, delta: float) -> void:
 	if direction.length() < 0.05:
 		return

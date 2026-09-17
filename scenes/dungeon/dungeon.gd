@@ -15,6 +15,7 @@ extends Node3D
 
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
 const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
+const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
 const ENEMY_SCRIPT := preload("res://scenes/dungeon/enemy_3d.gd")
 const EXIT_SCENE := preload("res://assets/models/dungeon/Arch_Door.fbx")
 
@@ -72,6 +73,13 @@ func _setup_hud(title: String) -> void:
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
 	hud.add_child(joystick)
 	joystick.direction_changed.connect(_on_joystick_moved)
+
+	# Права половина екрана крутить камеру, короткий дотик по ній — удар.
+	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
+	hud.add_child(camera_touch)
+	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
+	camera_touch.tap_attack.connect(player.attack)
+
 	hud.move_child(exit_button, hud.get_child_count() - 1)
 
 	exit_button.visible = false

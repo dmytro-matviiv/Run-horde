@@ -13,6 +13,7 @@ extends Node3D
 ## код про них нічого не знає, фізику для них він побудує сам.
 
 const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
+const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 
 ## Куди веде кожна будівля.
@@ -40,6 +41,12 @@ func _ready() -> void:
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
 	$HUD.add_child(joystick)
 	joystick.direction_changed.connect(_on_joystick_moved)
+
+	# Права половина екрана крутить камеру, короткий дотик по ній — удар.
+	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
+	$HUD.add_child(camera_touch)
+	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
+	camera_touch.tap_attack.connect(player.attack)
 	# Кнопка дії має бути ПОВЕРХ джойстика, інакше дотик по ній
 	# сприймався б як спроба рухатись.
 	$HUD.move_child(action_button, $HUD.get_child_count() - 1)

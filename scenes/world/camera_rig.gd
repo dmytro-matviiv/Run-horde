@@ -12,20 +12,41 @@ extends Node3D
 const FOLLOW_SPEED := 6.0      # як швидко камера наздоганяє героя
 const HEIGHT_OFFSET := 1.2     # дивимось на груди, а не на ноги
 
+## Камера сама доводиться за спину героєві, коли той біжить: інакше,
+## повернувши назад, гравець біжить "на себе" й не бачить, куди йде.
+## Робимо це повільно — різкий доворот камери викликає нудоту.
+const AUTO_FOLLOW_SPEED := 2.4
+
+## Після ручного повороту (палець на правій половині чи права кнопка
+## миші) автодоведення мовчить кілька секунд, щоб не боротися з гравцем.
+const MANUAL_HOLD_TIME := 3.0
+
 @export var target_path: NodePath
 @export var distance := 7.0
 @export var pitch_degrees := -34.0
 
+## Чи доводити камеру за рухом автоматично.
+@export var auto_follow := true
+
 @onready var spring_arm: SpringArm3D = $SpringArm3D
 
 var _target: Node3D
+var _yaw := 0.0
+var _manual_left := 0.0
 
 func _ready() -> void:
 	_target = get_node_or_null(target_path) as Node3D
 	spring_arm.spring_length = distance
 	spring_arm.rotation_degrees.x = pitch_degrees
+	_yaw = rotation.y
 	if _target != null:
 		global_position = _target.global_position + Vector3.UP * HEIGHT_OFFSET
+
+## Ручний поворот камери: палець по правій половині екрана або права
+## кнопка миші.
+func rotate_by(amount: float) -> void:
+	_yaw = wrapf(_yaw + amount, -PI, PI)
+	_manual_left = MANUAL_HOLD_TIME
 
 func _physics_process(delta: float) -> void:
 	if _target == null:
@@ -34,3 +55,13 @@ func _physics_process(delta: float) -> void:
 	# lerp зі швидкістю, обмеженою кадром: рух камери лишається плавним
 	# і на 30, і на 120 кадрах за секунду.
 	global_position = global_position.lerp(wanted, clampf(FOLLOW_SPEED * delta, 0.0, 1.0))
+	_update_yaw(delta)
+
+func _update_yaw(delta: float) -> void:
+	if _manual_left > 0.0:
+		_manual_left -= delta
+	elif auto_follow and _target.has_method("get_move_yaw") and _target.is_moving():
+		# Камера повільно заходить героєві за спину: він біжить "від
+		# нас", і дорогу попереду видно.
+		_yaw = rotate_toward(_yaw, _target.get_move_yaw() + PI, AUTO_FOLLOW_SPEED * delta)
+	rotation.y = _yaw
