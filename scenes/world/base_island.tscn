@@ -31,7 +31,6 @@ sky_material = SubResource("ProceduralSkyMaterial_sky")
 background_mode = 2
 sky = SubResource("Sky_day")
 tonemap_mode = 2
-ssao_enabled = true
 
 [node name="BaseIsland" type="Node3D"]
 script = ExtResource("1")
