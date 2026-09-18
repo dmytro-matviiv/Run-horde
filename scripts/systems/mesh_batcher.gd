@@ -27,7 +27,12 @@ func add(scene: PackedScene, transform: Transform3D) -> void:
 	for part: Dictionary in _get_parts(scene):
 		var key := "%s|%s" % [part.mesh.get_rid(), part.material.get_rid() if part.material else "-"]
 		if not _batches.has(key):
-			_batches[key] = {"mesh": part.mesh, "material": part.material, "transforms": []}
+			_batches[key] = {
+				"mesh": part.mesh,
+				"material": part.material,
+				"lod_scale": part.lod_scale,
+				"transforms": [],
+			}
 		_batches[key].transforms.append(transform * part.transform)
 
 ## Створює вузли малювання. Після цього пакетувальник можна викидати.
@@ -43,6 +48,12 @@ func flush(parent: Node3D) -> void:
 
 		var instance := MultiMeshInstance3D.new()
 		instance.multimesh = multimesh
+		# Рушій вирішує, наскільки спростити модель (LOD), за масштабом
+		# ВУЗЛА. У пакета вузол має масштаб 1, а моделі набору зроблені в
+		# сантиметрах і збільшені всередині в сто разів. Без цієї поправки
+		# рушій вважав стіну крихітною, брав найгрубшу версію сітки — і
+		# від стін лишались уламки з дірами.
+		instance.lod_bias = batch.lod_scale
 		if batch.material != null:
 			instance.material_override = batch.material
 		# Тіні від дрібниць на телефоні коштують дорого, а видно їх ледве.
@@ -62,10 +73,13 @@ func _get_parts(scene: PackedScene) -> Array:
 		var mesh_instance := node as MeshInstance3D
 		if mesh_instance.mesh == null:
 			continue
+		var relative := _relative_transform(mesh_instance, root)
+		var scale := relative.basis.get_scale()
 		parts.append({
 			"mesh": mesh_instance.mesh,
 			"material": mesh_instance.material_override,
-			"transform": _relative_transform(mesh_instance, root),
+			"transform": relative,
+			"lod_scale": maxf(scale.x, maxf(scale.y, scale.z)),
 		})
 	root.free()
 	_scene_parts[scene] = parts
