@@ -51,6 +51,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		rotate_requested.emit(-event.relative.x * ROTATE_PER_PIXEL)
 		pitch_requested.emit(-event.relative.y * PITCH_PER_PIXEL)
 
+## На паузі дотики сюди не доходять — скидаємо стан, щоб після паузи
+## не лишився "затиснутий" удар чи оберт камери.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_PAUSED:
+		return
+	_touch_index = -1
+	_mouse_rotating = false
+	if _mouse_attacking:
+		_mouse_attacking = false
+		attack_held_changed.emit(false)
+
 func _handle_touch(index: int, position: Vector2, pressed: bool) -> void:
 	if pressed:
 		# Ліва половина — рух, її не чіпаємо.

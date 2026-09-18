@@ -222,6 +222,12 @@ static func damage_number(parent: Node, position: Vector3, amount: float, crit: 
 ## Коротко підсвічує модель білим (або іншим кольором). Накладка
 ## вішається лише на мить удару: постійна коштувала б зайвий прохід
 ## малювання для кожного ворога.
+##
+## Поки спалах гасне, модель може зникнути: ворог помер, або гравець
+## вийшов з данжу. Тому список мешів перебираємо без типу й кожен
+## перевіряємо — інакше Godot падає з "previously freed instance".
+## Таймер іде й під час паузи, щоб модель не лишалась білою, поки
+## відкрите вікно вибору здібності.
 static func flash_model(model: Node, color: Color = Color.WHITE, duration: float = 0.1) -> void:
 	if model == null or not is_instance_valid(model):
 		return
@@ -232,10 +238,10 @@ static func flash_model(model: Node, color: Color = Color.WHITE, duration: float
 	var tree := model.get_tree()
 	if tree == null:
 		return
-	tree.create_timer(duration, false).timeout.connect(func() -> void:
-		for mesh: GeometryInstance3D in meshes:
-			if is_instance_valid(mesh) and mesh.material_overlay == material:
-				mesh.material_overlay = null)
+	tree.create_timer(duration, true).timeout.connect(func() -> void:
+		for mesh in meshes:
+			if is_instance_valid(mesh) and (mesh as GeometryInstance3D).material_overlay == material:
+				(mesh as GeometryInstance3D).material_overlay = null)
 
 # --- кола на підлозі ---
 

@@ -502,9 +502,10 @@ func _die() -> void:
 	collision_layer = 0
 	died.emit(global_position, xp_reward)
 	_play_once(["Death"])
-	# Даємо дограти смерть, а тоді прибираємо.
-	await get_tree().create_timer(1.6).timeout
-	queue_free()
+	# Даємо дограти смерть, а тоді прибираємо. Таймер стоїть на паузі
+	# разом із грою, і прив'язаний до самого ворога: якщо той зникне
+	# раніше (гравець вийшов з данжу), виклик просто не відбудеться.
+	get_tree().create_timer(1.6, false).timeout.connect(queue_free)
 
 # --- поворот і анімації ---
 

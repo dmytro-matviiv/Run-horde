@@ -25,6 +25,7 @@ func _ready() -> void:
 	_player = _dungeon.get_node("Player")
 
 	await _test_health_bar()
+	await _test_kill_then_pause()
 	await _test_combo()
 	print("COMBAT: швидкість часу після комбо ", Engine.time_scale)
 	await _test_backpedal()
@@ -54,6 +55,23 @@ func _test_health_bar() -> void:
 	print("COMBAT: смужка героя після -30 HP: частка %.2f, слід %.2f (має бути 0.70 і 0.70)" % [ratio, trail])
 	_player.current_hp = _player.max_hp
 	_player._update_health_bar()
+
+## Колишній виліт: ворога вдарили (він спалахнув білим), він помер, і
+## тут гра стала на паузу (вибір здібності). Ворог зникав під час паузи,
+## а після неї код знімав спалах із уже видаленої моделі.
+func _test_kill_then_pause() -> void:
+	var enemy := _nearest_alive_enemy()
+	if enemy == null:
+		return
+	_player.global_position = enemy.global_position + Vector3(0, 0.1, 2.0)
+	await get_tree().physics_frame
+	enemy.take_damage(enemy.current_hp + 1.0)
+	get_tree().paused = true
+	await get_tree().create_timer(2.0, true).timeout
+	var freed := not is_instance_valid(enemy)
+	get_tree().paused = false
+	await get_tree().create_timer(0.3).timeout
+	print("COMBAT: смерть ворога + пауза 2 с: ворог прибраний під час паузи — %s, гра живе далі" % freed)
 
 ## Ставимо героя біля ворога й тиснемо удар: ціль має знайтись сама,
 ## комбо — пройти всі три ланки, здоров'я ворога — падати.

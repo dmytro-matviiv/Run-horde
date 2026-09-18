@@ -66,6 +66,14 @@ func _gui_input(event: InputEvent) -> void:
 			_release()
 		accept_event()
 
+## Гра стала на паузу (вибір здібності) — під час паузи кнопка не чує
+## пальця, і відпускання загубилось би: герой після паузи бив би сам
+## без упину. Тому на паузі кнопку "відпускаємо" примусово.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED and _down:
+		_touch_index = -1
+		_release()
+
 func _press() -> void:
 	_down = true
 	scale = Vector2.ONE * 0.92

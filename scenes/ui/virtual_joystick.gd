@@ -38,6 +38,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _active and _touch_index == -2:
 		_handle_drag(event.position)
 
+## Гра стала на паузу — палець, відпущений під час паузи, джойстик уже не
+## почує, і герой після паузи біг би сам. Тому на паузі джойстик
+## відпускаємо.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED and _active:
+		_active = false
+		_touch_index = -1
+		direction_changed.emit(Vector2.ZERO)
+		queue_redraw()
+
 func _handle_press(index: int, position: Vector2, pressed: bool) -> void:
 	if pressed:
 		if _active or position.x > size.x * 0.5:
