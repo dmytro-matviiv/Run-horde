@@ -9,8 +9,24 @@ func _ready() -> void:
 	var scene: Node = load(SCENE).instantiate()
 	add_child(scene)
 	await get_tree().create_timer(3.0).timeout
+	for node in scene.get_node("HUD").get_children():
+		if node.has_signal("upgrade_chosen"):
+			node.upgrade_chosen.emit(&"weapon_damage")
 	get_tree().paused = false
-	await get_tree().create_timer(1.0).timeout
+	# Даємо потоковому підвантаженню влаштуватись, а тоді міряємо
+	# усталений стан, а не мить побудови.
+	await get_tree().create_timer(6.0).timeout
+
+	var worst := 1000.0
+	var total := 0.0
+	var samples := 0
+	for i in 120:
+		await get_tree().process_frame
+		var fps := Engine.get_frames_per_second()
+		worst = minf(worst, fps)
+		total += fps
+		samples += 1
+	print("PERF: кадри середні %d, найгірші %d" % [int(total / samples), int(worst)])
 
 	var lights := 0
 	var meshes := 0

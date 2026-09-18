@@ -57,6 +57,7 @@ var _attack_left := 0.0
 var _aggro := false
 var _dying := false
 var _health_bar: HealthBar3D
+var _sleeping := false
 
 func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_player = player
@@ -120,6 +121,19 @@ func _ready() -> void:
 	_agent.avoidance_enabled = true
 	_agent.radius = 0.5
 	add_child(_agent)
+
+## Сон: ворог далеко від гравця не рахує маршрут і не ворушить
+## скелетом. Анімація скелета — найдорожча річ на телефоні, а бачити
+## того, хто за три кімнати звідси, все одно неможливо.
+func set_sleeping(sleeping: bool) -> void:
+	if _sleeping == sleeping:
+		return
+	_sleeping = sleeping
+	set_physics_process(not sleeping)
+	if _animation != null:
+		_animation.active = not sleeping
+	if _model != null:
+		_model.visible = not sleeping
 
 func _physics_process(delta: float) -> void:
 	if _dying or _player == null:

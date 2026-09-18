@@ -31,6 +31,24 @@ const BOSS_MODEL := preload("res://assets/models/monsters/Demon-LnfIziKv4o.glb")
 ## Скільки досвіду треба на наступний рівень героя в данжі.
 const XP_PER_LEVEL := 12
 
+## ПОТОКОВЕ ПІДВАНТАЖЕННЯ
+##
+## Данж ріжеться на шматки (див. DungeonBuilder). Тут вирішується, який
+## шматок збудувати, а який сховати:
+##   BUILD_DISTANCE — на цій відстані шматок починають будувати, щоб
+##     гравець підійшов уже до готового;
+##   HIDE_DISTANCE  — далі за це шматок ховається з очей, бо малювати
+##     кімнати за три повороти звідси немає сенсу.
+## Перевіряємо не щокадру, а раз на STREAM_INTERVAL — цього вистачає,
+## бо герой не встигає пробігти шматок за чверть секунди.
+const BUILD_DISTANCE := 46.0
+const HIDE_DISTANCE := 38.0
+const STREAM_INTERVAL := 0.25
+
+## Ворог далі за цю відстань не думає й не ворушить скелетом: він просто
+## чекає. На телефоні саме анімація скелетів з'їдає найбільше часу.
+const ENEMY_SLEEP_DISTANCE := 32.0
+
 @onready var player: CharacterBody3D = $Player
 @onready var level_root: Node3D = $NavigationRegion3D
 @onready var enemies_root: Node3D = $Enemies
@@ -46,14 +64,23 @@ var _alive_enemies := 0
 var _boss_defeated := false
 var _exit_position := Vector3.ZERO
 var _exit_open := false
+var _map_rows: Array = []
+var _chunks: Array = []
+var _lights: Array = []
+var _stream_left := 0.0
 
 func _ready() -> void:
 	_level_index = GameState.dungeon_level
 	var level := DungeonLevels.get_level(_level_index)
-	var markers := DungeonBuilder.build(level.map, level_root)
+	_map_rows = level.map
+	var markers := DungeonBuilder.build_base(level.map, level_root)
+	_chunks = markers.chunks
+	_lights = markers.lights
 
 	player.global_position = markers.start + Vector3(0, 0.2, 0)
 	_exit_position = markers.exit
+	# Найближчі шматки будуємо одразу, решту — коли гравець підійде.
+	_update_streaming(true)
 
 	# Карту прохідності печемо ПІСЛЯ того, як рівень зібрано: інакше
 	# ворогам не буде по чому рахувати маршрут.
@@ -183,11 +210,39 @@ func _open_exit() -> void:
 	level_root.add_child(glow)
 	_update_status()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_stream_left -= delta
+	if _stream_left <= 0.0:
+		_stream_left = STREAM_INTERVAL
+		_update_streaming(false)
+
 	if not _exit_open:
 		return
 	# Підійшов до відчиненого виходу — можна йти далі.
 	exit_button.visible = player.global_position.distance_to(_exit_position) < 3.0
+
+## Будує те, що попереду, ховає те, що позаду, і присипляє далеких
+## ворогів. Гравець цього не помічає: він просто йде коридором.
+func _update_streaming(immediate: bool) -> void:
+	var origin := player.global_position
+	for chunk: Dictionary in _chunks:
+		var distance := origin.distance_to(chunk.center)
+		if distance < BUILD_DISTANCE and not chunk.built:
+			DungeonBuilder.build_chunk(_map_rows, chunk)
+			if not immediate:
+				# За раз будуємо лише один шматок: так навіть найповільніший
+				# телефон не отримає ривка посеред бігу.
+				chunk.node.visible = true
+				break
+		chunk.node.visible = chunk.built and distance < HIDE_DISTANCE
+
+	# Далекі смолоскипи гасимо: кожне увімкнене джерело світла коштує.
+	for light: OmniLight3D in _lights:
+		light.visible = origin.distance_to(light.global_position) < HIDE_DISTANCE
+
+	for enemy in enemies_root.get_children():
+		if enemy is Enemy3D:
+			(enemy as Enemy3D).set_sleeping(origin.distance_to(enemy.global_position) > ENEMY_SLEEP_DISTANCE)
 
 func _update_status(title: String = "") -> void:
 	if title != "":
