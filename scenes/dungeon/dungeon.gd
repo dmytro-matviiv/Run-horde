@@ -95,13 +95,18 @@ func _ready() -> void:
 	# ворогам не буде по чому рахувати маршрут. Печеться у фоні — тим
 	# часом по одному шматку за кадр збираємо найближчі зали.
 	level_root.bake_navigation_mesh(true)
-	while _build_next_visible_chunk():
+	# Збираємо ВСІ шматки одразу, по одному за кадр, поки гравець дивиться
+	# на смужку завантаження. На слабкому телефоні збирання шматка посеред
+	# гри давало ривок щоразу, як герой заходив у нову залу; тепер під
+	# час гри шматки лише ховаються й показуються — це безкоштовно.
+	while _build_next_chunk():
 		await get_tree().process_frame
 	_update_streaming()
 	if level_root.is_baking():
 		await level_root.bake_finished
 
 	_spawn_enemies(markers)
+	await _warm_up_rendering()
 	_update_streaming()
 	SceneLoader.release()
 
@@ -274,17 +279,66 @@ func _update_streaming() -> void:
 	_update_lights(origin, view_distance)
 	_update_enemies(origin)
 
-## Під час завантаження: будує найближчий ще не збудований шматок, який
-## опиниться в кадрі. Повертає false, коли таких не лишилось.
-func _build_next_visible_chunk() -> bool:
-	var origin := player.global_position
-	var view_distance: float = PerfSettings.get_value("view_distance")
+## Під час завантаження: будує наступний ще не збудований шматок.
+## Повертає false, коли всі зібрані.
+func _build_next_chunk() -> bool:
 	for chunk: Dictionary in _chunks:
-		if not chunk.built and _distance_to_chunk(origin, chunk) < view_distance:
+		if not chunk.built:
 			DungeonBuilder.build_chunk(_map_rows, chunk, PerfSettings.get_value("decor_density"))
-			chunk.node.visible = true
 			return true
 	return false
+
+## ПРОГРІВ ГРАФІКИ.
+##
+## Відеочип готує програму малювання (шейдер) для кожного виду об'єкта
+## тоді, коли вперше бачить його в кадрі. На слабкому телефоні це
+## десяті частки секунди — саме такі "зависання" бували на першому ударі,
+## першому снаряді, першій зустрічі з босом.
+##
+## Тож поки на екрані смужка завантаження, ми на кілька кадрів ставимо
+## перед камерою по одному зразку всього, що з'явиться в данжі: кожного
+## ворога, боса, двері виходу, всі прикраси, всі ефекти бою. Гравець
+## цього не бачить (екран завантаження зверху), а шейдери вже готові.
+func _warm_up_rendering() -> void:
+	var holder := Node3D.new()
+	add_child(holder)
+	var center := player.global_position + Vector3(0, 1.0, 0)
+	var models: Array = MELEE_MODELS.duplicate()
+	models.append_array([RANGED_MODEL, BOSS_MODEL, EXIT_SCENE])
+	var step := 0
+	for scene: PackedScene in models:
+		var model: Node3D = scene.instantiate()
+		holder.add_child(model)
+		model.global_position = center + Vector3((step % 3 - 1) * 0.6, -0.8, (step / 3) * 0.6)
+		model.scale = Vector3.ONE * 0.3
+		step += 1
+		CombatVfx.flash_model(model, Color.WHITE, 0.5)
+
+	# Прикраси малюються пакетами (MultiMesh) — у пакета свій варіант
+	# шейдера, тож і прогріваємо пакетом.
+	var batcher := MeshBatcher.new()
+	for scene: PackedScene in DungeonBuilder.all_decor_scenes():
+		batcher.add(scene, Transform3D(Basis().scaled(Vector3.ONE * 0.3), center + Vector3(0, -0.8, 0)))
+	batcher.flush(holder)
+
+	CombatVfx.slash(holder, center, 0.0, 2.0, 150.0, Color(0.72, 0.87, 1.0), false, 0.0, 0.5)
+	CombatVfx.impact(holder, center, Color(1.0, 0.65, 0.25), true)
+	CombatVfx.damage_number(holder, center, 12.0, true)
+	CombatVfx.shockwave(holder, center, 1.5, Color(0.35, 0.95, 1.0), 0.5)
+	var marker := CombatVfx.make_ground_marker(Color(1.0, 0.22, 0.15, 0.85), 1.0, 1.0)
+	holder.add_child(marker)
+	marker.global_position = center - Vector3(0, 0.9, 0)
+	var shot := EnemyProjectile.create(0.0)
+	holder.add_child(shot)
+	shot.global_position = center
+	var bar: HealthBar3D = HealthBar3D.new()
+	holder.add_child(bar)
+	bar.setup(Color(0.95, 0.25, 0.25), 0.5, true)
+	bar.global_position = center
+
+	for i in 4:
+		await get_tree().process_frame
+	holder.queue_free()
 
 ## Відстань від героя до найближчої точки шматка на площині.
 func _distance_to_chunk(origin: Vector3, chunk: Dictionary) -> float:

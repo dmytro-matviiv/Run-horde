@@ -50,14 +50,14 @@ const SETTINGS_PATH := "user://settings.cfg"
 const PROFILES := {
 	Quality.LOW: {
 		"max_fps": 30,
-		"render_scale_max": 0.7,
+		"render_scale_max": 0.65,
 		"render_scale_min": 0.5,
 		"shadows": false,
 		"lod_threshold": 4.0,
-		"dungeon_lights": 2,
+		"dungeon_lights": 0,
 		"view_distance": 20.0,
 		"decor_density": 0.45,
-		"enemy_awake": 26.0,
+		"enemy_awake": 22.0,
 	},
 	Quality.MEDIUM: {
 		"max_fps": 60,
@@ -149,6 +149,11 @@ func get_value(key: String) -> Variant:
 func get_quality_title() -> String:
 	return QUALITY_TITLES[quality]
 
+## Чи працює легкий рушій (OpenGL ES 3). На телефонах гра стартує саме в
+## ньому: на слабких відеочипах він швидший за Vulkan у рази.
+static func is_compatibility() -> bool:
+	return RenderingServer.get_current_rendering_method() == "gl_compatibility"
+
 ## Вибір у меню: -1 = "Авто", інакше конкретний рівень.
 func set_user_choice(choice: int) -> void:
 	auto_quality = choice < 0
@@ -223,7 +228,10 @@ func _apply_sun(light: DirectionalLight3D) -> void:
 	if not light.has_meta(&"perf_shadow"):
 		light.set_meta(&"perf_shadow", light.shadow_enabled)
 	var wanted: bool = light.get_meta(&"perf_shadow")
-	light.shadow_enabled = wanted and get_value("shadows")
+	# У легкому рушії сонце з тінями малюється ще одним проходом поверх
+	# уже освітленої сцени — світло подвоюється, трава стає кислотною. Тож
+	# там тіні від сонця вимкнені: і правильні кольори, і дешевше.
+	light.shadow_enabled = wanted and get_value("shadows") and not is_compatibility()
 	if quality == Quality.HIGH:
 		light.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 		light.directional_shadow_max_distance = 50.0

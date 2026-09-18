@@ -96,6 +96,13 @@ const TRAP_SCENES := [
 	preload("res://assets/models/dungeon/Spikes.fbx"),
 ]
 
+## Усі моделі, з яких збирається данж (для прогріву графіки).
+static func all_decor_scenes() -> Array:
+	var scenes: Array = [FLOOR_SCENE, FLOOR_BRICKS_SCENE, WALL_SCENE, TORCH_SCENE, COLUMN_SCENE]
+	for group: Array in [CLUTTER_SCENES, WALL_DECOR_SCENES, FURNITURE_SCENES, TREASURE_SCENES, TRAP_SCENES]:
+		scenes.append_array(group)
+	return scenes
+
 ## Символи, по яких можна ходити.
 const WALKABLE := [".", "S", "m", "r", "B", "E"]
 

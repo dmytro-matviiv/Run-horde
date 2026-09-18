@@ -113,6 +113,11 @@ var _attack_counter := 0
 var _telegraph: MeshInstance3D
 var _charging_shot: EnemyProjectile
 
+## Стоїть на підлозі (після першого приземлення). Поки так, ворог, що
+## йде маршрутом, рухається без фізики — див. _move().
+var _grounded := false
+var _path_step := false
+
 func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_player = player
 	_model = model_scene.instantiate()
@@ -183,7 +188,13 @@ func _ready() -> void:
 	current_hp = max_hp
 	_agent = NavigationAgent3D.new()
 	# Ворог зупиняється трохи раніше цілі, інакше штовхає героя спиною.
-	_agent.path_desired_distance = 0.6
+	# До наступної точки маршруту переходить лише дійшовши до поточної
+	# впритул: інакше він "зрізав" би кути й заходив у стіну.
+	_agent.path_desired_distance = 0.25
+	# Карта прохідності лежить на пів метра вище за підлогу (так її печуть
+	# клітинки висотою 0.25 м), а ноги ворога — на самій підлозі. Без цієї
+	# поправки ворог "не дотягувався" до точок маршруту по висоті й стояв.
+	_agent.path_height_offset = 0.5
 	_agent.target_desired_distance = attack_range * 0.8
 	# Взаємне розштовхування агентів (avoidance) вимкнене: воно рахується
 	# щокадру для кожного ворога, а результат нам не потрібен.
@@ -234,11 +245,11 @@ func _physics_process(delta: float) -> void:
 	_stagger_left = maxf(_stagger_left - delta, 0.0)
 
 	# Стоїть без діла на підлозі — рухати нічого, фізику не рахуємо.
-	if not _aggro and is_on_floor() and velocity.is_zero_approx() and _knockback.is_zero_approx():
+	if not _aggro and _grounded and velocity.is_zero_approx() and _knockback.is_zero_approx():
 		_play("Idle")
 		return
 
-	if not is_on_floor():
+	if not _grounded:
 		velocity.y -= GRAVITY * delta
 	else:
 		velocity.y = 0.0
@@ -258,17 +269,35 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 		_play("Idle")
 
-	# Відкидання від удару героя накладається поверх власного руху лише
-	# на цей крок. Власну швидкість потім повертаємо точно такою, якою
-	# вона була: раніше після кроку віднімалось уже зменшене відкидання,
-	# і залишок накопичувався — ворога "несло" на кілька метрів.
-	var own_velocity := velocity
-	velocity.x += _knockback.x
-	velocity.z += _knockback.z
-	move_and_slide()
-	velocity.x = own_velocity.x
-	velocity.z = own_velocity.z
+	_move(delta)
+
+## Рух ворога.
+##
+## move_and_slide() — найдорожча річ, яку ворог робить щокадру: кілька
+## перевірок зіткнень фігурою. Але коли ворог іде МАРШРУТОМ, вона не
+## потрібна: маршрут по карті прохідності вже обходить стіни з запасом.
+## Тож такий ворог просто зсувається вздовж маршруту. Повна фізика
+## лишається там, де без неї не можна: падіння на старті, відкидання від
+## удару, відхід стрільця (він іде не маршрутом, а геть від героя).
+##
+## Відкидання накладається лише на цей крок, а власна швидкість потім
+## повертається точно такою, якою була, — інакше залишок накопичувався б.
+func _move(delta: float) -> void:
+	var has_knockback := not _knockback.is_zero_approx()
+	var moving := not Vector2(velocity.x, velocity.z).is_zero_approx()
+	if _grounded and not has_knockback and _path_step:
+		global_position.x += velocity.x * delta
+		global_position.z += velocity.z * delta
+	elif has_knockback or moving or not _grounded:
+		var own_velocity := velocity
+		velocity.x += _knockback.x
+		velocity.z += _knockback.z
+		move_and_slide()
+		_grounded = is_on_floor()
+		velocity.x = own_velocity.x
+		velocity.z = own_velocity.z
 	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * delta)
+	_path_step = false
 
 ## Помітив — переслідує; поки не втік далеко, не забуває.
 func _update_aggro(distance: float) -> void:
@@ -322,8 +351,13 @@ func _move_along_path(delta: float) -> void:
 	if direction.length() < 0.01:
 		return
 	direction = direction.normalized()
-	velocity.x = move_toward(velocity.x, direction.x * move_speed, 12.0 * delta)
-	velocity.z = move_toward(velocity.z, direction.z * move_speed, 12.0 * delta)
+	# Напрямок — точно на наступну точку маршруту, плавно набирається лише
+	# швидкість. Так ворог іде рівно по лінії маршруту, яка вже обходить
+	# стіни з запасом, і не зрізає кутів (поворот моделі й так плавний).
+	var speed := move_toward(Vector2(velocity.x, velocity.z).length(), move_speed, 12.0 * delta)
+	velocity.x = direction.x * speed
+	velocity.z = direction.z * speed
+	_path_step = true
 	_face(direction, 10.0)
 	_play("Walk")
 
