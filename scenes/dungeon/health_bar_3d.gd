@@ -21,6 +21,10 @@ const BACKGROUND_COLOR := Color(0.05, 0.05, 0.07, 0.75)
 ## Скільки смужка ворога лишається на екрані після останнього удару.
 const SHOW_TIME := 4.0
 
+## Матеріали спільні для всіх смужок одного кольору: двадцять ворогів —
+## два матеріали, а не сорок. Відеокарта малює однакове разом.
+static var _materials: Dictionary = {}
+
 var _background: MeshInstance3D
 var _fill: MeshInstance3D
 var _always_visible := false
@@ -39,12 +43,24 @@ func setup(color: Color, height: float, always_visible: bool = false, width_scal
 	# Заповнення трохи ближче до камери, щоб не блимало крізь тло.
 	_fill.position.z = 0.01
 	visible = _always_visible
+	# Таймер зникнення потрібен лише після удару.
+	set_process(false)
 	set_ratio(1.0)
 
 func _make_quad(color: Color, width: float, height: float) -> MeshInstance3D:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(width, height)
 
+	var instance := MeshInstance3D.new()
+	instance.mesh = quad
+	instance.material_override = _get_material(color)
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return instance
+
+## Частка здоров'я від 0 до 1.
+static func _get_material(color: Color) -> StandardMaterial3D:
+	if _materials.has(color):
+		return _materials[color]
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -52,14 +68,9 @@ func _make_quad(color: Color, width: float, height: float) -> MeshInstance3D:
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.no_depth_test = true
 	material.render_priority = 1
+	_materials[color] = material
+	return material
 
-	var instance := MeshInstance3D.new()
-	instance.mesh = quad
-	instance.material_override = material
-	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	return instance
-
-## Частка здоров'я від 0 до 1.
 func set_ratio(ratio: float) -> void:
 	_ratio = clampf(ratio, 0.0, 1.0)
 	if _fill == null:
@@ -74,6 +85,7 @@ func set_ratio(ratio: float) -> void:
 func flash() -> void:
 	visible = true
 	_hide_left = SHOW_TIME
+	set_process(not _always_visible)
 
 func _process(delta: float) -> void:
 	if _always_visible or _hide_left <= 0.0:
@@ -81,3 +93,4 @@ func _process(delta: float) -> void:
 	_hide_left -= delta
 	if _hide_left <= 0.0:
 		visible = false
+		set_process(false)

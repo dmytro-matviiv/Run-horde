@@ -7,6 +7,13 @@ const SCENE := "res://scenes/dungeon/dungeon.tscn"
 const OUT_PATH := "user://dungeon_screenshot.png"
 
 func _ready() -> void:
+	PerfSettings.persist_settings = false
+	var out_path := OUT_PATH
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--quality="):
+			PerfSettings.apply_quality(argument.get_slice("=", 1).to_int(), false)
+		elif argument.begins_with("--out="):
+			out_path = argument.get_slice("=", 1)
 	var dungeon: Node = load(SCENE).instantiate()
 	add_child(dungeon)
 	await get_tree().create_timer(3.0).timeout
@@ -30,6 +37,6 @@ func _ready() -> void:
 			enemy.take_damage(enemy.max_hp * 0.45)
 	await get_tree().create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
-	get_viewport().get_texture().get_image().save_png(OUT_PATH)
-	print("SHOT: ", ProjectSettings.globalize_path(OUT_PATH))
+	get_viewport().get_texture().get_image().save_png(out_path)
+	print("SHOT: ", ProjectSettings.globalize_path(out_path))
 	get_tree().quit(0)

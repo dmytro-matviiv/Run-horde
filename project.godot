@@ -28,6 +28,7 @@ IapManager="*res://scripts/autoload/iap_manager.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 UiTheme="*res://scripts/autoload/ui_theme.gd"
 PerfSettings="*res://scripts/autoload/perf_settings.gd"
+SceneLoader="*res://scripts/autoload/scene_loader.gd"
 
 [editor_plugins]
 

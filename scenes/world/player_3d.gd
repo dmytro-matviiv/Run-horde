@@ -53,6 +53,7 @@ var _attack_left := 0.0
 var _dead := false
 var _regen_per_second := 0.0
 var _health_bar: HealthBar3D
+var _torch: OmniLight3D
 
 func _ready() -> void:
 	_build_animation_tree()
@@ -73,6 +74,13 @@ func _add_torch_light() -> void:
 	light.omni_range = 18.0
 	light.position = Vector3(0, 1.6, 0)
 	add_child(light)
+	_torch = light
+
+## Удень на острові смолоскип не потрібен: сонце світить і так, а кожне
+## джерело світла телефон рахує для кожного пікселя навколо героя.
+func set_torch_enabled(enabled: bool) -> void:
+	if _torch != null:
+		_torch.visible = enabled
 
 ## Дерево анімацій будуємо кодом, а не мишкою в редакторі: так видно
 ## увесь набір станів в одному місці, і його легко переносити на інших
@@ -89,9 +97,9 @@ func _build_animation_tree() -> void:
 	var move := AnimationNodeBlendSpace1D.new()
 	move.min_space = 0.0
 	move.max_space = 2.0
-	move.add_blend_point(_animation_node("CharacterArmature|Idle"), 0.0)
-	move.add_blend_point(_animation_node("CharacterArmature|Walk"), 1.0)
-	move.add_blend_point(_animation_node("CharacterArmature|Run"), 2.0)
+	move.add_blend_point(_animation_node("CharacterArmature|Idle"), 0.0, -1, &"idle")
+	move.add_blend_point(_animation_node("CharacterArmature|Walk"), 1.0, -1, &"walk")
+	move.add_blend_point(_animation_node("CharacterArmature|Run"), 2.0, -1, &"run")
 
 	var attack := AnimationNodeOneShot.new()
 	attack.fadein_time = 0.1

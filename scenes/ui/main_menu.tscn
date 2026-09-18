@@ -104,9 +104,25 @@ custom_minimum_size = Vector2(300, 52)
 theme_override_font_sizes/font_size = 17
 text = "Скринька (реклама)"
 
+[node name="Row3" type="HBoxContainer" parent="CenterContainer/VBoxContainer"]
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="GraphicsButton" type="Button" parent="CenterContainer/VBoxContainer/Row3"]
+custom_minimum_size = Vector2(196, 48)
+theme_override_font_sizes/font_size = 16
+text = "Графіка: Авто"
+
+[node name="FpsButton" type="Button" parent="CenterContainer/VBoxContainer/Row3"]
+custom_minimum_size = Vector2(92, 48)
+theme_override_font_sizes/font_size = 16
+text = "FPS"
+
 [connection signal="pressed" from="CenterContainer/VBoxContainer/PlayButton" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/Row1/HeroesButton" to="." method="_on_heroes_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/Row1/WeaponsButton" to="." method="_on_weapons_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/Row2/UpgradesButton" to="." method="_on_upgrades_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/Row2/ShopButton" to="." method="_on_shop_pressed"]
 [connection signal="pressed" from="CenterContainer/VBoxContainer/ChestButton" to="." method="_on_chest_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/Row3/GraphicsButton" to="." method="_on_graphics_pressed"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/Row3/FpsButton" to="." method="_on_fps_pressed"]

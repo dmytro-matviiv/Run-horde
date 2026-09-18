@@ -12,6 +12,8 @@ const OFFLINE_REWARD_SCENE := preload("res://scenes/ui/offline_reward.tscn")
 @onready var gems_label: Label = $TopBar/GemsLabel
 @onready var hero_label: Label = $CenterContainer/VBoxContainer/HeroLabel
 @onready var chest_button: Button = $CenterContainer/VBoxContainer/ChestButton
+@onready var graphics_button: Button = $CenterContainer/VBoxContainer/Row3/GraphicsButton
+@onready var fps_button: Button = $CenterContainer/VBoxContainer/Row3/FpsButton
 
 const CHEST_MESSAGE_SEC := 3.0
 
@@ -21,6 +23,7 @@ var _chest_message_left := 0.0   # поки > 0, щосекундне оновл
 func _ready() -> void:
 	_update_gold_label()
 	_update_chest_button()
+	_update_graphics_buttons()
 	if GameState.pending_offline_gold > 0:
 		_show_offline_reward()
 
@@ -58,7 +61,7 @@ func _show_offline_reward() -> void:
 ## "Грати" веде на базу героя — звідти він сам піде в данж через портал.
 ## Старий 2D-ран лишається в проєкті, поки бій не переїде в 3D.
 func _on_play_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/world/base_island.tscn")
+	SceneLoader.change_scene("res://scenes/world/base_island.tscn", "База")
 
 func _on_upgrades_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/meta_upgrades.tscn")
@@ -84,3 +87,27 @@ func _on_chest_ad_reward() -> void:
 func _on_chest_ad_skipped() -> void:
 	chest_button.text = "Нагороду не отримано"
 	_chest_message_left = CHEST_MESSAGE_SEC
+
+## Графіка по колу: Авто -> Низька -> Середня -> Висока -> Авто.
+## "Авто" — гра сама підбирає якість під телефон і тримає кадри рівними.
+func _on_graphics_pressed() -> void:
+	if PerfSettings.auto_quality:
+		PerfSettings.set_user_choice(PerfSettings.Quality.LOW)
+	elif PerfSettings.quality < PerfSettings.Quality.HIGH:
+		PerfSettings.set_user_choice(PerfSettings.quality + 1)
+	else:
+		PerfSettings.set_user_choice(-1)
+	_update_graphics_buttons()
+
+## Лічильник кадрів у кутку екрана — щоб перевірити на телефоні, як
+## насправді йде гра.
+func _on_fps_pressed() -> void:
+	PerfSettings.set_show_fps(not PerfSettings.show_fps)
+	_update_graphics_buttons()
+
+func _update_graphics_buttons() -> void:
+	if PerfSettings.auto_quality:
+		graphics_button.text = "Графіка: Авто (%s)" % PerfSettings.get_quality_title().to_lower()
+	else:
+		graphics_button.text = "Графіка: %s" % PerfSettings.get_quality_title()
+	fps_button.text = "FPS: так" if PerfSettings.show_fps else "FPS: ні"

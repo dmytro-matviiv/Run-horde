@@ -32,11 +32,8 @@ const ACTION_SCENES := {
 var _nearby: Interactable
 
 func _ready() -> void:
-	# Моделі з наборів приходять без фізики, тож стінки будуємо самі по
-	# формі мешів. Так будь-яка модель, яку ви перетягнете в редакторі,
-	# одразу стає твердою — без ручного налаштування.
-	_build_collisions($Buildings)
-	_build_collisions($Nature)
+	SceneLoader.hold()
+	player.set_torch_enabled(false)
 
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
 	$HUD.add_child(joystick)
@@ -63,10 +60,23 @@ func _ready() -> void:
 
 	gold_label.text = "Золото: %d    Геми: %d" % [GameState.gold, GameState.gems]
 
-## Створює фізичні стінки для всіх мешів усередині вузла.
-func _build_collisions(root: Node) -> void:
-	for child in root.find_children("*", "MeshInstance3D", true, false):
-		(child as MeshInstance3D).create_trimesh_collision()
+	# Моделі з наборів приходять без фізики, тож стінки будуємо самі по
+	# формі мешів. Так будь-яка модель, яку ви перетягнете в редакторі,
+	# одразу стає твердою — без ручного налаштування.
+	await _build_collisions([$Buildings, $Nature])
+	SceneLoader.release()
+
+## Створює фізичні стінки для всіх мешів усередині вузлів. Будуємо по
+## кілька за кадр, поки на екрані завантаження: на слабкому телефоні
+## фізика великих будівель за один кадр давала помітний ривок.
+func _build_collisions(roots: Array) -> void:
+	var built := 0
+	for root: Node in roots:
+		for child in root.find_children("*", "MeshInstance3D", true, false):
+			(child as MeshInstance3D).create_trimesh_collision()
+			built += 1
+			if built % 4 == 0:
+				await get_tree().process_frame
 
 ## Джойстик дає напрямок в екранних координатах (вниз — це +Y), а рух
 ## уперед — це -Z у 3D, тож вісь Y перевертаємо.
@@ -90,7 +100,13 @@ func _on_action_pressed() -> void:
 	if _nearby == null:
 		return
 	var path: String = ACTION_SCENES.get(_nearby.action, "")
-	if path != "":
+	if path == "":
+		return
+	# У данж — через екран завантаження: це найважча сцена гри, і на
+	# слабкому телефоні пряме завантаження "заморожувало" екран.
+	if _nearby.action == "portal":
+		SceneLoader.change_scene(path, "Забуті склепи")
+	else:
 		get_tree().change_scene_to_file(path)
 
 func _on_menu_pressed() -> void:

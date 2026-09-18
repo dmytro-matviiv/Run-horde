@@ -13,6 +13,18 @@ class_name Enemy3D
 ##
 ## Агро теж чесне: поки герой далеко, ворог стоїть на місці; помітив —
 ## починає переслідувати, і вже не губить, поки той не втече далеко.
+##
+## ЕКОНОМІЯ НА СЛАБКИХ ТЕЛЕФОНАХ (гравцеві непомітна):
+##  - маршрут перераховується кілька разів на секунду, а не щокадру:
+##    за третину секунди герой зміщується на метр, маршрут той самий;
+##  - "чи бачу героя" для стрільця теж перевіряється кілька разів на
+##    секунду. Перед самим пострілом — завжди свіжо, тож крізь стіни він
+##    однаково не стріляє;
+##  - у кожного ворога свій зсув таймерів, щоб усі не рахували в один
+##    і той самий кадр;
+##  - анімація ворога, якого не видно в кадрі, стоїть на паузі, а
+##    далекого — оновлюється через кадр;
+##  - ворог, що стоїть без діла, не рахує фізику руху.
 
 signal died(position: Vector3, xp_reward: int)
 
@@ -25,6 +37,9 @@ const ENEMY_BAR_COLOR := Color(0.95, 0.25, 0.25)
 
 const GRAVITY := 20.0
 const ATTACK_ANIMATION_TIME := 0.5
+
+const REPATH_INTERVAL := 0.3
+const SIGHT_INTERVAL := 0.2
 
 @export var kind: Kind = Kind.MELEE
 @export var max_hp := 30.0
@@ -59,6 +74,15 @@ var _dying := false
 var _health_bar: HealthBar3D
 var _sleeping := false
 
+var _repath_left := 0.0
+var _sight_left := 0.0
+var _can_see := false
+var _on_screen := true
+var _animation_step := 1
+var _animation_frame := 0
+var _animation_time := 0.0
+var _animation_cache: Dictionary = {}
+
 func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_player = player
 	_model = model_scene.instantiate()
@@ -68,7 +92,11 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	if not players.is_empty():
 		_animation = players[0]
 		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying"])
+		# Анімацію крутимо самі (див. _process): так її можна оновлювати
+		# рідше або ставити на паузу, коли ворога не видно.
+		_animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	_add_health_bar()
+	_add_screen_notifier()
 
 ## Смужка висить трохи вище за голову й ширшає разом із розміром ворога:
 ## у боса вона має бути помітною, у дрібноти — не затуляти його самого.
@@ -112,15 +140,30 @@ func _get_model_bounds() -> AABB:
 			bounds = bounds.merge(child_bounds)
 	return bounds
 
+## Відеокарта й так знає, що потрапляє в кадр; цей вузол просто
+## повідомляє нам про це — безкоштовно.
+func _add_screen_notifier() -> void:
+	var notifier := VisibleOnScreenNotifier3D.new()
+	notifier.aabb = AABB(Vector3(-0.8, 0.0, -0.8), Vector3(1.6, target_height + 0.6, 1.6))
+	notifier.screen_entered.connect(func() -> void: _on_screen = true)
+	notifier.screen_exited.connect(func() -> void: _on_screen = false)
+	add_child(notifier)
+
 func _ready() -> void:
 	current_hp = max_hp
 	_agent = NavigationAgent3D.new()
 	# Ворог зупиняється трохи раніше цілі, інакше штовхає героя спиною.
 	_agent.path_desired_distance = 0.6
 	_agent.target_desired_distance = attack_range * 0.8
-	_agent.avoidance_enabled = true
+	# Взаємне розштовхування агентів (avoidance) вимкнене: воно рахується
+	# щокадру для кожного ворога, а його результат ми й так не
+	# використовували.
+	_agent.avoidance_enabled = false
 	_agent.radius = 0.5
 	add_child(_agent)
+	# Різний зсув у кожного: вороги не рахують маршрут усі в один кадр.
+	_repath_left = randf() * REPATH_INTERVAL
+	_sight_left = randf() * SIGHT_INTERVAL
 
 ## Сон: ворог далеко від гравця не рахує маршрут і не ворушить
 ## скелетом. Анімація скелета — найдорожча річ на телефоні, а бачити
@@ -130,23 +173,47 @@ func set_sleeping(sleeping: bool) -> void:
 		return
 	_sleeping = sleeping
 	set_physics_process(not sleeping)
-	if _animation != null:
-		_animation.active = not sleeping
+	set_process(not sleeping)
 	if _model != null:
 		_model.visible = not sleeping
 
+## 1 — анімація щокадру, 2 — через кадр і т.д. Задає данж за відстанню.
+func set_animation_step(step: int) -> void:
+	_animation_step = maxi(step, 1)
+
+func _process(delta: float) -> void:
+	if _animation == null:
+		return
+	_animation_time += delta
+	# Невидимий ворог анімацію не рахує взагалі: час накопичується й
+	# "доганяється" одним кроком, щойно він з'явиться в кадрі.
+	if not _on_screen:
+		return
+	_animation_frame += 1
+	if _animation_frame % _animation_step != 0:
+		return
+	_animation.advance(_animation_time)
+	_animation_time = 0.0
+
 func _physics_process(delta: float) -> void:
 	if _dying or _player == null:
+		return
+
+	var distance := global_position.distance_to(_player.global_position)
+	_update_aggro(distance)
+	_attack_left -= delta
+	_repath_left -= delta
+	_sight_left -= delta
+
+	# Стоїть без діла на підлозі — рухати нічого, фізику не рахуємо.
+	if not _aggro and is_on_floor() and velocity.is_zero_approx():
+		_play("Idle")
 		return
 
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	else:
 		velocity.y = 0.0
-
-	var distance := global_position.distance_to(_player.global_position)
-	_update_aggro(distance)
-	_attack_left -= delta
 
 	if _aggro:
 		if kind == Kind.RANGED:
@@ -165,11 +232,14 @@ func _physics_process(delta: float) -> void:
 func _update_aggro(distance: float) -> void:
 	if not _aggro and distance <= aggro_range:
 		_aggro = true
+		_repath_left = 0.0   # помітив — одразу прокладає маршрут
 	elif _aggro and distance > leash_range:
 		_aggro = false
 
 func _process_melee(distance: float, delta: float) -> void:
-	if distance > attack_range:
+	# Далеко — або близько, але між нами стіна: іде маршрутом в обхід, а
+	# не стоїть носом у стіну.
+	if distance > attack_range or not _sees_player():
 		_move_along_path(delta)
 		return
 	velocity.x = 0.0
@@ -179,8 +249,7 @@ func _process_melee(distance: float, delta: float) -> void:
 
 ## Стрілець тримає дистанцію і б'є лише тоді, коли СПРАВДІ бачить ціль.
 func _process_ranged(distance: float, delta: float) -> void:
-	var can_see := _has_line_of_sight()
-	if not can_see:
+	if not _sees_player():
 		# Не бачить — підходить ближче, доки не з'явиться видимість.
 		_move_along_path(delta)
 		return
@@ -195,7 +264,9 @@ func _process_ranged(distance: float, delta: float) -> void:
 ## Йде до героя МАРШРУТОМ по карті прохідності: обходить кути, стіни й
 ## колони замість того, щоб упиратись у них.
 func _move_along_path(delta: float) -> void:
-	_agent.target_position = _player.global_position
+	if _repath_left <= 0.0:
+		_repath_left = REPATH_INTERVAL
+		_agent.target_position = _player.global_position
 	if _agent.is_navigation_finished():
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -210,6 +281,14 @@ func _move_along_path(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, direction.z * move_speed, 12.0 * delta)
 	_face(direction)
 	_play("Walk")
+
+## Видимість героя з кешем: промінь пускаємо кілька разів на секунду,
+## а не щокадру.
+func _sees_player() -> bool:
+	if _sight_left <= 0.0:
+		_sight_left = SIGHT_INTERVAL
+		_can_see = _has_line_of_sight()
+	return _can_see
 
 ## Промінь від очей ворога до грудей героя. Якщо першим трапляється
 ## стіна — стріляти не можна.
@@ -250,6 +329,8 @@ func take_damage(amount: float) -> void:
 	if _dying:
 		return
 	current_hp -= amount
+	if not _aggro:
+		_repath_left = 0.0
 	_aggro = true   # вдарили — помітив, навіть якщо був далеко
 	# Смужка з'являється від першого ж удару й спадає з кожним тіком.
 	if _health_bar != null:
@@ -298,7 +379,17 @@ func _play_once(candidates: Array) -> void:
 	if name != "":
 		_animation.play(name)
 
+## Назви шукаються один раз і запам'ятовуються: _play викликається
+## щокадру, і перебирати рядки кожного разу — марна робота.
 func _find_animation(candidates: Array) -> String:
+	var key := ",".join(candidates)
+	if _animation_cache.has(key):
+		return _animation_cache[key]
+	var found := _search_animation(candidates)
+	_animation_cache[key] = found
+	return found
+
+func _search_animation(candidates: Array) -> String:
 	for wanted: String in candidates:
 		for name: String in _animation.get_animation_list():
 			if name.get_slice("|", name.get_slice_count("|") - 1) == wanted:
