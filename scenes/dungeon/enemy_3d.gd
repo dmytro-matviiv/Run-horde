@@ -258,15 +258,17 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 		_play("Idle")
 
-	# Відкидання від удару героя накладається поверх власного руху.
+	# Відкидання від удару героя накладається поверх власного руху лише
+	# на цей крок. Власну швидкість потім повертаємо точно такою, якою
+	# вона була: раніше після кроку віднімалось уже зменшене відкидання,
+	# і залишок накопичувався — ворога "несло" на кілька метрів.
+	var own_velocity := velocity
 	velocity.x += _knockback.x
 	velocity.z += _knockback.z
-	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * delta)
-
 	move_and_slide()
-
-	velocity.x -= _knockback.x
-	velocity.z -= _knockback.z
+	velocity.x = own_velocity.x
+	velocity.z = own_velocity.z
+	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * delta)
 
 ## Помітив — переслідує; поки не втік далеко, не забуває.
 func _update_aggro(distance: float) -> void:
@@ -414,7 +416,7 @@ func _resolve_attack() -> void:
 		CombatVfx.shockwave(get_parent(), global_position, SLAM_RADIUS, SLAM_COLOR, 0.35)
 		var rig := get_tree().get_first_node_in_group(&"camera_rig")
 		if rig != null:
-			rig.shake(0.22)
+			rig.shake(0.12)
 		if offset.length() <= SLAM_RADIUS + 0.3:
 			_player.take_damage(damage * 1.5)
 		return
@@ -430,7 +432,7 @@ func _release_shot() -> void:
 	var shot := _charging_shot
 	_charging_shot = null
 	var target := _player.global_position + Vector3.UP * 1.0
-	shot.launch(target - shot.global_position, _player)
+	shot.launch(target - shot.global_position, _player, get_parent())
 
 ## Замах збито: сильний удар героя перериває ворога.
 func _cancel_windup() -> void:

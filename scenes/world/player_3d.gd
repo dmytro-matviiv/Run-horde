@@ -29,7 +29,7 @@ const RUN_SPEED := 5.4
 const ACCELERATION := 14.0      # як швидко набирає швидкість
 const DECELERATION := 18.0      # як швидко спиняється
 const ROTATION_SPEED := 12.0    # як швидко довертається в бік руху
-const COMBAT_TURN_SPEED := 16.0 # як швидко довертається до цілі в бою
+const COMBAT_TURN_SPEED := 22.0 # як швидко довертається до цілі в бою
 const GRAVITY := 22.0
 
 const BASE_DAMAGE := 14.0
@@ -55,9 +55,12 @@ const BACKPEDAL_FACTOR := 0.72
 const RETREAT_GUARD_TIME := 0.8
 
 ## --- Удари ---
-## Наскільки герой підскакує до цілі, якщо та трохи далі за замах.
-const LUNGE_RANGE := 2.4
-const LUNGE_TIME := 0.12
+## Крок до цілі, якщо та трохи далі за замах. Раніше це був ривок до
+## 3.5 м за десяту частку секунди — герой "пролітав" до ворога. Тепер це
+## спокійний крок, не далі за метр і не швидше за звичайний біг.
+const LUNGE_REACH_EXTRA := 1.2
+const LUNGE_MAX_DISTANCE := 0.9
+const LUNGE_SPEED := 5.0
 ## Під час удару герой рухається повільніше — удар має вагу.
 const ATTACK_MOVE_FACTOR := 0.35
 ## Скільки часу після удару можна продовжити комбо.
@@ -74,11 +77,11 @@ const SKILL_COLOR := Color(0.35, 0.95, 1.0)
 ## recover — коли можна бити знову, knockback — сила відкидання.
 const COMBO := [
 	{"shot": "SlashShot", "damage": 1.0, "reach": 2.9, "arc": 150.0, "hit_time": 0.17,
-		"recover": 0.36, "knockback": 2.0, "reverse": false, "tilt": 0.14, "heavy": false},
+		"recover": 0.36, "knockback": 0.6, "reverse": false, "tilt": 0.14, "heavy": false},
 	{"shot": "SlashFastShot", "damage": 1.15, "reach": 2.9, "arc": 150.0, "hit_time": 0.13,
-		"recover": 0.32, "knockback": 2.0, "reverse": true, "tilt": -0.2, "heavy": false},
+		"recover": 0.32, "knockback": 0.6, "reverse": true, "tilt": -0.2, "heavy": false},
 	{"shot": "KickShot", "damage": 1.9, "reach": 2.6, "arc": 110.0, "hit_time": 0.22,
-		"recover": 0.5, "knockback": 7.5, "reverse": false, "tilt": 0.0, "heavy": true},
+		"recover": 0.5, "knockback": 3.5, "reverse": false, "tilt": 0.0, "heavy": true},
 ]
 
 ## --- Перекат ---
@@ -90,7 +93,7 @@ const DODGE_COOLDOWN := 0.9
 ## --- Вихор ---
 const SKILL_RADIUS := 3.6
 const SKILL_DAMAGE := 2.4
-const SKILL_KNOCKBACK := 8.0
+const SKILL_KNOCKBACK := 4.0
 const SKILL_COOLDOWN := 6.0
 const SKILL_TIME := 0.45
 const SKILL_HIT_DELAY := 0.12
@@ -620,20 +623,20 @@ func _start_attack() -> void:
 	_since_attack = 0.0
 	_refresh_target()
 
+	# Лицем до цілі герой довертається сам (швидко, але плавно — див.
+	# _update_facing), а удар однаково йде в ціль: цілитись не треба.
 	if _target != null:
 		var offset := _target.global_position - global_position
 		offset.y = 0.0
 		var distance := offset.length()
-		# Одразу лицем до цілі: цілитись самому не треба.
-		if distance > 0.01:
-			_facing_angle = atan2(offset.x, offset.z)
-			model.rotation.y = _facing_angle
-		# Ціль трохи далі за замах — короткий підскок до неї.
+		# Ціль трохи далі за замах — спокійний крок до неї. Лише на першому
+		# ударі серії: далі ворог і так поруч, а кидатись за ним після
+		# кожного удару — це й були "різкі рухи".
 		var reach: float = step.reach
-		if distance > reach * 0.75 and distance < reach + LUNGE_RANGE:
-			var travel := distance - reach * 0.6
-			_lunge_velocity = offset.normalized() * (travel / LUNGE_TIME)
-			_lunge_left = LUNGE_TIME
+		if step_index == 0 and distance > reach * 0.9 and distance < reach + LUNGE_REACH_EXTRA:
+			var travel := minf(distance - reach * 0.75, LUNGE_MAX_DISTANCE)
+			_lunge_velocity = offset.normalized() * LUNGE_SPEED
+			_lunge_left = travel / LUNGE_SPEED
 
 	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
 	_fire(step.shot, moving)
@@ -646,7 +649,7 @@ func _update_attack(delta: float) -> void:
 	if not _attack_vfx_done and _attack_time >= step.hit_time - 0.07:
 		_attack_vfx_done = true
 		var color := HEAVY_COLOR if step.heavy else SLASH_COLOR
-		CombatVfx.slash(get_parent(), global_position + Vector3.UP * 1.0, _facing_angle,
+		CombatVfx.slash(get_parent(), global_position + Vector3.UP * 1.0, _aim_angle(),
 			step.reach + 0.2, step.arc, color, step.reverse, step.tilt, 0.24)
 	if not _attack_hit_done and _attack_time >= step.hit_time:
 		_attack_hit_done = true
@@ -662,7 +665,8 @@ func _update_attack(delta: float) -> void:
 ## Шкода всім ворогам у дузі перед героєм. Стіна захищає: крізь неї
 ## меч не дістає.
 func _apply_hit(step: Dictionary) -> void:
-	var forward := _facing_vector()
+	var aim := _aim_angle()
+	var forward := Vector3(sin(aim), 0.0, cos(aim))
 	var half_arc := deg_to_rad(step.arc) * 0.5
 	var hits := 0
 	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
@@ -701,18 +705,32 @@ func _update_skill(delta: float) -> void:
 			continue
 		_deal_damage(enemy, SKILL_DAMAGE, offset.normalized() * SKILL_KNOCKBACK, true)
 		hits += 1
-	CombatVfx.hitstop(get_tree(), 0.06)
-	_shake_camera(0.2 if hits > 0 else 0.1)
+	if hits > 0:
+		CombatVfx.hitstop(get_tree(), 0.05)
+	_shake_camera(0.1 if hits > 0 else 0.05)
 
 func _deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool) -> void:
 	var crit := randf() < CRIT_CHANCE
 	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
 	enemy.take_damage(amount, knockback, crit, heavy)
 
-## Сильний удар "заморожує" кадр і трусить камеру; легкий — ледь-ледь.
+## Лише сильний удар (ногою) на мить пригальмовує гру й ледь трусить
+## камеру. Звичайні помахи — без цього: на кожному ударі це
+## сприймалось як ривки.
 func _feel_hit(heavy: bool) -> void:
-	CombatVfx.hitstop(get_tree(), 0.075 if heavy else 0.035)
-	_shake_camera(0.16 if heavy else 0.05)
+	if heavy:
+		CombatVfx.hitstop(get_tree(), 0.045)
+		_shake_camera(0.07)
+
+## Куди йде удар: у ціль, якщо вона є, інакше — куди дивиться герой.
+## Герой довертається до цілі плавно, а удар не має промахуватись через
+## те, що поворот ще не завершився.
+func _aim_angle() -> float:
+	if _target != null and is_instance_valid(_target) and _target.is_alive():
+		var offset := _target.global_position - global_position
+		if Vector2(offset.x, offset.z).length() > 0.05:
+			return atan2(offset.x, offset.z)
+	return _facing_angle
 
 func _shake_camera(strength: float) -> void:
 	var rig := get_tree().get_first_node_in_group(&"camera_rig")
@@ -742,7 +760,7 @@ func _update_animation(delta: float) -> void:
 	var forward := _facing_vector()
 	var right := Vector3(-forward.z, 0.0, forward.x)
 	var flat := Vector3(velocity.x, 0.0, velocity.z)
-	if _roll_left > 0.0 or _lunge_left > 0.0:
+	if _roll_left > 0.0:
 		flat = Vector3.ZERO
 	# right — права рука героя: коли він дивиться на +Z, це -X світу.
 	var wanted := Vector2(flat.dot(right), flat.dot(forward)) / RUN_SPEED
@@ -761,7 +779,7 @@ func take_damage(amount: float) -> bool:
 	_update_health_bar()
 	health_changed.emit(current_hp, max_hp)
 	CombatVfx.flash_model(model, Color(1.0, 0.25, 0.2), 0.12)
-	_shake_camera(0.1)
+	_shake_camera(0.06)
 	if _attack_step < 0 and _roll_left <= 0.0:
 		_fire("HitShot")
 	if current_hp <= 0.0:

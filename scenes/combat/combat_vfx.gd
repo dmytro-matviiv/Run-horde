@@ -285,7 +285,9 @@ static func hitstop(tree: SceneTree, duration: float) -> void:
 	_hitstop_until = until
 	_hitstop_token += 1
 	var token := _hitstop_token
-	Engine.time_scale = 0.05
+	# Не повна зупинка, а різке пригальмування: удар відчувається, але
+	# картинка не "застигає", що на телефоні сприймалось би як лаг.
+	Engine.time_scale = 0.25
 	tree.create_timer(duration, true, false, true).timeout.connect(func() -> void:
 		if token == _hitstop_token:
 			Engine.time_scale = 1.0)
@@ -363,7 +365,8 @@ void fragment() {
 	_flare_materials[key] = material
 	return material
 
+## Прибрати вузол через кілька секунд. Підписуємо сам метод вузла, а не
+## лямбду: якщо вузол зникне раніше (разом із батьком), підписка
+## зникне теж, і ніхто не звернеться до видаленого об'єкта.
 static func _free_after(node: Node, seconds: float) -> void:
-	node.get_tree().create_timer(seconds, false).timeout.connect(func() -> void:
-		if is_instance_valid(node):
-			node.queue_free())
+	node.get_tree().create_timer(seconds, false).timeout.connect(node.queue_free)

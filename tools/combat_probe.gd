@@ -28,6 +28,7 @@ func _ready() -> void:
 	await _test_kill_then_pause()
 	await _test_combo()
 	print("COMBAT: швидкість часу після комбо ", Engine.time_scale)
+	await _test_smoothness()
 	await _test_backpedal()
 	await _test_dodge()
 	await _test_skill()
@@ -93,6 +94,43 @@ func _test_combo() -> void:
 	print("COMBAT: ворог %.0f -> %.0f HP (живий: %s), цифр шкоди на екрані: %d" % [
 		hp_before, enemy.current_hp if is_instance_valid(enemy) else 0.0,
 		is_instance_valid(enemy) and enemy.is_alive(), labels])
+
+## Плавність бою: герой не має "перелітати" до ворога, розвертатись за
+## один кадр, а ворога не має відносити на метри.
+func _test_smoothness() -> void:
+	var enemy := _nearest_alive_enemy(Enemy3D.Kind.MELEE)
+	if enemy == null:
+		return
+	enemy.current_hp = 900.0
+	enemy.max_hp = 900.0
+	_place_player_near(enemy, 3.4, 3.0)
+	_player._facing_angle = atan2(enemy.global_position.x - _player.global_position.x,
+		enemy.global_position.z - _player.global_position.z) + PI
+	await get_tree().create_timer(0.2).timeout
+	var max_player_speed := 0.0
+	var max_turn_deg := 0.0
+	var max_enemy_speed := 0.0
+	var last_angle: float = _player._facing_angle
+	var last_player := _player.global_position
+	var last_enemy := enemy.global_position
+	var enemy_start := enemy.global_position
+	var frames := 0
+	for i in 9:
+		_player.attack()
+		for frame in 14:
+			await get_tree().physics_frame
+			var dt := get_physics_process_delta_time()
+			frames += 1
+			var p := _player.global_position
+			var e := enemy.global_position
+			max_player_speed = maxf(max_player_speed, Vector2(p.x - last_player.x, p.z - last_player.z).length() / dt)
+			max_enemy_speed = maxf(max_enemy_speed, Vector2(e.x - last_enemy.x, e.z - last_enemy.z).length() / dt)
+			max_turn_deg = maxf(max_turn_deg, rad_to_deg(absf(angle_difference(last_angle, _player._facing_angle))))
+			last_player = p
+			last_enemy = e
+			last_angle = _player._facing_angle
+	print("COMBAT: плавність — герой макс %.1f м/с (біг 5.4), розворот макс %.0f° за кадр, ворог макс %.1f м/с, ворог зсунувся на %.1f м" % [
+		max_player_speed, max_turn_deg, max_enemy_speed, enemy.global_position.distance_to(enemy_start)])
 
 ## Відходимо від ворога, тримаючи удар: герой має дивитись на ворога й
 ## бігти задки. Відбігли далі — розвертається.

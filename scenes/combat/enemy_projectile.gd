@@ -42,11 +42,13 @@ func _ready() -> void:
 func set_charge(progress: float) -> void:
 	scale = Vector3.ONE * lerpf(0.25, 1.0, clampf(progress, 0.0, 1.0))
 
-func launch(direction: Vector3, target: Node3D) -> void:
+## world — куди "відпустити" снаряд. Випущений снаряд більше не дитина
+## стрільця: якщо той помре, поки снаряд летить, снаряд (і його іскри)
+## не зникнуть посеред польоту.
+func launch(direction: Vector3, target: Node3D, world: Node) -> void:
 	_target = target
 	_velocity = direction.normalized() * SPEED
-	# Відтепер снаряд живе сам по собі, а не рухається разом зі стрільцем.
-	top_level = true
+	reparent(world, true)
 	scale = Vector3.ONE
 	_launched = true
 
