@@ -14,7 +14,12 @@ func setup(new_level: int, choices: Array[UpgradeDef], current_levels: Dictionar
 	for upgrade in choices:
 		var current_level: int = current_levels.get(upgrade.id, 0)
 		var card := Button.new()
-		card.custom_minimum_size = Vector2(220, 180)
+		# Ширина фіксована, а довгий опис переноситься на новий рядок.
+		# Без цього картка розтягувалась під найдовший рядок і вилазила
+		# за край екрана — опис здібності було не дочитати.
+		card.custom_minimum_size = Vector2(250, 190)
+		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		card.text = "%s\n\n%s\n\nРівень %d/%d" % [
 			upgrade.title,
 			upgrade.description,

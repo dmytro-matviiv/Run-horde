@@ -99,6 +99,9 @@ func _process(delta: float) -> void:
 
 func _start_loading() -> void:
 	get_tree().paused = false
+	# Про всяк випадок: якщо перехід стався посеред "заморожування" кадру
+	# від удару, нова сцена має стартувати з нормальною швидкістю.
+	Engine.time_scale = 1.0
 	# Окремі потоки для залежностей: моделі ворогів, стін і прикрас
 	# вантажаться паралельно, на кількох ядрах телефона.
 	var error := ResourceLoader.load_threaded_request(_path, "PackedScene", true)

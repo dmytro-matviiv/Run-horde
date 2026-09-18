@@ -5,12 +5,13 @@ extends Control
 ## заважають один одному — стандартна схема мобільних екшенів.
 ##
 ## На ПК те саме роблять миша й права кнопка: перетягування з натиснутою
-## правою крутить камеру, клік лівою в правій половині — удар. Це для
-## зручності тестування, поки немає телефона під рукою.
+## правою крутить камеру, ліва кнопка в правій половині — удар (утримання
+## б'є серією). Це для зручності тестування, поки немає телефона під рукою.
 
 signal rotate_requested(amount: float)
 signal pitch_requested(amount: float)
 signal tap_attack
+signal attack_held_changed(held: bool)
 
 ## Скільки радіанів повороту дає один піксель протягування.
 ## Вертикаль трохи млявіша за горизонталь: нахил має бути точним, бо
@@ -29,6 +30,7 @@ var _last_position := Vector2.ZERO
 var _travelled := 0.0
 var _held_time := 0.0
 var _mouse_rotating := false
+var _mouse_attacking := false
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -77,5 +79,10 @@ func _handle_drag(position: Vector2) -> void:
 func _handle_mouse_button(event: InputEventMouseButton) -> void:
 	if event.button_index == MOUSE_BUTTON_RIGHT:
 		_mouse_rotating = event.pressed
-	elif event.button_index == MOUSE_BUTTON_LEFT and event.pressed and event.position.x > size.x * 0.5:
-		tap_attack.emit()
+	elif event.button_index == MOUSE_BUTTON_LEFT and event.device != InputEvent.DEVICE_ID_EMULATION:
+		if event.pressed and event.position.x > size.x * 0.5:
+			_mouse_attacking = true
+			attack_held_changed.emit(true)
+		elif not event.pressed and _mouse_attacking:
+			_mouse_attacking = false
+			attack_held_changed.emit(false)

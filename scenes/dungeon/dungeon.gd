@@ -16,6 +16,7 @@ extends Node3D
 const LEVEL_UP_CHOICE_SCENE := preload("res://scenes/ui/level_up_choice.tscn")
 const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
 const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
+const COMBAT_BUTTONS_SCRIPT := preload("res://scenes/ui/combat_buttons.gd")
 const ENEMY_SCRIPT := preload("res://scenes/dungeon/enemy_3d.gd")
 const EXIT_SCENE := preload("res://assets/models/dungeon/Arch_Door.fbx")
 
@@ -116,15 +117,37 @@ func _setup_hud(title: String) -> void:
 	# Права половина екрана крутить камеру, короткий дотик по ній — удар.
 	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
 	hud.add_child(camera_touch)
+	$CameraRig.set_world_collision(false)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
 	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
 	camera_touch.tap_attack.connect(player.attack)
+	camera_touch.attack_held_changed.connect(player.set_attack_held)
+
+	# Бойові кнопки — поверх зони камери: дотик по кнопці забирає кнопка.
+	var combat_buttons: Control = COMBAT_BUTTONS_SCRIPT.new()
+	hud.add_child(combat_buttons)
+	combat_buttons.setup(player)
+	if not OS.has_feature("mobile"):
+		_add_keyboard_hint()
 
 	hud.move_child(exit_button, hud.get_child_count() - 1)
 
 	exit_button.visible = false
 	exit_button.pressed.connect(_on_exit_pressed)
 	_update_status(title)
+
+## Підказка для ПК: які клавіші що роблять.
+func _add_keyboard_hint() -> void:
+	var hint := Label.new()
+	hint.text = "Пробіл / ЛКМ — удар (утримуй — серія)   •   Shift — перекат   •   E — вихор   •   ПКМ — камера"
+	hint.add_theme_font_size_override("font_size", 15)
+	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
+	hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	hint.position.y -= 8.0
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(hint)
 
 func _spawn_enemies(markers: Dictionary) -> void:
 	for position: Vector3 in markers.melee:
@@ -323,8 +346,7 @@ func _on_exit_pressed() -> void:
 	GameState.unlock_next_dungeon_level()
 	SceneLoader.change_scene(BASE_SCENE_PATH, "База")
 
+## Удар, перекат і вихір з клавіатури герой ловить сам (див. player_3d).
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept"):
-		player.attack()
-	elif event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("ui_cancel"):
 		SceneLoader.change_scene(BASE_SCENE_PATH, "База")

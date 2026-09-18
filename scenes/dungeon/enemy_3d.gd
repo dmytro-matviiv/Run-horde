@@ -1,30 +1,30 @@
 extends CharacterBody3D
 class_name Enemy3D
 
-## Ворог у данжі. Замовник окремо назвав три речі, які тут вирішуються:
+## Ворог у данжі.
 ##
-## 1. НЕ ПРОХОДИТЬ КРІЗЬ СТІНИ — у ворога справжнє фізичне тіло, і рух
-##    іде через move_and_slide(), а не телепортацією до героя.
+## 1. НЕ ПРОХОДИТЬ КРІЗЬ СТІНИ — справжнє фізичне тіло, рух через
+##    move_and_slide(), а не телепортацією до героя.
 ## 2. НЕ ТУПИЙ І НЕ ЗАСТРЯГАЄ — шлях рахує NavigationAgent3D по карті
-##    прохідності данжу. Якщо герой зайшов за ріг, ворог обходить кут,
-##    а не впирається носом у стіну.
-## 3. СТРІЛЕЦЬ НЕ СТРІЛЯЄ КРІЗЬ СТІНИ — перед пострілом перевіряє, чи
-##    бачить героя (промінь від очей до цілі).
+##    прохідності. Зайшов за ріг — ворог обходить кут, а не стоїть носом
+##    у стіну.
+## 3. НЕ Б'Є Й НЕ СТРІЛЯЄ КРІЗЬ СТІНИ — перед ударом перевіряє, чи
+##    бачить героя.
 ##
-## Агро теж чесне: поки герой далеко, ворог стоїть на місці; помітив —
-## починає переслідувати, і вже не губить, поки той не втече далеко.
+## БІЙ, ЯКИЙ МОЖНА ЧИТАТИ Й ОБІГРАВАТИ:
+##  - Перед ударом ворог ЗАМАХУЄТЬСЯ: на підлозі з'являється червона
+##    зона, яка заповнюється до моменту удару. Вийшов із неї чи зробив
+##    перекат — удар пройшов повз.
+##  - Бос кожен третій удар б'є об землю: велике коло навколо себе.
+##  - Стрілець пускає видимий снаряд, від якого можна ухилитись; підійшов
+##    упритул — він відступає, щоб тримати дистанцію.
+##  - Удар героя відкидає ворога, а сильний (удар ногою, вихор) ще й
+##    збиває замах — агресивна гра винагороджується.
 ##
-## ЕКОНОМІЯ НА СЛАБКИХ ТЕЛЕФОНАХ (гравцеві непомітна):
-##  - маршрут перераховується кілька разів на секунду, а не щокадру:
-##    за третину секунди герой зміщується на метр, маршрут той самий;
-##  - "чи бачу героя" для стрільця теж перевіряється кілька разів на
-##    секунду. Перед самим пострілом — завжди свіжо, тож крізь стіни він
-##    однаково не стріляє;
-##  - у кожного ворога свій зсув таймерів, щоб усі не рахували в один
-##    і той самий кадр;
-##  - анімація ворога, якого не видно в кадрі, стоїть на паузі, а
-##    далекого — оновлюється через кадр;
-##  - ворог, що стоїть без діла, не рахує фізику руху.
+## ЕКОНОМІЯ НА СЛАБКИХ ТЕЛЕФОНАХ (гравцеві непомітна): маршрут і
+## видимість рахуються кілька разів на секунду з розсинхроном між
+## ворогами; анімація поза кадром на паузі, удалині — через кадр; ворог
+## без діла не рахує фізику руху.
 
 signal died(position: Vector3, xp_reward: int)
 
@@ -34,12 +34,34 @@ const HEALTH_BAR_SCRIPT := preload("res://scenes/dungeon/health_bar_3d.gd")
 
 ## Колір смужки ворога. Бос отримує ту саму, але помітнішу.
 const ENEMY_BAR_COLOR := Color(0.95, 0.25, 0.25)
+const TELEGRAPH_COLOR := Color(1.0, 0.22, 0.15, 0.85)
+const SLAM_COLOR := Color(1.0, 0.45, 0.1, 0.9)
+const HIT_COLOR := Color(1.0, 0.95, 0.8)
+const HEAVY_HIT_COLOR := Color(1.0, 0.65, 0.25)
 
 const GRAVITY := 20.0
-const ATTACK_ANIMATION_TIME := 0.5
 
 const REPATH_INTERVAL := 0.3
 const SIGHT_INTERVAL := 0.2
+
+## Як швидко гасне відкидання (м/с за секунду).
+const KNOCKBACK_DECAY := 28.0
+
+## Замах: скільки секунд від початку до удару. Саме стільки гравець має,
+## щоб вийти з червоної зони.
+const MELEE_WINDUP := 0.55
+const RANGED_WINDUP := 0.5
+const BOSS_WINDUP := 0.75
+const SLAM_WINDUP := 1.0
+const SLAM_RADIUS := 3.6
+const SLAM_EVERY := 3
+
+## Під час замаху ворог повільно довертається за героєм — достатньо, щоб
+## влучити в того, хто стоїть, але не в того, хто відскочив убік.
+const WINDUP_TURN_SPEED := 2.5
+
+## Стрілець тримається не ближче за це.
+const RANGED_MIN_DISTANCE := 3.5
 
 @export var kind: Kind = Kind.MELEE
 @export var max_hp := 30.0
@@ -59,8 +81,7 @@ const SIGHT_INTERVAL := 0.2
 @export var eye_height := 1.2
 
 ## Зріст ворога на екрані в метрах. Моделі з різних наборів приходять
-## у зовсім різному масштабі (одна завбільшки з палець, інша — з
-## будинок), тож приводимо кожну до потрібного розміру самі.
+## у зовсім різному масштабі, тож приводимо кожну до потрібного розміру.
 @export var target_height := 1.7
 
 var current_hp := 0.0
@@ -83,6 +104,15 @@ var _animation_frame := 0
 var _animation_time := 0.0
 var _animation_cache: Dictionary = {}
 
+var _knockback := Vector3.ZERO
+var _stagger_left := 0.0
+var _windup_left := 0.0
+var _windup_total := 0.0
+var _windup_slam := false
+var _attack_counter := 0
+var _telegraph: MeshInstance3D
+var _charging_shot: EnemyProjectile
+
 func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_player = player
 	_model = model_scene.instantiate()
@@ -98,8 +128,10 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_add_health_bar()
 	_add_screen_notifier()
 
-## Смужка висить трохи вище за голову й ширшає разом із розміром ворога:
-## у боса вона має бути помітною, у дрібноти — не затуляти його самого.
+func is_alive() -> bool:
+	return not _dying
+
+## Смужка висить трохи вище за голову й ширшає разом із розміром ворога.
 func _add_health_bar() -> void:
 	_health_bar = HEALTH_BAR_SCRIPT.new()
 	add_child(_health_bar)
@@ -109,16 +141,13 @@ func _add_health_bar() -> void:
 ## Масштабує модель так, щоб її висота дорівнювала target_height.
 ##
 ## Габарити рахуємо у СВІТОВИХ координатах і переводимо в систему
-## моделі. Локальні габарити тут не годяться: у моделей зі скелетом
-## меш лежить у системі кістки, його власний розмір крихітний — і
-## масштаб виходив у сотню разів більшим за потрібний.
+## моделі: у моделей зі скелетом меш лежить у системі кістки, його
+## власний розмір крихітний — і масштаб виходив у сотню разів більшим.
 func _normalize_size() -> void:
 	var bounds := _get_model_bounds()
 	if bounds.size.y <= 0.01:
 		return
 	var factor := target_height / bounds.size.y
-	# Запобіжник на випадок дивних моделей: краще лишити як є, ніж
-	# отримати ворога завбільшки з будинок.
 	if factor < 0.01 or factor > 100.0:
 		push_warning("Дивний масштаб моделі ворога: %f" % factor)
 		return
@@ -150,14 +179,14 @@ func _add_screen_notifier() -> void:
 	add_child(notifier)
 
 func _ready() -> void:
+	add_to_group(&"enemies")
 	current_hp = max_hp
 	_agent = NavigationAgent3D.new()
 	# Ворог зупиняється трохи раніше цілі, інакше штовхає героя спиною.
 	_agent.path_desired_distance = 0.6
 	_agent.target_desired_distance = attack_range * 0.8
 	# Взаємне розштовхування агентів (avoidance) вимкнене: воно рахується
-	# щокадру для кожного ворога, а його результат ми й так не
-	# використовували.
+	# щокадру для кожного ворога, а результат нам не потрібен.
 	_agent.avoidance_enabled = false
 	_agent.radius = 0.5
 	add_child(_agent)
@@ -165,9 +194,7 @@ func _ready() -> void:
 	_repath_left = randf() * REPATH_INTERVAL
 	_sight_left = randf() * SIGHT_INTERVAL
 
-## Сон: ворог далеко від гравця не рахує маршрут і не ворушить
-## скелетом. Анімація скелета — найдорожча річ на телефоні, а бачити
-## того, хто за три кімнати звідси, все одно неможливо.
+## Сон: далекий ворог не рахує маршрут і не ворушить скелетом.
 func set_sleeping(sleeping: bool) -> void:
 	if _sleeping == sleeping:
 		return
@@ -185,8 +212,8 @@ func _process(delta: float) -> void:
 	if _animation == null:
 		return
 	_animation_time += delta
-	# Невидимий ворог анімацію не рахує взагалі: час накопичується й
-	# "доганяється" одним кроком, щойно він з'явиться в кадрі.
+	# Невидимий ворог анімацію не рахує: час накопичується й "доганяється"
+	# одним кроком, щойно він з'явиться в кадрі.
 	if not _on_screen:
 		return
 	_animation_frame += 1
@@ -204,9 +231,10 @@ func _physics_process(delta: float) -> void:
 	_attack_left -= delta
 	_repath_left -= delta
 	_sight_left -= delta
+	_stagger_left = maxf(_stagger_left - delta, 0.0)
 
 	# Стоїть без діла на підлозі — рухати нічого, фізику не рахуємо.
-	if not _aggro and is_on_floor() and velocity.is_zero_approx():
+	if not _aggro and is_on_floor() and velocity.is_zero_approx() and _knockback.is_zero_approx():
 		_play("Idle")
 		return
 
@@ -215,7 +243,12 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
-	if _aggro:
+	if _windup_left > 0.0:
+		_process_windup(delta)
+	elif _stagger_left > 0.0:
+		velocity.x = 0.0
+		velocity.z = 0.0
+	elif _aggro:
 		if kind == Kind.RANGED:
 			_process_ranged(distance, delta)
 		else:
@@ -225,10 +258,17 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 		_play("Idle")
 
+	# Відкидання від удару героя накладається поверх власного руху.
+	velocity.x += _knockback.x
+	velocity.z += _knockback.z
+	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * delta)
+
 	move_and_slide()
 
-## Помітив — переслідує; поки не втік далеко, не забуває. Два різні
-## радіуси не дають ворогові "блимати" між станами на межі агро.
+	velocity.x -= _knockback.x
+	velocity.z -= _knockback.z
+
+## Помітив — переслідує; поки не втік далеко, не забуває.
 func _update_aggro(distance: float) -> void:
 	if not _aggro and distance <= aggro_range:
 		_aggro = true
@@ -237,32 +277,35 @@ func _update_aggro(distance: float) -> void:
 		_aggro = false
 
 func _process_melee(distance: float, delta: float) -> void:
-	# Далеко — або близько, але між нами стіна: іде маршрутом в обхід, а
-	# не стоїть носом у стіну.
+	# Далеко — або близько, але між нами стіна: іде маршрутом в обхід.
 	if distance > attack_range or not _sees_player():
 		_move_along_path(delta)
 		return
 	velocity.x = 0.0
 	velocity.z = 0.0
-	_face_player()
-	_try_attack()
+	_face_player(10.0)
+	_try_begin_windup()
 
-## Стрілець тримає дистанцію і б'є лише тоді, коли СПРАВДІ бачить ціль.
+## Стрілець тримає дистанцію: не бачить — підходить, задалеко —
+## підходить, упритул — відступає. Стріляє лише тоді, коли бачить.
 func _process_ranged(distance: float, delta: float) -> void:
-	if not _sees_player():
-		# Не бачить — підходить ближче, доки не з'явиться видимість.
+	if not _sees_player() or distance > attack_range:
 		_move_along_path(delta)
 		return
-	if distance < attack_range * 2.0:
+	if distance < RANGED_MIN_DISTANCE:
+		var away := global_position - _player.global_position
+		away.y = 0.0
+		away = away.normalized()
+		velocity.x = move_toward(velocity.x, away.x * move_speed, 12.0 * delta)
+		velocity.z = move_toward(velocity.z, away.z * move_speed, 12.0 * delta)
+		_play("Walk")
+	else:
 		velocity.x = 0.0
 		velocity.z = 0.0
-	else:
-		_move_along_path(delta)
-	_face_player()
-	_try_attack()
+	_face_player(10.0)
+	_try_begin_windup()
 
-## Йде до героя МАРШРУТОМ по карті прохідності: обходить кути, стіни й
-## колони замість того, щоб упиратись у них.
+## Іде до героя МАРШРУТОМ по карті прохідності.
 func _move_along_path(delta: float) -> void:
 	if _repath_left <= 0.0:
 		_repath_left = REPATH_INTERVAL
@@ -279,11 +322,10 @@ func _move_along_path(delta: float) -> void:
 	direction = direction.normalized()
 	velocity.x = move_toward(velocity.x, direction.x * move_speed, 12.0 * delta)
 	velocity.z = move_toward(velocity.z, direction.z * move_speed, 12.0 * delta)
-	_face(direction)
+	_face(direction, 10.0)
 	_play("Walk")
 
-## Видимість героя з кешем: промінь пускаємо кілька разів на секунду,
-## а не щокадру.
+## Видимість героя з кешем: промінь кілька разів на секунду.
 func _sees_player() -> bool:
 	if _sight_left <= 0.0:
 		_sight_left = SIGHT_INTERVAL
@@ -291,77 +333,196 @@ func _sees_player() -> bool:
 	return _can_see
 
 ## Промінь від очей ворога до грудей героя. Якщо першим трапляється
-## стіна — стріляти не можна.
+## стіна — бачити не можна.
 func _has_line_of_sight() -> bool:
 	var from := global_position + Vector3.UP * eye_height
 	var to := _player.global_position + Vector3.UP * 1.0
 	var query := PhysicsRayQueryParameters3D.create(from, to)
 	query.exclude = [get_rid()]
-	# Маска 1 — світ (стіни, колони). Героя промінь ігнорує: нас цікавить
-	# саме те, чи є перешкода на шляху.
+	# Маска 1 — світ (стіни, колони).
 	query.collision_mask = 1
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	return hit.is_empty()
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
-func _try_attack() -> void:
-	if _attack_left > 0.0:
+# --- замах і удар ---
+
+## Замахується лише тоді, коли вже повернувся до героя: спершу
+## розвернутись, потім бити — а не махати в інший бік.
+func _try_begin_windup() -> void:
+	var offset := _player.global_position - global_position
+	offset.y = 0.0
+	if offset.length() > 0.3 and _model_forward().angle_to(offset.normalized()) > deg_to_rad(35.0):
 		return
-	# Б'ємо лише те, що бачимо: інакше ворог дістає героя крізь стіну,
-	# просто стоячи впритул з іншого боку.
+	_begin_windup()
+
+func _begin_windup() -> void:
+	if _attack_left > 0.0 or _windup_left > 0.0:
+		return
 	if not _has_line_of_sight():
 		return
-	_attack_left = attack_cooldown
-	_play_once(["Punch", "Bite_Front", "Headbutt"])
+	_attack_counter += 1
+	_windup_slam = kind == Kind.BOSS and _attack_counter % SLAM_EVERY == 0
+	match kind:
+		Kind.RANGED:
+			_windup_total = RANGED_WINDUP
+		Kind.BOSS:
+			_windup_total = SLAM_WINDUP if _windup_slam else BOSS_WINDUP
+		_:
+			_windup_total = MELEE_WINDUP
+	_windup_left = _windup_total
+	velocity.x = 0.0
+	velocity.z = 0.0
+	_play_once(["Punch", "Bite_Front", "Headbutt", "Weapon"])
+
 	if kind == Kind.RANGED:
-		_shoot()
-	elif _player.has_method("take_damage"):
-		_player.take_damage(damage)
-
-## Постріл — миттєвий промінь: ворог уже перевірив видимість, тож
-## влучання чесне й не пролітає крізь стіну.
-func _shoot() -> void:
-	if not _has_line_of_sight():
+		# Снаряд "набухає" в руці — це і є попередження для гравця.
+		_charging_shot = EnemyProjectile.create(damage)
+		add_child(_charging_shot)
+		_charging_shot.position = Vector3(0, target_height * 0.7, 0) + _model_forward() * 0.6
 		return
-	if _player.has_method("take_damage"):
+
+	if _windup_slam:
+		_show_telegraph(SLAM_RADIUS, PI, SLAM_COLOR)
+	else:
+		_show_telegraph(_melee_reach(), deg_to_rad(55.0), TELEGRAPH_COLOR)
+
+func _process_windup(delta: float) -> void:
+	velocity.x = 0.0
+	velocity.z = 0.0
+	_windup_left -= delta
+	if not _windup_slam:
+		_face_player(WINDUP_TURN_SPEED)
+	var progress := 1.0 - _windup_left / _windup_total
+	if _telegraph != null:
+		_telegraph.rotation.y = _model.rotation.y
+		_telegraph.set_instance_shader_parameter(&"progress", progress)
+	if _charging_shot != null and is_instance_valid(_charging_shot):
+		_charging_shot.set_charge(progress)
+		_charging_shot.position = Vector3(0, target_height * 0.7, 0) + _model_forward() * 0.6
+	if _windup_left <= 0.0:
+		_resolve_attack()
+
+func _resolve_attack() -> void:
+	_windup_left = 0.0
+	_attack_left = attack_cooldown
+	_hide_telegraph()
+	if kind == Kind.RANGED:
+		_release_shot()
+		return
+	var offset := _player.global_position - global_position
+	offset.y = 0.0
+	if _windup_slam:
+		CombatVfx.shockwave(get_parent(), global_position, SLAM_RADIUS, SLAM_COLOR, 0.35)
+		var rig := get_tree().get_first_node_in_group(&"camera_rig")
+		if rig != null:
+			rig.shake(0.22)
+		if offset.length() <= SLAM_RADIUS + 0.3:
+			_player.take_damage(damage * 1.5)
+		return
+	# Звичайний удар влучає, лише якщо герой досі в червоній зоні.
+	var in_reach := offset.length() <= _melee_reach() + 0.35
+	var in_front := offset.length() < 0.5 or _model_forward().angle_to(offset.normalized()) <= deg_to_rad(65.0)
+	if in_reach and in_front and _has_line_of_sight():
 		_player.take_damage(damage)
 
-func take_damage(amount: float) -> void:
+func _release_shot() -> void:
+	if _charging_shot == null or not is_instance_valid(_charging_shot):
+		return
+	var shot := _charging_shot
+	_charging_shot = null
+	var target := _player.global_position + Vector3.UP * 1.0
+	shot.launch(target - shot.global_position, _player)
+
+## Замах збито: сильний удар героя перериває ворога.
+func _cancel_windup() -> void:
+	_windup_left = 0.0
+	_hide_telegraph()
+	if _charging_shot != null and is_instance_valid(_charging_shot):
+		_charging_shot.queue_free()
+	_charging_shot = null
+	_attack_left = maxf(_attack_left, attack_cooldown * 0.5)
+
+func _melee_reach() -> float:
+	return attack_range * 1.15 + 0.3
+
+func _show_telegraph(radius: float, half_arc: float, color: Color) -> void:
+	_hide_telegraph()
+	_telegraph = CombatVfx.make_ground_marker(color, radius, half_arc)
+	add_child(_telegraph)
+	_telegraph.position = Vector3(0, 0.05, 0)
+	_telegraph.rotation.y = _model.rotation.y
+
+func _hide_telegraph() -> void:
+	if _telegraph != null and is_instance_valid(_telegraph):
+		_telegraph.queue_free()
+	_telegraph = null
+
+# --- отримання шкоди ---
+
+## Удар героя. knockback — напрямок і сила відкидання, heavy — сильний
+## удар, що збиває замах.
+func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = false, heavy: bool = false) -> void:
 	if _dying:
 		return
 	current_hp -= amount
 	if not _aggro:
 		_repath_left = 0.0
 	_aggro = true   # вдарили — помітив, навіть якщо був далеко
-	# Смужка з'являється від першого ж удару й спадає з кожним тіком.
 	if _health_bar != null:
 		_health_bar.set_ratio(current_hp / max_hp)
 		_health_bar.flash()
-	_play_once(["HitReact", "HitRecieve"])
+
+	var parent := get_parent()
+	var chest := global_position + Vector3.UP * target_height * 0.55
+	CombatVfx.impact(parent, chest, HEAVY_HIT_COLOR if heavy or crit else HIT_COLOR, heavy or crit)
+	CombatVfx.damage_number(parent, global_position + Vector3.UP * (target_height + 0.35), amount, crit)
+	CombatVfx.flash_model(_model, Color.WHITE, 0.09)
+
+	# Бос важкий: його майже не зрушити й лише сильним ударом збити замах.
+	var is_boss := kind == Kind.BOSS
+	_knockback = knockback * (0.25 if is_boss else 1.0)
+	if heavy or not is_boss:
+		if heavy:
+			_cancel_windup()
+		_stagger_left = maxf(_stagger_left, (0.45 if heavy else 0.15) * (0.5 if is_boss else 1.0))
+
+	if _windup_left <= 0.0:
+		_play_once(["HitReact", "HitRecieve"])
 	if current_hp <= 0.0:
 		_die()
 
 func _die() -> void:
 	_dying = true
 	velocity = Vector3.ZERO
+	_knockback = Vector3.ZERO
+	_cancel_windup()
+	remove_from_group(&"enemies")
 	if _health_bar != null:
 		_health_bar.visible = false
+	# Мертвий ворог більше не заступає дорогу.
+	collision_layer = 0
 	died.emit(global_position, xp_reward)
 	_play_once(["Death"])
 	# Даємо дограти смерть, а тоді прибираємо.
 	await get_tree().create_timer(1.6).timeout
 	queue_free()
 
-func _face_player() -> void:
+# --- поворот і анімації ---
+
+func _model_forward() -> Vector3:
+	var angle := _model.rotation.y
+	return Vector3(sin(angle), 0.0, cos(angle))
+
+func _face_player(speed: float) -> void:
 	var direction := _player.global_position - global_position
 	direction.y = 0.0
 	if direction.length() > 0.01:
-		_face(direction.normalized())
+		_face(direction.normalized(), speed)
 
-func _face(direction: Vector3) -> void:
+func _face(direction: Vector3, speed: float) -> void:
 	if _model == null:
 		return
 	var wanted := atan2(direction.x, direction.z)
-	_model.rotation.y = rotate_toward(_model.rotation.y, wanted, 10.0 * get_physics_process_delta_time())
+	_model.rotation.y = rotate_toward(_model.rotation.y, wanted, speed * get_physics_process_delta_time())
 
 ## Анімації в різних моделей звуться по-різному, тож шукаємо за
 ## кількома можливими назвами.

@@ -27,6 +27,9 @@ func _ready() -> void:
 	var scene: Node = load(SCENES[scene_key]).instantiate()
 	add_child(scene)
 	await _dismiss_ability_choice(scene)
+	# --no-ui: сховати інтерфейс, щоб побачити вартість самого 3D.
+	if options.has("no-ui") and scene.has_node("HUD"):
+		scene.get_node("HUD").visible = false
 	# Даємо потоковому підвантаженню влаштуватись, а тоді міряємо
 	# усталений стан, а не мить побудови.
 	await get_tree().create_timer(5.0).timeout
@@ -81,4 +84,6 @@ func _parse_args() -> Dictionary:
 		if argument.begins_with("--") and argument.contains("="):
 			var parts := argument.substr(2).split("=", true, 1)
 			result[parts[0]] = parts[1]
+		elif argument.begins_with("--"):
+			result[argument.substr(2)] = "1"
 	return result

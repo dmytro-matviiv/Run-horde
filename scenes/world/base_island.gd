@@ -34,6 +34,8 @@ var _nearby: Interactable
 func _ready() -> void:
 	SceneLoader.hold()
 	player.set_torch_enabled(false)
+	# На острові пробіл — "зайти в будівлю", бій з клавіатури тут вимкнено.
+	player.combat_input_enabled = false
 
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
 	$HUD.add_child(joystick)
@@ -45,6 +47,7 @@ func _ready() -> void:
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
 	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
 	camera_touch.tap_attack.connect(player.attack)
+	camera_touch.attack_held_changed.connect(player.set_attack_held)
 	# Кнопка дії має бути ПОВЕРХ джойстика, інакше дотик по ній
 	# сприймався б як спроба рухатись.
 	$HUD.move_child(action_button, $HUD.get_child_count() - 1)

@@ -1,61 +1,166 @@
 extends CharacterBody3D
 
-## Герой у 3D-світі. Головні вимоги замовника — плавність:
+## Герой у 3D-світі: рух, камеро-відносне керування й бій.
 ##
-## 1. Рух у будь-якому напрямку (360°), а не по вісьмох напрямках.
-## 2. Персонаж ПЛАВНО довертається в бік руху, а не клацає між позами.
-## 3. Анімації переливаються одна в одну (стоїть -> іде -> біжить), а не
-##    перемикаються ривком. За це відповідає AnimationTree: він змішує
-##    сусідні анімації за швидкістю, тож перехід непомітний.
+## РУХ. Персонаж ходить у будь-якому напрямку (360°) і плавно
+## довертається; анімації переливаються одна в одну через AnimationTree.
 ##
-## Керування камеро-відносне: "вперед" — це вперед відносно камери, як у
-## всіх сучасних іграх від третьої особи.
+## БІЙ — так, щоб на телефоні не треба було цілитись:
+##  - АВТОНАВЕДЕННЯ. Герой сам обирає найближчого ворога попереду (під
+##    ним червоне кільце). Удар іде в нього, навіть якщо гравець стоїть
+##    трохи боком, а якщо ворог за крок-два — герой підскакує до нього.
+##  - БІЙ НА ВІДХОДІ. Поки ворог близько й іде бій, герой тримається до
+##    нього обличчям: відступаєш — він позадкує й далі б'є (біг назад і
+##    вбік мають власні анімації). Відбіг далі — розвертається й біжить.
+##  - КОМБО з трьох ударів: два помахи мечем у різні боки й удар ногою,
+##    що відкидає ворога. Натискання під час удару запам'ятовується, а
+##    утримання кнопки б'є серією, поки є ціль.
+##  - ПЕРЕКАТ: ривок з короткою невразливістю — щоб вийти з-під удару,
+##    який ворог показав червоною зоною на підлозі.
+##  - ВИХІР: удар по колу з відкиданням, раз на кілька секунд.
+##  - Відчуття удару: слід меча, іскри, цифри шкоди, коротке
+##    "заморожування" кадру й тряска камери на сильних ударах.
+
+signal died
+signal health_changed(current: float, maximum: float)
 
 const WALK_SPEED := 2.6
 const RUN_SPEED := 5.4
 const ACCELERATION := 14.0      # як швидко набирає швидкість
 const DECELERATION := 18.0      # як швидко спиняється
 const ROTATION_SPEED := 12.0    # як швидко довертається в бік руху
+const COMBAT_TURN_SPEED := 16.0 # як швидко довертається до цілі в бою
 const GRAVITY := 22.0
 
-## Бій. Удар б'є по дузі перед героєм — саме так читається замах мечем.
-const ATTACK_RANGE := 2.6
-const ATTACK_ARC_DEG := 120.0
-const ATTACK_COOLDOWN := 0.55
 const BASE_DAMAGE := 14.0
 const BASE_MAX_HP := 100.0
 
+## --- Автонаведення ---
+## Ціль береться в цьому радіусі й тримається, поки не відбіжить далі
+## за LOCK_BREAK_RANGE (різні радіуси — щоб ціль не "блимала" на межі).
+const LOCK_RANGE := 7.0
+const LOCK_BREAK_RANGE := 9.0
+const RETARGET_INTERVAL := 0.2
+## Ближче за це й під час бою герой стоїть до ворога обличчям і відходить
+## задки. Далі — розвертається й біжить.
+const ENGAGE_RANGE := 4.5
+## Скільки секунд після останнього удару (свого чи по собі) герой
+## вважається "у бою".
+const COMBAT_MEMORY := 2.5
+## Швидкість задки й убік відносно звичайного бігу.
+const BACKPEDAL_FACTOR := 0.72
+## Скільки секунд після останнього удару герой ще відступає обличчям до
+## ворога. Перестав бити й тікаєш — розвертається й біжить, навіть якщо
+## ворог женеться слідом.
+const RETREAT_GUARD_TIME := 0.8
+
+## --- Удари ---
+## Наскільки герой підскакує до цілі, якщо та трохи далі за замах.
+const LUNGE_RANGE := 2.4
+const LUNGE_TIME := 0.12
+## Під час удару герой рухається повільніше — удар має вагу.
+const ATTACK_MOVE_FACTOR := 0.35
+## Скільки часу після удару можна продовжити комбо.
+const COMBO_WINDOW := 0.7
+const CRIT_CHANCE := 0.12
+const CRIT_MULTIPLIER := 1.8
+
+const SLASH_COLOR := Color(0.72, 0.87, 1.0)
+const HEAVY_COLOR := Color(1.0, 0.72, 0.3)
+const SKILL_COLOR := Color(0.35, 0.95, 1.0)
+
+## Ланки комбо. damage — множник шкоди, reach — дальність, arc — ширина
+## замаху в градусах, hit_time — коли саме лезо "доходить" до ворога,
+## recover — коли можна бити знову, knockback — сила відкидання.
+const COMBO := [
+	{"shot": "SlashShot", "damage": 1.0, "reach": 2.9, "arc": 150.0, "hit_time": 0.17,
+		"recover": 0.36, "knockback": 2.0, "reverse": false, "tilt": 0.14, "heavy": false},
+	{"shot": "SlashFastShot", "damage": 1.15, "reach": 2.9, "arc": 150.0, "hit_time": 0.13,
+		"recover": 0.32, "knockback": 2.0, "reverse": true, "tilt": -0.2, "heavy": false},
+	{"shot": "KickShot", "damage": 1.9, "reach": 2.6, "arc": 110.0, "hit_time": 0.22,
+		"recover": 0.5, "knockback": 7.5, "reverse": false, "tilt": 0.0, "heavy": true},
+]
+
+## --- Перекат ---
+const DODGE_SPEED := 11.0
+const DODGE_TIME := 0.38
+const DODGE_INVULNERABLE := 0.34
+const DODGE_COOLDOWN := 0.9
+
+## --- Вихор ---
+const SKILL_RADIUS := 3.6
+const SKILL_DAMAGE := 2.4
+const SKILL_KNOCKBACK := 8.0
+const SKILL_COOLDOWN := 6.0
+const SKILL_TIME := 0.45
+const SKILL_HIT_DELAY := 0.12
+
+## Після отриманої шкоди — мить невразливості, щоб натовп не "заклював"
+## героя за один кадр.
+const HURT_INVULNERABLE := 0.35
+
 const HEALTH_BAR_SCRIPT := preload("res://scenes/dungeon/health_bar_3d.gd")
 
-## Зелена смужка — для своїх: героя й дружніх NPC. На відміну від
-## ворожої, вона видима завжди.
+## Зелена смужка — для своїх: героя й дружніх NPC.
 const ALLY_BAR_COLOR := Color(0.35, 0.9, 0.4)
 const BAR_HEIGHT := 2.1
 
-## Швидкість, з якої хода переходить у біг (для змішування анімацій).
-const RUN_THRESHOLD := 3.4
+## Кістки нижньої частини тіла. Удар під час бігу грається лише верхом:
+## ноги біжать, руки б'ють.
+const LOWER_BODY_MARKERS := ["Root", "Body", "Hips", "Leg", "Foot", "PT.", "Toe"]
 
 @onready var model: Node3D = $Model
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var camera_pivot: Node3D = $CameraPivot
 
-signal died
-signal health_changed(current: float, maximum: float)
-
-var _input_direction := Vector2.ZERO
-var _facing_angle := 0.0
+## Острів вимикає бойове керування з клавіатури: там пробіл — це "зайти
+## в будівлю".
+var combat_input_enabled := true
 
 var max_hp := BASE_MAX_HP
 var current_hp := BASE_MAX_HP
+
+var _input_direction := Vector2.ZERO
+var _facing_angle := 0.0
 var _damage := BASE_DAMAGE
 var _speed_bonus := 0.0
-var _attack_left := 0.0
+var _attack_speed := 1.0
 var _dead := false
 var _regen_per_second := 0.0
 var _health_bar: HealthBar3D
 var _torch: OmniLight3D
 
+var _target: Enemy3D
+var _retarget_left := 0.0
+var _combat_left := 0.0
+var _since_attack := 99.0
+var _target_marker: MeshInstance3D
+
+var _combo_index := 0
+var _combo_expire := 0.0
+var _attack_step := -1
+var _attack_time := 0.0
+var _attack_hit_done := false
+var _attack_vfx_done := false
+var _attack_queued := false
+var _attack_held := false
+var _lunge_velocity := Vector3.ZERO
+var _lunge_left := 0.0
+
+var _roll_direction := Vector3.ZERO
+var _roll_left := 0.0
+var _dodge_cooldown_left := 0.0
+var _invulnerable_left := 0.0
+
+var _skill_cooldown_left := 0.0
+var _spin_left := 0.0
+var _skill_hit_left := -1.0
+
+var _blend_position := Vector2.ZERO
+var _upper_body_filter: Array[NodePath] = []
+
 func _ready() -> void:
+	_ensure_input_actions()
 	_build_animation_tree()
 	animation_tree.active = true
 	_facing_angle = rotation.y
@@ -65,8 +170,7 @@ func _ready() -> void:
 	_add_torch_light()
 
 ## Світло, яке герой носить із собою. Це найдешевший спосіб освітити
-## підземелля: одне джерело замість десятків по стінах, і воно завжди
-## там, де гравець дивиться.
+## підземелля: одне джерело замість десятків по стінах.
 func _add_torch_light() -> void:
 	var light := OmniLight3D.new()
 	light.light_color = Color(1.0, 0.85, 0.65)
@@ -82,179 +186,596 @@ func set_torch_enabled(enabled: bool) -> void:
 	if _torch != null:
 		_torch.visible = enabled
 
-## Дерево анімацій будуємо кодом, а не мишкою в редакторі: так видно
-## увесь набір станів в одному місці, і його легко переносити на інших
-## персонажів — у моделей Quaternius анімації звуться однаково.
+## Клавіші для ПК: пробіл/J — удар, Shift/K — перекат, E/L — вихор.
+## Додаються кодом, щоб не залежати від налаштувань проєкту.
+static func _ensure_input_actions() -> void:
+	var actions := {
+		"attack": [KEY_SPACE, KEY_J],
+		"dodge": [KEY_SHIFT, KEY_K],
+		"skill": [KEY_E, KEY_L],
+	}
+	for action: String in actions:
+		if InputMap.has_action(action):
+			continue
+		InputMap.add_action(action)
+		for key: Key in actions[action]:
+			var event := InputEventKey.new()
+			event.physical_keycode = key
+			InputMap.action_add_event(action, event)
+
+# --- дерево анімацій ---
+
+## Дерево анімацій будуємо кодом: увесь набір станів видно в одному
+## місці, і його легко перенести на інших героїв Quaternius.
 ##
-## Влаштоване так: BlendSpace1D "Move" плавно переливає спокій -> ходу ->
-## біг за швидкістю, а OneShot "AttackShot" накладає зверху удар мечем,
-## не перериваючи руху.
+##   Move (2D)   — спокій, хода, біг уперед, назад, уліво, вправо;
+##                 положення в просторі = швидкість відносно погляду.
+##   SlashShot, SlashFastShot, KickShot — три ланки комбо поверх руху;
+##   RollShot    — перекат, перекриває все;
+##   HitShot     — здригання від удару (лише верх тіла);
+##   Dead        — смерть, лишається на останньому кадрі.
 func _build_animation_tree() -> void:
 	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
 	animation_tree.anim_player = animation_tree.get_path_to(player)
-	_make_looping(player, ["CharacterArmature|Idle", "CharacterArmature|Walk", "CharacterArmature|Run"])
+	_make_looping(player, ["Idle", "Walk", "Run", "Run_Back", "Run_Left", "Run_Right"])
+	_upper_body_filter = _collect_upper_body_tracks(player.get_animation(_anim("Sword_Slash")))
 
-	var move := AnimationNodeBlendSpace1D.new()
-	move.min_space = 0.0
-	move.max_space = 2.0
-	move.add_blend_point(_animation_node("CharacterArmature|Idle"), 0.0, -1, &"idle")
-	move.add_blend_point(_animation_node("CharacterArmature|Walk"), 1.0, -1, &"walk")
-	move.add_blend_point(_animation_node("CharacterArmature|Run"), 2.0, -1, &"run")
-
-	var attack := AnimationNodeOneShot.new()
-	attack.fadein_time = 0.1
-	attack.fadeout_time = 0.2
+	var move := AnimationNodeBlendSpace2D.new()
+	move.min_space = Vector2(-1, -1)
+	move.max_space = Vector2(1, 1)
+	move.add_blend_point(_animation_node("Idle"), Vector2(0, 0), -1, &"idle")
+	move.add_blend_point(_animation_node("Walk"), Vector2(0, 0.48), -1, &"walk")
+	move.add_blend_point(_animation_node("Run"), Vector2(0, 1), -1, &"run")
+	move.add_blend_point(_animation_node("Run_Back"), Vector2(0, -1), -1, &"back")
+	move.add_blend_point(_animation_node("Run_Left"), Vector2(-1, 0), -1, &"left")
+	move.add_blend_point(_animation_node("Run_Right"), Vector2(1, 0), -1, &"right")
 
 	var tree := AnimationNodeBlendTree.new()
 	tree.add_node(&"Move", move, Vector2(0, 0))
-	tree.add_node(&"Slash", _animation_node("CharacterArmature|Sword_Slash"), Vector2(0, 160))
-	tree.add_node(&"AttackShot", attack, Vector2(320, 60))
-	tree.connect_node(&"AttackShot", 0, &"Move")
-	tree.connect_node(&"AttackShot", 1, &"Slash")
-	tree.connect_node(&"output", 0, &"AttackShot")
+
+	# Три ланки комбо. Друга — той самий помах, але швидший.
+	tree.add_node(&"SlashAnim", _animation_node("Sword_Slash"), Vector2(0, 200))
+	tree.add_node(&"SlashScale", AnimationNodeTimeScale.new(), Vector2(200, 200))
+	tree.add_node(&"SlashShot", _one_shot(0.06, 0.16), Vector2(400, 0))
+	tree.add_node(&"SlashFastAnim", _animation_node("Sword_Slash"), Vector2(0, 400))
+	tree.add_node(&"SlashFastScale", AnimationNodeTimeScale.new(), Vector2(200, 400))
+	tree.add_node(&"SlashFastShot", _one_shot(0.05, 0.16), Vector2(600, 0))
+	tree.add_node(&"KickAnim", _animation_node("Kick_Right"), Vector2(0, 600))
+	tree.add_node(&"KickScale", AnimationNodeTimeScale.new(), Vector2(200, 600))
+	tree.add_node(&"KickShot", _one_shot(0.06, 0.2), Vector2(800, 0))
+	tree.add_node(&"RollAnim", _animation_node("Roll"), Vector2(0, 800))
+	tree.add_node(&"RollScale", AnimationNodeTimeScale.new(), Vector2(200, 800))
+	tree.add_node(&"RollShot", _one_shot(0.04, 0.12), Vector2(1000, 0))
+	tree.add_node(&"HitAnim", _animation_node("HitRecieve"), Vector2(0, 1000))
+	var hit_shot := _one_shot(0.05, 0.15)
+	_apply_filter(hit_shot, true)
+	tree.add_node(&"HitShot", hit_shot, Vector2(1200, 0))
+	tree.add_node(&"DeathAnim", _animation_node("Death"), Vector2(0, 1200))
+	var dead := AnimationNodeBlend2.new()
+	tree.add_node(&"Dead", dead, Vector2(1400, 0))
+
+	tree.connect_node(&"SlashScale", 0, &"SlashAnim")
+	tree.connect_node(&"SlashShot", 0, &"Move")
+	tree.connect_node(&"SlashShot", 1, &"SlashScale")
+	tree.connect_node(&"SlashFastScale", 0, &"SlashFastAnim")
+	tree.connect_node(&"SlashFastShot", 0, &"SlashShot")
+	tree.connect_node(&"SlashFastShot", 1, &"SlashFastScale")
+	tree.connect_node(&"KickScale", 0, &"KickAnim")
+	tree.connect_node(&"KickShot", 0, &"SlashFastShot")
+	tree.connect_node(&"KickShot", 1, &"KickScale")
+	tree.connect_node(&"RollScale", 0, &"RollAnim")
+	tree.connect_node(&"RollShot", 0, &"KickShot")
+	tree.connect_node(&"RollShot", 1, &"RollScale")
+	tree.connect_node(&"HitShot", 0, &"RollShot")
+	tree.connect_node(&"HitShot", 1, &"HitAnim")
+	tree.connect_node(&"Dead", 0, &"HitShot")
+	tree.connect_node(&"Dead", 1, &"DeathAnim")
+	tree.connect_node(&"output", 0, &"Dead")
 	animation_tree.tree_root = tree
 
-func _animation_node(animation_name: String) -> AnimationNodeAnimation:
+	# Перекат триває DODGE_TIME, а анімація довша — пришвидшуємо її так,
+	# щоб перекид завершився разом із ривком.
+	var roll_length := player.get_animation(_anim("Roll")).length
+	animation_tree.set("parameters/RollScale/scale", roll_length / (DODGE_TIME + 0.12))
+	_apply_attack_speed()
+
+func _one_shot(fade_in: float, fade_out: float) -> AnimationNodeOneShot:
+	var shot := AnimationNodeOneShot.new()
+	shot.fadein_time = fade_in
+	shot.fadeout_time = fade_out
+	return shot
+
+## Фільтр "лише верх тіла" — список доріжок анімації, що рухають кістки
+## від живота й вище.
+func _apply_filter(shot: AnimationNodeOneShot, enabled: bool) -> void:
+	for path in _upper_body_filter:
+		shot.set_filter_path(path, true)
+	shot.filter_enabled = enabled
+
+func _collect_upper_body_tracks(animation: Animation) -> Array[NodePath]:
+	var result: Array[NodePath] = []
+	for i in animation.get_track_count():
+		var path := animation.track_get_path(i)
+		var bone := String(path.get_concatenated_subnames())
+		if bone == "":
+			continue
+		var lower := false
+		for marker: String in LOWER_BODY_MARKERS:
+			if bone.contains(marker):
+				lower = true
+				break
+		if not lower:
+			result.append(path)
+	return result
+
+## Повна назва анімації в моделі ("CharacterArmature|Run").
+func _anim(short_name: String) -> String:
+	return "CharacterArmature|" + short_name
+
+func _animation_node(short_name: String) -> AnimationNodeAnimation:
 	var node := AnimationNodeAnimation.new()
-	node.animation = animation_name
+	node.animation = _anim(short_name)
 	return node
 
 ## Хода, біг і спокій мають крутитись по колу; імпорт glTF за
 ## замовчуванням лишає їх одноразовими.
 func _make_looping(player: AnimationPlayer, names: Array) -> void:
-	for name: String in names:
-		if player.has_animation(name):
-			player.get_animation(name).loop_mode = Animation.LOOP_LINEAR
+	for short_name: String in names:
+		if player.has_animation(_anim(short_name)):
+			player.get_animation(_anim(short_name)).loop_mode = Animation.LOOP_LINEAR
+
+func _apply_attack_speed() -> void:
+	animation_tree.set("parameters/SlashScale/scale", 1.15 * _attack_speed)
+	animation_tree.set("parameters/SlashFastScale/scale", 1.45 * _attack_speed)
+	animation_tree.set("parameters/KickScale/scale", 1.1 * _attack_speed)
+
+func _fire(shot: String, upper_body_only: bool = false) -> void:
+	var node := (animation_tree.tree_root as AnimationNodeBlendTree).get_node(shot) as AnimationNodeOneShot
+	if node != null and shot != "HitShot":
+		_apply_filter(node, upper_body_only)
+	animation_tree.set("parameters/%s/request" % shot, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+
+func _abort_attacks() -> void:
+	for shot in ["SlashShot", "SlashFastShot", "KickShot"]:
+		animation_tree.set("parameters/%s/request" % shot, AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+
+# --- керування ---
 
 ## Напрямок від джойстика або клавіатури: (0,0) — стоїмо.
-## Приймаємо ззовні, щоб той самий герой працював і з екранним
-## джойстиком на телефоні, і з клавіатурою на ПК.
 func set_move_input(direction: Vector2) -> void:
 	_input_direction = direction
 
-func _physics_process(delta: float) -> void:
-	_attack_left -= delta
+## Удар (дотик, клік, кнопка). Якщо герой ще б'є — удар запам'ятовується
+## й почнеться одразу, щойно закінчиться попередній.
+func attack() -> void:
 	if _dead:
 		return
-	var direction := _get_world_direction()
+	if _attack_step >= 0 or _roll_left > 0.0 or _spin_left > 0.0:
+		_attack_queued = true
+		return
+	_start_attack()
 
-	# Розгін і гальмування: різні швидкості, щоб старт був жвавим, а
-	# зупинка — не миттєвою.
-	var target_speed := RUN_SPEED * (1.0 + _speed_bonus) * clampf(direction.length(), 0.0, 1.0)
-	var target_velocity := direction.normalized() * target_speed
-	var rate := ACCELERATION if direction.length() > 0.05 else DECELERATION
-	velocity.x = move_toward(velocity.x, target_velocity.x, rate * delta)
-	velocity.z = move_toward(velocity.z, target_velocity.z, rate * delta)
+## Утримання кнопки удару: серія ударів, поки є ціль.
+func set_attack_held(held: bool) -> void:
+	_attack_held = held
+	if held:
+		attack()
+
+func dodge() -> void:
+	if _dead or _dodge_cooldown_left > 0.0 or _roll_left > 0.0:
+		return
+	var direction := _get_world_direction()
+	if direction.length() < 0.1:
+		# Стоїть на місці — перекат назад, геть від ворога.
+		direction = -_facing_vector()
+	_roll_direction = direction.normalized()
+	_roll_left = DODGE_TIME
+	_invulnerable_left = maxf(_invulnerable_left, DODGE_INVULNERABLE)
+	_dodge_cooldown_left = DODGE_COOLDOWN
+	# Перекат скасовує удар: у небезпеці гравець має реагувати миттєво.
+	_attack_step = -1
+	_lunge_left = 0.0
+	_abort_attacks()
+	_facing_angle = atan2(_roll_direction.x, _roll_direction.z)
+	model.rotation.y = _facing_angle
+	_fire("RollShot")
+	CombatVfx.shockwave(get_parent(), global_position, 1.1, Color(0.85, 0.8, 0.7, 0.7), 0.3)
+
+func use_skill() -> void:
+	if _dead or _skill_cooldown_left > 0.0 or _roll_left > 0.0:
+		return
+	_skill_cooldown_left = SKILL_COOLDOWN
+	_spin_left = SKILL_TIME
+	_skill_hit_left = SKILL_HIT_DELAY
+	_attack_step = -1
+	_lunge_left = 0.0
+	_combat_left = COMBAT_MEMORY
+	_abort_attacks()
+	_fire("SlashFastShot")
+	var parent := get_parent()
+	var chest := global_position + Vector3.UP * 1.0
+	CombatVfx.slash(parent, chest, _facing_angle, SKILL_RADIUS, 359.0, SKILL_COLOR, false, 0.0, SKILL_TIME)
+	CombatVfx.slash(parent, chest + Vector3.UP * 0.25, _facing_angle + PI, SKILL_RADIUS * 0.85, 359.0, SKILL_COLOR, true, 0.1, SKILL_TIME)
+	CombatVfx.shockwave(parent, global_position, SKILL_RADIUS, SKILL_COLOR, 0.4)
+
+## Частка кулдауну, що лишилась (0 — готово). Для кнопок на екрані.
+func get_skill_cooldown() -> Vector2:
+	return Vector2(_skill_cooldown_left, SKILL_COOLDOWN)
+
+func get_dodge_cooldown() -> Vector2:
+	return Vector2(_dodge_cooldown_left, DODGE_COOLDOWN)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not combat_input_enabled or event.is_echo():
+		return
+	if event.is_action_pressed("attack"):
+		attack()
+	elif event.is_action_pressed("dodge"):
+		dodge()
+	elif event.is_action_pressed("skill"):
+		use_skill()
+
+# --- кадр фізики ---
+
+func _physics_process(delta: float) -> void:
+	_tick_timers(delta)
+	if _dead:
+		velocity.x = move_toward(velocity.x, 0.0, DECELERATION * delta)
+		velocity.z = move_toward(velocity.z, 0.0, DECELERATION * delta)
+		velocity.y = 0.0 if is_on_floor() else velocity.y - GRAVITY * delta
+		move_and_slide()
+		return
+
+	_retarget_left -= delta
+	if _retarget_left <= 0.0:
+		_retarget_left = RETARGET_INTERVAL
+		_refresh_target()
+
+	var direction := _get_world_direction()
+	_update_attack(delta)
+	_update_skill(delta)
+	# Удар, натиснутий під час перекату чи вихору, стартує одразу після.
+	if _attack_queued and _attack_step < 0 and _roll_left <= 0.0 and _spin_left <= 0.0:
+		_start_attack()
+	_update_velocity(direction, delta)
 
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	else:
 		velocity.y = 0.0
 
-	if _regen_per_second > 0.0 and current_hp > 0.0:
+	if _regen_per_second > 0.0 and current_hp < max_hp:
 		current_hp = minf(current_hp + _regen_per_second * delta, max_hp)
 		_update_health_bar()
 		health_changed.emit(current_hp, max_hp)
 
 	move_and_slide()
 	_update_facing(direction, delta)
-	_update_animation()
+	_update_animation(delta)
+	_update_target_marker()
 
-## Напрямок руху у світових координатах: клавіші/джойстик дають напрямок
-## відносно ЕКРАНА, а рухатись треба відносно камери.
+func _tick_timers(delta: float) -> void:
+	_dodge_cooldown_left = maxf(_dodge_cooldown_left - delta, 0.0)
+	_skill_cooldown_left = maxf(_skill_cooldown_left - delta, 0.0)
+	_invulnerable_left = maxf(_invulnerable_left - delta, 0.0)
+	_combat_left = maxf(_combat_left - delta, 0.0)
+	_since_attack += delta
+	_roll_left = maxf(_roll_left - delta, 0.0)
+	if _attack_step < 0:
+		_combo_expire = maxf(_combo_expire - delta, 0.0)
+
+func _update_velocity(direction: Vector3, delta: float) -> void:
+	if _roll_left > 0.0:
+		# Ривок швидкий на початку й гасне під кінець.
+		var speed := DODGE_SPEED * (0.45 + 0.55 * _roll_left / DODGE_TIME)
+		velocity.x = _roll_direction.x * speed
+		velocity.z = _roll_direction.z * speed
+		return
+	if _lunge_left > 0.0:
+		_lunge_left -= delta
+		velocity.x = _lunge_velocity.x
+		velocity.z = _lunge_velocity.z
+		return
+
+	var factor := 1.0 + _speed_bonus
+	if _is_facing_target() and direction.length() > 0.05:
+		# Задки й убік — повільніше, ніж уперед: так відчувається, що герой
+		# тримає оборону, а не тікає.
+		if _facing_vector().dot(direction.normalized()) < 0.3:
+			factor *= BACKPEDAL_FACTOR
+	if _attack_step >= 0 or _spin_left > 0.0:
+		factor *= ATTACK_MOVE_FACTOR
+
+	var target_velocity := direction.normalized() * RUN_SPEED * factor * clampf(direction.length(), 0.0, 1.0)
+	var rate := ACCELERATION if direction.length() > 0.05 else DECELERATION
+	velocity.x = move_toward(velocity.x, target_velocity.x, rate * delta)
+	velocity.z = move_toward(velocity.z, target_velocity.z, rate * delta)
+
+## Напрямок руху у світових координатах: джойстик дає напрямок відносно
+## ЕКРАНА, а рухатись треба відносно камери.
 func _get_world_direction() -> Vector3:
 	var input := _input_direction
-	# "Вгору" на клавіатурі = вперед від камери, тобто -Y у цій системі.
+	# "Вгору" на клавіатурі = вперед від камери.
 	var keyboard := Input.get_vector("ui_left", "ui_right", "ui_down", "ui_up")
 	if keyboard != Vector2.ZERO:
 		input = keyboard
 	if input == Vector2.ZERO:
 		return Vector3.ZERO
-
-	# "Вперед" для камери — це -Z (так влаштований Godot), тому вектор
-	# від'ємний: інакше герой іде рівно в протилежний бік.
-	#
-	# Кут беремо з АКТИВНОЇ камери, а не з окремого вузла: камера тепер
-	# обертається (пальцем на телефоні, мишею на ПК або сама за рухом),
-	# і "вперед" має рахуватись від того, що гравець бачить.
+	# "Вперед" для камери — це -Z (так влаштований Godot).
 	var camera_yaw := _get_camera_yaw()
 	var forward := Vector3(-sin(camera_yaw), 0.0, -cos(camera_yaw))
 	var right := Vector3(-forward.z, 0.0, forward.x)
 	return (right * input.x + forward * input.y) * input.length()
 
-## Плавний доворот: персонаж не "телепортує" погляд, а повертається з
-## обмеженою швидкістю — саме це дає відчуття живого руху на 360°.
-## Кут активної камери; поки її немає (наприклад, у тестах) — нуль.
 func _get_camera_yaw() -> float:
 	var camera := get_viewport().get_camera_3d()
 	return 0.0 if camera == null else camera.global_rotation.y
 
-## Куди герой зараз біжить — цим користується камера, щоб плавно
-## заходити йому за спину.
 func get_move_yaw() -> float:
 	return atan2(velocity.x, velocity.z)
 
 func is_moving() -> bool:
 	return Vector2(velocity.x, velocity.z).length() > 0.6
 
-func _update_facing(direction: Vector3, delta: float) -> void:
-	if direction.length() < 0.05:
+func _facing_vector() -> Vector3:
+	return Vector3(sin(_facing_angle), 0.0, cos(_facing_angle))
+
+# --- ціль ---
+
+## Тримаємо поточну ціль, поки вона жива й поруч; інакше шукаємо нову:
+## найближчу, з перевагою тим, що попереду, і тільки ту, яку видно
+## (не крізь стіну).
+func _refresh_target() -> void:
+	if _target != null:
+		if not is_instance_valid(_target) or not _target.is_alive() \
+				or _flat_distance(_target) > LOCK_BREAK_RANGE:
+			_target = null
+	var best: Enemy3D = null
+	var best_score := INF
+	var forward := _facing_vector()
+	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
+		if not enemy.is_alive():
+			continue
+		var offset := enemy.global_position - global_position
+		offset.y = 0.0
+		var distance := offset.length()
+		if distance > LOCK_RANGE:
+			continue
+		var in_front := maxf(forward.dot(offset / maxf(distance, 0.01)), 0.0)
+		var score := distance - in_front * 1.5
+		if score < best_score and _can_see(enemy):
+			best = enemy
+			best_score = score
+	if best == null:
 		return
-	var wanted := atan2(direction.x, direction.z)
-	_facing_angle = rotate_toward(_facing_angle, wanted, ROTATION_SPEED * delta)
+	# Перемикаємось лише на помітно кращу ціль, щоб приціл не стрибав.
+	if _target == null or (best != _target and best_score < _target_score() - 1.2):
+		_target = best
+
+func _target_score() -> float:
+	var offset := _target.global_position - global_position
+	offset.y = 0.0
+	var distance := offset.length()
+	return distance - maxf(_facing_vector().dot(offset / maxf(distance, 0.01)), 0.0) * 1.5
+
+func _flat_distance(node: Node3D) -> float:
+	var offset := node.global_position - global_position
+	offset.y = 0.0
+	return offset.length()
+
+func _can_see(node: Node3D) -> bool:
+	var query := PhysicsRayQueryParameters3D.create(
+		global_position + Vector3.UP * 1.1, node.global_position + Vector3.UP * 1.0)
+	query.collision_mask = 1
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+## Обличчям до ворога:
+##  - під час удару — завжди;
+##  - одразу після удару — навіть на відході (б'єш і відступаєш);
+##  - у бою поруч із ворогом, поки не тікаєш від нього.
+## Тікаєш без ударів або відбіг далі за ENGAGE_RANGE — герой
+## розвертається й біжить.
+func _is_facing_target() -> bool:
+	if _target == null or not is_instance_valid(_target):
+		return false
+	if _attack_step >= 0:
+		return true
+	var distance := _flat_distance(_target)
+	if _since_attack < RETREAT_GUARD_TIME and distance < LOCK_BREAK_RANGE:
+		return true
+	if distance >= ENGAGE_RANGE or _combat_left <= 0.0:
+		return false
+	var direction := _get_world_direction()
+	if direction.length() > 0.3:
+		var to_target := (_target.global_position - global_position).normalized()
+		if direction.normalized().dot(Vector3(to_target.x, 0.0, to_target.z)) < -0.4:
+			return false
+	return true
+
+## Червоне кільце під ціллю — гравець бачить, кого зараз ударить.
+func _update_target_marker() -> void:
+	var has_target := _target != null and is_instance_valid(_target)
+	if not has_target:
+		if _target_marker != null:
+			_target_marker.visible = false
+		return
+	if _target_marker == null:
+		_target_marker = CombatVfx.make_ground_marker(Color(1.0, 0.35, 0.28, 0.9), 0.75)
+		get_parent().add_child(_target_marker)
+	_target_marker.visible = true
+	_target_marker.global_position = _target.global_position + Vector3(0, 0.05, 0)
+
+# --- удари ---
+
+func _start_attack() -> void:
+	var step_index := _combo_index if _combo_expire > 0.0 else 0
+	var step: Dictionary = COMBO[step_index]
+	_attack_step = step_index
+	_combo_index = (step_index + 1) % COMBO.size()
+	_attack_time = 0.0
+	_attack_hit_done = false
+	_attack_vfx_done = false
+	_attack_queued = false
+	_combat_left = COMBAT_MEMORY
+	_since_attack = 0.0
+	_refresh_target()
+
+	if _target != null:
+		var offset := _target.global_position - global_position
+		offset.y = 0.0
+		var distance := offset.length()
+		# Одразу лицем до цілі: цілитись самому не треба.
+		if distance > 0.01:
+			_facing_angle = atan2(offset.x, offset.z)
+			model.rotation.y = _facing_angle
+		# Ціль трохи далі за замах — короткий підскок до неї.
+		var reach: float = step.reach
+		if distance > reach * 0.75 and distance < reach + LUNGE_RANGE:
+			var travel := distance - reach * 0.6
+			_lunge_velocity = offset.normalized() * (travel / LUNGE_TIME)
+			_lunge_left = LUNGE_TIME
+
+	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
+	_fire(step.shot, moving)
+
+func _update_attack(delta: float) -> void:
+	if _attack_step < 0:
+		return
+	_attack_time += delta * _attack_speed
+	var step: Dictionary = COMBO[_attack_step]
+	if not _attack_vfx_done and _attack_time >= step.hit_time - 0.07:
+		_attack_vfx_done = true
+		var color := HEAVY_COLOR if step.heavy else SLASH_COLOR
+		CombatVfx.slash(get_parent(), global_position + Vector3.UP * 1.0, _facing_angle,
+			step.reach + 0.2, step.arc, color, step.reverse, step.tilt, 0.24)
+	if not _attack_hit_done and _attack_time >= step.hit_time:
+		_attack_hit_done = true
+		_apply_hit(step)
+	if _attack_time >= step.recover:
+		_attack_step = -1
+		_combo_expire = COMBO_WINDOW
+		# Утримання кнопки б'є серією — але лише коли є кого бити, щоб
+		# герой не махав мечем у порожнечу.
+		if _attack_queued or (_attack_held and _target != null):
+			_start_attack()
+
+## Шкода всім ворогам у дузі перед героєм. Стіна захищає: крізь неї
+## меч не дістає.
+func _apply_hit(step: Dictionary) -> void:
+	var forward := _facing_vector()
+	var half_arc := deg_to_rad(step.arc) * 0.5
+	var hits := 0
+	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
+		if not enemy.is_alive():
+			continue
+		var offset := enemy.global_position - global_position
+		offset.y = 0.0
+		var distance := offset.length()
+		if distance > step.reach + 0.5:
+			continue
+		if distance > 0.4 and forward.angle_to(offset / distance) > half_arc:
+			continue
+		if not _can_see(enemy):
+			continue
+		_deal_damage(enemy, step.damage, offset.normalized() * step.knockback, step.heavy)
+		hits += 1
+	if hits > 0:
+		_feel_hit(step.heavy)
+
+func _update_skill(delta: float) -> void:
+	if _spin_left > 0.0:
+		_spin_left -= delta
+	if _skill_hit_left < 0.0:
+		return
+	_skill_hit_left -= delta
+	if _skill_hit_left > 0.0:
+		return
+	_skill_hit_left = -1.0
+	var hits := 0
+	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
+		if not enemy.is_alive():
+			continue
+		var offset := enemy.global_position - global_position
+		offset.y = 0.0
+		if offset.length() > SKILL_RADIUS + 0.4 or not _can_see(enemy):
+			continue
+		_deal_damage(enemy, SKILL_DAMAGE, offset.normalized() * SKILL_KNOCKBACK, true)
+		hits += 1
+	CombatVfx.hitstop(get_tree(), 0.06)
+	_shake_camera(0.2 if hits > 0 else 0.1)
+
+func _deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool) -> void:
+	var crit := randf() < CRIT_CHANCE
+	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
+	enemy.take_damage(amount, knockback, crit, heavy)
+
+## Сильний удар "заморожує" кадр і трусить камеру; легкий — ледь-ледь.
+func _feel_hit(heavy: bool) -> void:
+	CombatVfx.hitstop(get_tree(), 0.075 if heavy else 0.035)
+	_shake_camera(0.16 if heavy else 0.05)
+
+func _shake_camera(strength: float) -> void:
+	var rig := get_tree().get_first_node_in_group(&"camera_rig")
+	if rig != null:
+		rig.shake(strength)
+
+# --- поворот і анімація ---
+
+func _update_facing(direction: Vector3, delta: float) -> void:
+	if _roll_left > 0.0:
+		return   # напрямок перекату задано на старті
+	if _spin_left > 0.0:
+		# Вихор — повний оберт навколо себе.
+		_facing_angle = wrapf(_facing_angle + TAU / SKILL_TIME * delta, -PI, PI)
+	elif _is_facing_target():
+		var offset := _target.global_position - global_position
+		if Vector2(offset.x, offset.z).length() > 0.05:
+			_facing_angle = rotate_toward(_facing_angle, atan2(offset.x, offset.z), COMBAT_TURN_SPEED * delta)
+	elif direction.length() > 0.05:
+		_facing_angle = rotate_toward(_facing_angle, atan2(direction.x, direction.z), ROTATION_SPEED * delta)
 	model.rotation.y = _facing_angle
 
-## Швидкість -> положення в дереві анімацій. 0 — стоїть, 1 — хода,
-## 2 — біг; проміжні значення AnimationTree змішує сам.
-func _update_animation() -> void:
-	var speed := Vector2(velocity.x, velocity.z).length()
-	var blend := 0.0
-	if speed > 0.05:
-		blend = remap(speed, 0.0, WALK_SPEED, 0.0, 1.0) if speed <= WALK_SPEED \
-			else remap(speed, WALK_SPEED, RUN_SPEED, 1.0, 2.0)
-	animation_tree.set("parameters/Move/blend_position", clampf(blend, 0.0, 2.0))
+## Швидкість у системі координат героя -> положення в просторі рухів:
+## вперед — біг, назад — біг задки, вбік — біг боком. Проміжні
+## напрямки AnimationTree змішує сам.
+func _update_animation(delta: float) -> void:
+	var forward := _facing_vector()
+	var right := Vector3(-forward.z, 0.0, forward.x)
+	var flat := Vector3(velocity.x, 0.0, velocity.z)
+	if _roll_left > 0.0 or _lunge_left > 0.0:
+		flat = Vector3.ZERO
+	# right — права рука героя: коли він дивиться на +Z, це -X світу.
+	var wanted := Vector2(flat.dot(right), flat.dot(forward)) / RUN_SPEED
+	_blend_position = _blend_position.lerp(wanted.limit_length(1.0), clampf(12.0 * delta, 0.0, 1.0))
+	animation_tree.set("parameters/Move/blend_position", _blend_position)
 
-## Удар мечем: анімація поверх руху (гілка OneShot) плюс сама шкода —
-## по всіх ворогах у дузі перед героєм.
-func attack() -> void:
-	if _dead or _attack_left > 0.0:
-		return
-	_attack_left = ATTACK_COOLDOWN
-	animation_tree.set("parameters/AttackShot/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
-	_hit_enemies_in_arc()
+# --- здоров'я ---
 
-## Шукаємо ворогів кулею навколо героя й лишаємо тих, хто справді
-## попереду: удар мечем не має діставати тих, хто за спиною.
-func _hit_enemies_in_arc() -> void:
-	var shape := SphereShape3D.new()
-	shape.radius = ATTACK_RANGE
-	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape = shape
-	query.transform = Transform3D(Basis(), global_position + Vector3.UP)
-	query.collision_mask = 4          # шар ворогів
-	query.collide_with_bodies = true
-
-	var forward := Vector3(sin(_facing_angle), 0.0, cos(_facing_angle))
-	var half_arc := deg_to_rad(ATTACK_ARC_DEG) * 0.5
-	for hit in get_world_3d().direct_space_state.intersect_shape(query, 16):
-		var body: Variant = hit.get("collider")
-		if body == null or not body.has_method("take_damage"):
-			continue
-		var to_enemy: Vector3 = body.global_position - global_position
-		to_enemy.y = 0.0
-		if to_enemy.length() > 0.01 and forward.angle_to(to_enemy.normalized()) <= half_arc:
-			body.take_damage(_damage)
-
-func take_damage(amount: float) -> void:
-	if _dead:
-		return
+## Повертає false, якщо удар не пройшов (перекат, мить після удару).
+func take_damage(amount: float) -> bool:
+	if _dead or _invulnerable_left > 0.0:
+		return false
 	current_hp = maxf(current_hp - amount, 0.0)
+	_invulnerable_left = HURT_INVULNERABLE
+	_combat_left = COMBAT_MEMORY
 	_update_health_bar()
 	health_changed.emit(current_hp, max_hp)
+	CombatVfx.flash_model(model, Color(1.0, 0.25, 0.2), 0.12)
+	_shake_camera(0.1)
+	if _attack_step < 0 and _roll_left <= 0.0:
+		_fire("HitShot")
 	if current_hp <= 0.0:
-		_dead = true
-		velocity = Vector3.ZERO
-		died.emit()
+		_die()
+	return true
+
+func _die() -> void:
+	_dead = true
+	_attack_step = -1
+	_target = null
+	if _target_marker != null:
+		_target_marker.visible = false
+	animation_tree.set("parameters/Dead/blend_amount", 1.0)
+	died.emit()
 
 ## Здібності з вибору на рівні. Ідентифікатори ті самі, що й у
 ## 2D-частині гри, тож окремого списку заводити не довелось.
@@ -263,8 +784,9 @@ func apply_ability(id: StringName) -> void:
 		&"weapon_damage":
 			_damage *= 1.25
 		&"weapon_cooldown", &"weapon_multishot":
-			_attack_left = 0.0
-			_damage *= 1.1
+			_attack_speed *= 1.12
+			_damage *= 1.05
+			_apply_attack_speed()
 		&"move_speed":
 			_speed_bonus += 0.12
 		&"max_hp":
