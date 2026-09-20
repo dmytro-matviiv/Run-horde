@@ -37,6 +37,14 @@ static func build(style: String, accent: Color) -> Node3D:
 			_add_box(root, Vector3(0.04, 0.62, 0.1), Vector3(0.06, 0.35, 0), STEEL)
 			_add_box(root, Vector3(0.04, 0.62, 0.1), Vector3(-0.06, 0.35, 0), STEEL)
 			_add_box(root, Vector3(0.16, 0.06, 0.06), Vector3(0, 0.05, 0), accent)
+		"pistol":
+			_add_box(root, Vector3(0.06, 0.16, 0.06), Vector3(0, 0.05, 0), Color(0.2, 0.2, 0.22))
+			_add_box(root, Vector3(0.05, 0.09, 0.26), Vector3(0, 0.17, 0.08), Color(0.28, 0.29, 0.32))
+			_add_box(root, Vector3(0.03, 0.03, 0.06), Vector3(0, 0.17, 0.22), accent)
+		"rifle":
+			_add_box(root, Vector3(0.06, 0.1, 0.8), Vector3(0, 0.2, 0.15), Color(0.24, 0.25, 0.28))
+			_add_box(root, Vector3(0.05, 0.16, 0.08), Vector3(0, 0.08, -0.05), Color(0.18, 0.18, 0.2))
+			_add_box(root, Vector3(0.03, 0.03, 0.1), Vector3(0, 0.2, 0.58), accent)
 		"staff":
 			_add_box(root, Vector3(0.05, 1.5, 0.05), Vector3(0, 0.5, 0), WOOD)
 			_add_sphere(root, 0.13, Vector3(0, 1.32, 0), accent, true)

@@ -16,8 +16,8 @@ var _marks: Dictionary = {}
 
 func _init() -> void:
 	id = &"death_mark"
-	title = "Мітка Смерті"
-	description = "Удари лишають мітку: мічений отримує на чверть більше шкоди, а гинучи — труїть сусідів."
+	title = "Мітка Цілі"
+	description = "Влучання лишають мітку: мічений отримує на чверть більше шкоди, а гинучи — вибухає, зачіпаючи сусідів."
 	color = MARK_COLOR
 
 func modify_damage(_player: Node, enemy: Node, amount: float) -> float:

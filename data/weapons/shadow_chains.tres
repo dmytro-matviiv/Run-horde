@@ -9,6 +9,7 @@ id = &"shadow_chains"
 title = "Тіньові Ланцюги"
 description = "Ланцюг темряви перестрибує між п'ятьма ворогами й труїть кожного."
 hero_id = &"void_assassin"
+cost_gold = 6600
 cost_gems = 550
 archetype = "chain"
 damage = 15.0

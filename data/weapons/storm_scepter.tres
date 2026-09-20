@@ -9,6 +9,7 @@ id = &"storm_scepter"
 title = "Жезл Грози"
 description = "Блискавка перестрибує з ворога на ворога й сповільнює уражених."
 hero_id = &"runewielder"
+cost_gold = 4200
 cost_gems = 350
 archetype = "chain"
 damage = 14.0

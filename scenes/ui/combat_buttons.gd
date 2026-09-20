@@ -30,7 +30,9 @@ func _ready() -> void:
 
 func setup(player: Node) -> void:
 	_player = player
-	_attack = _make_button("attack", ATTACK_RADIUS, "", Color(0.98, 0.72, 0.25))
+	# Зі стволом у руках кнопка удару стає кнопкою вогню.
+	var ranged: bool = _player.is_ranged()
+	_attack = _make_button("gun" if ranged else "attack", ATTACK_RADIUS, "", Color(0.98, 0.72, 0.25))
 	_dodge = _make_button("dodge", SMALL_RADIUS, "Перекат", Color(0.6, 0.9, 1.0))
 	_attack.pressed_down.connect(func() -> void: _player.set_attack_held(true))
 	_attack.released.connect(func() -> void: _player.set_attack_held(false))
@@ -77,6 +79,20 @@ func _place(button: CombatButton, center: Vector2) -> void:
 func _process(_delta: float) -> void:
 	if _player == null:
 		return
+	# Зі стволом кнопка удару показує набої, а під час перезарядки —
+	# скільки лишилось.
+	if _player.is_ranged():
+		var ammo: Vector2i = _player.get_ammo()
+		var reload: Vector2 = _player.get_reload()
+		if reload.x > 0.0:
+			_attack.inner_text = "перезарядка"
+			_attack.cooldown_seconds = 0.0
+			_attack.cooldown_ratio = reload.x / maxf(reload.y, 0.01)
+		else:
+			_attack.inner_text = "%d / %d" % [ammo.x, ammo.y]
+			_attack.cooldown_ratio = 0.0
+		_attack.queue_redraw()
+
 	var dodge: Vector2 = _player.get_dodge_cooldown()
 	_dodge.cooldown_seconds = dodge.x
 	_dodge.cooldown_ratio = dodge.x / dodge.y if dodge.y > 0.0 else 0.0

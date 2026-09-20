@@ -9,6 +9,7 @@ id = &"battle_axe"
 title = "Бойова Сокира"
 description = "Широкий замах навколо себе: величезна шкода всім, хто підійшов упритул."
 hero_id = &"blade_warden"
+cost_gold = 4200
 cost_gems = 350
 archetype = "melee_arc"
 damage = 34.0

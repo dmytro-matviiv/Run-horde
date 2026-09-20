@@ -9,6 +9,7 @@ id = &"war_blade"
 title = "Метальний Клинок"
 description = "Стартова зброя вартової: швидкий клинок по найближчому ворогу."
 hero_id = &"blade_warden"
+cost_gold = 0
 cost_gems = 0
 archetype = "projectile"
 damage = 11.0

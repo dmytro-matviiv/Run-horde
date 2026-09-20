@@ -192,15 +192,17 @@ var owned_weapon_ids: Array = []          # StringName
 var equipped_weapon_ids: Dictionary = {}  # StringName (hero_id) -> StringName (weapon_id)
 
 func is_weapon_owned(id: StringName) -> bool:
-	return WeaponPool.get_def(id).cost_gems <= 0 or owned_weapon_ids.has(id)
+	return WeaponPool.get_def(id).cost_gold <= 0 or owned_weapon_ids.has(id)
 
-## Повертає true, якщо зброю куплено (вистачило гемів і її ще не було).
+## Повертає true, якщо зброю куплено. Уся зброя купується за ЗОЛОТО —
+## те саме, що заробляється в походах, тож данжі й крамниця пов'язані.
 func buy_weapon(id: StringName) -> bool:
 	if is_weapon_owned(id):
 		return false
 	var def := WeaponPool.get_def(id)
-	if not spend_gems(def.cost_gems):
+	if gold < def.cost_gold:
 		return false
+	gold -= def.cost_gold
 	owned_weapon_ids.append(id)
 	SaveManager.save_game()
 	return true
@@ -218,8 +220,12 @@ func equip_weapon(hero_id: StringName, weapon_id: StringName) -> bool:
 ## Чим герой б'ється зараз. Якщо нічого не спорядили — стартова зброя.
 func get_equipped_weapon_id(hero_id: StringName) -> StringName:
 	var equipped: StringName = equipped_weapon_ids.get(hero_id, &"")
-	if equipped != &"" and is_weapon_owned(equipped):
-		return equipped
+	# Перевіряємо не лише "куплено", а й що ця зброя досі належить цьому
+	# героєві: його арсенал міг змінитись між версіями гри.
+	if equipped != &"":
+		var def := WeaponPool.get_def(equipped)
+		if def != null and def.hero_id == hero_id and is_weapon_owned(equipped):
+			return equipped
 	return WeaponPool.get_starter_for_hero(hero_id).id
 
 func is_hero_unlocked(id: StringName) -> bool:

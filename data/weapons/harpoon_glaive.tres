@@ -9,6 +9,7 @@ id = &"harpoon_glaive"
 title = "Глефа"
 description = "Важка глефа прошиває наскрізь цілий рядок ворогів."
 hero_id = &"blade_warden"
+cost_gold = 3600
 cost_gems = 300
 archetype = "projectile"
 damage = 17.0

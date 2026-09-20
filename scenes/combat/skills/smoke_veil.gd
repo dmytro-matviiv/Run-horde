@@ -12,8 +12,8 @@ const SMOKE_COLOR := Color(0.6, 0.35, 0.95)
 
 func _init() -> void:
 	id = &"smoke_veil"
-	title = "Димова Завіса"
-	description = "Асасин зникає з очей: вороги гублять ціль, а він кілька секунд б'є вдвічі сильніше."
+	title = "Димова Граната"
+	description = "Дим ховає бійця: вороги гублять ціль, а він кілька секунд б'є вдвічі сильніше."
 	color = SMOKE_COLOR
 	icon_kind = "smoke"
 	cooldown = 10.0

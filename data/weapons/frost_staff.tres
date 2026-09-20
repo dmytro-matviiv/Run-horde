@@ -9,6 +9,7 @@ id = &"frost_staff"
 title = "Посох Криги"
 description = "Кидає крижане поле: воно шкодить і сильно сповільнює всіх усередині."
 hero_id = &"runewielder"
+cost_gold = 3600
 cost_gems = 300
 archetype = "ground_zone"
 damage = 6.0

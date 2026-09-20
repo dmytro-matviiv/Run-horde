@@ -22,7 +22,10 @@ func _ready() -> void:
 		elif argument.begins_with("--hero="):
 			GameState.selected_hero_id = StringName(argument.get_slice("=", 1))
 		elif argument.begins_with("--weapon="):
-			GameState.equipped_weapon_ids[GameState.selected_hero_id] = StringName(argument.get_slice("=", 1))
+			var weapon_id := StringName(argument.get_slice("=", 1))
+			GameState.equipped_weapon_ids[GameState.selected_hero_id] = weapon_id
+			if not GameState.owned_weapon_ids.has(weapon_id):
+				GameState.owned_weapon_ids.append(weapon_id)
 	_dungeon = load(SCENE).instantiate()
 	add_child(_dungeon)
 	await _dismiss_ability_choice()
@@ -38,6 +41,7 @@ func _ready() -> void:
 	await _test_dodge()
 	await _test_skill()
 	await _test_passive_charge()
+	await _test_shooting()
 	await _test_ranged()
 	await _test_enemy_windup()
 	if _shot_path != "":
@@ -63,7 +67,7 @@ func _report_loadout() -> void:
 		names.append(skill.title)
 	var model: Node3D = _player.model
 	var has_model: bool = model.get_child_count() > 0
-	var weapon_in_hand: bool = not model.find_children("WeaponModel", "", true, false).is_empty()
+	var weapon_in_hand: bool = _player._weapon_node != null
 	print("COMBAT: герой %s, зброя %s (%s), модель %s, зброя в руці %s" % [
 		hero.title, weapon.title, weapon.style_3d, has_model, weapon_in_hand])
 	print("COMBAT: здібності %s, пасивка %s, шкода %.1f, HP %.0f" % [
@@ -103,6 +107,48 @@ func _test_passive_charge() -> void:
 		print("COMBAT: \"%s\" — готова на %.0f%% люті: %s, на повній: %s, ривок %.1f м" % [
 			dash.title, before * 100.0, ready_before, ready_full,
 			position_before.distance_to(_player.global_position)])
+
+## Стрільба: темп вогню, витрата набоїв, шкода по ворогові, перезарядка.
+func _test_shooting() -> void:
+	if not _player.is_ranged():
+		print("COMBAT: у цього героя зброя ближнього бою")
+		return
+	var enemy := _nearest_alive_enemy()
+	if enemy == null:
+		return
+	enemy.current_hp = 2000.0
+	enemy.max_hp = 2000.0
+	# Решту прибираємо: інакше автонаведення вибере ближчого, і замір
+	# шкоди піде не по тому ворогові.
+	_isolate(enemy)
+	_place_player_near(enemy, 7.0)
+	await get_tree().create_timer(0.4).timeout
+	var ammo_before: Vector2i = _player.get_ammo()
+	var hp_before: float = enemy.current_hp
+	var max_bullets := 0
+	_player.set_attack_held(true)
+	for i in 60:
+		await get_tree().physics_frame
+		max_bullets = maxi(max_bullets, _dungeon.find_children("*", "PlayerProjectile", true, false).size())
+	_player.set_attack_held(false)
+	await get_tree().create_timer(0.6).timeout
+	var ammo_after: Vector2i = _player.get_ammo()
+	print("COMBAT: стрільба — набої %d/%d -> %d, ворог %.0f -> %.0f HP, куль у повітрі до %d" % [
+		ammo_before.x, ammo_before.y, ammo_after.x, hp_before, enemy.current_hp, max_bullets])
+
+	# Порожній магазин має сам піти в перезарядку.
+	_player._ammo = 0
+	_player.attack()
+	await get_tree().physics_frame
+	var reload: Vector2 = _player.get_reload()
+	await get_tree().create_timer(reload.y + 0.3).timeout
+	for node in _dungeon.get_node("HUD").get_children():
+		if node.has_method("setup") and node.get("_attack") != null:
+			var attack_button = node.get("_attack")
+			print("COMBAT: кнопка вогню — напис \"%s\", видима %s, розмір %s" % [
+				attack_button.inner_text, attack_button.visible, attack_button.size])
+	print("COMBAT: перезарядка %.1f с, набоїв після неї %d/%d" % [
+		reload.y, _player.get_ammo().x, _player.get_ammo().y])
 
 func _test_health_bar() -> void:
 	var bar: HealthBar3D = _player._health_bar

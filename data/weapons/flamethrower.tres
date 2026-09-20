@@ -9,6 +9,7 @@ id = &"flamethrower"
 title = "Вогнемет"
 description = "Струмінь полум'я конусом: б'є всіх перед собою й підпалює їх."
 hero_id = &"ember_priestess"
+cost_gold = 4800
 cost_gems = 400
 archetype = "cone"
 damage = 7.0

@@ -12,9 +12,13 @@ extends CharacterBody3D
 ##  - БІЙ НА ВІДХОДІ. Поки ворог близько й іде бій, герой тримається до
 ##    нього обличчям: відступаєш — він позадкує й далі б'є (біг назад і
 ##    вбік мають власні анімації). Відбіг далі — розвертається й біжить.
-##  - КОМБО з трьох ударів: два помахи мечем у різні боки й удар ногою,
-##    що відкидає ворога. Натискання під час удару запам'ятовується, а
-##    утримання кнопки б'є серією, поки є ціль.
+##  - КОМБО з трьох ударів (для ближнього бою): два помахи мечем у різні
+##    боки й удар ногою, що відкидає ворога. Натискання під час удару
+##    запам'ятовується, а утримання кнопки б'є серією, поки є ціль.
+##  - СТРІЛЬБА (для вогнепальної зброї): свій темп вогню, магазин і
+##    перезарядка. Утримуєш кнопку — герой веде вогонь, поки є набої;
+##    скінчились — сам перезаряджається. Кулі летять видимо й
+##    розбиваються об стіни.
 ##  - ПЕРЕКАТ: ривок з короткою невразливістю — щоб вийти з-під удару,
 ##    який ворог показав червоною зоною на підлозі.
 ##  - ЗДІБНОСТІ: у кожного героя свої (Skills3D) — вихор вартової,
@@ -179,6 +183,13 @@ var _concealed_damage := 1.0
 var _concealed_speed := 0.0
 
 var _model_instance: Node3D
+var _weapon_node: Node3D
+
+## Стрільба: скільки набоїв лишилось, коли можна наступний постріл і
+## скільки триває перезарядка.
+var _ammo := 0
+var _fire_left := 0.0
+var _reload_left := 0.0
 
 var _blend_position := Vector2.ZERO
 var _upper_body_filter: Array[NodePath] = []
@@ -224,7 +235,9 @@ func _build_model() -> void:
 
 func _equip_weapon() -> void:
 	if _model_instance != null:
-		HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def)
+		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def)
+	if is_ranged():
+		_ammo = weapon_def.magazine
 
 ## Числа героя: база + бонуси героя + прокачані таланти + зброя.
 func _apply_loadout() -> void:
@@ -299,7 +312,9 @@ func _build_animation_tree() -> void:
 	var move := AnimationNodeBlendSpace2D.new()
 	move.min_space = Vector2(-1, -1)
 	move.max_space = Vector2(1, 1)
-	move.add_blend_point(_animation_node("Idle"), Vector2(0, 0), -1, &"idle")
+	# Зі стволом у руках герой і стоїть інакше, і стріляє, а не махає.
+	var ranged := is_ranged()
+	move.add_blend_point(_animation_node("Idle_Gun" if ranged else "Idle", ["Idle"]), Vector2(0, 0), -1, &"idle")
 	move.add_blend_point(_animation_node("Walk"), Vector2(0, 0.48), -1, &"walk")
 	move.add_blend_point(_animation_node("Run"), Vector2(0, 1), -1, &"run")
 	move.add_blend_point(_animation_node("Run_Back", ["Walk", "Run"]), Vector2(0, -1), -1, &"back")
@@ -310,13 +325,16 @@ func _build_animation_tree() -> void:
 	tree.add_node(&"Move", move, Vector2(0, 0))
 
 	# Три ланки комбо. Друга — той самий помах, але швидший.
-	tree.add_node(&"SlashAnim", _animation_node("Sword_Slash"), Vector2(0, 200))
+	var attack_anim := "Gun_Shoot" if ranged else "Sword_Slash"
+	tree.add_node(&"SlashAnim", _animation_node(attack_anim, ["Sword_Slash"]), Vector2(0, 200))
 	tree.add_node(&"SlashScale", AnimationNodeTimeScale.new(), Vector2(200, 200))
 	tree.add_node(&"SlashShot", _one_shot(0.06, 0.16), Vector2(400, 0))
-	tree.add_node(&"SlashFastAnim", _animation_node("Sword_Slash"), Vector2(0, 400))
+	tree.add_node(&"SlashFastAnim", _animation_node(attack_anim, ["Sword_Slash"]), Vector2(0, 400))
 	tree.add_node(&"SlashFastScale", AnimationNodeTimeScale.new(), Vector2(200, 400))
 	tree.add_node(&"SlashFastShot", _one_shot(0.05, 0.16), Vector2(600, 0))
-	tree.add_node(&"KickAnim", _animation_node("Kick_Right", ["Punch_Right", "Sword_Slash"]), Vector2(0, 600))
+	# Для стрільця це місце займає рух перезарядки.
+	tree.add_node(&"KickAnim", _animation_node("Interact" if ranged else "Kick_Right",
+		["Kick_Right", "Punch_Right", "Sword_Slash"]), Vector2(0, 600))
 	tree.add_node(&"KickScale", AnimationNodeTimeScale.new(), Vector2(200, 600))
 	tree.add_node(&"KickShot", _one_shot(0.06, 0.2), Vector2(800, 0))
 	tree.add_node(&"RollAnim", _animation_node("Roll", ["Run", "Walk"]), Vector2(0, 800))
@@ -444,13 +462,95 @@ func set_move_input(direction: Vector2) -> void:
 
 ## Удар (дотик, клік, кнопка). Якщо герой ще б'є — удар запам'ятовується
 ## й почнеться одразу, щойно закінчиться попередній.
+## Чи в руках вогнепальна зброя.
+func is_ranged() -> bool:
+	return weapon_def != null and weapon_def.ranged_3d
+
 func attack() -> void:
 	if _dead:
+		return
+	if is_ranged():
+		_try_shoot()
 		return
 	if _attack_step >= 0 or _roll_left > 0.0 or _spin_left > 0.0:
 		_attack_queued = true
 		return
 	_start_attack()
+
+# --- стрільба ---
+
+## Набої в магазині: (скільки лишилось, скільки всього).
+func get_ammo() -> Vector2i:
+	if not is_ranged():
+		return Vector2i.ZERO
+	return Vector2i(_ammo, weapon_def.magazine)
+
+## Скільки лишилось перезаряджатись і скільки вона триває.
+func get_reload() -> Vector2:
+	return Vector2(_reload_left, weapon_def.reload_time if is_ranged() else 0.0)
+
+func reload() -> void:
+	if not is_ranged() or _reload_left > 0.0 or _ammo >= weapon_def.magazine:
+		return
+	_reload_left = weapon_def.reload_time / maxf(attack_speed(), 0.1)
+	_fire("KickShot", true)
+
+## Постріл, якщо ствол готовий: не в перезарядці, минула затримка після
+## попереднього і є набої.
+func _try_shoot() -> void:
+	if _roll_left > 0.0 or _reload_left > 0.0 or _fire_left > 0.0:
+		return
+	if _ammo <= 0:
+		reload()
+		return
+	_shoot()
+
+func _shoot() -> void:
+	_ammo -= 1
+	_fire_left = weapon_def.fire_interval / maxf(attack_speed(), 0.1)
+	_combat_left = COMBAT_MEMORY
+	_since_attack = 0.0
+	_refresh_target()
+
+	var aim := _aim_angle()
+	var direction := Vector3(sin(aim), 0.0, cos(aim))
+	if _target != null and is_instance_valid(_target):
+		# Ціль трохи вища за підлогу — цілимось у груди.
+		direction = (_target.global_position + Vector3.UP * 0.9 - _muzzle_position()).normalized()
+	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
+	_fire("SlashShot", moving)
+
+	var parent := get_parent()
+	var muzzle := _muzzle_position()
+	for i in maxi(weapon_def.bullets_per_shot, 1):
+		var spread := deg_to_rad(weapon_def.bullet_spread_deg)
+		var shot_direction := direction.rotated(Vector3.UP, randf_range(-spread, spread))
+		var bullet := PlayerProjectile.create(self, 1.0, weapon_def.color, 1.2)
+		parent.add_child(bullet)
+		bullet.launch(muzzle, shot_direction, weapon_def.bullet_speed)
+	CombatVfx.muzzle_flash(parent, muzzle, direction, weapon_def.color)
+	_shake_camera(0.03)
+	if _ammo <= 0:
+		reload()
+
+## Кінчик ствола: беремо з моделі зброї в руці, а якщо її немає —
+## приблизно від плеча героя.
+func _muzzle_position() -> Vector3:
+	if _weapon_node != null and is_instance_valid(_weapon_node):
+		return _weapon_node.global_transform * weapon_def.muzzle_offset
+	return global_position + Vector3.UP * 1.2 + _facing_vector() * 0.5
+
+func _update_ranged(delta: float) -> void:
+	if not is_ranged():
+		return
+	_fire_left = maxf(_fire_left - delta, 0.0)
+	if _reload_left > 0.0:
+		_reload_left -= delta
+		if _reload_left <= 0.0:
+			_ammo = weapon_def.magazine
+	# Утримання кнопки — вогонь чергою, поки є набої.
+	elif _attack_held and _fire_left <= 0.0:
+		_try_shoot()
 
 ## Утримання кнопки удару: серія ударів, поки є ціль.
 func set_attack_held(held: bool) -> void:
@@ -595,6 +695,7 @@ func _physics_process(delta: float) -> void:
 
 	var direction := _get_world_direction()
 	_update_attack(delta)
+	_update_ranged(delta)
 	_tick_skills(delta)
 	# Удар, натиснутий під час перекату чи вихору, стартує одразу після.
 	if _attack_queued and _attack_step < 0 and _roll_left <= 0.0 and _spin_left <= 0.0:

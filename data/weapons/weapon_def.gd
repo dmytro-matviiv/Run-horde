@@ -14,8 +14,13 @@ class_name WeaponDef
 @export var title: String
 @export_multiline var description: String
 
-## Чий це асортимент (id героя). Стартова зброя героя — cost_gems = 0.
+## Чий це асортимент (id героя). Стартова зброя героя — cost_gold = 0.
 @export var hero_id: StringName
+## Ціна в золоті. Числа тимчасові — баланс зведемо, коли буде більше
+## рівнів і стабільний заробіток за похід.
+@export var cost_gold: int = 0
+## Лишилось від старої версії, де зброя купувалась за геми. Тепер уся
+## зброя купується за золото; поле тримаємо, щоб не ламати збереження.
 @export var cost_gems: int = 0
 
 @export_enum("projectile", "aoe_projectile", "cone", "melee_arc", "chain", "orbit_storm", "ground_zone")
@@ -60,6 +65,19 @@ var archetype: String = "projectile"
 @export var swing_vfx: VfxDef
 @export var hit_vfx: VfxDef
 
+@export_group("3D: вогнепальна зброя")
+## Зброя стріляє, а не б'є. Тоді герой не махає, а веде вогонь:
+## затримка між пострілами, магазин і перезарядка.
+@export var ranged_3d := false
+@export var fire_interval := 0.35        # секунд між пострілами
+@export var magazine := 12               # набоїв у магазині
+@export var reload_time := 1.5
+@export var bullet_speed := 45.0
+@export var bullet_spread_deg := 2.0
+@export var bullets_per_shot := 1
+## Звідки вилітає куля відносно моделі зброї (кінчик ствола).
+@export var muzzle_offset := Vector3(0, 0, 0.5)
+
 @export_group("3D: зброя в руці")
 ## Модель зброї (.glb). Порожньо — гра шукає
 ## res://assets/models/weapons/<id>.glb, а якщо немає й там, збирає
@@ -69,7 +87,7 @@ var archetype: String = "projectile"
 ## Стиль бою в 3D: від нього залежать і тимчасова модель, і те, як
 ## герой б'є (широкий замах сокири, довгий випад глефи, швидка серія
 ## парних клинків).
-@export_enum("sword", "axe", "glaive", "twin_blades", "staff", "daggers")
+@export_enum("sword", "axe", "glaive", "twin_blades", "staff", "daggers", "pistol", "rifle")
 var style_3d: String = "sword"
 
 ## Чим зброя відрізняється в бою. Множники до базового удару героя.

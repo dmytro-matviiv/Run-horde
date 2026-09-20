@@ -9,6 +9,7 @@ id = &"staff_meteor"
 title = "Посох Метеора"
 description = "Повільний метеор, що вибухає по площі й підпалює всіх у радіусі вибуху."
 hero_id = &"runewielder"
+cost_gold = 4800
 cost_gems = 400
 archetype = "aoe_projectile"
 damage = 26.0

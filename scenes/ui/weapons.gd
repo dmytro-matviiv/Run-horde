@@ -41,9 +41,9 @@ var _preview_note: Label
 ## візьме в руку. Немає моделі — показуємо тимчасову й пишемо про це.
 func _build_preview() -> void:
 	var holder := VBoxContainer.new()
-	holder.custom_minimum_size = Vector2(0, 190)
+	holder.custom_minimum_size = Vector2(0, 150)
 	_preview = MODEL_PREVIEW_SCRIPT.new()
-	_preview.custom_minimum_size = Vector2(0, 160)
+	_preview.custom_minimum_size = Vector2(0, 120)
 	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	holder.add_child(_preview)
 	_preview_note = Label.new()
@@ -70,7 +70,7 @@ func _show_equipped() -> void:
 
 func _rebuild() -> void:
 	_show_equipped()
-	gems_label.text = "Геми: %d        Золото: %d" % [GameState.gems, GameState.gold]
+	gems_label.text = "Золото: %d        Геми: %d" % [GameState.gold, GameState.gems]
 	for child in rows_container.get_children():
 		child.queue_free()
 	var equipped := GameState.get_equipped_weapon_id(_hero_id)
@@ -137,8 +137,15 @@ func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
 	return card
 
 ## Головні числа зброї людською мовою: скільки б'є, як часто і що
-## лишає на ворогові.
+## лишає на ворогові. Для вогнепальної — ще магазин і перезарядка.
 func _build_stats_text(def: WeaponDef) -> String:
+	if def.ranged_3d:
+		return "   •   ".join([
+			"Шкода %d" % int(def.damage),
+			"%.0f пострілів/с" % (1.0 / maxf(def.fire_interval, 0.01)),
+			"магазин %d" % def.magazine,
+			"перезарядка %.1f с" % def.reload_time,
+		])
 	var parts: Array[String] = ["Шкода %d" % int(def.damage)]
 	if def.cooldown > 0.0:
 		parts.append("раз на %.1f с" % def.cooldown)
@@ -161,8 +168,9 @@ func _build_action_button(def: WeaponDef, equipped_id: StringName, owned: bool) 
 		button.text = "Спорядити"
 		button.pressed.connect(_on_equip_pressed.bind(def.id))
 	else:
-		button.text = "%d гемів" % def.cost_gems
-		button.disabled = GameState.gems < def.cost_gems
+		# Уся зброя купується за золото — те саме, що падає в походах.
+		button.text = "%d золота" % def.cost_gold
+		button.disabled = GameState.gold < def.cost_gold
 		button.pressed.connect(_on_buy_pressed.bind(def.id))
 	return button
 

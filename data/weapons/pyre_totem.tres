@@ -9,6 +9,7 @@ id = &"pyre_totem"
 title = "Багаття"
 description = "Ставить вогнище: воно довго горить на місці й спалює всіх, хто в нього зайшов."
 hero_id = &"ember_priestess"
+cost_gold = 4200
 cost_gems = 350
 archetype = "ground_zone"
 damage = 8.0

@@ -9,6 +9,7 @@ id = &"sun_lance"
 title = "Сонячний Спис"
 description = "Промінь світла прошиває всіх на своєму шляху й лишає їх горіти."
 hero_id = &"ember_priestess"
+cost_gold = 5400
 cost_gems = 450
 archetype = "projectile"
 damage = 22.0

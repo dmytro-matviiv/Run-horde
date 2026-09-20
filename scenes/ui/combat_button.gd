@@ -41,6 +41,9 @@ var cooldown_ratio := 0.0:
 			queue_redraw()
 var cooldown_seconds := 0.0
 
+## Напис усередині кнопки (набої "24 / 30"). Порожньо — нічого не малюємо.
+var inner_text := ""
+
 var _touch_index := -1
 var _down := false
 
@@ -125,6 +128,8 @@ func _draw() -> void:
 				_draw_fire(center, radius * 0.45, glyph_color)
 			"smoke":
 				_draw_smoke(center, radius * 0.45, glyph_color)
+			"gun":
+				_draw_gun(center, radius * 0.5, glyph_color)
 			_:
 				_draw_whirl(center, radius * 0.45, glyph_color)
 
@@ -148,14 +153,25 @@ func _draw() -> void:
 			var angle := -PI * 0.5 + TAU * cooldown_ratio * float(i) / steps
 			points.append(center + Vector2(cos(angle), sin(angle)) * (radius - 3.0))
 		draw_colored_polygon(points, Color(0, 0, 0, 0.55))
-		if cooldown_seconds < 0.15:
-			return
-		var font := ThemeDB.fallback_font
-		var text := "%.1f" % cooldown_seconds if cooldown_seconds < 3.0 else "%d" % ceili(cooldown_seconds)
-		var font_size := int(radius * 0.5)
-		var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
-		draw_string(font, center + Vector2(-text_size.x * 0.5, font_size * 0.35), text,
-			HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.WHITE)
+		# Секунди показуємо, лише коли їх варто читати. Раніше тут був
+		# вихід із малювання — і разом із секундами зникав напис із
+		# набоями.
+		if cooldown_seconds >= 0.15:
+			var font := ThemeDB.fallback_font
+			var text := "%.1f" % cooldown_seconds if cooldown_seconds < 3.0 else "%d" % ceili(cooldown_seconds)
+			var font_size := int(radius * 0.5)
+			var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
+			draw_string(font, center + Vector2(-text_size.x * 0.5, font_size * 0.35), text,
+				HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, Color.WHITE)
+
+	# Набої малюємо всередині кнопки: підпис під нею на телефоні
+	# опинявся б за краєм екрана.
+	if inner_text != "":
+		var ammo_font := ThemeDB.fallback_font
+		var ammo_size := int(radius * 0.32)
+		var ammo_width := ammo_font.get_string_size(inner_text, HORIZONTAL_ALIGNMENT_CENTER, -1, ammo_size).x
+		draw_string(ammo_font, center + Vector2(-ammo_width * 0.5, radius * 0.62), inner_text,
+			HORIZONTAL_ALIGNMENT_CENTER, -1, ammo_size, Color(1, 1, 1, 0.9))
 
 	if caption != "":
 		var font := ThemeDB.fallback_font
@@ -212,6 +228,16 @@ func _draw_smoke(center: Vector2, size_px: float, color: Color) -> void:
 	draw_circle(center + Vector2(-size_px * 0.4, size_px * 0.15), size_px * 0.45, color)
 	draw_circle(center + Vector2(size_px * 0.35, size_px * 0.25), size_px * 0.4, Color(color, color.a * 0.8))
 	draw_circle(center + Vector2(0, -size_px * 0.3), size_px * 0.5, Color(color, color.a * 0.6))
+
+## Силует пістолета — для стрілецької зброї.
+func _draw_gun(center: Vector2, size_px: float, color: Color) -> void:
+	var body := Rect2(center + Vector2(-size_px * 0.9, -size_px * 0.45), Vector2(size_px * 1.5, size_px * 0.5))
+	draw_rect(body, color)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-size_px * 0.5, size_px * 0.05),
+		center + Vector2(-size_px * 0.1, size_px * 0.05),
+		center + Vector2(-size_px * 0.25, size_px * 0.85),
+		center + Vector2(-size_px * 0.7, size_px * 0.85)]), color)
 
 ## Три дуги по колу — вихор.
 func _draw_whirl(center: Vector2, size_px: float, color: Color) -> void:

@@ -63,8 +63,7 @@ func show_hero(hero: HeroDef, weapon: WeaponDef) -> bool:
 	_pivot.add_child(instance)
 	HeroBuilder.attach_weapon(instance, hero, weapon)
 	HeroBuilder.play_idle(instance)
-	_camera.position = Vector3(0, 1.1, 2.6)
-	_camera.rotation_degrees = Vector3(-8, 0, 0)
+	_frame(instance, 1.15)
 	return _placeholder
 
 ## Сама зброя великим планом.
@@ -78,10 +77,35 @@ func show_weapon(weapon: WeaponDef) -> bool:
 	else:
 		instance = WeaponModels.build(weapon.style_3d, weapon.color)
 	_pivot.add_child(instance)
-	instance.position = Vector3(0, -0.4, 0)
-	_camera.position = Vector3(0, 0.6, 1.9)
-	_camera.rotation_degrees = Vector3(-6, 0, 0)
+	_frame(instance, 1.4)
 	return _placeholder
+
+## Ставить камеру так, щоб модель уміщалась повністю. Раніше камера
+## стояла на фіксованій відстані, і високому героєві зрізало голову.
+func _frame(instance: Node3D, margin: float) -> void:
+	var bounds := _visual_bounds(instance)
+	if bounds.size.y <= 0.01:
+		_camera.position = Vector3(0, 1.0, 2.6)
+		return
+	var height: float = maxf(bounds.size.y, bounds.size.x * 0.8)
+	var distance: float = (height * 0.5) / tan(deg_to_rad(_camera.fov * 0.5)) * margin
+	var center_y: float = bounds.position.y + bounds.size.y * 0.5
+	_camera.position = Vector3(0, center_y, distance)
+	_camera.rotation_degrees = Vector3.ZERO
+
+## Габарити всього, що видно в моделі (у її власних координатах).
+func _visual_bounds(instance: Node3D) -> AABB:
+	var bounds := AABB()
+	var first := true
+	for node in instance.find_children("*", "VisualInstance3D", true, false):
+		var visual := node as VisualInstance3D
+		var box: AABB = visual.global_transform * visual.get_aabb()
+		if first:
+			bounds = box
+			first = false
+		else:
+			bounds = bounds.merge(box)
+	return bounds
 
 func _clear() -> void:
 	for child in _pivot.get_children():

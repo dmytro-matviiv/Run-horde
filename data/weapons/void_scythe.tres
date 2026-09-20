@@ -9,6 +9,7 @@ id = &"void_scythe"
 title = "Коса Порожнечі"
 description = "Розмашистий удар косою за спиною й перед собою — майже повне коло."
 hero_id = &"void_assassin"
+cost_gold = 6000
 cost_gems = 500
 archetype = "melee_arc"
 damage = 30.0

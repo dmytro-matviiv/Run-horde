@@ -50,14 +50,15 @@ func _rebuild() -> void:
 	rows_container.add_child(_build_header("Геми"))
 	for product_id: String in IapManager.GEM_PRODUCTS:
 		var amount: int = IapManager.GEM_PRODUCTS[product_id]
-		var button := _build_row(rows_container, "%s — %d гемів" % [GEM_TITLES[product_id], amount])
+		var button := _build_row(rows_container, "%s — %d гемів" % [GEM_TITLES[product_id], amount],
+			product_id, Color(0.55, 0.9, 1.0))
 		button.text = IapManager.get_price_text(product_id)
 		button.pressed.connect(IapManager.purchase.bind(product_id))
 
 	rows_container.add_child(_build_header("Обмін гемів на золото"))
 	for i in Balance.GEM_EXCHANGES.size():
 		var exchange: Array = Balance.GEM_EXCHANGES[i]
-		var button := _build_row(rows_container, "%d золота" % exchange[1])
+		var button := _build_row(rows_container, "%d золота" % exchange[1], "exchange")
 		button.text = "%d гемів" % exchange[0]
 		button.disabled = GameState.gems < exchange[0]
 		button.pressed.connect(_on_exchange_pressed.bind(i))
@@ -114,10 +115,23 @@ func _build_header(text: String) -> Label:
 	label.add_theme_color_override("font_color", Color(0.7, 0.85, 1))
 	return label
 
-## Рядок "опис + кнопка". Повертає кнопку, щоб виклик сам задав текст і дію.
-func _build_row(parent: Control, info_text: String) -> Button:
+## Рядок "іконка + опис + кнопка". Повертає кнопку, щоб виклик сам
+## задав текст і дію.
+##
+## Іконка — слот під майбутній арт: поклади файл
+## res://assets/ui/icons/shop/<назва>.png, і він з'явиться замість
+## кольорової заглушки (див. assets/ART_GUIDE.md).
+func _build_row(parent: Control, info_text: String, icon_name: String = "", accent: Color = Color(1, 0.86, 0.4)) -> Button:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
+	var icon := TextureRect.new()
+	icon.custom_minimum_size = Vector2(52, 52)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture = ArtSlots.icon_or_placeholder(ArtSlots.shop_icon(icon_name), accent)
+	if icon_name != "":
+		icon.tooltip_text = "Іконка: assets/ui/icons/shop/%s.png" % icon_name
+	row.add_child(icon)
 	var info := Label.new()
 	info.custom_minimum_size = Vector2(400, 0)
 	info.text = info_text

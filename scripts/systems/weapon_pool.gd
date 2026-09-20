@@ -21,10 +21,12 @@ const ALL_WEAPONS: Array[WeaponDef] = [
 	preload("res://data/weapons/pyre_totem.tres"),
 	preload("res://data/weapons/sun_lance.tres"),
 
-	preload("res://data/weapons/shadow_dagger.tres"),
-	preload("res://data/weapons/venom_daggers.tres"),
-	preload("res://data/weapons/void_scythe.tres"),
-	preload("res://data/weapons/shadow_chains.tres"),
+	# Оперативник: вогнепальна зброя. Стартовий пістолет безкоштовний,
+	# решта купується за золото.
+	preload("res://data/weapons/pistol_basic.tres"),
+	preload("res://data/weapons/pistol_heavy.tres"),
+	preload("res://data/weapons/rifle_standard.tres"),
+	preload("res://data/weapons/rifle_heavy.tres"),
 ]
 
 static func get_def(id: StringName) -> WeaponDef:

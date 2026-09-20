@@ -192,6 +192,41 @@ static func impact(parent: Node, position: Vector3, color: Color, big: bool = fa
 	tween.tween_property(flare, "transparency", 1.0, 0.14)
 	tween.chain().tween_callback(flare.queue_free)
 
+## Спалах пострілу біля ствола: коротка яскрава зірка й кілька іскор
+## уздовж напрямку. Без справжнього світла — телефон його не потягне на
+## кожному пострілі, а видно однаково добре.
+static func muzzle_flash(parent: Node, position: Vector3, direction: Vector3, color: Color) -> void:
+	var flare := MeshInstance3D.new()
+	flare.mesh = _get_flare_mesh()
+	flare.material_override = _get_flare_material(color)
+	flare.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(flare)
+	flare.global_position = position
+	flare.scale = Vector3.ONE * 0.5
+	var tween := flare.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(flare, "scale", Vector3.ONE * 0.9, 0.07)
+	tween.tween_property(flare, "transparency", 1.0, 0.07)
+	tween.chain().tween_callback(flare.queue_free)
+
+	var sparks := CPUParticles3D.new()
+	sparks.one_shot = true
+	sparks.explosiveness = 1.0
+	sparks.amount = 5
+	sparks.lifetime = 0.16
+	sparks.mesh = _get_spark_mesh()
+	sparks.material_override = _get_spark_material()
+	sparks.direction = direction
+	sparks.spread = 14.0
+	sparks.initial_velocity_min = 4.0
+	sparks.initial_velocity_max = 9.0
+	sparks.gravity = Vector3(0, -4.0, 0)
+	sparks.color = color
+	parent.add_child(sparks)
+	sparks.global_position = position
+	sparks.emitting = true
+	_free_after(sparks, 0.3)
+
 ## Цифра шкоди, що злітає над ворогом. Критичний удар — більша жовта.
 static func damage_number(parent: Node, position: Vector3, amount: float, crit: bool = false) -> void:
 	var label := Label3D.new()

@@ -9,6 +9,7 @@ id = &"shadow_dagger"
 title = "Тіньовий Кинджал"
 description = "Стартова зброя асасина: дуже швидкі кидки кинджалів."
 hero_id = &"void_assassin"
+cost_gold = 0
 cost_gems = 0
 archetype = "projectile"
 damage = 8.0

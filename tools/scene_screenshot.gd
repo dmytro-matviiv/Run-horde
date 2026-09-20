@@ -12,6 +12,12 @@ func _ready() -> void:
 			scene_path = argument.get_slice("=", 1)
 		elif argument.begins_with("--out="):
 			out_path = argument.get_slice("=", 1)
+		elif argument.begins_with("--hero="):
+			GameState.selected_hero_id = StringName(argument.get_slice("=", 1))
+		elif argument.begins_with("--weapon="):
+			GameState.equipped_weapon_ids[GameState.selected_hero_id] = StringName(argument.get_slice("=", 1))
+			if not GameState.owned_weapon_ids.has(GameState.equipped_weapon_ids[GameState.selected_hero_id]):
+				GameState.owned_weapon_ids.append(GameState.equipped_weapon_ids[GameState.selected_hero_id])
 		elif argument == "--fps":
 			PerfSettings._set_fps_visible(true)
 	add_child(load(scene_path).instantiate())

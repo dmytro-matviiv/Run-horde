@@ -9,6 +9,7 @@ id = &"blade_storm"
 title = "Вихор Смерті"
 description = "Чотири клинки без упину крутяться навколо героїні й ріжуть усіх, хто підійшов, — навіть тих, хто вже впритул."
 hero_id = &"blade_warden"
+cost_gold = 5400
 cost_gems = 450
 archetype = "orbit_storm"
 damage = 9.0

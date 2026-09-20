@@ -9,6 +9,7 @@ id = &"venom_daggers"
 title = "Отруйні Кинджали"
 description = "Віяло з трьох кинджалів; отрута продовжує роз'їдати ворога після влучання."
 hero_id = &"void_assassin"
+cost_gold = 5400
 cost_gems = 450
 archetype = "projectile"
 damage = 7.0

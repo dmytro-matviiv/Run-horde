@@ -6,9 +6,9 @@
 [resource]
 script = ExtResource("1")
 id = &"void_assassin"
-title = "Асасин Порожнечі"
-description = "Преміум-герой. Мітить ворогів, а в димовій завісі зникає з очей і б'є вдвічі сильніше."
-color = Color(0.6, 0.35, 0.95, 1)
+title = "Оперативник"
+description = "Боєць із вогнепальною зброєю. Мітить ціль, а димова граната ховає його від ворогів."
+color = Color(0.45, 0.6, 0.75, 1)
 unlock_cost = 0
 gem_cost = 900
 bonus_max_hp = -15.0

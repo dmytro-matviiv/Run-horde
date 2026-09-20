@@ -1,0 +1,33 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"rifle_standard"
+title = "Автомат"
+description = "Черга без упину: слабші кулі, зате багато й швидко."
+hero_id = &"void_assassin"
+cost_gold = 6000
+cost_gems = 0
+archetype = "projectile"
+damage = 9.8
+cooldown = 0.12
+color = Color(0.6, 0.85, 1.0, 1)
+projectile_speed = 700.0
+style_3d = "rifle"
+ranged_3d = true
+damage_mult_3d = 0.7
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.4
+reach_3d = 18.0
+arc_3d = 30.0
+fire_interval = 0.12
+magazine = 30
+reload_time = 2.1
+bullet_speed = 55.0
+bullet_spread_deg = 3.5
+bullets_per_shot = 1
+model_scale = 0.155
+grip_rotation_deg = Vector3(0, 0, 90)
+muzzle_offset = Vector3(4.6, 0.18, 0)

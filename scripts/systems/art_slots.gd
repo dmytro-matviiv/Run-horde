@@ -16,6 +16,7 @@ class_name ArtSlots
 ##   іконка здібності    res://assets/ui/icons/skills/<id здібності>.png
 ##   іконка таланту      res://assets/ui/icons/talents/<id таланту>.png
 ##   іконка зброї        res://assets/ui/icons/weapons/<id зброї>.png
+##   іконка в магазині   res://assets/ui/icons/shop/<назва товару>.png
 ##
 ## id героя та зброї — ті самі, що в data/heroes/*.tres і data/weapons/*.tres
 ## (наприклад, blade_warden, battle_axe).
@@ -26,6 +27,7 @@ const MENU_ICON_DIR := "res://assets/ui/icons/menu/"
 const SKILL_ICON_DIR := "res://assets/ui/icons/skills/"
 const TALENT_ICON_DIR := "res://assets/ui/icons/talents/"
 const WEAPON_ICON_DIR := "res://assets/ui/icons/weapons/"
+const SHOP_ICON_DIR := "res://assets/ui/icons/shop/"
 
 const MODEL_EXTENSIONS := [".glb", ".gltf", ".fbx", ".tscn"]
 const ICON_EXTENSIONS := [".png", ".webp", ".jpg", ".svg"]
@@ -61,6 +63,9 @@ static func skill_icon(skill_id: StringName) -> Texture2D:
 
 static func talent_icon(talent_id: StringName) -> Texture2D:
 	return _find_texture(TALENT_ICON_DIR, String(talent_id))
+
+static func shop_icon(name: String) -> Texture2D:
+	return _find_texture(SHOP_ICON_DIR, name) if name != "" else null
 
 static func weapon_icon(weapon_id: StringName, explicit: Texture2D = null) -> Texture2D:
 	if explicit != null:

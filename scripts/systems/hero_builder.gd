@@ -42,26 +42,28 @@ static func tint(instance: Node3D, color: Color) -> void:
 
 ## Вішає зброю на кістку руки. Вбудований у модель меч ховаємо, коли
 ## герой бере щось інше, — інакше він тримав би дві зброї.
-static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> void:
+## Повертає вузол причепленої зброї (або null, якщо лишився вбудований
+## у модель меч) — з нього беремо кінчик ствола для пострілу.
+static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> Node3D:
 	var builtin := model.find_child(String(hero.builtin_weapon_node), true, false)
 	if builtin != null and builtin is Node3D:
 		(builtin as Node3D).visible = weapon == null or weapon.style_3d == "sword"
 	if weapon == null:
-		return
+		return null
 	var skeletons := model.find_children("*", "Skeleton3D", true, false)
 	if skeletons.is_empty():
-		return
+		return null
 	var skeleton := skeletons[0] as Skeleton3D
 	var bone := skeleton.find_bone(String(hero.weapon_bone))
 	if bone < 0:
-		return
+		return null
 
 	var scene := ArtSlots.weapon_model(weapon.id, weapon.model_scene)
 	var weapon_node: Node3D
 	if scene != null:
 		weapon_node = scene.instantiate()
 	elif weapon.style_3d == "sword":
-		return   # у моделі вже є меч — лишаємо його
+		return null   # у моделі вже є меч — лишаємо його
 	else:
 		weapon_node = WeaponModels.build(weapon.style_3d, weapon.color)
 
@@ -74,6 +76,7 @@ static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> vo
 	# Кістки моделі мають власний масштаб, тож зброю зводимо до метрів.
 	var bone_scale: float = skeleton.global_transform.basis.get_scale().x
 	weapon_node.scale = Vector3.ONE * weapon.model_scale / maxf(bone_scale, 0.0001)
+	return weapon_node
 
 ## Вмикає спокійну анімацію — для вітрини в меню.
 static func play_idle(model: Node3D) -> void:
