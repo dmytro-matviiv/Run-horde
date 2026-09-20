@@ -300,7 +300,15 @@ func _move(delta: float) -> void:
 	_path_step = false
 
 ## Помітив — переслідує; поки не втік далеко, не забуває.
+##
+## Героя, що сховався (димова завіса асасина), ворог не бачить узагалі:
+## губить ціль і кидає замах.
 func _update_aggro(distance: float) -> void:
+	if _player.has_method("is_targetable") and not _player.is_targetable():
+		if _aggro:
+			_aggro = false
+			_cancel_windup()
+		return
 	if not _aggro and distance <= aggro_range:
 		_aggro = true
 		_repath_left = 0.0   # помітив — одразу прокладає маршрут

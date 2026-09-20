@@ -34,6 +34,16 @@ const BASE_SCENE_PATH := "res://scenes/world/base_island.tscn"
 ## Скільки досвіду треба на наступний рівень героя в данжі.
 const XP_PER_LEVEL := 12
 
+## ЗОЛОТО ЗА ПОХІД (числа тимчасові — баланс підженемо, коли буде більше
+## рівнів). Талант "Приріст золота" додає свої відсотки, а талант
+## "Удача" покращує вибір здібностей, "Стартовий рівень" дає зайвий
+## вибір на вході.
+const GOLD_PER_KILL := 4
+const GOLD_PER_BOSS := 60
+const GOLD_FOR_CLEAR := 120
+const TALENT_GOLD_PER_LEVEL := 0.07
+const TALENT_LUCK_PER_LEVEL := 0.04
+
 ## ПОТОКОВЕ ПІДВАНТАЖЕННЯ
 ##
 ## Данж ріжеться на шматки (див. DungeonBuilder). Тут вирішується, який
@@ -71,6 +81,7 @@ var _map_rows: Array = []
 var _chunks: Array = []
 var _lights: Array = []
 var _stream_left := 0.0
+var _run_gold := 0
 
 ## Збирання рівня розкладене на кілька кадрів і сховане за екраном
 ## завантаження (SceneLoader.hold): гравець бачить плавну смужку, а не
@@ -111,8 +122,10 @@ func _ready() -> void:
 	SceneLoader.release()
 
 	# Вхідна кімната порожня, і перше, що робить гравець, — обирає
-	# здібність. Далі вибір повторюється з кожним новим рівнем.
-	await _offer_ability()
+	# здібність. Талант "Стартовий рівень" дає зайві вибори одразу.
+	var start_picks := 1 + GameState.get_meta_level(GameState.selected_hero_id, &"meta_start_level")
+	for i in start_picks:
+		await _offer_ability()
 
 func _setup_hud(title: String) -> void:
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
@@ -205,10 +218,21 @@ func _spawn_enemy(position: Vector3, kind: Enemy3D.Kind, model: PackedScene) -> 
 
 func _on_enemy_died(_position: Vector3, xp_reward: int, kind: Enemy3D.Kind) -> void:
 	_alive_enemies -= 1
+	_add_gold(GOLD_PER_BOSS if kind == Enemy3D.Kind.BOSS else GOLD_PER_KILL)
 	_add_xp(xp_reward)
 	if kind == Enemy3D.Kind.BOSS:
 		_boss_defeated = true
 		_open_exit()
+
+## Золото з походу. Талант "Приріст золота" множить здобич, а
+## зараховується вона одразу — щоб прогрес не пропав, якщо гравець
+## загине на виході.
+func _add_gold(amount: int) -> void:
+	var levels := GameState.get_meta_level(GameState.selected_hero_id, &"meta_gold_gain")
+	var total := int(round(amount * (1.0 + TALENT_GOLD_PER_LEVEL * levels)))
+	_run_gold += total
+	GameState.add_gold(total)
+	_update_status()
 
 ## Досвід збирається з ворогів; за кожен рівень — нова здібність.
 func _add_xp(amount: int) -> void:
@@ -221,7 +245,8 @@ func _add_xp(amount: int) -> void:
 
 ## Вибір здібності зупиняє гру — як і в меню рівня 2D-частини.
 func _offer_ability() -> void:
-	var choices := UpgradePool.pick_choices({}, 0.0)
+	var luck := TALENT_LUCK_PER_LEVEL * GameState.get_meta_level(GameState.selected_hero_id, &"meta_luck")
+	var choices := UpgradePool.pick_choices({}, luck)
 	if choices.is_empty():
 		return
 	get_tree().paused = true
@@ -379,8 +404,8 @@ func _update_status(title: String = "") -> void:
 		status_label.set_meta("title", title)
 	var level_title: String = status_label.get_meta("title", "Данж")
 	var state := "Бос попереду" if not _boss_defeated else "Вихід відчинено"
-	status_label.text = "%s  •  рівень %d  •  досвід %d  •  ворогів %d  •  %s" % [
-		level_title, _hero_level, _xp, _alive_enemies, state,
+	status_label.text = "%s  •  рівень %d  •  досвід %d  •  золото %d  •  ворогів %d  •  %s" % [
+		level_title, _hero_level, _xp, _run_gold, _alive_enemies, state,
 	]
 
 ## Герой загинув — це має бути видно, а не виглядати як "застряг".
@@ -396,7 +421,8 @@ func _on_joystick_moved(direction: Vector2) -> void:
 	player.set_move_input(Vector2(direction.x, -direction.y))
 
 func _on_exit_pressed() -> void:
-	# Пройшов данж — наступний рівень стає доступним.
+	# Пройшов данж — наступний рівень стає доступним, плюс нагорода.
+	_add_gold(GOLD_FOR_CLEAR * (1 + _level_index))
 	GameState.unlock_next_dungeon_level()
 	SceneLoader.change_scene(BASE_SCENE_PATH, "База")
 

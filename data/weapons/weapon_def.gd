@@ -60,6 +60,31 @@ var archetype: String = "projectile"
 @export var swing_vfx: VfxDef
 @export var hit_vfx: VfxDef
 
+@export_group("3D: зброя в руці")
+## Модель зброї (.glb). Порожньо — гра шукає
+## res://assets/models/weapons/<id>.glb, а якщо немає й там, збирає
+## тимчасову зі простих фігур за стилем (WeaponModels).
+@export var model_scene: PackedScene
+
+## Стиль бою в 3D: від нього залежать і тимчасова модель, і те, як
+## герой б'є (широкий замах сокири, довгий випад глефи, швидка серія
+## парних клинків).
+@export_enum("sword", "axe", "glaive", "twin_blades", "staff", "daggers")
+var style_3d: String = "sword"
+
+## Чим зброя відрізняється в бою. Множники до базового удару героя.
+@export var damage_mult_3d: float = 1.0
+@export var speed_mult_3d: float = 1.0
+@export var knockback_mult_3d: float = 1.0
+## Дальність замаху в метрах і його ширина в градусах.
+@export var reach_3d: float = 2.9
+@export var arc_3d: float = 150.0
+
+## Як зброя лежить у руці (підганяється під конкретну модель).
+@export var grip_offset := Vector3.ZERO
+@export var grip_rotation_deg := Vector3.ZERO
+@export var model_scale: float = 1.0
+
 @export_group("Статус-ефект")
 ## Порожній StringName = без ефекту. Решта — StatusEffects.POISON/BURN/SLOW.
 @export var status: StringName

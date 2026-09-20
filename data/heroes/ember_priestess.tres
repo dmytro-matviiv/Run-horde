@@ -7,7 +7,7 @@
 script = ExtResource("1")
 id = &"ember_priestess"
 title = "Жриця Багаття"
-description = "Починає з вогняною аурою навколо себе. Прудкіша й крихкіша."
+description = "Крихка, зате прудка. Вогняне коло палить усіх навколо, а Фенікс раз за похід рятує від смерті."
 color = Color(0.95, 0.35, 0.55, 1)
 unlock_cost = 8000
 bonus_max_hp = -15.0
@@ -16,3 +16,5 @@ bonus_weapon = "damage_aura"
 ability_id = &"phoenix"
 unique_talent_id = &"talent_aura_power"
 texture = ExtResource("2")
+skill_ids = Array[StringName]([&"fire_ring"])
+passive_id = &"phoenix"

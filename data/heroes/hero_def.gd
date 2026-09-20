@@ -27,6 +27,27 @@ class_name HeroDef
 @export_enum("none", "orbital_blades", "damage_aura") var bonus_weapon: String = "none"
 
 
+@export_group("3D: модель і бій")
+## Модель героя (.glb). Порожньо — гра шукає файл за назвою героя:
+## res://assets/models/heroes/<id>.glb. Немає й там — герой ходить
+## тимчасовою моделлю, пофарбованою в його колір (гра працює, арт
+## можна додати будь-коли).
+@export var model_scene: PackedScene
+
+## Кістка правої руки, до якої кріпиться зброя, і вбудована в модель
+## зброя, яку треба сховати, коли герой бере іншу.
+@export var weapon_bone: StringName = &"Wrist.R"
+@export var builtin_weapon_node: StringName = &"Sword"
+
+## Якщо в новій моделі анімації звуться інакше — тут перелік
+## "наша назва" -> "назва в моделі". Порожньо = стандартні назви
+## Quaternius (CharacterArmature|Idle, |Run, |Sword_Slash ...).
+@export var animation_names: Dictionary = {}
+
+## Активні здібності для кнопок у бою (Skills3D) і пасивна риса класу.
+@export var skill_ids: Array[StringName] = []
+@export var passive_id: StringName
+
 @export_group("Спрайт-лист (куплений набір)")
 ## Якщо тут лежить аркуш кадрів — персонаж анімується ПОКАДРОВО, як у
 ## справжніх іграх, а не лише процедурним похитуванням. Порожньо —

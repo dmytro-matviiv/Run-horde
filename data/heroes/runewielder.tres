@@ -7,7 +7,7 @@
 script = ExtResource("1")
 id = &"runewielder"
 title = "Руновод"
-description = "Базовий герой. Автоматичний магічний болт по найближчому ворогу."
+description = "Базовий герой. Кожен сьомий удар сам вибухає рунною новою, а здібність — велика нова на вимогу."
 color = Color(0.2, 0.8, 1, 1)
 unlock_cost = 0
 bonus_max_hp = 0.0
@@ -16,3 +16,5 @@ bonus_weapon = "none"
 ability_id = &"rune_charge"
 unique_talent_id = &"talent_bolt_pierce"
 texture = ExtResource("2")
+skill_ids = Array[StringName]([&"rune_nova"])
+passive_id = &"rune_charge"

@@ -8,17 +8,30 @@ class_name CombatButton
 ## б'є правим — тому кнопка сама слухає дотики з будь-яким номером
 ## пальця. Мишею на ПК теж натискається.
 ##
-## Уміє показувати перезарядку: темний сектор, що зменшується, і секунди.
+## Уміє показувати перезарядку (темний сектор і секунди) та шкалу
+## накопичення — як "Лють" вартової, що заряджається від ударів.
+##
+## Якщо в res://assets/ui/icons/skills/<id>.png лежить картинка, кнопка
+## бере її; поки немає — малює просту фігуру за назвою (меч, стрілки,
+## вихор, нова, вогонь, дим).
 
 signal pressed_down
 signal released
 
-enum Icon {ATTACK, DODGE, SKILL}
-
 var radius := 60.0
-var icon: Icon = Icon.ATTACK
+## Яку фігуру малювати: attack, dodge, whirl, dash, nova, fire, smoke.
+var icon_kind := "attack"
+## Готова картинка (якщо художник уже дав) — малюється замість фігури.
+var icon_texture: Texture2D
 var caption := ""
 var accent := Color(0.98, 0.72, 0.25)
+
+## Шкала накопичення 0..1 (лють, заряд) або -1, якщо її немає.
+var charge := -1.0:
+	set(value):
+		if not is_equal_approx(value, charge):
+			charge = value
+			queue_redraw()
 
 ## 0 — готово, 1 — щойно використано. Задає власник кнопки.
 var cooldown_ratio := 0.0:
@@ -88,21 +101,46 @@ func _release() -> void:
 
 func _draw() -> void:
 	var center := size * 0.5
-	var is_ready := cooldown_ratio <= 0.0
+	var is_ready := cooldown_ratio <= 0.0 and (charge < 0.0 or charge >= 1.0)
 	# Обідок — кільце з двох кіл, а не згладжена лінія: так кнопка
 	# малюється однією командою разом із фоном (дешевше для телефона).
 	draw_circle(center, radius, Color(accent, 0.95 if is_ready else 0.4))
 	draw_circle(center, radius - 4.0, Color(0.05, 0.06, 0.09, 0.8 if not _down else 0.9))
 	var glyph_color := Color(1, 1, 1, 0.95 if is_ready else 0.45)
-	match icon:
-		Icon.ATTACK:
-			_draw_sword(center, radius * 0.5, glyph_color)
-		Icon.DODGE:
-			_draw_chevrons(center, radius * 0.42, glyph_color)
-		Icon.SKILL:
-			_draw_whirl(center, radius * 0.45, glyph_color)
+	if icon_texture != null:
+		var side := radius * 1.1
+		draw_texture_rect(icon_texture, Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)),
+			false, Color(1, 1, 1, 0.95 if is_ready else 0.5))
+	else:
+		match icon_kind:
+			"attack":
+				_draw_sword(center, radius * 0.5, glyph_color)
+			"dodge":
+				_draw_chevrons(center, radius * 0.42, glyph_color)
+			"dash":
+				_draw_dash(center, radius * 0.45, glyph_color)
+			"nova":
+				_draw_nova(center, radius * 0.45, glyph_color)
+			"fire":
+				_draw_fire(center, radius * 0.45, glyph_color)
+			"smoke":
+				_draw_smoke(center, radius * 0.45, glyph_color)
+			_:
+				_draw_whirl(center, radius * 0.45, glyph_color)
 
-	if not is_ready:
+	# Шкала накопичення: кільце наповнюється знизу за годинниковою.
+	if charge >= 0.0 and charge < 1.0:
+		var points := PackedVector2Array([center])
+		var steps := 28
+		for i in steps + 1:
+			var angle := -PI * 0.5 + TAU * (1.0 - charge) * float(i) / steps
+			points.append(center + Vector2(cos(angle), sin(angle)) * (radius - 3.0))
+		draw_colored_polygon(points, Color(0, 0, 0, 0.5))
+	elif charge >= 1.0:
+		# Готово — кнопка світиться.
+		draw_circle(center, radius + 3.0, Color(accent, 0.35))
+
+	if cooldown_ratio > 0.0:
 		# Темний сектор перезарядки: зменшується за годинниковою стрілкою.
 		var points := PackedVector2Array([center])
 		var steps := 32
@@ -110,6 +148,8 @@ func _draw() -> void:
 			var angle := -PI * 0.5 + TAU * cooldown_ratio * float(i) / steps
 			points.append(center + Vector2(cos(angle), sin(angle)) * (radius - 3.0))
 		draw_colored_polygon(points, Color(0, 0, 0, 0.55))
+		if cooldown_seconds < 0.15:
+			return
 		var font := ThemeDB.fallback_font
 		var text := "%.1f" % cooldown_seconds if cooldown_seconds < 3.0 else "%d" % ceili(cooldown_seconds)
 		var font_size := int(radius * 0.5)
@@ -143,6 +183,35 @@ func _draw_chevrons(center: Vector2, size_px: float, color: Color) -> void:
 			base + Vector2(-size_px * 0.35, -size_px * 0.6),
 			base + Vector2(size_px * 0.35, 0),
 			base + Vector2(-size_px * 0.35, size_px * 0.6)]), color, size_px * 0.22)
+
+## Стріла вперед — ривок.
+func _draw_dash(center: Vector2, size_px: float, color: Color) -> void:
+	draw_line(center - Vector2(size_px, 0), center + Vector2(size_px * 0.4, 0), color, size_px * 0.25)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(size_px, 0),
+		center + Vector2(size_px * 0.2, -size_px * 0.55),
+		center + Vector2(size_px * 0.2, size_px * 0.55)]), color)
+
+## Кола, що розходяться, — нова.
+func _draw_nova(center: Vector2, size_px: float, color: Color) -> void:
+	draw_circle(center, size_px * 0.28, color)
+	draw_arc(center, size_px * 0.62, 0.0, TAU, 20, color, size_px * 0.13)
+	draw_arc(center, size_px * 0.95, 0.0, TAU, 24, Color(color, color.a * 0.6), size_px * 0.1)
+
+## Язик полум'я.
+func _draw_fire(center: Vector2, size_px: float, color: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(0, -size_px),
+		center + Vector2(size_px * 0.6, size_px * 0.2),
+		center + Vector2(0, size_px * 0.9),
+		center + Vector2(-size_px * 0.6, size_px * 0.2)]), color)
+	draw_circle(center + Vector2(0, size_px * 0.35), size_px * 0.3, Color(1, 1, 1, color.a * 0.7))
+
+## Клуби диму.
+func _draw_smoke(center: Vector2, size_px: float, color: Color) -> void:
+	draw_circle(center + Vector2(-size_px * 0.4, size_px * 0.15), size_px * 0.45, color)
+	draw_circle(center + Vector2(size_px * 0.35, size_px * 0.25), size_px * 0.4, Color(color, color.a * 0.8))
+	draw_circle(center + Vector2(0, -size_px * 0.3), size_px * 0.5, Color(color, color.a * 0.6))
 
 ## Три дуги по колу — вихор.
 func _draw_whirl(center: Vector2, size_px: float, color: Color) -> void:

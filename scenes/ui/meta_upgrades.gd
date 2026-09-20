@@ -20,10 +20,10 @@ const GENERIC_UPGRADES := [
 ## Унікальні таланти — по одному на героя, id збігається з
 ## HeroDef.unique_talent_id. Ефект застосовує Hero.apply_meta_upgrades().
 const TALENTS := {
-	&"talent_bolt_pierce": {"title": "Пробивна Руна", "per_level": "+1 пробиття магічного болта"},
-	&"talent_extra_blades": {"title": "Вихор Клинків", "per_level": "+1 орбітальний клинок"},
-	&"talent_aura_power": {"title": "Багаття Люті", "per_level": "+радіус і шкода аури"},
-	&"talent_shadow_clones": {"title": "Володар Тіней", "per_level": "клони приходять частіше й б'ють сильніше"},
+	&"talent_bolt_pierce": {"title": "Пробивна Руна", "per_level": "+0.4 м до радіуса Рунної Нови"},
+	&"talent_extra_blades": {"title": "Вихор Клинків", "per_level": "+18% шкоди Вихору, -0.4 с перезарядки"},
+	&"talent_aura_power": {"title": "Багаття Люті", "per_level": "+15% шкоди й +0.2 м радіуса Вогняного Кола"},
+	&"talent_shadow_clones": {"title": "Володар Тіней", "per_level": "+0.5 с Димової Завіси"},
 }
 
 const BOTTOM_MARGIN := 24.0
@@ -65,12 +65,23 @@ func _rebuild() -> void:
 		var talent: Dictionary = TALENTS[talent_id]
 		rows_container.add_child(_build_row(talent_id, talent.title, talent.per_level))
 
+## Рядок таланту. Ліворуч — місце під іконку: щойно покладете файл
+## res://assets/ui/icons/talents/<id таланту>.png, вона з'явиться тут
+## замість кольорової заглушки.
 func _build_row(id: StringName, title: String, per_level: String) -> Control:
 	var level := GameState.get_meta_level(_hero_id, id)
 	var max_level := GameState.get_meta_max_level(id)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
+
+	var icon := TextureRect.new()
+	icon.custom_minimum_size = Vector2(48, 48)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture = ArtSlots.icon_or_placeholder(ArtSlots.talent_icon(id), UiTheme.ACCENT)
+	icon.tooltip_text = "Іконка: assets/ui/icons/talents/%s.png" % id
+	row.add_child(icon)
 
 	var info := Label.new()
 	info.custom_minimum_size = Vector2(400, 0)

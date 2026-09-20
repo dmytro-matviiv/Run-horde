@@ -19,11 +19,16 @@ func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--shot="):
 			_shot_path = argument.get_slice("=", 1)
+		elif argument.begins_with("--hero="):
+			GameState.selected_hero_id = StringName(argument.get_slice("=", 1))
+		elif argument.begins_with("--weapon="):
+			GameState.equipped_weapon_ids[GameState.selected_hero_id] = StringName(argument.get_slice("=", 1))
 	_dungeon = load(SCENE).instantiate()
 	add_child(_dungeon)
 	await _dismiss_ability_choice()
 	_player = _dungeon.get_node("Player")
 
+	_report_loadout()
 	await _test_health_bar()
 	await _test_kill_then_pause()
 	await _test_combo()
@@ -32,6 +37,7 @@ func _ready() -> void:
 	await _test_backpedal()
 	await _test_dodge()
 	await _test_skill()
+	await _test_passive_charge()
 	await _test_ranged()
 	await _test_enemy_windup()
 	if _shot_path != "":
@@ -47,13 +53,65 @@ func _process(_delta: float) -> void:
 		if node.has_signal("upgrade_chosen") and not node.is_queued_for_deletion():
 			node.upgrade_chosen.emit(&"max_hp")
 
+## Хто в грі: модель, зброя, здібності, пасивка — усе з вибраного героя.
+func _report_loadout() -> void:
+	var hero: HeroDef = _player.hero_def
+	var weapon: WeaponDef = _player.weapon_def
+	var skills: Array = _player.get_skills()
+	var names := []
+	for skill: HeroSkill3D in skills:
+		names.append(skill.title)
+	var model: Node3D = _player.model
+	var has_model: bool = model.get_child_count() > 0
+	var weapon_in_hand: bool = not model.find_children("WeaponModel", "", true, false).is_empty()
+	print("COMBAT: герой %s, зброя %s (%s), модель %s, зброя в руці %s" % [
+		hero.title, weapon.title, weapon.style_3d, has_model, weapon_in_hand])
+	print("COMBAT: здібності %s, пасивка %s, шкода %.1f, HP %.0f" % [
+		names, _player.passive.title if _player.passive != null else "немає",
+		_player._damage, _player.max_hp])
+
+## Пасивка Клинкової Вартової: лють накопичується від ударів і вмикає
+## другу кнопку.
+func _test_passive_charge() -> void:
+	if _player.passive == null or _player.passive.get_charge() < 0.0:
+		print("COMBAT: у цього героя пасивка без шкали")
+		return
+	var enemy := _nearest_alive_enemy()
+	if enemy == null:
+		return
+	enemy.current_hp = 900.0
+	enemy.max_hp = 900.0
+	# З запасом місця позаду: ривок має куди розігнатись.
+	_place_player_near(enemy, 2.2, 8.0)
+	var before: float = _player.passive.get_charge()
+	for i in 8:
+		_player.attack()
+		for frame in 14:
+			await get_tree().physics_frame
+	var after: float = _player.passive.get_charge()
+	print("COMBAT: шкала пасивки \"%s\": %.2f -> %.2f" % [_player.passive.title, before, after])
+	# Друга кнопка (Ривок Люті) світиться лише на повній шкалі.
+	var skills: Array = _player.get_skills()
+	if skills.size() > 1:
+		var dash: HeroSkill3D = skills[1]
+		var ready_before: bool = dash.is_ready(_player)
+		_player.passive._charge = 1.0
+		var ready_full: bool = dash.is_ready(_player)
+		var position_before: Vector3 = _player.global_position
+		_player.use_skill(1)
+		await get_tree().create_timer(0.45).timeout
+		print("COMBAT: \"%s\" — готова на %.0f%% люті: %s, на повній: %s, ривок %.1f м" % [
+			dash.title, before * 100.0, ready_before, ready_full,
+			position_before.distance_to(_player.global_position)])
+
 func _test_health_bar() -> void:
 	var bar: HealthBar3D = _player._health_bar
 	_player.take_damage(30.0)
 	await get_tree().create_timer(1.2).timeout
 	var ratio: float = bar._bar.get_instance_shader_parameter(&"ratio")
 	var trail: float = bar._bar.get_instance_shader_parameter(&"trail")
-	print("COMBAT: смужка героя після -30 HP: частка %.2f, слід %.2f (має бути 0.70 і 0.70)" % [ratio, trail])
+	var expected: float = (_player.max_hp - 30.0) / _player.max_hp
+	print("COMBAT: смужка героя після -30 HP: частка %.2f, слід %.2f (має бути %.2f)" % [ratio, trail, expected])
 	_player.current_hp = _player.max_hp
 	_player._update_health_bar()
 
@@ -181,8 +239,10 @@ func _test_skill() -> void:
 	var before: float = enemy.current_hp
 	_player.use_skill()
 	await get_tree().create_timer(0.5).timeout
-	var cooldown: Vector2 = _player.get_skill_cooldown()
-	print("COMBAT: вихор — ворог %.0f -> %.0f HP, перезарядка %.1f / %.0f с" % [
+	var skills: Array = _player.get_skills()
+	var cooldown: Vector2 = skills[0].get_cooldown() if not skills.is_empty() else Vector2.ZERO
+	print("COMBAT: здібність \"%s\" — ворог %.0f -> %.0f HP, перезарядка %.1f / %.0f с" % [
+		skills[0].title if not skills.is_empty() else "?",
 		before, enemy.current_hp if is_instance_valid(enemy) else 0.0, cooldown.x, cooldown.y])
 
 ## Стоїмо біля ворога й не б'ємо: він має замахнутись (червона зона) і

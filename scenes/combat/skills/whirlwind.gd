@@ -1,0 +1,57 @@
+extends HeroSkill3D
+
+## ВИХОР — Клинкова Вартова.
+## Оберт навколо себе: б'є всіх поруч і відкидає їх. Головна відповідь
+## на "мене оточили".
+##
+## Особистий талант "Вихор Клинків" робить його сильнішим і частішим.
+
+const RADIUS := 3.6
+const DAMAGE := 2.4
+const KNOCKBACK := 4.0
+const SPIN_TIME := 0.45
+const HIT_DELAY := 0.12
+const SKILL_COLOR := Color(0.35, 0.95, 1.0)
+
+var _hit_left := -1.0
+
+func _init() -> void:
+	id = &"whirlwind"
+	title = "Вихор"
+	description = "Оберт із клинком: б'є й відкидає всіх навколо."
+	color = SKILL_COLOR
+	icon_kind = "whirl"
+	cooldown = 6.0
+
+func _use(player: Node) -> bool:
+	var level := talent_level(player)
+	# Талант: сильніше й частіше.
+	cooldown = maxf(6.0 - 0.4 * level, 3.0)
+	_hit_left = HIT_DELAY
+	player.spin_model(SPIN_TIME)
+	var parent := player.get_parent()
+	var chest: Vector3 = player.global_position + Vector3.UP
+	var radius := RADIUS + 0.15 * level
+	CombatVfx.slash(parent, chest, player.facing_angle(), radius, 359.0, color, false, 0.0, SPIN_TIME)
+	CombatVfx.slash(parent, chest + Vector3.UP * 0.25, player.facing_angle() + PI, radius * 0.85, 359.0, color, true, 0.1, SPIN_TIME)
+	CombatVfx.shockwave(parent, player.global_position, radius, color, 0.4)
+	return true
+
+func _update(player: Node, delta: float) -> void:
+	if _hit_left < 0.0:
+		return
+	_hit_left -= delta
+	if _hit_left > 0.0:
+		return
+	_hit_left = -1.0
+	var level := talent_level(player)
+	var radius := RADIUS + 0.15 * level
+	var damage := DAMAGE * (1.0 + 0.18 * level)
+	var hits := 0
+	for enemy: Enemy3D in player.enemies_in_radius(radius):
+		var push: Vector3 = enemy.global_position - player.global_position
+		push.y = 0.0
+		player.deal_damage(enemy, damage, push.normalized() * KNOCKBACK, true)
+		hits += 1
+	CombatVfx.hitstop(player.get_tree(), 0.05 if hits > 0 else 0.0)
+	player.shake_camera(0.1 if hits > 0 else 0.05)

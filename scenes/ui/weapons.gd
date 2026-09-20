@@ -9,6 +9,7 @@ extends Control
 ## (GameState.get_equipped_weapon_id -> run.gd -> Hero.equip_weapon).
 
 const WEAPON_ICON_SCRIPT := preload("res://scenes/ui/weapon_icon.gd")
+const MODEL_PREVIEW_SCRIPT := preload("res://scenes/ui/model_preview.gd")
 
 const ARCHETYPE_HINTS := {
 	"projectile": "Постріл",
@@ -33,12 +34,42 @@ const STATUS_HINTS := {
 
 var _hero_id: StringName
 
+var _preview: ModelPreview
+var _preview_note: Label
+
+## Над списком — 3D-вітрина спорядженої зброї: видно, що саме герой
+## візьме в руку. Немає моделі — показуємо тимчасову й пишемо про це.
+func _build_preview() -> void:
+	var holder := VBoxContainer.new()
+	holder.custom_minimum_size = Vector2(0, 190)
+	_preview = MODEL_PREVIEW_SCRIPT.new()
+	_preview.custom_minimum_size = Vector2(0, 160)
+	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	holder.add_child(_preview)
+	_preview_note = Label.new()
+	_preview_note.text = "Тимчасова модель зброї — справжню підключимо пізніше"
+	_preview_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_preview_note.add_theme_font_size_override("font_size", 13)
+	_preview_note.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	holder.add_child(_preview_note)
+	var column: VBoxContainer = $VBoxContainer
+	column.add_child(holder)
+	column.move_child(holder, 3)
+
 func _ready() -> void:
+	_build_preview()
 	_hero_id = GameState.selected_hero_id
 	hero_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
 	_rebuild()
 
+func _show_equipped() -> void:
+	var equipped := GameState.get_equipped_weapon_id(GameState.selected_hero_id)
+	var def := WeaponPool.get_def(equipped)
+	if def != null and _preview != null:
+		_preview_note.visible = _preview.show_weapon(def)
+
 func _rebuild() -> void:
+	_show_equipped()
 	gems_label.text = "Геми: %d        Золото: %d" % [GameState.gems, GameState.gold]
 	for child in rows_container.get_children():
 		child.queue_free()
@@ -57,6 +88,16 @@ func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
 	row.add_theme_constant_override("separation", 18)
 	card.add_child(row)
 
+	# Є готова картинка (assets/ui/icons/weapons/<id>.png) — беремо її,
+	# інакше малюємо фігуру за архетипом зброї.
+	var picture := ArtSlots.weapon_icon(def.id, def.icon)
+	if picture != null:
+		var image := TextureRect.new()
+		image.texture = picture
+		image.custom_minimum_size = Vector2(96, 96)
+		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		return image
 	var icon: Control = WEAPON_ICON_SCRIPT.new()
 	icon.setup(def, owned)
 	row.add_child(icon)

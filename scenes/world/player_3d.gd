@@ -17,9 +17,18 @@ extends CharacterBody3D
 ##    утримання кнопки б'є серією, поки є ціль.
 ##  - ПЕРЕКАТ: ривок з короткою невразливістю — щоб вийти з-під удару,
 ##    який ворог показав червоною зоною на підлозі.
-##  - ВИХІР: удар по колу з відкиданням, раз на кілька секунд.
+##  - ЗДІБНОСТІ: у кожного героя свої (Skills3D) — вихор вартової,
+##    рунна нова, вогняне коло, димова завіса. Плюс пасивна риса класу,
+##    яка працює сама (лють, заряд, фенікс, мітка).
 ##  - Відчуття удару: слід меча, іскри, цифри шкоди, коротке
 ##    "заморожування" кадру й тряска камери на сильних ударах.
+##
+## ГЕРОЙ, ЗБРОЯ, ТАЛАНТИ. Модель, зброя в руці, здібності й числа беруться
+## з того, кого гравець обрав на базі: HeroDef (data/heroes), WeaponDef
+## (data/weapons) і прокачані таланти з GameState. Немає моделі — герой
+## ходить тимчасовою, пофарбованою в його колір; немає моделі зброї —
+## вона збирається з простих фігур (WeaponModels). Гра грається вже
+## зараз, а справжній арт під'єднається сам, щойно з'явиться.
 
 signal died
 signal health_changed(current: float, maximum: float)
@@ -90,13 +99,10 @@ const DODGE_TIME := 0.38
 const DODGE_INVULNERABLE := 0.34
 const DODGE_COOLDOWN := 0.9
 
-## --- Вихор ---
-const SKILL_RADIUS := 3.6
-const SKILL_DAMAGE := 2.4
-const SKILL_KNOCKBACK := 4.0
-const SKILL_COOLDOWN := 6.0
-const SKILL_TIME := 0.45
-const SKILL_HIT_DELAY := 0.12
+## Скільки дає один рівень спільних талантів (екран "Таланти").
+const TALENT_HP_PER_LEVEL := 10.0
+const TALENT_DAMAGE_PER_LEVEL := 0.05
+const TALENT_SPEED_PER_LEVEL := 0.03
 
 ## Після отриманої шкоди — мить невразливості, щоб натовп не "заклював"
 ## героя за один кадр.
@@ -119,6 +125,11 @@ const LOWER_BODY_MARKERS := ["Root", "Body", "Hips", "Leg", "Foot", "PT.", "Toe"
 ## Острів вимикає бойове керування з клавіатури: там пробіл — це "зайти
 ## в будівлю".
 var combat_input_enabled := true
+
+## Хто саме зараз у грі і з чим. Задається з GameState у _ready.
+var hero_def: HeroDef
+var weapon_def: WeaponDef
+var passive: HeroPassive3D
 
 var max_hp := BASE_MAX_HP
 var current_hp := BASE_MAX_HP
@@ -155,15 +166,26 @@ var _roll_left := 0.0
 var _dodge_cooldown_left := 0.0
 var _invulnerable_left := 0.0
 
-var _skill_cooldown_left := 0.0
+var _skills: Array[HeroSkill3D] = []
 var _spin_left := 0.0
-var _skill_hit_left := -1.0
+var _spin_total := 0.45
+
+## Тимчасові підсилення: прискорення ударів після ривка люті та
+## "невидимість" асасина.
+var _attack_speed_buff := 1.0
+var _attack_speed_left := 0.0
+var _concealed_left := 0.0
+var _concealed_damage := 1.0
+var _concealed_speed := 0.0
+
+var _model_instance: Node3D
 
 var _blend_position := Vector2.ZERO
 var _upper_body_filter: Array[NodePath] = []
 
 func _ready() -> void:
 	_ensure_input_actions()
+	_load_hero()
 	_build_animation_tree()
 	animation_tree.active = true
 	_facing_angle = rotation.y
@@ -171,6 +193,53 @@ func _ready() -> void:
 	add_child(_health_bar)
 	_health_bar.setup(ALLY_BAR_COLOR, BAR_HEIGHT, true)
 	_add_torch_light()
+
+# --- хто в грі: герой, зброя, таланти ---
+
+## Збирає героя: модель, зброю в руці, здібності й числа з талантів.
+func _load_hero() -> void:
+	hero_def = HeroPool.get_def(GameState.selected_hero_id)
+	weapon_def = WeaponPool.get_def(GameState.get_equipped_weapon_id(hero_def.id))
+	_build_model()
+	_equip_weapon()
+	_apply_loadout()
+
+	passive = Skills3D.create_passive(hero_def.passive_id)
+	_skills = Skills3D.create_for_hero(hero_def)
+
+## Модель героя й зброя в руці — те саме, що показує екран вибору
+## (HeroBuilder). Немає своєї моделі — береться тимчасова в кольорі героя.
+func _build_model() -> void:
+	# Стару модель прибираємо З ДЕРЕВА одразу, а не лише queue_free():
+	# інакше вона живе до кінця кадру, і зброя причепилась би до неї.
+	for child in model.get_children():
+		model.remove_child(child)
+		child.queue_free()
+	var built := HeroBuilder.build_model(hero_def)
+	_model_instance = built[0]
+	if _model_instance == null:
+		push_warning("Немає жодної моделі героя")
+		return
+	model.add_child(_model_instance)
+
+func _equip_weapon() -> void:
+	if _model_instance != null:
+		HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def)
+
+## Числа героя: база + бонуси героя + прокачані таланти + зброя.
+func _apply_loadout() -> void:
+	var levels := GameState.get_hero_meta_levels(hero_def.id)
+	var hp_levels: int = levels.get(&"meta_max_hp", 0)
+	var damage_levels: int = levels.get(&"meta_damage", 0)
+	var speed_levels: int = levels.get(&"meta_move_speed", 0)
+
+	max_hp = BASE_MAX_HP + hero_def.bonus_max_hp + TALENT_HP_PER_LEVEL * hp_levels
+	current_hp = max_hp
+	_damage = BASE_DAMAGE * (1.0 + TALENT_DAMAGE_PER_LEVEL * damage_levels)
+	_speed_bonus = hero_def.move_speed_percent + TALENT_SPEED_PER_LEVEL * speed_levels
+	if weapon_def != null:
+		_damage *= weapon_def.damage_mult_3d
+		_attack_speed = weapon_def.speed_mult_3d
 
 ## Світло, яке герой носить із собою. Це найдешевший спосіб освітити
 ## підземелля: одне джерело замість десятків по стінах.
@@ -196,6 +265,7 @@ static func _ensure_input_actions() -> void:
 		"attack": [KEY_SPACE, KEY_J],
 		"dodge": [KEY_SHIFT, KEY_K],
 		"skill": [KEY_E, KEY_L],
+		"skill_2": [KEY_Q, KEY_U],
 	}
 	for action: String in actions:
 		if InputMap.has_action(action):
@@ -221,7 +291,10 @@ func _build_animation_tree() -> void:
 	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
 	animation_tree.anim_player = animation_tree.get_path_to(player)
 	_make_looping(player, ["Idle", "Walk", "Run", "Run_Back", "Run_Left", "Run_Right"])
-	_upper_body_filter = _collect_upper_body_tracks(player.get_animation(_anim("Sword_Slash")))
+	var slash_name := _anim("Sword_Slash")
+	if not player.has_animation(slash_name):
+		slash_name = player.get_animation_list()[0]
+	_upper_body_filter = _collect_upper_body_tracks(player.get_animation(slash_name))
 
 	var move := AnimationNodeBlendSpace2D.new()
 	move.min_space = Vector2(-1, -1)
@@ -229,9 +302,9 @@ func _build_animation_tree() -> void:
 	move.add_blend_point(_animation_node("Idle"), Vector2(0, 0), -1, &"idle")
 	move.add_blend_point(_animation_node("Walk"), Vector2(0, 0.48), -1, &"walk")
 	move.add_blend_point(_animation_node("Run"), Vector2(0, 1), -1, &"run")
-	move.add_blend_point(_animation_node("Run_Back"), Vector2(0, -1), -1, &"back")
-	move.add_blend_point(_animation_node("Run_Left"), Vector2(-1, 0), -1, &"left")
-	move.add_blend_point(_animation_node("Run_Right"), Vector2(1, 0), -1, &"right")
+	move.add_blend_point(_animation_node("Run_Back", ["Walk", "Run"]), Vector2(0, -1), -1, &"back")
+	move.add_blend_point(_animation_node("Run_Left", ["Walk", "Run"]), Vector2(-1, 0), -1, &"left")
+	move.add_blend_point(_animation_node("Run_Right", ["Walk", "Run"]), Vector2(1, 0), -1, &"right")
 
 	var tree := AnimationNodeBlendTree.new()
 	tree.add_node(&"Move", move, Vector2(0, 0))
@@ -243,17 +316,17 @@ func _build_animation_tree() -> void:
 	tree.add_node(&"SlashFastAnim", _animation_node("Sword_Slash"), Vector2(0, 400))
 	tree.add_node(&"SlashFastScale", AnimationNodeTimeScale.new(), Vector2(200, 400))
 	tree.add_node(&"SlashFastShot", _one_shot(0.05, 0.16), Vector2(600, 0))
-	tree.add_node(&"KickAnim", _animation_node("Kick_Right"), Vector2(0, 600))
+	tree.add_node(&"KickAnim", _animation_node("Kick_Right", ["Punch_Right", "Sword_Slash"]), Vector2(0, 600))
 	tree.add_node(&"KickScale", AnimationNodeTimeScale.new(), Vector2(200, 600))
 	tree.add_node(&"KickShot", _one_shot(0.06, 0.2), Vector2(800, 0))
-	tree.add_node(&"RollAnim", _animation_node("Roll"), Vector2(0, 800))
+	tree.add_node(&"RollAnim", _animation_node("Roll", ["Run", "Walk"]), Vector2(0, 800))
 	tree.add_node(&"RollScale", AnimationNodeTimeScale.new(), Vector2(200, 800))
 	tree.add_node(&"RollShot", _one_shot(0.04, 0.12), Vector2(1000, 0))
-	tree.add_node(&"HitAnim", _animation_node("HitRecieve"), Vector2(0, 1000))
+	tree.add_node(&"HitAnim", _animation_node("HitRecieve", ["HitReact", "Idle"]), Vector2(0, 1000))
 	var hit_shot := _one_shot(0.05, 0.15)
 	_apply_filter(hit_shot, true)
 	tree.add_node(&"HitShot", hit_shot, Vector2(1200, 0))
-	tree.add_node(&"DeathAnim", _animation_node("Death"), Vector2(0, 1200))
+	tree.add_node(&"DeathAnim", _animation_node("Death", ["HitRecieve", "Idle"]), Vector2(0, 1200))
 	var dead := AnimationNodeBlend2.new()
 	tree.add_node(&"Dead", dead, Vector2(1400, 0))
 
@@ -278,7 +351,8 @@ func _build_animation_tree() -> void:
 
 	# Перекат триває DODGE_TIME, а анімація довша — пришвидшуємо її так,
 	# щоб перекид завершився разом із ривком.
-	var roll_length := player.get_animation(_anim("Roll")).length
+	var roll_name := (tree.get_node(&"RollAnim") as AnimationNodeAnimation).animation
+	var roll_length := player.get_animation(roll_name).length
 	animation_tree.set("parameters/RollScale/scale", roll_length / (DODGE_TIME + 0.12))
 	_apply_attack_speed()
 
@@ -311,13 +385,25 @@ func _collect_upper_body_tracks(animation: Animation) -> Array[NodePath]:
 			result.append(path)
 	return result
 
-## Повна назва анімації в моделі ("CharacterArmature|Run").
+## Повна назва анімації в моделі. Стандарт — набори Quaternius
+## ("CharacterArmature|Run"), але в HeroDef.animation_names можна задати
+## свої назви для моделі з іншого набору.
 func _anim(short_name: String) -> String:
+	if hero_def != null and hero_def.animation_names.has(short_name):
+		return hero_def.animation_names[short_name]
 	return "CharacterArmature|" + short_name
 
-func _animation_node(short_name: String) -> AnimationNodeAnimation:
+## Якщо в моделі немає потрібної анімації (скажімо, бігу назад), беремо
+## запасну — краще менш точний рух, ніж застигла поза.
+func _animation_node(short_name: String, fallbacks: Array = []) -> AnimationNodeAnimation:
 	var node := AnimationNodeAnimation.new()
 	node.animation = _anim(short_name)
+	var player: AnimationPlayer = animation_tree.get_node(animation_tree.anim_player)
+	if player != null and not player.has_animation(node.animation):
+		for name: String in fallbacks:
+			if player.has_animation(_anim(name)):
+				node.animation = _anim(name)
+				break
 	return node
 
 ## Хода, біг і спокій мають крутитись по колу; імпорт glTF за
@@ -328,9 +414,17 @@ func _make_looping(player: AnimationPlayer, names: Array) -> void:
 			player.get_animation(_anim(short_name)).loop_mode = Animation.LOOP_LINEAR
 
 func _apply_attack_speed() -> void:
-	animation_tree.set("parameters/SlashScale/scale", 1.15 * _attack_speed)
-	animation_tree.set("parameters/SlashFastScale/scale", 1.45 * _attack_speed)
-	animation_tree.set("parameters/KickScale/scale", 1.1 * _attack_speed)
+	var speed := attack_speed()
+	animation_tree.set("parameters/SlashScale/scale", 1.15 * speed)
+	animation_tree.set("parameters/SlashFastScale/scale", 1.45 * speed)
+	animation_tree.set("parameters/KickScale/scale", 1.1 * speed)
+
+## Швидкість ударів разом із тимчасовим прискоренням (ривок люті).
+func amp_attack_speed() -> float:
+	return attack_speed()
+
+func attack_speed() -> float:
+	return _attack_speed * (_attack_speed_buff if _attack_speed_left > 0.0 else 1.0)
 
 func _fire(shot: String, upper_body_only: bool = false) -> void:
 	var node := (animation_tree.tree_root as AnimationNodeBlendTree).get_node(shot) as AnimationNodeOneShot
@@ -384,29 +478,92 @@ func dodge() -> void:
 	_fire("RollShot")
 	CombatVfx.shockwave(get_parent(), global_position, 1.1, Color(0.85, 0.8, 0.7, 0.7), 0.3)
 
-func use_skill() -> void:
-	if _dead or _skill_cooldown_left > 0.0 or _roll_left > 0.0:
+## Здібності героя — для кнопок на екрані.
+func get_skills() -> Array[HeroSkill3D]:
+	return _skills
+
+## Натиснули кнопку здібності (0 — перша, 1 — друга).
+func use_skill(index: int = 0) -> void:
+	if _dead or _roll_left > 0.0 or index < 0 or index >= _skills.size():
 		return
-	_skill_cooldown_left = SKILL_COOLDOWN
-	_spin_left = SKILL_TIME
-	_skill_hit_left = SKILL_HIT_DELAY
+	# Спершу скидаємо удар, який герой робив, і лише потім застосовуємо
+	# здібність: вона сама може задати рух (ривок люті), і зачищати його
+	# після цього не можна.
+	var skill := _skills[index]
 	_attack_step = -1
 	_lunge_left = 0.0
-	_combat_left = COMBAT_MEMORY
 	_abort_attacks()
+	if not skill.try_use(self):
+		return
+	_combat_left = COMBAT_MEMORY
 	_fire("SlashFastShot")
-	var parent := get_parent()
-	var chest := global_position + Vector3.UP * 1.0
-	CombatVfx.slash(parent, chest, _facing_angle, SKILL_RADIUS, 359.0, SKILL_COLOR, false, 0.0, SKILL_TIME)
-	CombatVfx.slash(parent, chest + Vector3.UP * 0.25, _facing_angle + PI, SKILL_RADIUS * 0.85, 359.0, SKILL_COLOR, true, 0.1, SKILL_TIME)
-	CombatVfx.shockwave(parent, global_position, SKILL_RADIUS, SKILL_COLOR, 0.4)
-
-## Частка кулдауну, що лишилась (0 — готово). Для кнопок на екрані.
-func get_skill_cooldown() -> Vector2:
-	return Vector2(_skill_cooldown_left, SKILL_COOLDOWN)
 
 func get_dodge_cooldown() -> Vector2:
 	return Vector2(_dodge_cooldown_left, DODGE_COOLDOWN)
+
+# --- те, чим користуються здібності ---
+
+## Оберт моделі навколо себе (вихор, каст нови).
+func spin_model(time: float) -> void:
+	_spin_left = time
+	_spin_total = maxf(time, 0.01)
+
+## Ривок у заданий бік — ним користується "Ривок Люті".
+func dash(direction: Vector3, speed: float, time: float) -> void:
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	if flat.length() < 0.01:
+		flat = _facing_vector()
+	_lunge_velocity = flat.normalized() * speed
+	_lunge_left = time
+
+func grant_invulnerable(seconds: float) -> void:
+	_invulnerable_left = maxf(_invulnerable_left, seconds)
+
+func add_attack_speed(multiplier: float, seconds: float) -> void:
+	_attack_speed_buff = multiplier
+	_attack_speed_left = seconds
+	_apply_attack_speed()
+
+func heal(amount: float) -> void:
+	current_hp = minf(current_hp + amount, max_hp)
+	_update_health_bar()
+	health_changed.emit(current_hp, max_hp)
+
+## Зникнути з очей ворогів (димова завіса асасина).
+func set_concealed(seconds: float, damage_bonus: float, speed_bonus: float) -> void:
+	_concealed_left = seconds
+	_concealed_damage = damage_bonus
+	_concealed_speed = speed_bonus
+	_set_model_transparency(0.55)
+
+## Чи бачать героя вороги. Поки він у димовій завісі — ні.
+func is_targetable() -> bool:
+	return _concealed_left <= 0.0 and not _dead
+
+func _set_model_transparency(value: float) -> void:
+	for node in model.find_children("*", "GeometryInstance3D", true, false):
+		(node as GeometryInstance3D).transparency = value
+
+## Усі живі вороги в радіусі. require_sight — не бити крізь стіни.
+func enemies_in_radius(radius: float, require_sight: bool = true) -> Array[Enemy3D]:
+	var result: Array[Enemy3D] = []
+	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
+		if not enemy.is_alive():
+			continue
+		var offset: Vector3 = enemy.global_position - global_position
+		offset.y = 0.0
+		if offset.length() > radius + 0.5:
+			continue
+		if require_sight and not _can_see(enemy):
+			continue
+		result.append(enemy)
+	return result
+
+func facing_vector() -> Vector3:
+	return _facing_vector()
+
+func facing_angle() -> float:
+	return _facing_angle
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not combat_input_enabled or event.is_echo():
@@ -416,7 +573,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("dodge"):
 		dodge()
 	elif event.is_action_pressed("skill"):
-		use_skill()
+		use_skill(0)
+	elif event.is_action_pressed("skill_2"):
+		use_skill(1)
 
 # --- кадр фізики ---
 
@@ -436,7 +595,7 @@ func _physics_process(delta: float) -> void:
 
 	var direction := _get_world_direction()
 	_update_attack(delta)
-	_update_skill(delta)
+	_tick_skills(delta)
 	# Удар, натиснутий під час перекату чи вихору, стартує одразу після.
 	if _attack_queued and _attack_step < 0 and _roll_left <= 0.0 and _spin_left <= 0.0:
 		_start_attack()
@@ -459,10 +618,16 @@ func _physics_process(delta: float) -> void:
 
 func _tick_timers(delta: float) -> void:
 	_dodge_cooldown_left = maxf(_dodge_cooldown_left - delta, 0.0)
-	_skill_cooldown_left = maxf(_skill_cooldown_left - delta, 0.0)
 	_invulnerable_left = maxf(_invulnerable_left - delta, 0.0)
 	_combat_left = maxf(_combat_left - delta, 0.0)
+	_attack_speed_left = maxf(_attack_speed_left - delta, 0.0)
 	_since_attack += delta
+	if _spin_left > 0.0:
+		_spin_left -= delta
+	if _concealed_left > 0.0:
+		_concealed_left = maxf(_concealed_left - delta, 0.0)
+		if _concealed_left <= 0.0:
+			_set_model_transparency(0.0)
 	_roll_left = maxf(_roll_left - delta, 0.0)
 	if _attack_step < 0:
 		_combo_expire = maxf(_combo_expire - delta, 0.0)
@@ -478,9 +643,15 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 		_lunge_left -= delta
 		velocity.x = _lunge_velocity.x
 		velocity.z = _lunge_velocity.z
+		if _lunge_left <= 0.0:
+			# Ривок скінчився — гасимо надлишок швидкості, інакше героя
+			# несло б за інерцією ще кілька метрів.
+			var flat := Vector2(velocity.x, velocity.z).limit_length(RUN_SPEED)
+			velocity.x = flat.x
+			velocity.z = flat.y
 		return
 
-	var factor := 1.0 + _speed_bonus
+	var factor := 1.0 + _speed_bonus + (_concealed_speed if _concealed_left > 0.0 else 0.0)
 	if _is_facing_target() and direction.length() > 0.05:
 		# Задки й убік — повільніше, ніж уперед: так відчувається, що герой
 		# тримає оборону, а не тікає.
@@ -632,7 +803,7 @@ func _start_attack() -> void:
 		# Ціль трохи далі за замах — спокійний крок до неї. Лише на першому
 		# ударі серії: далі ворог і так поруч, а кидатись за ним після
 		# кожного удару — це й були "різкі рухи".
-		var reach: float = step.reach
+		var reach: float = _reach(step)
 		if step_index == 0 and distance > reach * 0.9 and distance < reach + LUNGE_REACH_EXTRA:
 			var travel := minf(distance - reach * 0.75, LUNGE_MAX_DISTANCE)
 			_lunge_velocity = offset.normalized() * LUNGE_SPEED
@@ -650,7 +821,7 @@ func _update_attack(delta: float) -> void:
 		_attack_vfx_done = true
 		var color := HEAVY_COLOR if step.heavy else SLASH_COLOR
 		CombatVfx.slash(get_parent(), global_position + Vector3.UP * 1.0, _aim_angle(),
-			step.reach + 0.2, step.arc, color, step.reverse, step.tilt, 0.24)
+			_reach(step) + 0.2, _arc(step), color, step.reverse, step.tilt, 0.24)
 	if not _attack_hit_done and _attack_time >= step.hit_time:
 		_attack_hit_done = true
 		_apply_hit(step)
@@ -664,10 +835,22 @@ func _update_attack(delta: float) -> void:
 
 ## Шкода всім ворогам у дузі перед героєм. Стіна захищає: крізь неї
 ## меч не дістає.
+## Дальність і ширина замаху залежать від зброї: сокира б'є широко,
+## глефа — далеко й вузько.
+func _reach(step: Dictionary) -> float:
+	if weapon_def == null:
+		return step.reach
+	return step.reach * weapon_def.reach_3d / 2.9
+
+func _arc(step: Dictionary) -> float:
+	if weapon_def == null:
+		return step.arc
+	return clampf(step.arc * weapon_def.arc_3d / 150.0, 40.0, 359.0)
+
 func _apply_hit(step: Dictionary) -> void:
 	var aim := _aim_angle()
 	var forward := Vector3(sin(aim), 0.0, cos(aim))
-	var half_arc := deg_to_rad(step.arc) * 0.5
+	var half_arc := deg_to_rad(_arc(step)) * 0.5
 	var hits := 0
 	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
 		if not enemy.is_alive():
@@ -675,44 +858,44 @@ func _apply_hit(step: Dictionary) -> void:
 		var offset := enemy.global_position - global_position
 		offset.y = 0.0
 		var distance := offset.length()
-		if distance > step.reach + 0.5:
+		if distance > _reach(step) + 0.5:
 			continue
 		if distance > 0.4 and forward.angle_to(offset / distance) > half_arc:
 			continue
 		if not _can_see(enemy):
 			continue
-		_deal_damage(enemy, step.damage, offset.normalized() * step.knockback, step.heavy)
+		var knockback: float = step.knockback * (weapon_def.knockback_mult_3d if weapon_def != null else 1.0)
+		deal_damage(enemy, step.damage, offset.normalized() * knockback, step.heavy)
 		hits += 1
 	if hits > 0:
 		_feel_hit(step.heavy)
 
-func _update_skill(delta: float) -> void:
-	if _spin_left > 0.0:
-		_spin_left -= delta
-	if _skill_hit_left < 0.0:
-		return
-	_skill_hit_left -= delta
-	if _skill_hit_left > 0.0:
-		return
-	_skill_hit_left = -1.0
-	var hits := 0
-	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
-		if not enemy.is_alive():
-			continue
-		var offset := enemy.global_position - global_position
-		offset.y = 0.0
-		if offset.length() > SKILL_RADIUS + 0.4 or not _can_see(enemy):
-			continue
-		_deal_damage(enemy, SKILL_DAMAGE, offset.normalized() * SKILL_KNOCKBACK, true)
-		hits += 1
-	if hits > 0:
-		CombatVfx.hitstop(get_tree(), 0.05)
-	_shake_camera(0.1 if hits > 0 else 0.05)
+## Здібності й пасивка живуть своїм життям: перезарядка, накопичення
+## люті, тик вогняного кола.
+func _tick_skills(delta: float) -> void:
+	for skill: HeroSkill3D in _skills:
+		skill.tick(self, delta)
+	if passive != null:
+		passive.tick(self, delta)
 
-func _deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool) -> void:
+## Єдине місце, де героєві рахується шкода: сюди приходять і звичайні
+## удари, і здібності, і пасивки. Тут же діють мітка ворога, димова
+## завіса й критичні удари.
+func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool) -> void:
+	if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive():
+		return
 	var crit := randf() < CRIT_CHANCE
 	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
+	if _concealed_left > 0.0:
+		amount *= _concealed_damage
+	if passive != null:
+		amount = passive.modify_damage(self, enemy, amount)
 	enemy.take_damage(amount, knockback, crit, heavy)
+	if passive == null:
+		return
+	passive.on_hit(self, enemy, amount, heavy)
+	if not enemy.is_alive():
+		passive.on_kill(self, enemy)
 
 ## Лише сильний удар (ногою) на мить пригальмовує гру й ледь трусить
 ## камеру. Звичайні помахи — без цього: на кожному ударі це
@@ -732,6 +915,10 @@ func _aim_angle() -> float:
 			return atan2(offset.x, offset.z)
 	return _facing_angle
 
+## Трусонути камеру — цим користуються й здібності.
+func shake_camera(strength: float) -> void:
+	_shake_camera(strength)
+
 func _shake_camera(strength: float) -> void:
 	var rig := get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
@@ -744,7 +931,7 @@ func _update_facing(direction: Vector3, delta: float) -> void:
 		return   # напрямок перекату задано на старті
 	if _spin_left > 0.0:
 		# Вихор — повний оберт навколо себе.
-		_facing_angle = wrapf(_facing_angle + TAU / SKILL_TIME * delta, -PI, PI)
+		_facing_angle = wrapf(_facing_angle + TAU / _spin_total * delta, -PI, PI)
 	elif _is_facing_target():
 		var offset := _target.global_position - global_position
 		if Vector2(offset.x, offset.z).length() > 0.05:
@@ -776,6 +963,13 @@ func take_damage(amount: float) -> bool:
 	current_hp = maxf(current_hp - amount, 0.0)
 	_invulnerable_left = HURT_INVULNERABLE
 	_combat_left = COMBAT_MEMORY
+	if passive != null:
+		passive.on_damage_taken(self, amount)
+		# Фенікс: смертельний удар не вбиває, а піднімає героя знову.
+		if current_hp <= 0.0 and passive.on_lethal(self):
+			_update_health_bar()
+			health_changed.emit(current_hp, max_hp)
+			return true
 	_update_health_bar()
 	health_changed.emit(current_hp, max_hp)
 	CombatVfx.flash_model(model, Color(1.0, 0.25, 0.2), 0.12)

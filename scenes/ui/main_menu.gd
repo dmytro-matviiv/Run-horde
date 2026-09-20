@@ -20,7 +20,29 @@ const CHEST_MESSAGE_SEC := 3.0
 var _chest_refresh_timer := 0.0
 var _chest_message_left := 0.0   # поки > 0, щосекундне оновлення не затирає повідомлення
 
+## Кнопки меню мають місце під іконку: поклади
+## res://assets/ui/icons/menu/<назва>.png — і вона з'явиться сама.
+const MENU_ICONS := {
+	"PlayButton": "play",
+	"Row1/HeroesButton": "heroes",
+	"Row1/WeaponsButton": "weapons",
+	"Row2/UpgradesButton": "talents",
+	"Row2/ShopButton": "shop",
+	"ChestButton": "chest",
+}
+
+func _apply_menu_icons() -> void:
+	for path: String in MENU_ICONS:
+		var button := get_node_or_null("CenterContainer/VBoxContainer/" + path) as Button
+		if button == null:
+			continue
+		var name: String = MENU_ICONS[path]
+		button.icon = ArtSlots.icon_or_placeholder(ArtSlots.menu_icon(name), UiTheme.ACCENT, 48)
+		button.expand_icon = true
+		button.tooltip_text = "Іконка: assets/ui/icons/menu/%s.png" % name
+
 func _ready() -> void:
+	_apply_menu_icons()
 	_update_gold_label()
 	_update_chest_button()
 	_update_graphics_buttons()
