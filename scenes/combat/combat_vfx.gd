@@ -71,6 +71,24 @@ void fragment() {
 }
 """
 
+## Смуга на підлозі: куди зараз розженеться таран. Заповнюється від
+## нього вперед — видно, скільки лишилось до ривка.
+const LINE_SHADER := """
+shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+
+uniform vec4 color : source_color = vec4(1.0, 0.3, 0.2, 1.0);
+instance uniform float progress = 0.0;
+
+void fragment() {
+	float edge = min(min(UV.x, 1.0 - UV.x), min(UV.y, 1.0 - UV.y));
+	float border = 1.0 - smoothstep(0.03, 0.08, edge);
+	float fill = step(UV.y, progress);
+	ALBEDO = color.rgb;
+	ALPHA = clamp(max(border * 0.9, fill * 0.42 + 0.08), 0.0, 1.0) * color.a;
+}
+"""
+
 ## Спалах поверх моделі, коли в неї влучили.
 const FLASH_SHADER := """
 shader_type spatial;
@@ -93,6 +111,7 @@ static var _spark_mesh: QuadMesh
 static var _flare_mesh: QuadMesh
 static var _flare_materials: Dictionary = {}
 static var _ring_mesh: PlaneMesh
+static var _line_materials: Dictionary = {}
 static var _hitstop_until := 0
 static var _hitstop_token := 0
 
@@ -290,6 +309,16 @@ static func make_ground_marker(color: Color, radius: float, half_arc: float = PI
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(radius * 2.0, 1.0, radius * 2.0)
 	instance.set_instance_shader_parameter(&"half_arc", half_arc)
+	instance.set_instance_shader_parameter(&"progress", 0.0)
+	return instance
+
+## Смуга-попередження для тарана. length — довжина ривку, width — ширина.
+static func make_line_marker(color: Color, length: float, width: float) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.mesh = _get_ring_mesh()
+	instance.material_override = _get_material(_line_materials, LINE_SHADER, color)
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	instance.scale = Vector3(width, 1.0, length)
 	instance.set_instance_shader_parameter(&"progress", 0.0)
 	return instance
 

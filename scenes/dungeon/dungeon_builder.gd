@@ -96,29 +96,73 @@ const TRAP_SCENES := [
 	preload("res://assets/models/dungeon/Spikes.fbx"),
 ]
 
+## ПРИКРАСИ ПІД ТЕМУ РІВНЯ. Склепи захаращені бочками й скринями,
+## грибні печери — порожні, у павутинні й черепах, цитадель — з
+## прапорами, зброєю на стінах і золотом. Моделі ті самі, набір різний.
+const DECOR_SETS := {
+	"crypt": {
+		"clutter": CLUTTER_SCENES,
+		"wall": WALL_DECOR_SCENES,
+		"furniture": FURNITURE_SCENES,
+		"treasure": TREASURE_SCENES,
+		"traps": TRAP_SCENES,
+	},
+	"fungal": {
+		"clutter": [
+			preload("res://assets/models/dungeon/Skull.fbx"), preload("res://assets/models/dungeon/Vase.fbx"), preload("res://assets/models/dungeon/Brick.fbx"),
+			preload("res://assets/models/dungeon/Bucket.fbx"), preload("res://assets/models/dungeon/Skull.fbx"),
+		],
+		"wall": [preload("res://assets/models/dungeon/Cobweb.fbx"), preload("res://assets/models/dungeon/Cobweb2.fbx"), preload("res://assets/models/dungeon/Decorative_Wall.fbx")],
+		"furniture": [preload("res://assets/models/dungeon/Woodfire.fbx"), preload("res://assets/models/dungeon/Pedestal.fbx")],
+		"treasure": [preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Bag_Coins.fbx")],
+		"traps": [preload("res://assets/models/dungeon/Spikes.fbx")],
+	},
+	"citadel": {
+		"clutter": [preload("res://assets/models/dungeon/Crate.fbx"), preload("res://assets/models/dungeon/Barrel2.fbx"), preload("res://assets/models/dungeon/Chair.fbx")],
+		"wall": [
+			preload("res://assets/models/dungeon/Banner_wall.fbx"), preload("res://assets/models/dungeon/Sword_WallMount.fbx"),
+			preload("res://assets/models/dungeon/Decorative_Wall.fbx"), preload("res://assets/models/dungeon/Banner_wall.fbx"),
+		],
+		"furniture": [preload("res://assets/models/dungeon/Table_Big.fbx"), preload("res://assets/models/dungeon/Pedestal2.fbx"), preload("res://assets/models/dungeon/Woodfire.fbx")],
+		"treasure": [preload("res://assets/models/dungeon/Chest_Gold.fbx"), preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Chest.fbx")],
+		"traps": [preload("res://assets/models/dungeon/Trap_spikes.fbx")],
+	},
+}
+
 ## Усі моделі, з яких збирається данж (для прогріву графіки).
 static func all_decor_scenes() -> Array:
 	var scenes: Array = [FLOOR_SCENE, FLOOR_BRICKS_SCENE, WALL_SCENE, TORCH_SCENE, COLUMN_SCENE]
-	for group: Array in [CLUTTER_SCENES, WALL_DECOR_SCENES, FURNITURE_SCENES, TREASURE_SCENES, TRAP_SCENES]:
-		scenes.append_array(group)
+	for set_name: String in DECOR_SETS:
+		for group: String in DECOR_SETS[set_name]:
+			for scene: PackedScene in DECOR_SETS[set_name][group]:
+				if not scenes.has(scene):
+					scenes.append(scene)
 	return scenes
 
-## Символи, по яких можна ходити.
-const WALKABLE := [".", "S", "m", "r", "B", "E"]
+## Символи, по яких можна ходити: підлога, вхід/вихід/бос і всі мітки
+## ворогів (m r w x c t).
+const WALKABLE := [".", "S", "B", "E", "m", "r", "w", "x", "c", "t"]
+const ENEMY_SYMBOLS := ["m", "r", "w", "x", "c", "t"]
+
+## Тема за замовчуванням — якщо рівень її не задав.
+const DEFAULT_THEME := {
+	"stone": Color.WHITE, "floor": Color.WHITE, "torch": Color(1.0, 0.72, 0.38), "decor": "crypt",
+}
 
 ## Створює те, що має існувати одразу: мітки, перешкоди, світло і
 ## порожні вузли-шматки. Геометрію шматків будує вже streamer.
 ##
-## Повертає {"start", "exit", "boss", "melee", "ranged", "chunks", "lights"}.
-static func build_base(map_rows: Array, parent: Node3D) -> Dictionary:
+## Повертає {"start", "exit", "boss", "spawns", "chunks", "lights"};
+## spawns — список {symbol, position} для кожної мітки ворога.
+static func build_base(map_rows: Array, parent: Node3D, theme: Dictionary = DEFAULT_THEME) -> Dictionary:
 	var result := {
 		"start": Vector3.ZERO,
 		"exit": Vector3.ZERO,
 		"boss": Vector3.ZERO,
-		"melee": [],
-		"ranged": [],
+		"spawns": [],
 		"chunks": [],
 		"lights": [],
+		"torch_color": theme.get("torch", DEFAULT_THEME.torch),
 	}
 
 	# Уся нерухома фізика рівня — одне тіло з багатьма формами.
@@ -151,12 +195,18 @@ static func build_base(map_rows: Array, parent: Node3D) -> Dictionary:
 ## decor_density — частка дрібних прикрас (1.0 — усі). На слабкому
 ## телефоні бочок і павутиння менше, але стіни, скрині й колони ті самі:
 ## рівень упізнаваний на будь-якій якості.
-static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float = 1.0) -> void:
+static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float = 1.0, theme: Dictionary = DEFAULT_THEME) -> void:
 	if chunk.built:
 		return
 	chunk.built = true
 
 	var batcher := MeshBatcher.new()
+	var stone: Color = theme.get("stone", Color.WHITE)
+	var floor_color: Color = theme.get("floor", Color.WHITE)
+	var decor: Dictionary = DECOR_SETS.get(theme.get("decor", "crypt"), DECOR_SETS.crypt)
+	# Прикраси фарбуємо слабше за камінь: скриня в крижаній цитаделі має
+	# бути ледь інеєва, а не синя.
+	batcher.tint = Color.WHITE.lerp(stone, 0.5)
 	var rect: Rect2i = chunk.rect
 	# Насіння прив'язане до координат шматка, а не до порядку побудови:
 	# данж виглядає однаково, з якого боку в нього не зайти.
@@ -171,11 +221,14 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 			if x < 0 or x >= row.length() or not WALKABLE.has(row[x]):
 				continue
 			var position := Vector3(x * CELL, 0.0, z * CELL)
-			batcher.add(FLOOR_SCENE, Transform3D(Basis(), position))
+			batcher.add(FLOOR_SCENE, Transform3D(Basis(), position), floor_color)
 			if _is_column_cell(map_rows, row, x, z):
-				batcher.add(COLUMN_SCENE, Transform3D(Basis(), position))
-			_add_wall_visuals(batcher, map_rows, x, z, position, decor_density)
-			_decorate_cell(batcher, map_rows, x, z, position, rng, decor_density)
+				# На клітинці з колоною більше нічого не ставимо — інакше
+				# стіл чи скриня стирчали б просто з колони.
+				batcher.add(COLUMN_SCENE, Transform3D(Basis(), position), stone)
+				continue
+			_add_wall_visuals(batcher, map_rows, x, z, position, decor_density, stone, decor)
+			_decorate_cell(batcher, map_rows, x, z, position, rng, decor_density, decor)
 
 	batcher.flush(chunk.node)
 
@@ -189,10 +242,9 @@ static func _register_marker(result: Dictionary, symbol: String, position: Vecto
 			result.exit = position
 		"B":
 			result.boss = position
-		"m":
-			result.melee.append(position)
-		"r":
-			result.ranged.append(position)
+		_:
+			if ENEMY_SYMBOLS.has(symbol):
+				result.spawns.append({"symbol": symbol, "position": position})
 
 static func _wall_directions() -> Dictionary:
 	return {
@@ -223,7 +275,7 @@ static func _collect_walls(parent: Node3D, result: Dictionary, wall_runs: Dictio
 			continue
 		if light_count % LIT_TORCH_EVERY == 0:
 			var torch_position := wall_position - Vector3(offset.x, 0.0, offset.y) * 0.35 + Vector3(0, 1.2, 0)
-			result.lights.append(_add_light(parent, torch_position))
+			result.lights.append(_add_light(parent, torch_position, result.torch_color))
 		light_count += 1
 	return light_count
 
@@ -259,9 +311,9 @@ static func _add_wall_run(obstacles: StaticBody3D, horizontal: bool, line: float
 	else:
 		_add_box_shape(obstacles, Vector3(line, WALL_HEIGHT * 0.5, middle), Vector3(0.5, WALL_HEIGHT, length))
 
-static func _add_light(parent: Node3D, position: Vector3) -> OmniLight3D:
+static func _add_light(parent: Node3D, position: Vector3, color: Color) -> OmniLight3D:
 	var light := OmniLight3D.new()
-	light.light_color = Color(1.0, 0.72, 0.38)
+	light.light_color = color
 	light.light_energy = 4.0
 	light.omni_range = 20.0
 	light.position = position
@@ -330,14 +382,14 @@ static func _chunk_has_floor(map_rows: Array, rect: Rect2i) -> bool:
 
 # --- видима геометрія шматка ---
 
-static func _add_wall_visuals(batcher: MeshBatcher, map_rows: Array, x: int, z: int, position: Vector3, decor_density: float) -> void:
+static func _add_wall_visuals(batcher: MeshBatcher, map_rows: Array, x: int, z: int, position: Vector3, decor_density: float, stone: Color, decor: Dictionary) -> void:
 	var directions := _wall_directions()
 	for offset: Vector2i in directions:
 		if _is_walkable(map_rows, x + offset.x, z + offset.y):
 			continue
 		var wall_position := position + Vector3(offset.x, 0.0, offset.y) * CELL * 0.5
 		wall_position.y = WALL_HEIGHT * 0.5
-		batcher.add(WALL_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), wall_position))
+		batcher.add(WALL_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), wall_position), stone)
 
 		if (x + z) % TORCH_EVERY == 0 and offset.y != 0:
 			var torch_position := wall_position - Vector3(offset.x, 0.0, offset.y) * 0.35 + Vector3(0, 0.6, 0)
@@ -346,8 +398,9 @@ static func _add_wall_visuals(batcher: MeshBatcher, map_rows: Array, x: int, z: 
 		if _chance(3, x, z, offset) and _hash01(x, z, 11) < decor_density:
 			var decor_position := position + Vector3(0, 1.3, 0) \
 				+ Vector3(offset.x, 0.0, offset.y) * (CELL * 0.5 - 0.15)
-			var decor: PackedScene = WALL_DECOR_SCENES[(x * 7 + z * 13 + offset.x + offset.y) % WALL_DECOR_SCENES.size()]
-			batcher.add(decor, Transform3D(Basis(Vector3.UP, directions[offset]), decor_position))
+			var wall_set: Array = decor.wall
+			var ornament: PackedScene = wall_set[(x * 7 + z * 13 + offset.x + offset.y) % wall_set.size()]
+			batcher.add(ornament, Transform3D(Basis(Vector3.UP, directions[offset]), decor_position))
 
 ## Невелика хитрість: "випадковість" для стін рахується з координат, а
 ## не з генератора. Тоді шматок виглядає однаково, скільки б разів його
@@ -364,25 +417,25 @@ static func _hash01(x: int, z: int, salt: int) -> float:
 
 ## Оздоблення клітинки: мотлох попід стінами, меблі посеред залів,
 ## скрині по кутах, пастки у вузьких місцях.
-static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int, position: Vector3, rng: RandomNumberGenerator, decor_density: float) -> void:
+static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int, position: Vector3, rng: RandomNumberGenerator, decor_density: float, decor: Dictionary) -> void:
 	if map_rows[z][x] == "S":
 		return   # вхідна зала лишається чистою
 	var open_sides := _count_open_sides(map_rows, x, z)
 	var small_decor := _hash01(x, z, 5) < decor_density
 
 	if open_sides <= 3 and rng.randf() < 0.3 and small_decor:
-		_place(batcher, CLUTTER_SCENES[rng.randi() % CLUTTER_SCENES.size()],
+		_place(batcher, decor.clutter[rng.randi() % decor.clutter.size()],
 			position + Vector3(rng.randf_range(-0.25, 0.25), 0.0, rng.randf_range(-0.25, 0.25)),
 			rng.randf_range(0.0, TAU), rng.randf_range(0.8, 1.15))
 	elif open_sides == 4 and rng.randf() < 0.07:
-		_place(batcher, FURNITURE_SCENES[rng.randi() % FURNITURE_SCENES.size()],
+		_place(batcher, decor.furniture[rng.randi() % decor.furniture.size()],
 			position, rng.randf_range(0.0, TAU), 1.0)
 
 	if open_sides == 2 and rng.randf() < 0.26:
-		_place(batcher, TREASURE_SCENES[rng.randi() % TREASURE_SCENES.size()],
+		_place(batcher, decor.treasure[rng.randi() % decor.treasure.size()],
 			position, rng.randf_range(0.0, TAU), 1.0)
 	if open_sides == 2 and rng.randf() < 0.12:
-		_place(batcher, TRAP_SCENES[rng.randi() % TRAP_SCENES.size()], position, 0.0, 1.0)
+		_place(batcher, decor.traps[rng.randi() % decor.traps.size()], position, 0.0, 1.0)
 	if rng.randf() < 0.08 and small_decor:
 		_place(batcher, FLOOR_BRICKS_SCENE, position + Vector3(0, 0.02, 0), 0.0, 1.0)
 

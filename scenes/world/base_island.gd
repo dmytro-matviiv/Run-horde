@@ -1,40 +1,67 @@
 extends Node3D
 
-## Стартовий острів — база героя. Тут гравець ходить між будівлями:
-## казарма відкриває вибір героя, кузня — зброю, храм — таланти,
-## ринок — магазин, а портал веде в данж.
+## Місто — база героя. Гравець ходить між будівлями: Зала героїв
+## відкриває вибір героя, Збройня — зброю, Храм — таланти, Ринок —
+## магазин, а арка в скелі на півночі веде в данж.
 ##
 ## Взаємодія за близькістю: підійшов — унизу з'явилась велика кнопка.
 ## На телефоні це зручніше, ніж цілитись пальцем у будинок під кутом
 ## камери, і водночас працює мишею на ПК.
 ##
-## Розставляти світ можна просто в редакторі: перетягніть будь-яку
-## модель з assets/models/environment у вузол Buildings або Nature —
-## код про них нічого не знає, фізику для них він побудує сам.
+## РЕДАГУВАННЯ. Усе місто — звичайні вузли, їх можна рухати в редакторі:
+##   Buildings — будівлі з дією (разом із зонами дії);
+##   Town/Houses, Town/Walls, Town/Plaza, Town/DungeonGate — те, у що
+##     не можна зайти: фізика для них будується сама;
+##   Town/Props — дрібний реквізит (теж твердий);
+##   Nature — дерева, скелі, гори, ліс на пагорбах;
+##   Effects — вогні жаровень (маркери Fire*) і прохід у данж.
+## Доріжки й бруківка намальовані в assets/textures/town/town_paths.png.
+##
+## ОПТИМІЗАЦІЯ. Під час гри однакові моделі збираються в пакети
+## (TownBatcher) — у редакторі цього не видно, а телефону легше в рази.
 
 const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
 const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
+const DUNGEON_SELECT_SCRIPT := preload("res://scenes/ui/dungeon_select.gd")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
+const DUNGEON_PATH := "res://scenes/dungeon/dungeon.tscn"
 
-## Куди веде кожна будівля.
+## Куди веде кожна будівля. Портал відкриває вибір рівня данжу.
 const ACTION_SCENES := {
 	"heroes": "res://scenes/ui/heroes.tscn",
 	"weapons": "res://scenes/ui/weapons.tscn",
 	"talents": "res://scenes/ui/meta_upgrades.tscn",
 	"shop": "res://scenes/ui/shop.tscn",
-	"portal": "res://scenes/dungeon/dungeon.tscn",
 }
+
+## Групи міста, які стають твердими, і наскільки зменшити їхню коробку
+## (дахи й ґанки виступають — повна коробка не пускала б до дверей).
+const SOLID_GROUPS := {
+	"Buildings": 0.72,
+	"Town/Houses": 0.78,
+	"Town/Walls": 0.95,
+	"Town/Plaza": 0.7,
+	"Town/DungeonGate": 0.85,
+	"Town/Props": 0.8,
+	"Nature/Trees": 0.3,
+}
+
+## Групи, які пакуються для телефона, і розмір ділянки пакування: місто
+## видно майже все одразу — одна ділянка; ліс і гори — дрібніші, щоб
+## те, що позаду камери, не малювалось.
+const BATCH_GROUPS := {"Town": 0.0, "Buildings": 0.0, "Nature": 40.0}
 
 @onready var player: CharacterBody3D = $Player
 @onready var action_button: Button = $HUD/ActionButton
 @onready var gold_label: Label = $HUD/GoldLabel
 
 var _nearby: Interactable
+var _select: Control
 
 func _ready() -> void:
 	SceneLoader.hold()
 	player.set_torch_enabled(false)
-	# На острові пробіл — "зайти в будівлю", бій з клавіатури тут вимкнено.
+	# У місті пробіл — "зайти в будівлю", бій з клавіатури тут вимкнено.
 	player.combat_input_enabled = false
 
 	var joystick: Control = JOYSTICK_SCENE.instantiate()
@@ -63,23 +90,68 @@ func _ready() -> void:
 
 	gold_label.text = "Золото: %d    Геми: %d" % [GameState.gold, GameState.gems]
 
-	# Моделі з наборів приходять без фізики, тож стінки будуємо самі по
-	# формі мешів. Так будь-яка модель, яку ви перетягнете в редакторі,
-	# одразу стає твердою — без ручного налаштування.
-	await _build_collisions([$Buildings, $Nature])
+	# Важке — під екраном завантаження: фізика будівель, пакування,
+	# вогні. Гравець бачить смужку, а не ривки першої секунди.
+	await get_tree().process_frame
+	_build_colliders()
+	await get_tree().process_frame
+	for group: String in BATCH_GROUPS:
+		if has_node(group):
+			TownBatcher.batch(get_node(group) as Node3D, BATCH_GROUPS[group])
+	_light_fires()
 	SceneLoader.release()
 
-## Створює фізичні стінки для всіх мешів усередині вузлів. Будуємо по
-## кілька за кадр, поки на екрані завантаження: на слабкому телефоні
-## фізика великих будівель за один кадр давала помітний ривок.
-func _build_collisions(roots: Array) -> void:
-	var built := 0
-	for root: Node in roots:
-		for child in root.find_children("*", "MeshInstance3D", true, false):
-			(child as MeshInstance3D).create_trimesh_collision()
-			built += 1
-			if built % 4 == 0:
-				await get_tree().process_frame
+## Прості коробки замість точної форми кожної моделі: для телефона це
+## в рази дешевше, а гравцеві різниці не видно.
+func _build_colliders() -> void:
+	var body := StaticBody3D.new()
+	body.name = "TownColliders"
+	add_child(body)
+	for group: String in SOLID_GROUPS:
+		if has_node(group):
+			TownBatcher.add_box_colliders(get_node(group) as Node3D, body, SOLID_GROUPS[group])
+
+## Вогонь на жаровнях: кілька частинок і світна "серцевина" без
+## справжнього джерела світла — телефону його не треба рахувати.
+func _light_fires() -> void:
+	if not has_node("Effects"):
+		return
+	for marker in $Effects.get_children():
+		if not String(marker.name).begins_with("Fire"):
+			continue
+		(marker as Node3D).add_child(_make_flame())
+
+static func _make_flame() -> Node3D:
+	var flame := CPUParticles3D.new()
+	flame.amount = 14
+	flame.lifetime = 0.7
+	flame.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	flame.emission_sphere_radius = 0.22
+	flame.direction = Vector3.UP
+	flame.spread = 12.0
+	flame.gravity = Vector3(0, 1.6, 0)
+	flame.initial_velocity_min = 0.6
+	flame.initial_velocity_max = 1.3
+	flame.scale_amount_min = 0.7
+	flame.scale_amount_max = 1.3
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	flame.scale_amount_curve = curve
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(1.0, 0.85, 0.35))
+	gradient.set_color(1, Color(0.9, 0.25, 0.05, 0.0))
+	flame.color_ramp = gradient
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.32, 0.32)
+	flame.mesh = quad
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	material.vertex_color_use_as_albedo = true
+	flame.material_override = material
+	return flame
 
 ## Джойстик дає напрямок в екранних координатах (вниз — це +Y), а рух
 ## уперед — це -Z у 3D, тож вісь Y перевертаємо.
@@ -92,8 +164,7 @@ func _on_player_entered(interactable: Interactable) -> void:
 	action_button.visible = true
 
 ## Виходимо з зони — кнопка зникає. Перевірка на "ту саму будівлю"
-## потрібна, бо зони можуть перекриватись: вийшовши з однієї, гравець
-## може вже стояти в іншій.
+## потрібна, бо зони можуть перекриватись.
 func _on_player_exited(interactable: Interactable) -> void:
 	if _nearby == interactable:
 		_nearby = null
@@ -102,22 +173,34 @@ func _on_player_exited(interactable: Interactable) -> void:
 func _on_action_pressed() -> void:
 	if _nearby == null:
 		return
-	var path: String = ACTION_SCENES.get(_nearby.action, "")
-	if path == "":
-		return
-	# У данж — через екран завантаження: це найважча сцена гри, і на
-	# слабкому телефоні пряме завантаження "заморожувало" екран.
 	if _nearby.action == "portal":
-		SceneLoader.change_scene(path, "Забуті склепи")
-	else:
+		_open_dungeon_select()
+		return
+	var path: String = ACTION_SCENES.get(_nearby.action, "")
+	if path != "":
 		get_tree().change_scene_to_file(path)
+
+## Вибір рівня данжу: наступний відкривається, лише коли пройдено
+## попередній.
+func _open_dungeon_select() -> void:
+	if _select != null and is_instance_valid(_select):
+		return
+	_select = DUNGEON_SELECT_SCRIPT.new()
+	$HUD.add_child(_select)
+	_select.level_chosen.connect(_on_level_chosen)
+
+func _on_level_chosen(index: int) -> void:
+	GameState.select_dungeon_level(index)
+	SceneLoader.change_scene(DUNGEON_PATH, DungeonLevels.get_level(index).title)
 
 func _on_menu_pressed() -> void:
 	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _select != null and is_instance_valid(_select):
+		return
 	if event.is_action_pressed("ui_accept"):
-		# Пробіл: якщо стоїмо біля будівлі — заходимо, інакше б'ємо мечем.
+		# Пробіл: якщо стоїмо біля будівлі — заходимо, інакше б'ємо.
 		if _nearby != null:
 			_on_action_pressed()
 		else:

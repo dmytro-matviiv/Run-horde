@@ -45,6 +45,11 @@ func _add_label() -> void:
 	label.outline_size = 28
 	label.outline_modulate = Color(0, 0, 0, 0.75)
 	label.position = Vector3(0, label_height, 0)
+	# Напис видно лише поблизу: у великому місті підписи всіх будівель
+	# одночасно захаращували б екран і просвічували крізь стіни.
+	label.visibility_range_end = 20.0
+	label.visibility_range_end_margin = 4.0
+	label.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	add_child(label)
 
 func _on_body_entered(body: Node3D) -> void:

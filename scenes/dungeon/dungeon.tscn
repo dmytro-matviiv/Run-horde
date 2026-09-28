@@ -9,7 +9,7 @@ geometry_parsed_geometry_type = 1
 vertices = PackedVector3Array()
 cell_size = 0.25
 cell_height = 0.25
-agent_height = 1.8
+agent_height = 2.0
 agent_radius = 0.5
 agent_max_climb = 0.5
 

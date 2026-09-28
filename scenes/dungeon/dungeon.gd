@@ -9,6 +9,10 @@ extends Node3D
 ##     рівні знову вибирає здібність.
 ##  4. У кінці — бос, а за ним вихід: на базу або на наступний рівень.
 ##
+## РІВНІ (DungeonLevels) різні не лише картою: у кожного своя тема
+## (колір каменю, туман, світло, прикраси), свої вороги й бос, і кожен
+## наступний міцніший (множники stats: здоров'я, шкода, золото).
+##
 ## Вороги не проходять крізь стіни й не застрягають за кутами: у данжі
 ## будується карта прохідності (NavigationRegion3D), по якій вони
 ## рахують маршрут.
@@ -20,14 +24,9 @@ const COMBAT_BUTTONS_SCRIPT := preload("res://scenes/ui/combat_buttons.gd")
 const ENEMY_SCRIPT := preload("res://scenes/dungeon/enemy_3d.gd")
 const EXIT_SCENE := preload("res://assets/models/dungeon/Arch_Door.fbx")
 
-## Моделі ворогів під кожну роль.
-const MELEE_MODELS := [
-	preload("res://assets/models/monsters/Orc Enemy.glb"),
-	preload("res://assets/models/monsters/Green Spiky Blob.glb"),
-	preload("res://assets/models/monsters/Ghost Skull.glb"),
-]
-const RANGED_MODEL := preload("res://assets/models/monsters/Wizard.glb")
-const BOSS_MODEL := preload("res://assets/models/monsters/Demon-LnfIziKv4o.glb")
+## Скільки підмоги Грибного Короля може бути живою одночасно —
+## і складність, і запобіжник для слабкого телефона.
+const MAX_SUMMONS := 6
 
 const BASE_SCENE_PATH := "res://scenes/world/base_island.tscn"
 
@@ -82,6 +81,14 @@ var _chunks: Array = []
 var _lights: Array = []
 var _stream_left := 0.0
 var _run_gold := 0
+var _level: Dictionary = {}
+var _theme: Dictionary = {}
+var _hp_scale := 1.0
+var _damage_scale := 1.0
+var _gold_scale := 1.0
+var _models: Dictionary = {}
+var _alive_summons := 0
+var _exit_choice: Control
 ## Що герой уже взяв у цьому поході: id здібності -> рівень.
 var _run_upgrades: Dictionary = {}
 
@@ -92,8 +99,14 @@ func _ready() -> void:
 	SceneLoader.hold()
 	_level_index = GameState.dungeon_level
 	var level := DungeonLevels.get_level(_level_index)
+	_level = level
+	_theme = level.get("theme", DungeonBuilder.DEFAULT_THEME)
+	_hp_scale = float(level.stats.hp)
+	_damage_scale = float(level.stats.damage)
+	_gold_scale = float(level.stats.gold)
+	_apply_theme()
 	_map_rows = level.map
-	var markers := DungeonBuilder.build_base(level.map, level_root)
+	var markers := DungeonBuilder.build_base(level.map, level_root, _theme)
 	_chunks = markers.chunks
 	_lights = markers.lights
 
@@ -169,58 +182,90 @@ func _add_keyboard_hint() -> void:
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(hint)
 
-func _spawn_enemies(markers: Dictionary) -> void:
-	for position: Vector3 in markers.melee:
-		_spawn_enemy(position, Enemy3D.Kind.MELEE, MELEE_MODELS[randi() % MELEE_MODELS.size()])
-	for position: Vector3 in markers.ranged:
-		_spawn_enemy(position, Enemy3D.Kind.RANGED, RANGED_MODEL)
-	if markers.boss != Vector3.ZERO:
-		_spawn_enemy(markers.boss, Enemy3D.Kind.BOSS, BOSS_MODEL)
+## Тема рівня: туман, загальне світло, тло. Колір каменю й прикраси
+## задає будівельник (DungeonBuilder) — тут лише повітря й світло.
+func _apply_theme() -> void:
+	var environment: Environment = $WorldEnvironment.environment.duplicate()
+	environment.background_color = _theme.get("background", environment.background_color)
+	environment.fog_light_color = _theme.get("fog", environment.fog_light_color)
+	environment.fog_density = float(_theme.get("fog_density", environment.fog_density))
+	environment.ambient_light_color = _theme.get("ambient", environment.ambient_light_color)
+	environment.ambient_light_energy = float(_theme.get("ambient_energy", environment.ambient_light_energy))
+	$WorldEnvironment.environment = environment
 
-func _spawn_enemy(position: Vector3, kind: Enemy3D.Kind, model: PackedScene) -> void:
-	var enemy: CharacterBody3D = ENEMY_SCRIPT.new()
+## Вороги за мітками карти. Хто саме стоїть на мітці — вирішує опис
+## рівня: "m" у склепах — орк, у печерах — грибовик.
+func _spawn_enemies(markers: Dictionary) -> void:
+	var enemies: Dictionary = _level.enemies
+	for spawn: Dictionary in markers.spawns:
+		var variants: Array = enemies.get(spawn.symbol, [])
+		if variants.is_empty():
+			continue
+		var definition: Dictionary = variants[randi() % variants.size()]
+		var group := int(definition.get("group", 1))
+		for i in group:
+			# Рій стоїть купкою навколо мітки, а не в одній точці.
+			var offset := Vector3.ZERO
+			if group > 1:
+				var angle := TAU * i / group
+				offset = Vector3(cos(angle), 0.0, sin(angle)) * 1.1
+			_spawn_enemy(spawn.position + offset, definition, false)
+	if markers.boss != Vector3.ZERO:
+		_spawn_enemy(markers.boss, _level.boss, true)
+
+func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> Enemy3D:
+	var enemy: Enemy3D = ENEMY_SCRIPT.new()
 	enemy.collision_layer = 4
 	enemy.collision_mask = 1
-	enemy.kind = kind
-	# Складність росте з рівнем данжу: ті самі вороги, але міцніші.
-	var scale_factor := 1.0 + 0.35 * _level_index
-	match kind:
-		Enemy3D.Kind.MELEE:
-			enemy.max_hp = 30.0 * scale_factor
-			enemy.damage = 8.0 * scale_factor
-		Enemy3D.Kind.RANGED:
-			enemy.max_hp = 22.0 * scale_factor
-			enemy.damage = 6.0 * scale_factor
-			enemy.attack_range = 9.0
-			enemy.aggro_range = 16.0
-			enemy.move_speed = 2.2
-			enemy.xp_reward = 4
-		Enemy3D.Kind.BOSS:
-			enemy.max_hp = 220.0 * scale_factor
-			enemy.damage = 16.0 * scale_factor
-			enemy.move_speed = 3.2
-			enemy.aggro_range = 18.0
-			enemy.xp_reward = 25
-			enemy.attack_range = 3.0
-			enemy.target_height = 3.4   # бос помітно вищий за решту
+	if is_boss:
+		enemy.configure_boss(definition, _hp_scale, _damage_scale)
+	else:
+		enemy.configure(definition, _hp_scale, _damage_scale)
 
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.5
-	capsule.height = 1.8
+	# Капсула за зростом: великий голем не має бути "тонким" для ударів.
+	var height: float = maxf(enemy.target_height, 1.0)
+	capsule.radius = clampf(height * 0.28, 0.35, 0.9)
+	capsule.height = maxf(height, capsule.radius * 2.0)
 	shape.shape = capsule
-	shape.position = Vector3(0, 0.9, 0)
+	shape.position = Vector3(0, capsule.height * 0.5, 0)
 	enemy.add_child(shape)
 
 	enemies_root.add_child(enemy)
 	enemy.global_position = position + Vector3(0, 0.2, 0)
-	enemy.setup(player, model)
-	enemy.died.connect(_on_enemy_died.bind(kind))
+	enemy.setup(player, _model(definition.model))
+	enemy.died.connect(_on_enemy_died.bind(enemy.kind))
+	if is_boss:
+		enemy.summon_requested.connect(_on_summon_requested)
 	_alive_enemies += 1
+	return enemy
+
+func _model(path: String) -> PackedScene:
+	if not _models.has(path):
+		_models[path] = load(path)
+	return _models[path]
+
+## Грибний Король кличе підмогу: кілька грибочків довкола нього. Скільки
+## їх може бути живими водночас — обмежено, щоб бій лишався чесним, а
+## телефон — живим.
+func _on_summon_requested(position: Vector3, count: int) -> void:
+	var definition: Dictionary = _level.boss.get("summon", {})
+	if definition.is_empty():
+		return
+	for i in count:
+		if _alive_summons >= MAX_SUMMONS:
+			return
+		var angle := TAU * i / count + randf() * 0.5
+		var spot := position + Vector3(cos(angle), 0.0, sin(angle)) * 2.2
+		var enemy := _spawn_enemy(spot, definition, false)
+		enemy.died.connect(func(_p: Vector3, _xp: int) -> void: _alive_summons -= 1)
+		_alive_summons += 1
+		CombatVfx.impact(level_root, spot + Vector3.UP * 0.5, Color(0.5, 1.0, 0.4), false)
 
 func _on_enemy_died(_position: Vector3, xp_reward: int, kind: Enemy3D.Kind) -> void:
 	_alive_enemies -= 1
-	_add_gold(GOLD_PER_BOSS if kind == Enemy3D.Kind.BOSS else GOLD_PER_KILL)
+	_add_gold(int(round((GOLD_PER_BOSS if kind == Enemy3D.Kind.BOSS else GOLD_PER_KILL) * _gold_scale)))
 	_add_xp(xp_reward)
 	if kind == Enemy3D.Kind.BOSS:
 		_boss_defeated = true
@@ -288,8 +333,9 @@ func _process(delta: float) -> void:
 
 	if not _exit_open:
 		return
-	# Підійшов до відчиненого виходу — можна йти далі.
-	exit_button.visible = player.global_position.distance_to(_exit_position) < 3.0
+	# Підійшов до відчиненого виходу — можна йти далі. Коли вже обирає,
+	# куди йти, кнопка не потрібна.
+	exit_button.visible = _exit_choice == null and player.global_position.distance_to(_exit_position) < 3.0
 
 ## Будує те, що попереду, ховає те, що позаду, і присипляє далеких
 ## ворогів. Гравець цього не помічає: він просто йде коридором.
@@ -302,7 +348,7 @@ func _update_streaming() -> void:
 		if not chunk.built and distance < view_distance + BUILD_AHEAD and not built_one:
 			# За раз будуємо лише один шматок: так навіть найповільніший
 			# телефон не отримає ривка посеред бігу.
-			DungeonBuilder.build_chunk(_map_rows, chunk, PerfSettings.get_value("decor_density"))
+			DungeonBuilder.build_chunk(_map_rows, chunk, PerfSettings.get_value("decor_density"), _theme)
 			built_one = true
 		chunk.node.visible = chunk.built and distance < view_distance
 
@@ -314,7 +360,7 @@ func _update_streaming() -> void:
 func _build_next_chunk() -> bool:
 	for chunk: Dictionary in _chunks:
 		if not chunk.built:
-			DungeonBuilder.build_chunk(_map_rows, chunk, PerfSettings.get_value("decor_density"))
+			DungeonBuilder.build_chunk(_map_rows, chunk, PerfSettings.get_value("decor_density"), _theme)
 			return true
 	return false
 
@@ -333,8 +379,13 @@ func _warm_up_rendering() -> void:
 	var holder := Node3D.new()
 	add_child(holder)
 	var center := player.global_position + Vector3(0, 1.0, 0)
-	var models: Array = MELEE_MODELS.duplicate()
-	models.append_array([RANGED_MODEL, BOSS_MODEL, EXIT_SCENE])
+	var models: Array = [EXIT_SCENE]
+	for symbol: String in _level.enemies:
+		for definition: Dictionary in _level.enemies[symbol]:
+			models.append(_model(definition.model))
+	models.append(_model(_level.boss.model))
+	if _level.boss.has("summon"):
+		models.append(_model(_level.boss.summon.model))
 	var step := 0
 	for scene: PackedScene in models:
 		var model: Node3D = scene.instantiate()
@@ -358,6 +409,9 @@ func _warm_up_rendering() -> void:
 	var marker := CombatVfx.make_ground_marker(Color(1.0, 0.22, 0.15, 0.85), 1.0, 1.0)
 	holder.add_child(marker)
 	marker.global_position = center - Vector3(0, 0.9, 0)
+	var line := CombatVfx.make_line_marker(Color(1.0, 0.3, 0.2, 0.85), 2.0, 1.0)
+	holder.add_child(line)
+	line.global_position = center - Vector3(0, 0.9, 0)
 	var shot := EnemyProjectile.create(0.0)
 	holder.add_child(shot)
 	shot.global_position = center
@@ -425,11 +479,54 @@ func _on_player_health_changed(current: float, maximum: float) -> void:
 func _on_joystick_moved(direction: Vector2) -> void:
 	player.set_move_input(Vector2(direction.x, -direction.y))
 
+## Біля відчиненого виходу: нагорода за рівень і вибір — повернутись у
+## місто чи одразу йти на наступний (якщо він є).
 func _on_exit_pressed() -> void:
-	# Пройшов данж — наступний рівень стає доступним, плюс нагорода.
-	_add_gold(GOLD_FOR_CLEAR * (1 + _level_index))
+	if _exit_choice != null:
+		return
+	_add_gold(int(round(GOLD_FOR_CLEAR * _gold_scale)))
 	GameState.unlock_next_dungeon_level()
-	SceneLoader.change_scene(BASE_SCENE_PATH, "База")
+	exit_button.visible = false
+	_exit_choice = _build_exit_choice()
+	hud.add_child(_exit_choice)
+
+func _build_exit_choice() -> Control:
+	# Затемнення на весь екран: гра позаду не відволікає, а випадковий
+	# дотик повз панель не рушить героя.
+	var shade := ColorRect.new()
+	shade.color = Color(0, 0, 0, 0.45)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.add_child(center)
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.make_box(UiTheme.PANEL, 12, 2, UiTheme.ACCENT))
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = "%s — пройдено!\nЗолота за похід: %d" % [_level.title, _run_gold]
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 22)
+	box.add_child(title)
+	var next_index := _level_index + 1
+	if next_index < DungeonLevels.get_level_count():
+		var next := Button.new()
+		next.text = "Далі: %s" % DungeonLevels.get_level(next_index).title
+		next.custom_minimum_size = Vector2(320, 56)
+		next.add_theme_font_size_override("font_size", 20)
+		next.pressed.connect(func() -> void:
+			GameState.select_dungeon_level(next_index)
+			SceneLoader.change_scene("res://scenes/dungeon/dungeon.tscn", DungeonLevels.get_level(next_index).title))
+		box.add_child(next)
+	var home := Button.new()
+	home.text = "Повернутись у місто"
+	home.custom_minimum_size = Vector2(320, 56)
+	home.add_theme_font_size_override("font_size", 20)
+	home.pressed.connect(func() -> void: SceneLoader.change_scene(BASE_SCENE_PATH, "Місто"))
+	box.add_child(home)
+	return shade
 
 ## Удар, перекат і вихір з клавіатури герой ловить сам (див. player_3d).
 func _unhandled_input(event: InputEvent) -> void:

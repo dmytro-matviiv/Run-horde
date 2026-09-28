@@ -17,6 +17,7 @@ class_name ArtSlots
 ##   іконка таланту      res://assets/ui/icons/talents/<id таланту>.png
 ##   іконка зброї        res://assets/ui/icons/weapons/<id зброї>.png
 ##   іконка в магазині   res://assets/ui/icons/shop/<назва товару>.png
+##   картинка рівня данжу res://assets/ui/icons/dungeons/<id рівня>.png
 ##
 ## id героя та зброї — ті самі, що в data/heroes/*.tres і data/weapons/*.tres
 ## (наприклад, blade_warden, battle_axe).
@@ -28,6 +29,7 @@ const SKILL_ICON_DIR := "res://assets/ui/icons/skills/"
 const TALENT_ICON_DIR := "res://assets/ui/icons/talents/"
 const WEAPON_ICON_DIR := "res://assets/ui/icons/weapons/"
 const SHOP_ICON_DIR := "res://assets/ui/icons/shop/"
+const DUNGEON_ICON_DIR := "res://assets/ui/icons/dungeons/"
 
 const MODEL_EXTENSIONS := [".glb", ".gltf", ".fbx", ".tscn"]
 const ICON_EXTENSIONS := [".png", ".webp", ".jpg", ".svg"]
@@ -63,6 +65,10 @@ static func skill_icon(skill_id: StringName) -> Texture2D:
 
 static func talent_icon(talent_id: StringName) -> Texture2D:
 	return _find_texture(TALENT_ICON_DIR, String(talent_id))
+
+## Картинка рівня данжу на екрані вибору (crypts, fungal, citadel).
+static func dungeon_icon(level_id: StringName) -> Texture2D:
+	return _find_texture(DUNGEON_ICON_DIR, String(level_id))
 
 static func shop_icon(name: String) -> Texture2D:
 	return _find_texture(SHOP_ICON_DIR, name) if name != "" else null
