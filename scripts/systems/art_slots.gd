@@ -30,6 +30,8 @@ const TALENT_ICON_DIR := "res://assets/ui/icons/talents/"
 const WEAPON_ICON_DIR := "res://assets/ui/icons/weapons/"
 const SHOP_ICON_DIR := "res://assets/ui/icons/shop/"
 const DUNGEON_ICON_DIR := "res://assets/ui/icons/dungeons/"
+## Кнопки бою: attack, gun, staff, book, cards (удар/постріл/чари) і dodge.
+const COMBAT_ICON_DIR := "res://assets/ui/icons/combat/"
 
 const MODEL_EXTENSIONS := [".glb", ".gltf", ".fbx", ".tscn"]
 const ICON_EXTENSIONS := [".png", ".webp", ".jpg", ".svg"]
@@ -65,6 +67,11 @@ static func skill_icon(skill_id: StringName) -> Texture2D:
 
 static func talent_icon(talent_id: StringName) -> Texture2D:
 	return _find_texture(TALENT_ICON_DIR, String(talent_id))
+
+## Картинка кнопки бою за її видом (attack, gun, staff, book, cards,
+## dodge). Немає файла — кнопка малює свій значок сама.
+static func combat_icon(kind: String) -> Texture2D:
+	return _find_texture(COMBAT_ICON_DIR, kind)
 
 ## Картинка рівня данжу на екрані вибору (crypts, fungal, citadel).
 static func dungeon_icon(level_id: StringName) -> Texture2D:

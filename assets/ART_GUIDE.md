@@ -75,7 +75,10 @@
 
     assets/ui/icons/menu/<назва>.png       play, heroes, weapons, talents, shop, chest
     assets/ui/icons/skills/<id>.png        whirlwind, rage_dash, rune_nova, fire_ring, smoke_veil,
-                                           arcane_barrage, frost_nova, venom_swamp, moon_storm
+                                           arcane_barrage, frost_nova, venom_swamp, moon_storm,
+                                           great_seal, card_storm
+    assets/ui/icons/combat/<вид>.png       кнопки бою: attack (меч), gun, staff, book, cards
+                                           (удар / постріл / чари залежно від зброї), dodge
     assets/ui/icons/talents/<id>.png       meta_max_hp, meta_damage, meta_move_speed,
                                            meta_pickup_radius, meta_gold_gain, meta_luck,
                                            meta_start_level, talent_extra_blades,

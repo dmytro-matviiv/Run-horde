@@ -46,7 +46,10 @@ func setup(player: Node) -> void:
 	for index in _skills.size():
 		var skill: HeroSkill3D = _skills[index]
 		var button := _make_button(skill.icon_kind, SMALL_RADIUS, skill.title, skill.color)
-		button.icon_texture = ArtSlots.skill_icon(skill.id)
+		# Своя іконка здібності важливіша за загальну картинку її виду.
+		var own_icon := ArtSlots.skill_icon(skill.id)
+		if own_icon != null:
+			button.icon_texture = own_icon
 		button.pressed_down.connect(func() -> void: _player.use_skill(index))
 		_skill_buttons.append(button)
 	_layout()
@@ -56,6 +59,8 @@ func setup(player: Node) -> void:
 func _make_button(icon_kind: String, radius: float, caption: String, accent: Color) -> CombatButton:
 	var button := CombatButton.new()
 	button.icon_kind = icon_kind
+	# Своя картинка з assets/ui/icons/combat/<вид>.png, якщо її поклали.
+	button.icon_texture = ArtSlots.combat_icon(icon_kind)
 	button.radius = radius
 	button.caption = caption
 	button.accent = accent
