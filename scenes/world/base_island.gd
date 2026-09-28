@@ -61,6 +61,11 @@ var _select: Control
 func _ready() -> void:
 	SceneLoader.hold()
 	player.set_torch_enabled(false)
+	# Повернулись з екрана будівлі — стоїмо біля її дверей, а не на вході.
+	if GameState.town_return_spot != Vector3.INF:
+		var spot := GameState.town_return_spot
+		player.global_position = Vector3(spot.x, player.global_position.y, spot.z)
+		GameState.town_return_spot = Vector3.INF
 	# У місті пробіл — "зайти в будівлю", бій з клавіатури тут вимкнено.
 	player.combat_input_enabled = false
 
@@ -82,6 +87,7 @@ func _ready() -> void:
 	$HUD/MenuButton.pressed.connect(_on_menu_pressed)
 	action_button.pressed.connect(_on_action_pressed)
 	action_button.visible = false
+	_style_hud()
 
 	for node in $Buildings.find_children("*", "Interactable", true, false):
 		var interactable := node as Interactable
@@ -100,6 +106,34 @@ func _ready() -> void:
 			TownBatcher.batch(get_node(group) as Node3D, BATCH_GROUPS[group])
 	_light_fires()
 	SceneLoader.release()
+
+## Оформлення (UiTheme): золото й підказка — на напівпрозорій панелі в
+## рамці, "Меню" — з іконкою набору, кнопка входу в будівлю — світла,
+## головна дія екрана.
+func _style_hud() -> void:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.hud_box())
+	panel.position = Vector2(12, 12)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 2)
+	panel.add_child(column)
+	$HUD.add_child(panel)
+	$HUD.move_child(panel, 0)
+	gold_label.reparent(column, false)
+	gold_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	var hint := $HUD/HintLabel as Label
+	hint.reparent(column, false)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.custom_minimum_size = Vector2(400, 0)
+	hint.add_theme_font_size_override("font_size", 15)
+	hint.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+
+	var menu := $HUD/MenuButton as Button
+	menu.icon = UiTheme.control_icon("menu")
+	menu.add_theme_constant_override("icon_max_width", 22)
+	menu.add_theme_constant_override("h_separation", 8)
+	UiTheme.make_primary(action_button)
 
 ## Прості коробки замість точної форми кожної моделі: для телефона це
 ## в рази дешевше, а гравцеві різниці не видно.
@@ -178,7 +212,8 @@ func _on_action_pressed() -> void:
 		return
 	var path: String = ACTION_SCENES.get(_nearby.action, "")
 	if path != "":
-		get_tree().change_scene_to_file(path)
+		# "Назад" на екрані будівлі поверне героя сюди ж, до її дверей.
+		GameState.open_from_town(path, _nearby.global_position)
 
 ## Вибір рівня данжу: наступний відкривається, лише коли пройдено
 ## попередній.

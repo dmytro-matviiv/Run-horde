@@ -73,12 +73,14 @@
 
 ## Іконки
 
-    assets/ui/icons/menu/<назва>.png       play, heroes, weapons, talents, shop, chest
+    assets/ui/icons/menu/<назва>.png       play, shop, chest (героя, зброю й таланти
+                                           гравець обирає в будівлях міста)
     assets/ui/icons/skills/<id>.png        whirlwind, rage_dash, rune_nova, fire_ring, smoke_veil,
                                            arcane_barrage, frost_nova, venom_swamp, moon_storm,
                                            great_seal, card_storm
     assets/ui/icons/combat/<вид>.png       кнопки бою: attack (меч), gun, staff, book, cards
-                                           (удар / постріл / чари залежно від зброї), dodge
+                                           (удар / постріл / чари залежно від зброї), dodge,
+                                           whirl, dash, nova, fire, frost, venom, bolt, rune
     assets/ui/icons/talents/<id>.png       meta_max_hp, meta_damage, meta_move_speed,
                                            meta_pickup_radius, meta_gold_gain, meta_luck,
                                            meta_start_level, talent_extra_blades,
@@ -93,6 +95,26 @@
 Іконки зброї не треба малювати: запустіть сцену `tools/weapon_icons.tscn`
 (F6 у редакторі) — вона відрендерить кожну зброю, що має 3D-модель, і
 збереже PNG у `assets/ui/icons/weapons/`.
+
+## Оформлення інтерфейсу
+
+Стиль — фентезійні рамки Kenney: темні напівпрозорі панелі з тонкою
+кремовою рамкою, кнопки з квадратиками на кутах, головна дія — світла
+кнопка з темним текстом, заголовки — блідо-зелені між розділювачами з
+руків'ям меча. Усі три набори Kenney — CC0.
+
+    assets/ui/theme/     панелі, кнопки, слот, розділювач (Fantasy UI Borders)
+    assets/ui/controls/  джойстик, кругла кнопка бою, білі іконки (Mobile Controls, стиль E)
+    assets/ui/cursors/   курсор-лезо й рука для ПК (Cursor Pixel Pack)
+
+Ці PNG не малюються руками — їх збирає `tools/build_ui_theme.py` з
+розпакованих наборів (рамки там білі; скрипт фарбує лінії й заливає тло).
+Кольори й розміри рамок — у `scripts/autoload/ui_theme.gd` (UiTheme).
+
+Кнопка бою бере картинку в такому порядку: власна іконка здібності
+(`icons/skills/<id>.png`) → картинка виду кнопки (`icons/combat/<вид>.png`)
+→ іконка з набору (меч, приціл, стрілки, вогонь...) → фігура, намальована
+кодом (посохи, книга, карти, крига, отрута, руна).
 
 ## Картинки рівнів данжу
 

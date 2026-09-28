@@ -38,9 +38,24 @@ var _placeholder_label: Label
 
 func _ready() -> void:
 	_build_preview()
+	_style()
 	popup.visible = false
 	_index = _find_index(GameState.selected_hero_id)
 	_rebuild()
+
+## Фентезійне оформлення (UiTheme): заголовок Зали, ім'я героя між
+## розділювачами, опис і здібності — на панелі в рамці.
+func _style() -> void:
+	var title := $VBoxContainer/TopRow/TitleLabel as Label
+	title.text = "Зала героїв"
+	title.add_theme_color_override("font_color", UiTheme.HEADING)
+	name_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	UiTheme.add_dividers(name_label)
+	var info: Array[Control] = [description_label, stats_label, icons_row]
+	UiTheme.wrap_in_panel(info)
+	UiTheme.make_primary(action_button)
+	($AbilityPopup/Panel as PanelContainer).add_theme_stylebox_override("panel", UiTheme.panel_box())
+	popup_title.add_theme_color_override("font_color", UiTheme.HEADING)
 
 ## Вітрина кладеться поверх старої "сцени" зі спрайтом: сам спрайт
 ## ховаємо, а підсвічування знизу лишаємо — воно гарне.
@@ -185,4 +200,5 @@ func _on_action_pressed() -> void:
 	_rebuild()
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+	# Назад — туди, звідки прийшли: у місто до дверей будівлі чи в меню.
+	GameState.return_from_ui()

@@ -141,6 +141,29 @@ func buy_starter_pack(id: StringName) -> bool:
 	SaveManager.save_game()
 	return true
 
+# Екрани будівель (Зала героїв, Збройня, Храм, Ринок): куди з них
+# повертатись — у місто до тих самих дверей або в головне меню, якщо
+# екран відкрили звідти. Між запусками не зберігається.
+const MAIN_MENU_SCENE := "res://scenes/ui/main_menu.tscn"
+const TOWN_SCENE := "res://scenes/world/base_island.tscn"
+var ui_return_scene := MAIN_MENU_SCENE
+var town_return_spot := Vector3.INF
+
+## Відкрити екран будівлі з міста: "Назад" поверне героя до її дверей.
+func open_from_town(scene_path: String, spot: Vector3) -> void:
+	ui_return_scene = TOWN_SCENE
+	town_return_spot = spot
+	get_tree().change_scene_to_file(scene_path)
+
+## "Назад" з екрана будівлі.
+func return_from_ui() -> void:
+	var target := ui_return_scene
+	ui_return_scene = MAIN_MENU_SCENE
+	if target == TOWN_SCENE:
+		SceneLoader.change_scene(TOWN_SCENE, "Місто")
+	else:
+		get_tree().change_scene_to_file(target)
+
 # Данж (3D). dungeon_level — який рівень зараз обрано, max_dungeon_level
 # — найдальший, куди герой уже дійшов.
 var dungeon_level := 0

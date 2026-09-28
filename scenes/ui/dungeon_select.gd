@@ -32,12 +32,7 @@ func _ready() -> void:
 	column.add_theme_constant_override("separation", 12)
 	add_child(column)
 
-	var title := Label.new()
-	title.text = "Данж — обери рівень"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 30)
-	title.add_theme_color_override("font_color", UiTheme.ACCENT)
-	column.add_child(title)
+	column.add_child(UiTheme.make_title("Данж — обери рівень", 28))
 
 	var cards := HBoxContainer.new()
 	cards.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -65,9 +60,9 @@ func _build_card(index: int) -> Control:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(250, 0)
 	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_theme_stylebox_override("panel", UiTheme.make_box(
-		UiTheme.PANEL if unlocked else Color(0.08, 0.08, 0.1), 12, 2,
-		accent if unlocked else Color(0.3, 0.3, 0.34)))
+	# Рамка — кольору світла цього рівня; закритий рівень — сірий.
+	card.add_theme_stylebox_override("panel", UiTheme.panel_box(
+		accent.lerp(Color.WHITE, 0.35) if unlocked else Color(0.45, 0.45, 0.48)))
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
@@ -77,9 +72,17 @@ func _build_card(index: int) -> Control:
 	picture.custom_minimum_size = Vector2(0, 92)
 	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	picture.texture = ArtSlots.icon_or_placeholder(ArtSlots.dungeon_icon(level.id), accent, 96)
-	picture.modulate = Color.WHITE if unlocked else Color(0.4, 0.4, 0.45)
-	box.add_child(picture)
+	var own_picture := ArtSlots.dungeon_icon(level.id)
+	if own_picture != null:
+		picture.texture = own_picture
+		picture.modulate = Color.WHITE if unlocked else Color(0.4, 0.4, 0.45)
+		box.add_child(picture)
+	else:
+		# Своєї картинки рівня ще немає — черепок у слоті кольору рівня.
+		var slot := UiTheme.make_slot(UiTheme.control_icon("skull"), 56.0,
+			accent if unlocked else Color(0.4, 0.4, 0.45))
+		slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		box.add_child(slot)
 
 	box.add_child(_label("Рівень %d. %s" % [index + 1, level.title], 20,
 		accent if unlocked else UiTheme.TEXT_DIM))
@@ -105,6 +108,7 @@ func _build_card(index: int) -> Control:
 		button.text = "Пройдено — увійти знову"
 	else:
 		button.text = "Увійти"
+		UiTheme.make_primary(button)
 	button.pressed.connect(_on_level_pressed.bind(index))
 	box.add_child(button)
 	return card

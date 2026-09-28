@@ -12,11 +12,30 @@ class_name CombatButton
 ## накопичення — як "Лють" вартової, що заряджається від ударів.
 ##
 ## Якщо в res://assets/ui/icons/skills/<id>.png лежить картинка, кнопка
-## бере її; поки немає — малює просту фігуру за назвою (меч, стрілки,
-## вихор, нова, вогонь, дим).
+## бере її. Поки немає — іконку з набору Kenney Mobile Controls
+## (assets/ui/controls, PACK_ICONS), а для решти видів (посохи, книга,
+## карти, крига, отрута...) малює просту фігуру сама.
+##
+## Сама кнопка — темний диск із того ж набору з тонким обідком кольору
+## здібності.
 
 signal pressed_down
 signal released
+
+const BUTTON_TEXTURE := "res://assets/ui/controls/button_circle.png"
+## Вид кнопки → іконка з набору (assets/ui/controls/icon_<назва>.png).
+const PACK_ICONS := {
+	"attack": "sword",
+	"gun": "crosshair",
+	"dodge": "jump",
+	"whirl": "arrow_rotate",
+	"dash": "arrow",
+	"nova": "target",
+	"fire": "fire",
+}
+## Подвійна стрілка з набору дивиться вгору ("стрибок") — для перекату
+## повертаємо її вправо.
+const PACK_ICON_TURN := {"dodge": PI * 0.5}
 
 var radius := 60.0
 ## Яку фігуру малювати: attack, dodge, whirl, dash, nova, fire, smoke.
@@ -46,9 +65,15 @@ var inner_text := ""
 
 var _touch_index := -1
 var _down := false
+var _background: Texture2D
+var _pack_icon: Texture2D
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	if ResourceLoader.exists(BUTTON_TEXTURE):
+		_background = load(BUTTON_TEXTURE)
+	if PACK_ICONS.has(icon_kind):
+		_pack_icon = UiTheme.control_icon(PACK_ICONS[icon_kind])
 	size = Vector2(radius * 2.0, radius * 2.0)
 	custom_minimum_size = size
 	pivot_offset = size * 0.5
@@ -105,15 +130,25 @@ func _release() -> void:
 func _draw() -> void:
 	var center := size * 0.5
 	var is_ready := cooldown_ratio <= 0.0 and (charge < 0.0 or charge >= 1.0)
-	# Обідок — кільце з двох кіл, а не згладжена лінія: так кнопка
-	# малюється однією командою разом із фоном (дешевше для телефона).
-	draw_circle(center, radius, Color(accent, 0.95 if is_ready else 0.4))
-	draw_circle(center, radius - 4.0, Color(0.05, 0.06, 0.09, 0.8 if not _down else 0.9))
+	# Обідок кольору здібності — диск під темною кнопкою, а не згладжена
+	# лінія: дві прості команди малювання (дешевше для телефона).
+	draw_circle(center, radius, Color(accent, 0.95 if is_ready else 0.35), true, -1.0, true)
+	if _background != null:
+		var inner := radius - 3.0
+		draw_texture_rect(_background, Rect2(center - Vector2(inner, inner), Vector2(inner, inner) * 2.0),
+			false, Color(0.72, 0.72, 0.72) if _down else Color.WHITE)
+	else:
+		draw_circle(center, radius - 4.0, Color(0.05, 0.06, 0.09, 0.8 if not _down else 0.9))
 	var glyph_color := Color(1, 1, 1, 0.95 if is_ready else 0.45)
 	if icon_texture != null:
 		var side := radius * 1.1
 		draw_texture_rect(icon_texture, Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)),
 			false, Color(1, 1, 1, 0.95 if is_ready else 0.5))
+	elif _pack_icon != null:
+		var side := radius * 0.92
+		draw_set_transform(center, PACK_ICON_TURN.get(icon_kind, 0.0))
+		draw_texture_rect(_pack_icon, Rect2(-Vector2(side, side) * 0.5, Vector2(side, side)), false, glyph_color)
+		draw_set_transform(Vector2.ZERO)
 	else:
 		match icon_kind:
 			"attack":
@@ -156,8 +191,8 @@ func _draw() -> void:
 			points.append(center + Vector2(cos(angle), sin(angle)) * (radius - 3.0))
 		draw_colored_polygon(points, Color(0, 0, 0, 0.5))
 	elif charge >= 1.0:
-		# Готово — кнопка світиться.
-		draw_circle(center, radius + 3.0, Color(accent, 0.35))
+		# Готово — навколо кнопки світиться кільце.
+		draw_arc(center, radius + 3.0, 0.0, TAU, 40, Color(accent, 0.6), 4.0, true)
 
 	if cooldown_ratio > 0.0:
 		# Темний сектор перезарядки: зменшується за годинниковою стрілкою.
@@ -311,12 +346,14 @@ func _draw_cards(center: Vector2, size_px: float, color: Color) -> void:
 		card.append(card[0])
 		draw_polyline(card, Color(0.05, 0.06, 0.09, 0.9), size_px * 0.08)
 
-## Коло з рунними рисками.
+## Руна "Феху" в колі печаті: стовбур і дві гілки навскіс угору.
 func _draw_rune(center: Vector2, size_px: float, color: Color) -> void:
-	draw_arc(center, size_px * 0.85, 0.0, TAU, 24, color, size_px * 0.14)
-	for i in 3:
-		var direction := Vector2.from_angle(TAU * i / 3.0 - PI / 2.0)
-		draw_line(center, center + direction * size_px * 0.55, color, size_px * 0.14)
+	draw_arc(center, size_px * 0.95, 0.0, TAU, 28, color, size_px * 0.12)
+	var width := size_px * 0.16
+	var stave := center + Vector2(-size_px * 0.18, 0)
+	draw_line(stave + Vector2(0, size_px * 0.6), stave + Vector2(0, -size_px * 0.6), color, width)
+	draw_line(stave + Vector2(0, -size_px * 0.12), stave + Vector2(size_px * 0.45, -size_px * 0.5), color, width)
+	draw_line(stave + Vector2(0, size_px * 0.22), stave + Vector2(size_px * 0.45, -size_px * 0.16), color, width)
 
 ## Три дуги по колу — вихор.
 func _draw_whirl(center: Vector2, size_px: float, color: Color) -> void:

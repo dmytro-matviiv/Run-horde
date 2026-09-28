@@ -16,6 +16,9 @@ func setup(kind: StringName, color: Color, title: String) -> void:
 	text = ""
 	tooltip_text = title
 	custom_minimum_size = Vector2(SIZE, SIZE)
+	# Іконка кругла — прямокутна рамка кнопки з теми тут зайва.
+	for state: String in ["normal", "hover", "pressed", "focus", "disabled"]:
+		add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	queue_redraw()
 
 func _draw() -> void:

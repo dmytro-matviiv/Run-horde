@@ -1,46 +1,43 @@
 extends Control
 
-## Головне меню: точка повернення між ранами. "Грати" веде в ран,
-## "Апгрейди" — на екран мета-прогресії (тут гравець витрачає золото
-## між ранами — наша "база"), "Магазин" — геми, обмін і стартові набори.
-## Тут же показуємо офлайн-золото (GameState.pending_offline_gold) і
-## скриньку за таймером.
+## Головне меню: "Грати" веде в місто, "Магазин" — геми, обмін і
+## стартові набори. Героя, зброю й таланти гравець обирає не тут, а в
+## місті — підходить до Зали героїв, Збройні чи Храму: у цьому й сенс
+## будівель. Тут же — офлайн-золото (GameState.pending_offline_gold),
+## скринька за таймером і налаштування.
 
 const OFFLINE_REWARD_SCENE := preload("res://scenes/ui/offline_reward.tscn")
 const CREDITS_SCRIPT := preload("res://scenes/ui/credits.gd")
 
 @onready var gold_label: Label = $TopBar/GoldLabel
 @onready var gems_label: Label = $TopBar/GemsLabel
-@onready var hero_label: Label = $CenterContainer/VBoxContainer/HeroLabel
-@onready var chest_button: Button = $CenterContainer/VBoxContainer/ChestButton
-@onready var graphics_button: Button = $CenterContainer/VBoxContainer/Row3/GraphicsButton
-@onready var fps_button: Button = $CenterContainer/VBoxContainer/Row3/FpsButton
+@onready var hero_label: Label = $CenterContainer/Panel/VBoxContainer/HeroLabel
+@onready var chest_button: Button = $CenterContainer/Panel/VBoxContainer/Row/ChestButton
+@onready var graphics_button: Button = $CenterContainer/Panel/VBoxContainer/Row3/GraphicsButton
+@onready var fps_button: Button = $CenterContainer/Panel/VBoxContainer/Row3/FpsButton
 
 const CHEST_MESSAGE_SEC := 3.0
 
 var _chest_refresh_timer := 0.0
 var _chest_message_left := 0.0   # поки > 0, щосекундне оновлення не затирає повідомлення
 
-## Кнопки меню мають місце під іконку: поклади
-## res://assets/ui/icons/menu/<назва>.png — і вона з'явиться сама.
+## Кнопки меню можуть мати іконку: поклади
+## res://assets/ui/icons/menu/<назва>.png — і вона з'явиться сама. Без
+## файла кнопка лишається текстовою, як у фентезійному зразку.
 const MENU_ICONS := {
 	"PlayButton": "play",
-	"Row1/HeroesButton": "heroes",
-	"Row1/WeaponsButton": "weapons",
-	"Row2/UpgradesButton": "talents",
-	"Row2/ShopButton": "shop",
-	"ChestButton": "chest",
+	"Row/ShopButton": "shop",
+	"Row/ChestButton": "chest",
 }
 
 func _apply_menu_icons() -> void:
 	for path: String in MENU_ICONS:
-		var button := get_node_or_null("CenterContainer/VBoxContainer/" + path) as Button
-		if button == null:
+		var button := get_node_or_null("CenterContainer/Panel/VBoxContainer/" + path) as Button
+		var icon := ArtSlots.menu_icon(MENU_ICONS[path])
+		if button == null or icon == null:
 			continue
-		var name: String = MENU_ICONS[path]
-		button.icon = ArtSlots.icon_or_placeholder(ArtSlots.menu_icon(name), UiTheme.ACCENT, 48)
+		button.icon = icon
 		button.expand_icon = true
-		button.tooltip_text = "Іконка: assets/ui/icons/menu/%s.png" % name
 
 func _ready() -> void:
 	_apply_menu_icons()
@@ -87,15 +84,6 @@ func _show_offline_reward() -> void:
 func _on_play_pressed() -> void:
 	SceneLoader.change_scene("res://scenes/world/base_island.tscn", "База")
 
-func _on_upgrades_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/meta_upgrades.tscn")
-
-func _on_heroes_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/heroes.tscn")
-
-func _on_weapons_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/weapons.tscn")
-
 func _on_shop_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/shop.tscn")
 
@@ -137,7 +125,7 @@ func _add_credits_button() -> void:
 	button.custom_minimum_size = Vector2(110, 48)
 	button.add_theme_font_size_override("font_size", 16)
 	button.pressed.connect(_on_credits_pressed)
-	$CenterContainer/VBoxContainer/Row3.add_child(button)
+	$CenterContainer/Panel/VBoxContainer/Row3.add_child(button)
 
 func _on_credits_pressed() -> void:
 	add_child(CREDITS_SCRIPT.new())

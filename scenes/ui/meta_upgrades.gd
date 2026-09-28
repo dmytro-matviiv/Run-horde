@@ -38,6 +38,13 @@ var _hero_id: StringName
 func _ready() -> void:
 	_hero_id = GameState.selected_hero_id
 	hero_label.text = "Таланти: %s" % HeroPool.get_def(_hero_id).title
+	var title := $VBoxContainer/TitleLabel as Label
+	title.text = "Храм — таланти"
+	title.add_theme_color_override("font_color", UiTheme.HEADING)
+	UiTheme.add_dividers(title)
+	# Список — посередині екрана: на широкому телефоні він інакше тулився
+	# до лівого краю, а праворуч зяяла порожнеча.
+	rows_container.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
 	_rebuild()
 	# Банер показуємо лише тут — розділ 8 ТЗ: тільки на екрані
 	# мета-прогресії, ніколи під час рану.
@@ -72,24 +79,27 @@ func _build_row(id: StringName, title: String, per_level: String) -> Control:
 	var level := GameState.get_meta_level(_hero_id, id)
 	var max_level := GameState.get_meta_max_level(id)
 
+	# Кожен талант — картка в рамці; іконка — у слоті. Своєї картинки
+	# (assets/ui/icons/talents/<id>.png) ще немає — стоїть зірка.
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UiTheme.panel_box())
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
-
-	var icon := TextureRect.new()
-	icon.custom_minimum_size = Vector2(48, 48)
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.texture = ArtSlots.icon_or_placeholder(ArtSlots.talent_icon(id), UiTheme.ACCENT)
-	icon.tooltip_text = "Іконка: assets/ui/icons/talents/%s.png" % id
-	row.add_child(icon)
+	card.add_child(row)
+	var own_icon := ArtSlots.talent_icon(id)
+	row.add_child(UiTheme.make_slot(own_icon if own_icon != null else UiTheme.control_icon("star"),
+		44.0, Color.WHITE if own_icon != null else UiTheme.HEADING))
 
 	var info := Label.new()
 	info.custom_minimum_size = Vector2(400, 0)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.text = "%s (%s) — рівень %d/%d" % [title, per_level, level, max_level]
 	row.add_child(info)
 
 	var buy_button := Button.new()
-	buy_button.custom_minimum_size = Vector2(150, 40)
+	buy_button.custom_minimum_size = Vector2(170, 44)
+	buy_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if level >= max_level:
 		buy_button.text = "Максимум"
 		buy_button.disabled = true
@@ -100,11 +110,12 @@ func _build_row(id: StringName, title: String, per_level: String) -> Control:
 		buy_button.pressed.connect(_on_buy_pressed.bind(id))
 	row.add_child(buy_button)
 
-	return row
+	return card
 
 func _on_buy_pressed(id: StringName) -> void:
 	GameState.buy_meta_upgrade(_hero_id, id)
 	_rebuild()
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+	# Назад — туди, звідки прийшли: у місто до дверей будівлі чи в меню.
+	GameState.return_from_ui()

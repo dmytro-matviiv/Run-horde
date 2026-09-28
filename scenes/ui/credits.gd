@@ -28,6 +28,11 @@ const TEXT := """[b]3D-моделі[/b]
 
 [b]Більшість інших моделей[/b] (місто, данж, монстри, персонажі) —
 Quaternius (quaternius.com), CC0.
+
+[b]Інтерфейс[/b]
+
+Рамки, кнопки, джойстик, іконки кнопок бою й курсор — Kenney (kenney.nl):
+«Fantasy UI Borders», «Mobile Controls», «Cursor Pixel Pack». Ліцензія CC0.
 """
 
 func _ready() -> void:
@@ -44,24 +49,20 @@ func _ready() -> void:
 	add_child(center)
 
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UiTheme.make_box(UiTheme.PANEL, 12, 2, UiTheme.ACCENT))
 	center.add_child(panel)
 
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 12)
 	panel.add_child(column)
 
-	var title := Label.new()
-	title.text = "Автори"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
-	title.add_theme_color_override("font_color", UiTheme.ACCENT)
-	column.add_child(title)
+	column.add_child(UiTheme.make_title("Автори", 26))
 
+	# Текст довший за екран — гортається всередині рамки, а кнопка
+	# "Закрити" лишається видно.
 	var body := RichTextLabel.new()
 	body.bbcode_enabled = true
-	body.fit_content = true
-	body.custom_minimum_size = Vector2(640, 0)
+	body.scroll_active = true
+	body.custom_minimum_size = Vector2(660, 420)
 	body.add_theme_font_size_override("normal_font_size", 17)
 	body.add_theme_font_size_override("bold_font_size", 18)
 	body.add_theme_color_override("default_color", UiTheme.TEXT)

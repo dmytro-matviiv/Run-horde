@@ -9,6 +9,10 @@ extends Control
 ## фіксований кружечок, а великий палець завжди попадає.
 ##
 ## Права половина екрана лишається вільною для кнопок (пауза тощо).
+##
+## Вигляд — темний диск і ручка з набору Kenney Mobile Controls. Поки
+## палець не торкається, блідий джойстик стоїть у лівому нижньому куті —
+## видно, куди ставити палець.
 
 signal direction_changed(direction: Vector2)
 
@@ -16,6 +20,13 @@ const MAX_RADIUS := 90.0      # відтягування на цю відста�
 const DEAD_ZONE := 8.0        # менше — вважаємо, що гравець просто тримає палець
 const BASE_ALPHA := 0.25
 const KNOB_ALPHA := 0.55
+const IDLE_ALPHA := 0.35
+const KNOB_RADIUS := 38.0
+const PAD_TEXTURE := "res://assets/ui/controls/joystick_circle_pad_a.png"
+const NUB_TEXTURE := "res://assets/ui/controls/joystick_circle_nub_a.png"
+
+var _pad: Texture2D
+var _nub: Texture2D
 
 var _touch_index := -1
 var _origin := Vector2.ZERO
@@ -26,6 +37,11 @@ func _ready() -> void:
 	# Джойстик малюється поверх гри, але не краде події в кнопок HUD.
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_process_unhandled_input(true)
+	if ResourceLoader.exists(PAD_TEXTURE):
+		_pad = load(PAD_TEXTURE)
+	if ResourceLoader.exists(NUB_TEXTURE):
+		_nub = load(NUB_TEXTURE)
+	resized.connect(queue_redraw)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
@@ -81,11 +97,25 @@ func _handle_drag(position: Vector2) -> void:
 
 func _draw() -> void:
 	if not _active:
+		# Підказка, куди ставити палець: блідий джойстик у кутку.
+		_draw_stick(_idle_center(), Vector2.ZERO, IDLE_ALPHA)
 		return
 	var offset := _knob - _origin
 	if offset.length() > MAX_RADIUS:
 		offset = offset.normalized() * MAX_RADIUS
-	draw_circle(_origin, MAX_RADIUS, Color(1, 1, 1, BASE_ALPHA * 0.35))
-	draw_arc(_origin, MAX_RADIUS, 0.0, TAU, 40, Color(1, 1, 1, BASE_ALPHA), 3.0)
-	draw_circle(_origin + offset, 34.0, Color(0.98, 0.72, 0.25, KNOB_ALPHA))
-	draw_arc(_origin + offset, 34.0, 0.0, TAU, 24, Color(1, 1, 1, 0.5), 2.0)
+	_draw_stick(_origin, offset, 1.0)
+
+func _idle_center() -> Vector2:
+	return Vector2(MAX_RADIUS + 60.0, size.y - MAX_RADIUS - 50.0)
+
+func _draw_stick(center: Vector2, offset: Vector2, alpha: float) -> void:
+	if _pad == null or _nub == null:
+		draw_circle(center, MAX_RADIUS, Color(1, 1, 1, BASE_ALPHA * 0.35 * alpha))
+		draw_arc(center, MAX_RADIUS, 0.0, TAU, 40, Color(1, 1, 1, BASE_ALPHA * alpha), 3.0)
+		draw_circle(center + offset, 34.0, Color(0.98, 0.72, 0.25, KNOB_ALPHA * alpha))
+		return
+	var pad_radius := MAX_RADIUS + 18.0
+	draw_texture_rect(_pad, Rect2(center - Vector2(pad_radius, pad_radius), Vector2(pad_radius, pad_radius) * 2.0),
+		false, Color(1, 1, 1, 0.85 * alpha))
+	draw_texture_rect(_nub, Rect2(center + offset - Vector2(KNOB_RADIUS, KNOB_RADIUS), Vector2(KNOB_RADIUS, KNOB_RADIUS) * 2.0),
+		false, Color(1, 1, 1, alpha))

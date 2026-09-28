@@ -33,6 +33,13 @@ func _ready() -> void:
 	IapManager.restore_finished.connect(_on_restore_finished)
 	IapManager.prices_updated.connect(_rebuild)
 	status_label.text = ""
+	var title := $VBoxContainer/TitleLabel as Label
+	title.text = "Ринок"
+	title.add_theme_color_override("font_color", UiTheme.HEADING)
+	UiTheme.add_dividers(title)
+	# Список — посередині екрана: на широкому телефоні він інакше тулився
+	# до лівого краю, а праворуч зяяла порожнеча.
+	rows_container.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
 	_rebuild()
 
 func _process(delta: float) -> void:
@@ -108,12 +115,8 @@ func _get_pack_desc(pack_id: StringName) -> String:
 			return "%d золота" % Balance.STARTER_GOLD_GOLD
 	return ""
 
-func _build_header(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", 22)
-	label.add_theme_color_override("font_color", Color(0.7, 0.85, 1))
-	return label
+func _build_header(text: String) -> Control:
+	return UiTheme.make_title(text, 22)
 
 ## Рядок "іконка + опис + кнопка". Повертає кнопку, щоб виклик сам
 ## задав текст і дію.
@@ -122,24 +125,28 @@ func _build_header(text: String) -> Label:
 ## res://assets/ui/icons/shop/<назва>.png, і він з'явиться замість
 ## кольорової заглушки (див. assets/ART_GUIDE.md).
 func _build_row(parent: Control, info_text: String, icon_name: String = "", accent: Color = Color(1, 0.86, 0.4)) -> Button:
+	# Кожен товар — картка в рамці, іконка — у слоті. Своєї картинки
+	# (assets/ui/icons/shop/<назва>.png) ще немає — стоїть біла іконка.
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UiTheme.panel_box())
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
-	var icon := TextureRect.new()
-	icon.custom_minimum_size = Vector2(52, 52)
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.texture = ArtSlots.icon_or_placeholder(ArtSlots.shop_icon(icon_name), accent)
-	if icon_name != "":
-		icon.tooltip_text = "Іконка: assets/ui/icons/shop/%s.png" % icon_name
-	row.add_child(icon)
+	card.add_child(row)
+	var own_icon := ArtSlots.shop_icon(icon_name)
+	var fallback := UiTheme.control_icon("money" if icon_name == "exchange" else "star")
+	row.add_child(UiTheme.make_slot(own_icon if own_icon != null else fallback, 44.0,
+		Color.WHITE if own_icon != null else accent))
 	var info := Label.new()
 	info.custom_minimum_size = Vector2(400, 0)
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.text = info_text
 	row.add_child(info)
 	var button := Button.new()
-	button.custom_minimum_size = Vector2(150, 44)
+	button.custom_minimum_size = Vector2(160, 46)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(button)
-	parent.add_child(row)
+	parent.add_child(card)
 	return button
 
 func _show_status(text: String) -> void:
@@ -182,4 +189,5 @@ func _on_restore_finished(restored_count: int) -> void:
 	_rebuild()
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+	# Назад — туди, звідки прийшли: у місто до дверей будівлі чи в меню.
+	GameState.return_from_ui()

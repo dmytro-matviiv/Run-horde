@@ -62,6 +62,9 @@ func _ready() -> void:
 	for enemy in dungeon.get_node("Enemies").get_children():
 		if enemy.global_position.distance_to(player.global_position) < 18.0:
 			enemy.take_damage(enemy.max_hp * 0.45)
+	# --pause — знімок із відкритим меню паузи.
+	if "--pause" in OS.get_cmdline_user_args():
+		dungeon.call("_open_pause")
 	await get_tree().create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
 	get_viewport().get_texture().get_image().save_png(out_path)

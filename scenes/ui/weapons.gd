@@ -80,8 +80,22 @@ func _build_preview() -> void:
 func _ready() -> void:
 	_build_preview()
 	_hero_id = GameState.selected_hero_id
-	hero_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
+	_style()
 	_rebuild()
+
+## Фентезійне оформлення (UiTheme): заголовок Збройні між розділювачами.
+func _style() -> void:
+	var title := $VBoxContainer/TitleLabel as Label
+	if title != null:
+		title.text = "Збройня"
+		title.add_theme_color_override("font_color", UiTheme.HEADING)
+		UiTheme.add_dividers(title)
+	hero_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
+	hero_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	gems_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	# Список — посередині екрана: на широкому телефоні він інакше тулився
+	# до лівого краю, а праворуч зяяла порожнеча.
+	rows_container.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
 
 func _show_equipped() -> void:
 	var equipped := GameState.get_equipped_weapon_id(GameState.selected_hero_id)
@@ -102,8 +116,7 @@ func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
 	var owned := GameState.is_weapon_owned(def.id)
 	var card := PanelContainer.new()
 	# Споряджену зброю підсвічуємо рамкою її ж кольору — видно з першого погляду.
-	if equipped_id == def.id:
-		card.add_theme_stylebox_override("panel", UiTheme.make_box(UiTheme.PANEL_LIGHT, 14, 3, def.color))
+	card.add_theme_stylebox_override("panel", UiTheme.panel_box(def.color if equipped_id == def.id else Color.WHITE))
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
@@ -115,13 +128,18 @@ func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
 	if picture != null:
 		var image := TextureRect.new()
 		image.texture = picture
-		image.custom_minimum_size = Vector2(96, 96)
+		image.custom_minimum_size = Vector2(84, 84)
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		# Некуплена зброя — приглушена, як і намальована заглушка.
 		if not owned:
 			image.modulate = Color(0.6, 0.6, 0.6, 0.7)
-		row.add_child(image)
+		# Картинка — у слоті з рамкою, як предмет в інвентарі.
+		var slot := PanelContainer.new()
+		slot.add_theme_stylebox_override("panel", UiTheme.slot_box())
+		slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		slot.add_child(image)
+		row.add_child(slot)
 	else:
 		var icon: Control = WEAPON_ICON_SCRIPT.new()
 		icon.setup(def, owned)
@@ -209,6 +227,7 @@ func _build_action_button(def: WeaponDef, equipped_id: StringName, owned: bool) 
 		button.disabled = true
 	elif owned:
 		button.text = "Спорядити"
+		UiTheme.make_primary(button)
 		button.pressed.connect(_on_equip_pressed.bind(def.id))
 	else:
 		# Уся зброя купується за золото — те саме, що падає в походах.
@@ -230,4 +249,5 @@ func _on_equip_pressed(id: StringName) -> void:
 	_rebuild()
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+	# Назад — туди, звідки прийшли: у місто до дверей будівлі чи в меню.
+	GameState.return_from_ui()

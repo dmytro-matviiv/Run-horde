@@ -11,6 +11,12 @@ signal closed
 
 func _ready() -> void:
 	amount_label.text = "+%d золота" % GameState.pending_offline_gold
+	# Оформлення (UiTheme): заголовок блідо-зелений, подвоєння — світла
+	# головна кнопка.
+	var title := $CenterContainer/Panel/MarginContainer/VBoxContainer/TitleLabel as Label
+	title.add_theme_color_override("font_color", UiTheme.HEADING)
+	amount_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	UiTheme.make_primary(claim_double_button)
 
 func _on_claim_pressed() -> void:
 	GameState.claim_offline_gold(1)
