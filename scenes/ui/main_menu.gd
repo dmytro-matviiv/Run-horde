@@ -7,6 +7,7 @@ extends Control
 ## скриньку за таймером.
 
 const OFFLINE_REWARD_SCENE := preload("res://scenes/ui/offline_reward.tscn")
+const CREDITS_SCRIPT := preload("res://scenes/ui/credits.gd")
 
 @onready var gold_label: Label = $TopBar/GoldLabel
 @onready var gems_label: Label = $TopBar/GemsLabel
@@ -43,6 +44,7 @@ func _apply_menu_icons() -> void:
 
 func _ready() -> void:
 	_apply_menu_icons()
+	_add_credits_button()
 	_update_gold_label()
 	_update_chest_button()
 	_update_graphics_buttons()
@@ -126,6 +128,19 @@ func _on_graphics_pressed() -> void:
 func _on_fps_pressed() -> void:
 	PerfSettings.set_show_fps(not PerfSettings.show_fps)
 	_update_graphics_buttons()
+
+## "Автори" — поруч із налаштуваннями. Для моделей під CC BY згадка
+## автора в самій грі обов'язкова.
+func _add_credits_button() -> void:
+	var button := Button.new()
+	button.text = "Автори"
+	button.custom_minimum_size = Vector2(110, 48)
+	button.add_theme_font_size_override("font_size", 16)
+	button.pressed.connect(_on_credits_pressed)
+	$CenterContainer/VBoxContainer/Row3.add_child(button)
+
+func _on_credits_pressed() -> void:
+	add_child(CREDITS_SCRIPT.new())
 
 func _update_graphics_buttons() -> void:
 	if PerfSettings.auto_quality:

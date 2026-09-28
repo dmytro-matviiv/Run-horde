@@ -7,7 +7,7 @@
 script = ExtResource("1")
 id = &"blade_storm"
 title = "Вихор Смерті"
-description = "Чотири клинки без упину крутяться навколо героїні й ріжуть усіх, хто підійшов, — навіть тих, хто вже впритул."
+description = "Диявольський меч у кожній руці: швидка серія широких ударів ріже всіх довкола, хоч кожен удар і легший."
 hero_id = &"blade_warden"
 cost_gold = 5400
 cost_gems = 450
@@ -25,3 +25,7 @@ speed_mult_3d = 1.35
 knockback_mult_3d = 0.6
 reach_3d = 2.6
 arc_3d = 180.0
+grip_offset = Vector3(0.001354, 0.001176, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 1.4407
+dual_wield = true

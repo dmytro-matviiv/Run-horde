@@ -3,7 +3,7 @@ class_name WeaponPool
 
 ## Реєстр усієї зброї гри — як HeroPool для героїв. Нова зброя
 ## додається сюди явно, щоб увесь асортимент було видно одним поглядом.
-## Стартова зброя героя — та, у якої cost_gems = 0.
+## Стартова зброя героя — та, у якої cost_gold = 0.
 
 const ALL_WEAPONS: Array[WeaponDef] = [
 	preload("res://data/weapons/rune_bolt.tres"),
@@ -11,10 +11,15 @@ const ALL_WEAPONS: Array[WeaponDef] = [
 	preload("res://data/weapons/storm_scepter.tres"),
 	preload("res://data/weapons/frost_staff.tres"),
 
+	# Клинкова Вартова — від дешевшої до найсильнішої.
 	preload("res://data/weapons/war_blade.tres"),
-	preload("res://data/weapons/battle_axe.tres"),
-	preload("res://data/weapons/blade_storm.tres"),
+	preload("res://data/weapons/talwar.tres"),
+	preload("res://data/weapons/twin_daggers.tres"),
 	preload("res://data/weapons/harpoon_glaive.tres"),
+	preload("res://data/weapons/battle_axe.tres"),
+	preload("res://data/weapons/cleaver.tres"),
+	preload("res://data/weapons/blade_storm.tres"),
+	preload("res://data/weapons/devils_axe.tres"),
 
 	preload("res://data/weapons/ember_bolt.tres"),
 	preload("res://data/weapons/flamethrower.tres"),
@@ -47,6 +52,6 @@ static func get_for_hero(hero_id: StringName) -> Array[WeaponDef]:
 ## не купив і не спорядив іншу.
 static func get_starter_for_hero(hero_id: StringName) -> WeaponDef:
 	for def in ALL_WEAPONS:
-		if def.hero_id == hero_id and def.cost_gems == 0:
+		if def.hero_id == hero_id and def.cost_gold <= 0:
 			return def
 	return ALL_WEAPONS[0]

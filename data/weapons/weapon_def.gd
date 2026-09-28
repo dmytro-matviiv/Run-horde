@@ -102,6 +102,9 @@ var style_3d: String = "sword"
 @export var grip_offset := Vector3.ZERO
 @export var grip_rotation_deg := Vector3.ZERO
 @export var model_scale: float = 1.0
+## Парна зброя: друга така сама модель у лівій руці, дзеркально до
+## правої (парні клинки, кинджали).
+@export var dual_wield := false
 
 @export_group("Статус-ефект")
 ## Порожній StringName = без ефекту. Решта — StatusEffects.POISON/BURN/SLOW.

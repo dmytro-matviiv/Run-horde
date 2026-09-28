@@ -6,8 +6,8 @@
 [resource]
 script = ExtResource("1")
 id = &"harpoon_glaive"
-title = "Глефа"
-description = "Важка глефа прошиває наскрізь цілий рядок ворогів."
+title = "Тризуб"
+description = "Тризуб на довгому держаку: б'є далі за все інше й прошиває ворогів, що стоять у ряд."
 hero_id = &"blade_warden"
 cost_gold = 3600
 cost_gems = 300
@@ -25,3 +25,6 @@ speed_mult_3d = 0.95
 knockback_mult_3d = 1.2
 reach_3d = 3.9
 arc_3d = 85.0
+grip_offset = Vector3(0.005312, 0.001174, -0.000497)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.3003

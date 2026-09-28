@@ -15,6 +15,17 @@ func _ready() -> void:
 		if argument.begins_with("--level="):
 			GameState.max_dungeon_level = maxi(GameState.max_dungeon_level, argument.get_slice("=", 1).to_int())
 			GameState.dungeon_level = argument.get_slice("=", 1).to_int()
+	# --hero=<id> і --weapon=<id> — ким і з чим іти (зброю купуємо й
+	# вдягаємо, як це зробив би гравець).
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--hero="):
+			GameState.selected_hero_id = StringName(argument.get_slice("=", 1))
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--weapon="):
+			var weapon_id := StringName(argument.get_slice("=", 1))
+			if not GameState.is_weapon_owned(weapon_id):
+				GameState.buy_weapon(weapon_id)
+			GameState.equip_weapon(GameState.selected_hero_id, weapon_id)
 	var out_path := OUT_PATH
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--quality="):

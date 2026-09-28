@@ -21,6 +21,16 @@ const ARCHETYPE_HINTS := {
 	"ground_zone": "Зона на землі",
 }
 
+## Як б'є ближня зброя в 3D-бою — за її стилем. Для решти лишається
+## назва архетипу вище.
+const STYLE_HINTS := {
+	"sword": "Меч — рівний замах",
+	"axe": "Сокира — важкий широкий замах",
+	"glaive": "Держакова — довгий удар уперед",
+	"twin_blades": "Парні клинки — швидка серія",
+	"daggers": "Кинджали — дуже швидкі короткі удари",
+}
+
 const STATUS_HINTS := {
 	&"poison": "отрута",
 	&"burn": "підпал",
@@ -97,10 +107,14 @@ func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
 		image.custom_minimum_size = Vector2(96, 96)
 		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		return image
-	var icon: Control = WEAPON_ICON_SCRIPT.new()
-	icon.setup(def, owned)
-	row.add_child(icon)
+		# Некуплена зброя — приглушена, як і намальована заглушка.
+		if not owned:
+			image.modulate = Color(0.6, 0.6, 0.6, 0.7)
+		row.add_child(image)
+	else:
+		var icon: Control = WEAPON_ICON_SCRIPT.new()
+		icon.setup(def, owned)
+		row.add_child(icon)
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -114,7 +128,7 @@ func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
 	info.add_child(title)
 
 	var kind := Label.new()
-	kind.text = ARCHETYPE_HINTS.get(def.archetype, "")
+	kind.text = STYLE_HINTS.get(def.style_3d, ARCHETYPE_HINTS.get(def.archetype, ""))
 	kind.add_theme_font_size_override("font_size", 14)
 	kind.add_theme_color_override("font_color", UiTheme.GEM)
 	info.add_child(kind)
@@ -145,6 +159,15 @@ func _build_stats_text(def: WeaponDef) -> String:
 			"%.0f пострілів/с" % (1.0 / maxf(def.fire_interval, 0.01)),
 			"магазин %d" % def.magazine,
 			"перезарядка %.1f с" % def.reload_time,
+		])
+	if STYLE_HINTS.has(def.style_3d):
+		# Ближня зброя в 3D-бою відрізняється множниками до удару героя —
+		# показуємо їх відносно стартового меча (100%).
+		return "   •   ".join([
+			"Шкода %d%%" % roundi(def.damage_mult_3d * 100.0),
+			"швидкість %d%%" % roundi(def.speed_mult_3d * 100.0),
+			"дальність %d%%" % roundi(def.reach_3d / 2.9 * 100.0),
+			"дуга %d°" % roundi(def.arc_3d),
 		])
 	var parts: Array[String] = ["Шкода %d" % int(def.damage)]
 	if def.cooldown > 0.0:

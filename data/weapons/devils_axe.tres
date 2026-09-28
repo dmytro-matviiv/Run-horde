@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/vfx/wind_slash.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"devils_axe"
+title = "Диявольська сокира"
+description = "Сокира з багряним лезом: широкий, далекий і нищівний замах — найсильніша зброя вартової."
+hero_id = &"blade_warden"
+cost_gold = 8000
+cost_gems = 0
+archetype = "melee_arc"
+damage = 40.0
+cooldown = 0.95
+color = Color(0.85, 0.15, 0.15, 1)
+melee_arc_deg = 170.0
+melee_range = 115.0
+swing_vfx = ExtResource("2")
+style_3d = "axe"
+damage_mult_3d = 1.7
+speed_mult_3d = 0.85
+knockback_mult_3d = 2.0
+reach_3d = 3.1
+arc_3d = 190.0
+grip_offset = Vector3(-0.003948, 0.000928, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 1.214

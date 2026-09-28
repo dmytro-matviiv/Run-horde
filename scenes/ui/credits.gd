@@ -1,0 +1,78 @@
+extends Control
+
+## Автори арту. Для моделей під ліцензією CC BY автора ОБОВ'ЯЗКОВО
+## треба вказати в самій грі — саме тут. Додаєш у гру модель з такою
+## ліцензією — допиши її сюди (назва, автор, посилання, ліцензія).
+##
+## Текст живе в коді, а не в .txt: текстові файли не потрапляють у
+## зібрану для телефона гру.
+
+signal closed
+
+const TEXT := """[b]3D-моделі[/b]
+
+[b]Зброя Клинкової Вартової[/b] — автор MiniPoly (poly.pizza/u/MiniPoly)
+• «Talwar» (Талвар) — poly.pizza/m/JOjAJdTeZw
+• «Devils Axe» (Диявольська сокира) — poly.pizza/m/JosYNHa2hh
+   Обидві — ліцензія CC BY 3.0 (creativecommons.org/licenses/by/3.0).
+   Моделі лише масштабовано й вкладено в руку героїні.
+• «Axe», «Cleaver», «Dagger», «Devil's Sword», «Trident» — CC0.
+
+[b]Більшість інших моделей[/b] (місто, данж, монстри, персонажі) —
+Quaternius (quaternius.com), CC0.
+"""
+
+func _ready() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.72)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.make_box(UiTheme.PANEL, 12, 2, UiTheme.ACCENT))
+	center.add_child(panel)
+
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 12)
+	panel.add_child(column)
+
+	var title := Label.new()
+	title.text = "Автори"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", UiTheme.ACCENT)
+	column.add_child(title)
+
+	var body := RichTextLabel.new()
+	body.bbcode_enabled = true
+	body.fit_content = true
+	body.custom_minimum_size = Vector2(640, 0)
+	body.add_theme_font_size_override("normal_font_size", 17)
+	body.add_theme_font_size_override("bold_font_size", 18)
+	body.add_theme_color_override("default_color", UiTheme.TEXT)
+	body.text = TEXT
+	column.add_child(body)
+
+	var close := Button.new()
+	close.text = "Закрити"
+	close.custom_minimum_size = Vector2(220, 52)
+	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	close.add_theme_font_size_override("font_size", 20)
+	close.pressed.connect(_on_close_pressed)
+	column.add_child(close)
+
+func _on_close_pressed() -> void:
+	closed.emit()
+	queue_free()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_on_close_pressed()

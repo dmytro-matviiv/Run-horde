@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/vfx/wind_slash.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"talwar"
+title = "Талвар"
+description = "Вигнута шабля: легкі швидкі замахи дуже широкою дугою — зручно різати юрбу, що обступила."
+hero_id = &"blade_warden"
+cost_gold = 2400
+cost_gems = 0
+archetype = "melee_arc"
+damage = 10.0
+cooldown = 0.7
+color = Color(0.95, 0.78, 0.3, 1)
+melee_arc_deg = 160.0
+melee_range = 115.0
+swing_vfx = ExtResource("2")
+style_3d = "sword"
+damage_mult_3d = 0.85
+speed_mult_3d = 1.2
+knockback_mult_3d = 0.75
+reach_3d = 2.8
+arc_3d = 185.0
+grip_offset = Vector3(-0.000506, 0.001579, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 1.1276

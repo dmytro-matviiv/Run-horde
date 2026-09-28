@@ -38,6 +38,8 @@ class_name HeroDef
 ## зброя, яку треба сховати, коли герой бере іншу.
 @export var weapon_bone: StringName = &"Wrist.R"
 @export var builtin_weapon_node: StringName = &"Sword"
+## Кістка лівої руки — для парної зброї (друга копія, дзеркально).
+@export var offhand_bone: StringName = &"Wrist.L"
 
 ## Якщо в новій моделі анімації звуться інакше — тут перелік
 ## "наша назва" -> "назва в моделі". Порожньо = стандартні назви

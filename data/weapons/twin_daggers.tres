@@ -1,0 +1,30 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/vfx/wind_slash.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"twin_daggers"
+title = "Парні кинджали"
+description = "Кинджал у кожній руці: найшвидші удари, але короткі й легкі — ворогів майже не відкидає. Що більше ударів, то швидше росте лють."
+hero_id = &"blade_warden"
+cost_gold = 3000
+cost_gems = 0
+archetype = "melee_arc"
+damage = 7.0
+cooldown = 0.45
+color = Color(0.95, 0.55, 0.25, 1)
+melee_arc_deg = 110.0
+melee_range = 115.0
+swing_vfx = ExtResource("2")
+style_3d = "daggers"
+damage_mult_3d = 0.6
+speed_mult_3d = 1.7
+knockback_mult_3d = 0.4
+reach_3d = 2.3
+arc_3d = 130.0
+grip_offset = Vector3(-0.001386, 0.001176, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.2948
+dual_wield = true

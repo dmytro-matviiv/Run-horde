@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+[ext_resource type="Resource" path="res://data/vfx/wind_slash.tres" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"cleaver"
+title = "Тесак"
+description = "Важкий тесак рубає повільно й вузько, зате кожен удар — найсильніший серед клинків. Для боса саме те."
+hero_id = &"blade_warden"
+cost_gold = 4800
+cost_gems = 0
+archetype = "melee_arc"
+damage = 30.0
+cooldown = 1.1
+color = Color(0.85, 0.3, 0.25, 1)
+melee_arc_deg = 100.0
+melee_range = 115.0
+swing_vfx = ExtResource("2")
+style_3d = "axe"
+damage_mult_3d = 1.9
+speed_mult_3d = 0.68
+knockback_mult_3d = 1.4
+reach_3d = 2.5
+arc_3d = 110.0
+grip_offset = Vector3(-0.000824, 0.000696, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 1.2592
