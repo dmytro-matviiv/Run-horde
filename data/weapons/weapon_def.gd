@@ -85,8 +85,10 @@ var archetype: String = "projectile"
 ##   arcane    — арканна стріла, що сама доводиться на ціль;
 ##   frost     — крижаний уламок: сповільнює, а третій поспіль заморожує;
 ##   venom     — отруйна куля: на влучанні лишає хмару, що труїть;
-##   lightning — блискавка, що перескакує з ворога на ворога.
-@export_enum("none", "arcane", "frost", "venom", "lightning") var spell: String = "none"
+##   lightning — блискавка, що перескакує з ворога на ворога;
+##   rune      — книга рун: під ворогом проступає печать і вибухає;
+##   cards     — рунні карти: віяло карт, що прошивають ворогів.
+@export_enum("none", "arcane", "frost", "venom", "lightning", "rune", "cards") var spell: String = "none"
 ## Секунд між чарами.
 @export var cast_interval := 0.6
 ## Швидкість снаряда чар (м/с).

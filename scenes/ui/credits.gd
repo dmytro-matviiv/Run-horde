@@ -23,6 +23,9 @@ const TEXT := """[b]3D-моделі[/b]
    poly.pizza/m/DZpBi0DSgZ, poly.pizza/m/bKCpO8LRCM, poly.pizza/m/8RpWxgO3ND
    Ліцензія CC BY 3.0. Моделі лише масштабовано й вкладено в руку героїні.
 
+[b]Книга рун Руновода[/b] — «Spellbook», автор Georg Bossenz — poly.pizza/m/bOlaFwTEGfX
+   Ліцензія CC BY 3.0. Частини моделі злито в одну (для телефона) й масштабовано.
+
 [b]Більшість інших моделей[/b] (місто, данж, монстри, персонажі) —
 Quaternius (quaternius.com), CC0.
 """

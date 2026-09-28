@@ -74,7 +74,9 @@ static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> No
 	if weapon.dual_wield:
 		var other := skeleton.find_bone(String(hero.offhand_bone))
 		if other >= 0:
-			_hold(skeleton, other, _make_weapon(scene, weapon), _mirrored_grip(skeleton, bone, other, grip))
+			var copy := _hold(skeleton, other, _make_weapon(scene, weapon), _mirrored_grip(skeleton, bone, other, grip))
+			# Друга рука теж "стріляє" (карти летять із тієї руки, що кидає).
+			weapon_node.set_meta(&"offhand", copy)
 	return weapon_node
 
 static func _make_weapon(scene: PackedScene, weapon: WeaponDef) -> Node3D:

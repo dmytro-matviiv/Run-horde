@@ -34,12 +34,14 @@ func _update(player: Node, delta: float) -> void:
 	if _hit_left > 0.0:
 		return
 	_hit_left = -1.0
-	var radius := RADIUS + 0.4 * talent_level(player)
+	# Здібність походу "Руна нищення" робить нову сильнішою й ширшою.
+	var power: float = player.nova_power() if player.has_method("nova_power") else 1.0
+	var radius := (RADIUS + 0.4 * talent_level(player)) * (1.0 + (power - 1.0) * 0.5)
 	var hits := 0
 	for enemy: Enemy3D in player.enemies_in_radius(radius):
 		var push: Vector3 = enemy.global_position - player.global_position
 		push.y = 0.0
-		player.deal_damage(enemy, DAMAGE, push.normalized() * KNOCKBACK, true)
+		player.deal_damage(enemy, DAMAGE * power, push.normalized() * KNOCKBACK, true)
 		hits += 1
 	CombatVfx.shockwave(player.get_parent(), player.global_position, radius, Color(1, 1, 1, 0.7), 0.3)
 	player.shake_camera(0.14 if hits > 0 else 0.06)

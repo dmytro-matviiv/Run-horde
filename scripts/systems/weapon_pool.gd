@@ -6,10 +6,9 @@ class_name WeaponPool
 ## Стартова зброя героя — та, у якої cost_gold = 0.
 
 const ALL_WEAPONS: Array[WeaponDef] = [
-	preload("res://data/weapons/rune_bolt.tres"),
-	preload("res://data/weapons/staff_meteor.tres"),
-	preload("res://data/weapons/storm_scepter.tres"),
-	preload("res://data/weapons/frost_staff.tres"),
+	# Руновод: книга рун і рунні карти, кожна зі своєю особливою здібністю.
+	preload("res://data/weapons/rune_book.tres"),
+	preload("res://data/weapons/rune_cards.tres"),
 
 	# Клинкова Вартова — від дешевшої до найсильнішої.
 	preload("res://data/weapons/war_blade.tres"),

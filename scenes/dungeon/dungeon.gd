@@ -91,6 +91,7 @@ var _alive_summons := 0
 var _exit_choice: Control
 ## Що герой уже взяв у цьому поході: id здібності -> рівень.
 var _run_upgrades: Dictionary = {}
+var _buff_bar: HFlowContainer
 
 ## Збирання рівня розкладене на кілька кадрів і сховане за екраном
 ## завантаження (SceneLoader.hold): гравець бачить плавну смужку, а не
@@ -168,6 +169,41 @@ func _setup_hud(title: String) -> void:
 	exit_button.visible = false
 	exit_button.pressed.connect(_on_exit_pressed)
 	_update_status(title)
+
+## Узяті в поході здібності — плашками під здоров'ям: видно, що вже
+## прокачано й на якому рівні. Особисті здібності героя — його кольором.
+func _update_buffs() -> void:
+	if _buff_bar == null:
+		_buff_bar = HFlowContainer.new()
+		_buff_bar.position = Vector2(16, 80)
+		_buff_bar.size = Vector2(560, 0)
+		_buff_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_buff_bar.add_theme_constant_override("h_separation", 6)
+		_buff_bar.add_theme_constant_override("v_separation", 4)
+		hud.add_child(_buff_bar)
+		hud.move_child(_buff_bar, 0)
+	for child in _buff_bar.get_children():
+		child.queue_free()
+	for upgrade: Dictionary in RunUpgrades.UPGRADES:
+		var level := int(_run_upgrades.get(upgrade.id, 0))
+		if level <= 0:
+			continue
+		var personal: bool = not (upgrade.scope in ["any", "melee", "ranged", "spell"])
+		var box := UiTheme.make_box(Color(0.05, 0.06, 0.09, 0.72), 8, 1,
+			player.hero_def.color if personal else Color(1, 1, 1, 0.35))
+		box.content_margin_left = 8
+		box.content_margin_right = 8
+		box.content_margin_top = 2
+		box.content_margin_bottom = 2
+		var chip := PanelContainer.new()
+		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chip.add_theme_stylebox_override("panel", box)
+		var label := Label.new()
+		label.text = upgrade.title if level == 1 else "%s ×%d" % [upgrade.title, level]
+		label.add_theme_font_size_override("font_size", 14)
+		label.add_theme_color_override("font_color", Color(1, 1, 1, 0.92))
+		chip.add_child(label)
+		_buff_bar.add_child(chip)
 
 ## Підказка для ПК: які клавіші що роблять.
 func _add_keyboard_hint() -> void:
@@ -314,6 +350,7 @@ func _offer_ability() -> void:
 	choice_ui.queue_free()
 	get_tree().paused = false
 	_run_upgrades[picked] = int(_run_upgrades.get(picked, 0)) + 1
+	_update_buffs()
 	player.apply_run_upgrade(picked)
 	_update_status()
 

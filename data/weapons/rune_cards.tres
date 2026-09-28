@@ -1,0 +1,30 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"rune_cards"
+title = "Рунні карти"
+description = "По карті в кожній руці: кидає віяло з трьох карт, що прошивають ворогів. Особливе — «Колода долі»: дванадцять карт розлітаються колом і повертаються, як бумеранг."
+hero_id = &"runewielder"
+cost_gold = 3500
+cost_gems = 0
+archetype = "projectile"
+damage = 10.0
+cooldown = 0.6
+color = Color(1.0, 0.8, 0.35, 1)
+projectile_speed = 420.0
+muzzle_offset = Vector3(0, 0, 0.09)
+spell = "cards"
+cast_interval = 0.6
+spell_speed = 22.0
+staff_skill = &"card_storm"
+style_3d = "staff"
+damage_mult_3d = 1.0
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.6
+grip_offset = Vector3(-0.000639, 0.001176, -0.000318)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.0498
+dual_wield = true

@@ -176,6 +176,21 @@ const STYLE_COMBOS := {
 	],
 }
 
+## Як чаклує герой залежно від зброї — жодних помахів, як мечем:
+##   посохи (Чарівниця) — то штовхає посох уперед, то наводить на ворога;
+##   книга рун — тримає книгу, а руну посилає вільною рукою;
+##   карти — кидає то правою, то лівою.
+const CAST_ANIMS := {
+	"staff": ["Punch_Right", "Gun_Shoot", "Interact"],
+	"rune": ["Punch_Left", "Interact", "Interact"],
+	"cards": ["Punch_Right", "Punch_Left", "Interact"],
+}
+const CAST_ANIM_SPEEDS := {
+	"staff": [1.5, 1.6, 1.0],
+	"rune": [1.4, 1.3, 1.0],
+	"cards": [1.7, 1.7, 1.0],
+}
+
 ## Три слоти анімації удару в дереві анімацій і їхні регулятори швидкості.
 const SLOTS := ["SlashShot", "SlashFastShot", "KickShot"]
 const SLOT_SCALES := ["SlashScale", "SlashFastScale", "KickScale"]
@@ -315,6 +330,8 @@ var _spell_pierce := 0
 var _spell_power := 1.0
 var _ring_power := 1.0
 var _phoenix_bonus := 0.0
+var _nova_power := 1.0
+var _charge_hits := 7
 
 var _blend_position := Vector2.ZERO
 var _upper_body_filter: Array[NodePath] = []
@@ -566,7 +583,7 @@ func _apply_attack_speed() -> void:
 	var speed := attack_speed()
 	var speeds := [1.15, 1.45, 1.1]
 	if is_caster():
-		speeds = [1.5, 1.6, 1.0]
+		speeds = CAST_ANIM_SPEEDS.get(weapon_def.spell, CAST_ANIM_SPEEDS["staff"])
 	elif not is_ranged():
 		for step: Dictionary in _combo():
 			speeds[SLOTS.find(step.shot)] = float(step.get("anim_speed", 1.0))
@@ -584,9 +601,7 @@ func _attack_slot_animations() -> Array:
 		# Для стрільця третій слот — рух перезарядки.
 		return ["Gun_Shoot", "Gun_Shoot", "Interact"]
 	if is_caster():
-		# Чарівниця не махає посохом, як мечем: то штовхає його вперед,
-		# то наводить на ворога, мов указку.
-		return ["Punch_Right", "Gun_Shoot", "Interact"]
+		return CAST_ANIMS.get(weapon_def.spell, CAST_ANIMS["staff"])
 	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right"]
 	for step: Dictionary in _combo():
 		result[SLOTS.find(step.shot)] = String(step.get("anim", "Sword_Slash"))
@@ -709,9 +724,15 @@ func _shoot() -> void:
 
 ## Кінчик ствола: беремо з моделі зброї в руці, а якщо її немає —
 ## приблизно від плеча героя.
-func _muzzle_position() -> Vector3:
+func _muzzle_position(offhand: bool = false) -> Vector3:
 	if _weapon_node != null and is_instance_valid(_weapon_node):
-		return _weapon_node.global_transform * weapon_def.muzzle_offset
+		var node := _weapon_node
+		# Друга така сама зброя в лівій руці (парні карти, кинджали).
+		if offhand and _weapon_node.has_meta(&"offhand"):
+			var other: Node3D = _weapon_node.get_meta(&"offhand")
+			if is_instance_valid(other):
+				node = other
+		return node.global_transform * weapon_def.muzzle_offset
 	return global_position + Vector3.UP * 1.2 + _facing_vector() * 0.5
 
 func _update_ranged(delta: float) -> void:
@@ -743,7 +764,8 @@ func _try_cast() -> void:
 	_fire("SlashShot" if _cast_count % 2 == 1 else "SlashFastShot", moving)
 
 func _release_spell() -> void:
-	var origin := _muzzle_position()
+	# Карти летять із тієї руки, що кидає: парні ходи — з лівої.
+	var origin := _muzzle_position(weapon_def.spell == "cards" and _cast_count % 2 == 0)
 	var aim := _aim_angle()
 	var direction := Vector3(sin(aim), 0.0, cos(aim))
 	var target: Enemy3D = null
@@ -783,6 +805,13 @@ func ring_power() -> float:
 
 func phoenix_bonus() -> float:
 	return _phoenix_bonus
+
+func nova_power() -> float:
+	return _nova_power
+
+## Кожен який удар підриває рунний заряд Руновода.
+func rune_charge_hits() -> int:
+	return _charge_hits
 
 ## Утримання кнопки удару: серія ударів, поки є ціль.
 func set_attack_held(held: bool) -> void:
@@ -1490,6 +1519,10 @@ func apply_run_upgrade(id: StringName) -> void:
 			_ring_power += 0.3
 		&"phoenix_power":
 			_phoenix_bonus += 0.2
+		&"nova_power":
+			_nova_power += 0.3
+		&"charge_speed":
+			_charge_hits = maxi(_charge_hits - 1, 4)
 		_:
 			push_warning("Невідома здібність походу: %s" % id)
 	_update_health_bar()

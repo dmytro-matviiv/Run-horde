@@ -138,6 +138,12 @@ func _draw() -> void:
 				_draw_venom(center, radius * 0.45, glyph_color)
 			"bolt":
 				_draw_bolt(center, radius * 0.45, glyph_color)
+			"book":
+				_draw_book(center, radius * 0.45, glyph_color)
+			"cards":
+				_draw_cards(center, radius * 0.45, glyph_color)
+			"rune":
+				_draw_rune(center, radius * 0.45, glyph_color)
 			_:
 				_draw_whirl(center, radius * 0.45, glyph_color)
 
@@ -283,6 +289,34 @@ func _draw_bolt(center: Vector2, size_px: float, color: Color) -> void:
 		center + Vector2(-size_px * 0.25, size_px),
 		center + Vector2(size_px * 0.45, -size_px * 0.15),
 		center + Vector2(size_px * 0.02, -size_px * 0.15)]), color)
+
+## Розгорнута книга.
+func _draw_book(center: Vector2, size_px: float, color: Color) -> void:
+	for side: float in [-1.0, 1.0]:
+		draw_colored_polygon(PackedVector2Array([
+			center + Vector2(0, -size_px * 0.55),
+			center + Vector2(side * size_px, -size_px * 0.75),
+			center + Vector2(side * size_px, size_px * 0.6),
+			center + Vector2(0, size_px * 0.8)]), color)
+	draw_line(center + Vector2(0, -size_px * 0.55), center + Vector2(0, size_px * 0.8),
+		Color(0.05, 0.06, 0.09, 0.9), size_px * 0.1)
+
+## Дві карти віялом.
+func _draw_cards(center: Vector2, size_px: float, color: Color) -> void:
+	for angle: float in [-0.3, 0.25]:
+		var card := PackedVector2Array()
+		for corner: Vector2 in [Vector2(-0.45, -0.7), Vector2(0.45, -0.7), Vector2(0.45, 0.7), Vector2(-0.45, 0.7)]:
+			card.append(center + (corner * size_px).rotated(angle))
+		draw_colored_polygon(card, color)
+		card.append(card[0])
+		draw_polyline(card, Color(0.05, 0.06, 0.09, 0.9), size_px * 0.08)
+
+## Коло з рунними рисками.
+func _draw_rune(center: Vector2, size_px: float, color: Color) -> void:
+	draw_arc(center, size_px * 0.85, 0.0, TAU, 24, color, size_px * 0.14)
+	for i in 3:
+		var direction := Vector2.from_angle(TAU * i / 3.0 - PI / 2.0)
+		draw_line(center, center + direction * size_px * 0.55, color, size_px * 0.14)
 
 ## Три дуги по колу — вихор.
 func _draw_whirl(center: Vector2, size_px: float, color: Color) -> void:

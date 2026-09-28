@@ -33,7 +33,9 @@ func setup(player: Node) -> void:
 	# Зі стволом у руках кнопка удару стає кнопкою вогню, з посохом —
 	# кнопкою чар.
 	var ranged: bool = _player.is_ranged()
-	var icon := "gun" if ranged else ("staff" if _player.is_caster() else "attack")
+	var icon := "gun" if ranged else "attack"
+	if _player.is_caster():
+		icon = {"rune": "book", "cards": "cards"}.get(_player.weapon_def.spell, "staff")
 	_attack = _make_button(icon, ATTACK_RADIUS, "", Color(0.98, 0.72, 0.25))
 	_dodge = _make_button("dodge", SMALL_RADIUS, "Перекат", Color(0.6, 0.9, 1.0))
 	_attack.pressed_down.connect(func() -> void: _player.set_attack_held(true))

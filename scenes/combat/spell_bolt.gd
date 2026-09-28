@@ -9,8 +9,12 @@ class_name SpellBolt
 ## хмару чи просто спалахує, — вирішує той, хто пустив снаряд (on_hit).
 
 const LIFETIME := 1.8
+## Карта-бумеранг летить стільки секунд, а тоді повертає до героя.
+const BOOMERANG_TURN := 0.5
+const CARD_TEXTURE := "res://assets/textures/rune_card.png"
 
 static var _meshes: Dictionary = {}
+static var _card_material: StandardMaterial3D
 
 var kind := "arcane"
 var damage_multiplier := 1.0
@@ -23,11 +27,18 @@ var pierce := 0
 ## Що робити на влучанні: on_hit.call(ворог або null, точка). null —
 ## стіна чи кінець польоту (отруйна куля й тоді лишає хмару).
 var on_hit: Callable
+## Карта: крутиться в польоті (рад/с) і може повертатись бумерангом —
+## тоді б'є і на зворотному шляху.
+var spin := 0.0
+var boomerang := false
 
 var _player: Node
 var _velocity := Vector3.ZERO
 var _life := LIFETIME
+var _age := 0.0
+var _returning := false
 var _hit_ids: Array = []
+var _body: MeshInstance3D
 
 static func create(player: Node, bolt_kind: String, multiplier: float, bolt_color: Color) -> SpellBolt:
 	var bolt := SpellBolt.new()
@@ -38,15 +49,22 @@ static func create(player: Node, bolt_kind: String, multiplier: float, bolt_colo
 	return bolt
 
 func _ready() -> void:
-	var body := MeshInstance3D.new()
-	body.mesh = _get_mesh(kind)
-	body.material_override = CombatVfx.get_glow_material(color)
-	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_body = MeshInstance3D.new()
+	_body.mesh = _get_mesh(kind)
+	_body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if kind == "card":
+		# Карта летить пласко, як тарілка, і крутиться.
+		_body.material_override = _get_card_material()
+		_body.rotation_degrees.x = -90.0
+	else:
+		_body.material_override = CombatVfx.get_glow_material(color)
 	# Уламок — загострений уздовж польоту (вперед у Godot — це -Z).
 	if kind == "frost":
-		body.rotation_degrees.x = -90.0
-	add_child(body)
+		_body.rotation_degrees.x = -90.0
+	add_child(_body)
 	add_child(CombatVfx.make_trail(color, 0.32 if kind == "venom" else 0.24))
+	if boomerang:
+		_life = LIFETIME + 0.6
 
 func launch(from: Vector3, direction: Vector3, speed: float) -> void:
 	global_position = from
@@ -54,7 +72,21 @@ func launch(from: Vector3, direction: Vector3, speed: float) -> void:
 	_orient()
 
 func _physics_process(delta: float) -> void:
-	if homing > 0.0 and target != null and is_instance_valid(target) and target.is_alive():
+	_age += delta
+	if spin != 0.0:
+		_body.rotation.y += spin * delta
+	if boomerang:
+		if not _returning and _age >= BOOMERANG_TURN:
+			# Розвернулась — на зворотному шляху знову б'є тих самих.
+			_returning = true
+			_hit_ids.clear()
+		if _returning and _player != null and is_instance_valid(_player):
+			var home: Vector3 = (_player as Node3D).global_position + Vector3.UP
+			if global_position.distance_to(home) < 0.9:
+				queue_free()
+				return
+			_steer_to(home, 9.0, delta)
+	elif homing > 0.0 and target != null and is_instance_valid(target) and target.is_alive():
 		var wanted := (target.global_position + Vector3.UP * target.target_height * 0.55 - global_position).normalized()
 		var speed := _velocity.length()
 		var current := _velocity / speed
@@ -104,6 +136,16 @@ func _finish(position: Vector3) -> void:
 		on_hit.call(null, position)
 	queue_free()
 
+## Плавно довернути політ на точку (turn — рад/с).
+func _steer_to(point: Vector3, turn: float, delta: float) -> void:
+	var speed := _velocity.length()
+	var current := _velocity / speed
+	var wanted := (point - global_position).normalized()
+	var angle := current.angle_to(wanted)
+	if angle > 0.001:
+		_velocity = current.slerp(wanted, minf(1.0, turn * delta / angle)) * speed
+		_orient()
+
 func _orient() -> void:
 	var direction := _velocity.normalized()
 	if absf(direction.y) < 0.98:
@@ -114,7 +156,13 @@ static func _get_mesh(bolt_kind: String) -> Mesh:
 	if _meshes.has(bolt_kind):
 		return _meshes[bolt_kind]
 	var mesh: Mesh
-	if bolt_kind == "frost":
+	if bolt_kind == "card":
+		# Легкий пласкій прямокутник із малюнком карти: справжня модель
+		# карти — 3 тис. вершин, забагато для зграї снарядів на телефоні.
+		var quad := QuadMesh.new()
+		quad.size = Vector2(0.34, 0.48)
+		mesh = quad
+	elif bolt_kind == "frost":
 		var shard := CylinderMesh.new()
 		shard.top_radius = 0.0
 		shard.bottom_radius = 0.09
@@ -131,3 +179,15 @@ static func _get_mesh(bolt_kind: String) -> Mesh:
 		mesh = sphere
 	_meshes[bolt_kind] = mesh
 	return mesh
+
+static func _get_card_material() -> StandardMaterial3D:
+	if _card_material == null:
+		_card_material = StandardMaterial3D.new()
+		_card_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_card_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_card_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+		if ResourceLoader.exists(CARD_TEXTURE):
+			_card_material.albedo_texture = load(CARD_TEXTURE)
+		else:
+			_card_material.albedo_color = Color(0.85, 0.2, 0.2)
+	return _card_material

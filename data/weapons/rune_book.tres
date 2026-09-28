@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"rune_book"
+title = "Книга рун"
+description = "Стартова книга: під ворогом проступає рунна печать і за мить вибухає, зачіпаючи всіх поруч. Особливе — «Велика печать»: тримає ворогів на місці, а тоді вибухає."
+hero_id = &"runewielder"
+cost_gold = 0
+cost_gems = 0
+archetype = "projectile"
+damage = 10.0
+cooldown = 0.8
+color = Color(0.35, 0.85, 1.0, 1)
+projectile_speed = 420.0
+muzzle_offset = Vector3(0, 0, 0)
+spell = "rune"
+cast_interval = 0.8
+spell_speed = 0.0
+staff_skill = &"great_seal"
+style_3d = "staff"
+damage_mult_3d = 1.0
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.6
+grip_offset = Vector3(-0.001742, 0.001176, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.211

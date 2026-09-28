@@ -6,7 +6,15 @@ extends Node
 ## файлу.
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SCHEMA_VERSION := 6
+const CURRENT_SCHEMA_VERSION := 7
+
+## v7: Руновод узяв книгу рун і рунні карти замість посохів-заглушок.
+const V7_WEAPON_RENAMES := {
+	"rune_bolt": "rune_book",
+	"staff_meteor": "rune_cards",
+	"storm_scepter": "rune_cards",
+	"frost_staff": "rune_cards",
+}
 
 ## v6: Жриця Багаття стала Чарівницею з посохами. Куплена стара зброя
 ## переходить на відповідні посохи — гравець нічого не втрачає.
@@ -85,19 +93,25 @@ func _migrate(data: Dictionary) -> Dictionary:
 	if version < 5:
 		data = _migrate_v4_to_v5(data)
 	if version < 6:
-		data = _migrate_v5_to_v6(data)
+		data = _rename_weapons(data, V6_WEAPON_RENAMES, 6)
+	if version < 7:
+		data = _rename_weapons(data, V7_WEAPON_RENAMES, 7)
 	return data
 
-func _migrate_v5_to_v6(data: Dictionary) -> Dictionary:
-	var owned: Array = data.get("owned_weapon_ids", [])
-	for i in owned.size():
-		owned[i] = V6_WEAPON_RENAMES.get(str(owned[i]), owned[i])
+## Перейменування зброї між версіями: куплене й споряджене переходить на
+## нову зброю, дублікати (кілька старих -> одна нова) прибираються.
+func _rename_weapons(data: Dictionary, renames: Dictionary, version: int) -> Dictionary:
+	var owned: Array = []
+	for id in data.get("owned_weapon_ids", []):
+		var renamed: String = renames.get(str(id), str(id))
+		if not owned.has(renamed):
+			owned.append(renamed)
 	data["owned_weapon_ids"] = owned
 	var equipped: Dictionary = data.get("equipped_weapon_ids", {})
 	for hero in equipped:
-		equipped[hero] = V6_WEAPON_RENAMES.get(str(equipped[hero]), equipped[hero])
+		equipped[hero] = renames.get(str(equipped[hero]), equipped[hero])
 	data["equipped_weapon_ids"] = equipped
-	data["schema_version"] = 6
+	data["schema_version"] = version
 	return data
 
 ## v1 мав один спільний meta_upgrade_levels на всіх героїв разом; v2 —

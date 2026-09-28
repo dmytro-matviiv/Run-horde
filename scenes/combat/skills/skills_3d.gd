@@ -17,6 +17,9 @@ const SKILLS := {
 	&"frost_nova": preload("res://scenes/combat/skills/frost_nova.gd"),
 	&"venom_swamp": preload("res://scenes/combat/skills/venom_swamp.gd"),
 	&"moon_storm": preload("res://scenes/combat/skills/moon_storm.gd"),
+	# Особливі здібності зброї Руновода.
+	&"great_seal": preload("res://scenes/combat/skills/great_seal.gd"),
+	&"card_storm": preload("res://scenes/combat/skills/card_storm.gd"),
 }
 
 const PASSIVES := {
