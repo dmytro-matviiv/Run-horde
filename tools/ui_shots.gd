@@ -67,6 +67,15 @@ func _ready() -> void:
 	await _shot("pause_confirm")
 	pause.queue_free()
 
+	# Екран завантаження — як посеред переходу в данж.
+	(SceneLoader.get("_title_label") as Label).text = "Забуті склепи"
+	(SceneLoader.get("_hint_label") as Label).text = SceneLoader.HINTS[0]
+	(SceneLoader.get("_root") as Control).modulate.a = 1.0
+	SceneLoader.call("_set_progress", 0.6)
+	SceneLoader.visible = true
+	await _shot("loading")
+	SceneLoader.visible = false
+
 	GameState.pending_offline_gold = maxi(offline_gold, 1234)
 	var offline: Node = load("res://scenes/ui/offline_reward.tscn").instantiate()
 	add_child(offline)

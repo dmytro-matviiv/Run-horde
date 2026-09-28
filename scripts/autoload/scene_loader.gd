@@ -165,17 +165,16 @@ func _build_ui() -> void:
 	game_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 	column.add_child(game_label)
 
+	# Назва місця — блідо-зелена між розділювачами з руків'ям меча, смуга —
+	# як здоров'я в HUD: те саме фентезійне оформлення (UiTheme).
 	_title_label = Label.new()
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.add_theme_font_size_override("font_size", 40)
-	_title_label.add_theme_color_override("font_color", UiTheme.ACCENT)
+	_title_label.add_theme_color_override("font_color", UiTheme.HEADING)
 	column.add_child(_title_label)
+	UiTheme.add_dividers(_title_label)
 
-	_bar = ProgressBar.new()
-	_bar.show_percentage = false
-	_bar.custom_minimum_size = Vector2(0, 14)
-	_bar.add_theme_stylebox_override("background", UiTheme.make_box(UiTheme.PANEL, 7))
-	_bar.add_theme_stylebox_override("fill", UiTheme.make_box(UiTheme.ACCENT, 7))
+	_bar = UiTheme.make_bar(UiTheme.HEADING, Vector2(0, 12))
 	column.add_child(_bar)
 
 	_hint_label = Label.new()
