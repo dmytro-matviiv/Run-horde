@@ -93,6 +93,13 @@ const SUMMON_COLOR := Color(0.5, 1.0, 0.4, 0.9)
 const VOLLEY_COOLDOWN := 5.0
 const DRAGON_CHARGE_COOLDOWN := 7.5
 
+## Чари героя: іней під сповільненим ворогом і крижана брила навколо
+## замороженого.
+const FROST_COLOR := Color(0.55, 0.85, 1.0, 0.9)
+const ICE_COLOR := Color(0.72, 0.92, 1.0, 0.42)
+
+static var _ice_material: StandardMaterial3D
+
 @export var kind: Kind = Kind.MELEE
 @export var max_hp := 30.0
 @export var damage := 8.0
@@ -159,6 +166,11 @@ var _animation_cache: Dictionary = {}
 
 var _knockback := Vector3.ZERO
 var _stagger_left := 0.0
+var _slow_factor := 1.0
+var _slow_left := 0.0
+var _frozen_left := 0.0
+var _frost_marker: MeshInstance3D
+var _ice_block: MeshInstance3D
 var _windup_left := 0.0
 var _windup_total := 0.0
 var _windup_slam := false
@@ -328,7 +340,8 @@ func set_animation_step(step: int) -> void:
 func _process(delta: float) -> void:
 	if _animation == null:
 		return
-	_animation_time += delta
+	# Сповільнений ворог і рухається повільно, заморожений — застигає.
+	_animation_time += delta * _pace()
 	# Невидимий ворог анімацію не рахує: час накопичується й "доганяється"
 	# одним кроком, щойно він з'явиться в кадрі.
 	if not _on_screen:
@@ -345,10 +358,11 @@ func _physics_process(delta: float) -> void:
 
 	var distance := global_position.distance_to(_player.global_position)
 	_update_aggro(distance)
-	_attack_left -= delta
+	_attack_left -= delta * _pace()
 	_repath_left -= delta
 	_sight_left -= delta
 	_stagger_left = maxf(_stagger_left - delta, 0.0)
+	_tick_status(delta)
 
 	# Стоїть без діла на підлозі — рухати нічого, фізику не рахуємо.
 	if not _aggro and _grounded and velocity.is_zero_approx() and _knockback.is_zero_approx():
@@ -365,7 +379,7 @@ func _physics_process(delta: float) -> void:
 	elif _charge_state != 0:
 		_process_charge(delta)
 	elif _windup_left > 0.0:
-		_process_windup(delta)
+		_process_windup(delta * _pace())
 	elif _stagger_left > 0.0:
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -403,13 +417,15 @@ func _physics_process(delta: float) -> void:
 func _move(delta: float) -> void:
 	var has_knockback := not _knockback.is_zero_approx()
 	var moving := not Vector2(velocity.x, velocity.z).is_zero_approx()
+	# Сповільнення діє на власний крок ворога, відкидання — ні.
+	var pace := _pace()
 	if _grounded and not has_knockback and _path_step:
-		global_position.x += velocity.x * delta
-		global_position.z += velocity.z * delta
+		global_position.x += velocity.x * pace * delta
+		global_position.z += velocity.z * pace * delta
 	elif has_knockback or moving or not _grounded:
 		var own_velocity := velocity
-		velocity.x += _knockback.x
-		velocity.z += _knockback.z
+		velocity.x = velocity.x * pace + _knockback.x
+		velocity.z = velocity.z * pace + _knockback.z
 		move_and_slide()
 		_grounded = is_on_floor()
 		velocity.x = own_velocity.x
@@ -818,6 +834,105 @@ func _hide_telegraph() -> void:
 		_telegraph.queue_free()
 	_telegraph = null
 
+# --- чари героя: сповільнення, заморозка, оглушення ---
+
+## Сповільнений ворог ходить, замахується й рухається повільніше, під
+## ним синіє іней. factor — частка звичайної швидкості (0.6 = на 40%
+## повільніше). Бос і голем піддаються вдвічі слабше — інакше їх можна
+## було б тримати без кінця.
+func apply_slow(factor: float, seconds: float) -> void:
+	if _dying:
+		return
+	if kind == Kind.BOSS or tank:
+		factor = lerpf(factor, 1.0, 0.5)
+	_slow_factor = factor if _slow_left <= 0.0 else minf(_slow_factor, factor)
+	_slow_left = maxf(_slow_left, seconds)
+	_show_frost(true)
+
+func is_slowed() -> bool:
+	return _slow_left > 0.0
+
+## Заморозка: ворог застигає в крижаній брилі — не ходить і не б'є,
+## замах зривається. Боса й голема — ненадовго.
+func freeze(seconds: float) -> void:
+	if _dying:
+		return
+	if kind == Kind.BOSS or tank:
+		seconds *= 0.35
+	_frozen_left = maxf(_frozen_left, seconds)
+	_hold_still(seconds)
+	_show_ice(true)
+
+## Оглушення важким ударом: стоїть і не б'є.
+func stun(seconds: float) -> void:
+	if _dying:
+		return
+	if kind == Kind.BOSS or tank:
+		seconds *= 0.4
+	_hold_still(seconds)
+
+func _hold_still(seconds: float) -> void:
+	_stagger_left = maxf(_stagger_left, seconds)
+	_cancel_windup()
+	# Таран, що цілиться чи мчить, теж зупиняється.
+	if _charge_state != 0:
+		_charge_state = 0
+		_hide_telegraph()
+
+## Наскільки швидко зараз "живе" ворог: 1 — звичайно, менше — сповільнений,
+## 0 — заморожений (стоїть, і анімація застигла).
+func _pace() -> float:
+	if _frozen_left > 0.0:
+		return 0.0
+	return _slow_factor if _slow_left > 0.0 else 1.0
+
+func _tick_status(delta: float) -> void:
+	if _slow_left > 0.0:
+		_slow_left -= delta
+		if _slow_left <= 0.0:
+			_slow_factor = 1.0
+			_show_frost(false)
+	if _frozen_left > 0.0:
+		_frozen_left -= delta
+		if _frozen_left <= 0.0:
+			_show_ice(false)
+
+## Іней на підлозі під ворогом — видно, кого сповільнено.
+func _show_frost(shown: bool) -> void:
+	if shown and _frost_marker == null:
+		_frost_marker = CombatVfx.make_ground_marker(FROST_COLOR, 0.7 + target_height * 0.12)
+		_frost_marker.set_instance_shader_parameter(&"progress", 1.0)
+		add_child(_frost_marker)
+		_frost_marker.position = Vector3(0, 0.06, 0)
+	if _frost_marker != null:
+		_frost_marker.visible = shown
+
+## Крижана брила — шестигранна прозора призма навколо ворога.
+func _show_ice(shown: bool) -> void:
+	if shown and _ice_block == null:
+		var mesh := CylinderMesh.new()
+		mesh.radial_segments = 6
+		mesh.rings = 1
+		mesh.top_radius = 0.4 + target_height * 0.08
+		mesh.bottom_radius = mesh.top_radius * 1.15
+		mesh.height = target_height * 1.08
+		_ice_block = MeshInstance3D.new()
+		_ice_block.mesh = mesh
+		_ice_block.material_override = _get_ice_material()
+		_ice_block.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_ice_block)
+		_ice_block.position = Vector3(0, mesh.height * 0.5 + hover, 0)
+	if _ice_block != null:
+		_ice_block.visible = shown
+
+static func _get_ice_material() -> StandardMaterial3D:
+	if _ice_material == null:
+		_ice_material = StandardMaterial3D.new()
+		_ice_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_ice_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_ice_material.albedo_color = ICE_COLOR
+	return _ice_material
+
 # --- отримання шкоди ---
 
 ## Удар героя. knockback — напрямок і сила відкидання, heavy — сильний
@@ -862,6 +977,10 @@ func _die() -> void:
 	_dying = true
 	velocity = Vector3.ZERO
 	_knockback = Vector3.ZERO
+	_frozen_left = 0.0
+	_slow_left = 0.0
+	_show_frost(false)
+	_show_ice(false)
 	_cancel_windup()
 	remove_from_group(&"enemies")
 	if _health_bar != null:

@@ -112,6 +112,8 @@ static var _flare_mesh: QuadMesh
 static var _flare_materials: Dictionary = {}
 static var _ring_mesh: PlaneMesh
 static var _line_materials: Dictionary = {}
+static var _thrust_mesh: BoxMesh
+static var _glow_materials: Dictionary = {}
 static var _hitstop_until := 0
 static var _hitstop_token := 0
 
@@ -167,6 +169,45 @@ static func _get_slash_mesh(radius: float, arc_deg: float) -> ArrayMesh:
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	_slash_meshes[key] = mesh
 	return mesh
+
+## Укол списом чи тризубом: яскрава смуга вистрілює вперед на довжину
+## удару й гасне — видно, що б'є вузько й далеко.
+static func thrust(parent: Node, origin: Vector3, yaw: float, length: float, color: Color) -> void:
+	var pivot := Node3D.new()
+	parent.add_child(pivot)
+	pivot.global_position = origin
+	pivot.global_rotation = Vector3(0.0, yaw, 0.0)
+	var beam := MeshInstance3D.new()
+	beam.mesh = _get_thrust_mesh()
+	beam.material_override = get_glow_material(color)
+	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Смуга лежить від героя вперед (меш — від 0 до 1 по Z).
+	beam.position = Vector3(0, 0, 0.5)
+	pivot.add_child(beam)
+	pivot.scale = Vector3(1.0, 1.0, 0.2)
+	var tween := pivot.create_tween()
+	tween.tween_property(pivot, "scale", Vector3(1.0, 1.0, length), 0.08)
+	tween.tween_property(beam, "transparency", 1.0, 0.16)
+	tween.tween_callback(pivot.queue_free)
+
+## Світний матеріал без освітлення (снаряди чар, укол) — один на колір.
+static func get_glow_material(color: Color) -> StandardMaterial3D:
+	var key := color.to_html()
+	if _glow_materials.has(key):
+		return _glow_materials[key]
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.albedo_color = color
+	material.disable_receive_shadows = true
+	_glow_materials[key] = material
+	return material
+
+static func _get_thrust_mesh() -> BoxMesh:
+	if _thrust_mesh == null:
+		_thrust_mesh = BoxMesh.new()
+		_thrust_mesh.size = Vector3(0.16, 0.06, 1.0)
+	return _thrust_mesh
 
 # --- влучання ---
 

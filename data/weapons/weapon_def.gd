@@ -87,7 +87,7 @@ var archetype: String = "projectile"
 ## Стиль бою в 3D: від нього залежать і тимчасова модель, і те, як
 ## герой б'є (широкий замах сокири, довгий випад глефи, швидка серія
 ## парних клинків).
-@export_enum("sword", "axe", "glaive", "twin_blades", "staff", "daggers", "pistol", "rifle")
+@export_enum("sword", "axe", "glaive", "twin_blades", "staff", "daggers", "pistol", "rifle", "cleaver")
 var style_3d: String = "sword"
 
 ## Чим зброя відрізняється в бою. Множники до базового удару героя.

@@ -85,17 +85,102 @@ const SLASH_COLOR := Color(0.72, 0.87, 1.0)
 const HEAVY_COLOR := Color(1.0, 0.72, 0.3)
 const SKILL_COLOR := Color(0.35, 0.95, 1.0)
 
-## Ланки комбо. damage — множник шкоди, reach — дальність, arc — ширина
-## замаху в градусах, hit_time — коли саме лезо "доходить" до ворога,
-## recover — коли можна бити знову, knockback — сила відкидання.
-const COMBO := [
-	{"shot": "SlashShot", "damage": 1.0, "reach": 2.9, "arc": 150.0, "hit_time": 0.17,
-		"recover": 0.36, "knockback": 0.6, "reverse": false, "tilt": 0.14, "heavy": false},
-	{"shot": "SlashFastShot", "damage": 1.15, "reach": 2.9, "arc": 150.0, "hit_time": 0.13,
-		"recover": 0.32, "knockback": 0.6, "reverse": true, "tilt": -0.2, "heavy": false},
-	{"shot": "KickShot", "damage": 1.9, "reach": 2.6, "arc": 110.0, "hit_time": 0.22,
-		"recover": 0.5, "knockback": 3.5, "reverse": false, "tilt": 0.0, "heavy": true},
-]
+## Ланки комбо — свої для кожного стилю зброї: сокира б'є не так, як
+## кинджали. Кожна ланка:
+##   shot — слот анімації (їх три, див. SLOTS), anim / anim_speed — яка
+##     анімація в ньому грає і як швидко;
+##   damage — множник шкоди, reach — дальність, arc — ширина замаху;
+##   hit_time — коли удар доходить, recover — коли закінчився;
+##   pause — перепочинок ПІСЛЯ удару: без нього утримання кнопки било
+##     без упину "удар-удар-удар";
+##   knockback — відкидання, heavy — сильний удар (збиває замах ворога).
+## Форма удару shape: "arc" — дуга попереду (звичайна), "circle" —
+## довкола себе, "line" — вузький довгий укол крізь ряд ворогів (width —
+## його ширина). Особливе: spin — герой обертається (сокира), hits — ще
+## влучання в тій самій ланці (парні клинки), burst — вибух довкола цілі
+## [радіус, частка шкоди] (кинджали), stun — оглушення в секундах (тесак).
+const STYLE_COMBOS := {
+	# Меч: два замахи в різні боки й удар ногою, що відкидає.
+	"sword": [
+		{"shot": "SlashShot", "anim": "Sword_Slash", "anim_speed": 1.15, "damage": 1.0, "reach": 2.9,
+			"arc": 150.0, "hit_time": 0.17, "recover": 0.36, "pause": 0.14, "knockback": 0.6,
+			"reverse": false, "tilt": 0.14, "heavy": false},
+		{"shot": "SlashFastShot", "anim": "Sword_Slash", "anim_speed": 1.45, "damage": 1.15, "reach": 2.9,
+			"arc": 150.0, "hit_time": 0.13, "recover": 0.32, "pause": 0.14, "knockback": 0.6,
+			"reverse": true, "tilt": -0.2, "heavy": false},
+		{"shot": "KickShot", "anim": "Kick_Right", "anim_speed": 1.1, "damage": 1.9, "reach": 2.6,
+			"arc": 110.0, "hit_time": 0.22, "recover": 0.5, "pause": 0.42, "knockback": 3.5,
+			"reverse": false, "tilt": 0.0, "heavy": true},
+	],
+	# Сокира: кожен удар — оберт довкола себе, дістає всіх поруч.
+	"axe": [
+		{"shot": "SlashShot", "anim": "Sword_Slash", "anim_speed": 1.0, "damage": 1.0, "reach": 2.7,
+			"arc": 360.0, "shape": "circle", "spin": 0.42, "hit_time": 0.24, "recover": 0.5, "pause": 0.3,
+			"knockback": 1.4, "reverse": false, "tilt": 0.0, "heavy": false},
+		{"shot": "SlashFastShot", "anim": "Sword_Slash", "anim_speed": 1.2, "damage": 1.1, "reach": 2.7,
+			"arc": 360.0, "shape": "circle", "spin": 0.38, "hit_time": 0.22, "recover": 0.46, "pause": 0.3,
+			"knockback": 1.4, "reverse": true, "tilt": 0.0, "heavy": false},
+		{"shot": "KickShot", "anim": "Sword_Slash", "anim_speed": 0.85, "damage": 1.7, "reach": 3.1,
+			"arc": 360.0, "shape": "circle", "spin": 0.55, "hit_time": 0.34, "recover": 0.66, "pause": 0.6,
+			"knockback": 3.8, "reverse": false, "tilt": 0.0, "heavy": true},
+	],
+	# Кинджали: швидкі уколи то правою, то лівою — і кожен вибухає
+	# довкола цілі, зачіпаючи сусідів.
+	"daggers": [
+		{"shot": "SlashShot", "anim": "Punch_Right", "anim_speed": 1.5, "damage": 0.85, "reach": 2.6,
+			"arc": 100.0, "burst": [1.6, 0.5], "hit_time": 0.1, "recover": 0.24, "pause": 0.1,
+			"knockback": 0.3, "reverse": false, "tilt": 0.1, "heavy": false},
+		{"shot": "SlashFastShot", "anim": "Punch_Left", "anim_speed": 1.5, "damage": 0.85, "reach": 2.6,
+			"arc": 100.0, "burst": [1.6, 0.5], "hit_time": 0.1, "recover": 0.24, "pause": 0.1,
+			"knockback": 0.3, "reverse": true, "tilt": -0.1, "heavy": false},
+		{"shot": "KickShot", "anim": "Sword_Slash", "anim_speed": 1.4, "damage": 1.3, "reach": 2.7,
+			"arc": 150.0, "burst": [2.2, 0.7], "hit_time": 0.14, "recover": 0.34, "pause": 0.42,
+			"knockback": 1.6, "reverse": false, "tilt": 0.0, "heavy": true},
+	],
+	# Держакова (тризуб): укол прошиває всіх, хто стоїть у ряд, а третій
+	# удар — широкий змах держаком.
+	"glaive": [
+		{"shot": "SlashShot", "anim": "Punch_Right", "anim_speed": 1.25, "damage": 1.1, "reach": 3.0,
+			"arc": 30.0, "shape": "line", "width": 1.3, "hit_time": 0.15, "recover": 0.36, "pause": 0.2,
+			"knockback": 1.2, "reverse": false, "tilt": 0.0, "heavy": false},
+		{"shot": "SlashFastShot", "anim": "Punch_Right", "anim_speed": 1.45, "damage": 1.2, "reach": 3.0,
+			"arc": 30.0, "shape": "line", "width": 1.3, "hit_time": 0.13, "recover": 0.33, "pause": 0.2,
+			"knockback": 1.2, "reverse": false, "tilt": 0.0, "heavy": false},
+		{"shot": "KickShot", "anim": "Sword_Slash", "anim_speed": 1.0, "damage": 1.5, "reach": 2.9,
+			"arc": 220.0, "hit_time": 0.2, "recover": 0.5, "pause": 0.5, "knockback": 3.2,
+			"reverse": false, "tilt": 0.0, "heavy": true},
+	],
+	# Парні клинки: кожен замах б'є двічі — правим і лівим.
+	"twin_blades": [
+		{"shot": "SlashShot", "anim": "Sword_Slash", "anim_speed": 1.35, "damage": 0.75, "reach": 2.8,
+			"arc": 170.0, "hits": [0.24], "hit_time": 0.13, "recover": 0.34, "pause": 0.14,
+			"knockback": 0.4, "reverse": false, "tilt": 0.14, "heavy": false},
+		{"shot": "SlashFastShot", "anim": "Sword_Slash", "anim_speed": 1.6, "damage": 0.75, "reach": 2.8,
+			"arc": 170.0, "hits": [0.22], "hit_time": 0.12, "recover": 0.32, "pause": 0.14,
+			"knockback": 0.4, "reverse": true, "tilt": -0.2, "heavy": false},
+		{"shot": "KickShot", "anim": "Sword_Slash", "anim_speed": 1.1, "damage": 1.1, "reach": 2.9,
+			"arc": 360.0, "shape": "circle", "spin": 0.4, "hits": [0.32], "hit_time": 0.2, "recover": 0.46,
+			"pause": 0.45, "knockback": 2.2, "reverse": false, "tilt": 0.0, "heavy": true},
+	],
+	# Тесак: повільні важкі удари, що оглушають; третій ще й б'є об землю.
+	"cleaver": [
+		{"shot": "SlashShot", "anim": "Sword_Slash", "anim_speed": 0.8, "damage": 1.0, "reach": 2.9,
+			"arc": 110.0, "stun": 0.6, "hit_time": 0.3, "recover": 0.62, "pause": 0.3,
+			"knockback": 1.2, "reverse": false, "tilt": 0.3, "heavy": true},
+		{"shot": "SlashFastShot", "anim": "Sword_Slash", "anim_speed": 0.9, "damage": 1.05, "reach": 2.9,
+			"arc": 110.0, "stun": 0.6, "hit_time": 0.28, "recover": 0.58, "pause": 0.3,
+			"knockback": 1.2, "reverse": true, "tilt": -0.3, "heavy": true},
+		{"shot": "KickShot", "anim": "Sword_Slash", "anim_speed": 0.7, "damage": 1.6, "reach": 3.0,
+			"arc": 130.0, "stun": 1.1, "burst": [2.0, 0.5], "hit_time": 0.36, "recover": 0.72, "pause": 0.6,
+			"knockback": 2.6, "reverse": false, "tilt": 0.5, "heavy": true},
+	],
+}
+
+## Три слоти анімації удару в дереві анімацій і їхні регулятори швидкості.
+const SLOTS := ["SlashShot", "SlashFastShot", "KickShot"]
+const SLOT_SCALES := ["SlashScale", "SlashFastScale", "KickScale"]
+## Вибух довкола цілі (кинджали, тесак).
+const BURST_COLOR := Color(1.0, 0.6, 0.25)
 
 ## --- Перекат ---
 const DODGE_SPEED := 11.0
@@ -162,6 +247,10 @@ var _attack_hit_done := false
 var _attack_vfx_done := false
 var _attack_queued := false
 var _attack_held := false
+## Перепочинок після удару: поки він іде, новий удар лише чекає черги.
+var _attack_cooldown_left := 0.0
+## Скільки повторних влучань ланки вже було (парні клинки).
+var _extra_hit := 0
 var _lunge_velocity := Vector3.ZERO
 var _lunge_left := 0.0
 
@@ -347,16 +436,17 @@ func _build_animation_tree() -> void:
 	var tree := AnimationNodeBlendTree.new()
 	tree.add_node(&"Move", move, Vector2(0, 0))
 
-	# Три ланки комбо. Друга — той самий помах, але швидший.
-	var attack_anim := "Gun_Shoot" if ranged else "Sword_Slash"
-	tree.add_node(&"SlashAnim", _animation_node(attack_anim, ["Sword_Slash"]), Vector2(0, 200))
+	# Три слоти удару. Що саме в них грає, залежить від зброї: у меча —
+	# два замахи й удар ногою, у кинджалів — уколи з обох рук, у
+	# стрільця — постріл і перезарядка.
+	var slots := _attack_slot_animations()
+	tree.add_node(&"SlashAnim", _animation_node(slots[0], ["Sword_Slash"]), Vector2(0, 200))
 	tree.add_node(&"SlashScale", AnimationNodeTimeScale.new(), Vector2(200, 200))
 	tree.add_node(&"SlashShot", _one_shot(0.06, 0.16), Vector2(400, 0))
-	tree.add_node(&"SlashFastAnim", _animation_node(attack_anim, ["Sword_Slash"]), Vector2(0, 400))
+	tree.add_node(&"SlashFastAnim", _animation_node(slots[1], ["Sword_Slash"]), Vector2(0, 400))
 	tree.add_node(&"SlashFastScale", AnimationNodeTimeScale.new(), Vector2(200, 400))
 	tree.add_node(&"SlashFastShot", _one_shot(0.05, 0.16), Vector2(600, 0))
-	# Для стрільця це місце займає рух перезарядки.
-	tree.add_node(&"KickAnim", _animation_node("Interact" if ranged else "Kick_Right",
+	tree.add_node(&"KickAnim", _animation_node(slots[2],
 		["Kick_Right", "Punch_Right", "Sword_Slash"]), Vector2(0, 600))
 	tree.add_node(&"KickScale", AnimationNodeTimeScale.new(), Vector2(200, 600))
 	tree.add_node(&"KickShot", _one_shot(0.06, 0.2), Vector2(800, 0))
@@ -456,9 +546,27 @@ func _make_looping(player: AnimationPlayer, names: Array) -> void:
 
 func _apply_attack_speed() -> void:
 	var speed := attack_speed()
-	animation_tree.set("parameters/SlashScale/scale", 1.15 * speed)
-	animation_tree.set("parameters/SlashFastScale/scale", 1.45 * speed)
-	animation_tree.set("parameters/KickScale/scale", 1.1 * speed)
+	var speeds := [1.15, 1.45, 1.1]
+	if not is_ranged():
+		for step: Dictionary in _combo():
+			speeds[SLOTS.find(step.shot)] = float(step.get("anim_speed", 1.0))
+	for i in SLOT_SCALES.size():
+		animation_tree.set("parameters/%s/scale" % SLOT_SCALES[i], speeds[i] * speed)
+
+## Комбо для зброї в руках — за її стилем (невідомий стиль б'є як меч).
+func _combo() -> Array:
+	var style: String = weapon_def.style_3d if weapon_def != null else "sword"
+	return STYLE_COMBOS.get(style, STYLE_COMBOS["sword"])
+
+## Анімації трьох слотів удару.
+func _attack_slot_animations() -> Array:
+	if is_ranged():
+		# Для стрільця третій слот — рух перезарядки.
+		return ["Gun_Shoot", "Gun_Shoot", "Interact"]
+	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right"]
+	for step: Dictionary in _combo():
+		result[SLOTS.find(step.shot)] = String(step.get("anim", "Sword_Slash"))
+	return result
 
 ## Швидкість ударів разом із тимчасовим прискоренням (ривок люті).
 func amp_attack_speed() -> float:
@@ -495,7 +603,9 @@ func attack() -> void:
 	if is_ranged():
 		_try_shoot()
 		return
-	if _attack_step >= 0 or _roll_left > 0.0 or _spin_left > 0.0:
+	# Удар ще йде, герой котиться чи переводить подих після удару —
+	# натискання запам'ятовується й спрацює, щойно можна.
+	if _attack_step >= 0 or _roll_left > 0.0 or _spin_left > 0.0 or _attack_cooldown_left > 0.0:
 		_attack_queued = true
 		return
 	_start_attack()
@@ -758,8 +868,11 @@ func _physics_process(delta: float) -> void:
 	_update_attack(delta)
 	_update_ranged(delta)
 	_tick_skills(delta)
-	# Удар, натиснутий під час перекату чи вихору, стартує одразу після.
-	if _attack_queued and _attack_step < 0 and _roll_left <= 0.0 and _spin_left <= 0.0:
+	# Наступний удар — лише після перепочинку: натиснутий заздалегідь чи
+	# кнопка утримується (тоді — коли є кого бити, щоб герой не махав
+	# зброєю в порожнечу).
+	if _attack_step < 0 and _roll_left <= 0.0 and _spin_left <= 0.0 and _attack_cooldown_left <= 0.0 \
+			and not is_ranged() and (_attack_queued or (_attack_held and _target != null)):
 		_start_attack()
 	_update_velocity(direction, delta)
 
@@ -783,6 +896,7 @@ func _tick_timers(delta: float) -> void:
 	_invulnerable_left = maxf(_invulnerable_left - delta, 0.0)
 	_combat_left = maxf(_combat_left - delta, 0.0)
 	_attack_speed_left = maxf(_attack_speed_left - delta, 0.0)
+	_attack_cooldown_left = maxf(_attack_cooldown_left - delta, 0.0)
 	_since_attack += delta
 	if _spin_left > 0.0:
 		_spin_left -= delta
@@ -944,14 +1058,16 @@ func _update_target_marker() -> void:
 # --- удари ---
 
 func _start_attack() -> void:
-	var step_index := _combo_index if _combo_expire > 0.0 else 0
-	var step: Dictionary = COMBO[step_index]
+	var combo := _combo()
+	var step_index := (_combo_index if _combo_expire > 0.0 else 0) % combo.size()
+	var step: Dictionary = combo[step_index]
 	_attack_step = step_index
-	_combo_index = (step_index + 1) % COMBO.size()
+	_combo_index = (step_index + 1) % combo.size()
 	_attack_time = 0.0
 	_attack_hit_done = false
 	_attack_vfx_done = false
 	_attack_queued = false
+	_extra_hit = 0
 	_combat_left = COMBAT_MEMORY
 	_since_attack = 0.0
 	_refresh_target()
@@ -971,6 +1087,9 @@ func _start_attack() -> void:
 			_lunge_velocity = offset.normalized() * LUNGE_SPEED
 			_lunge_left = travel / LUNGE_SPEED
 
+	# Кругова сокира: герой обертається разом із ударом.
+	if step.has("spin"):
+		spin_model(float(step.spin) / maxf(_attack_speed, 0.1))
 	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
 	_fire(step.shot, moving)
 
@@ -978,22 +1097,41 @@ func _update_attack(delta: float) -> void:
 	if _attack_step < 0:
 		return
 	_attack_time += delta * _attack_speed
-	var step: Dictionary = COMBO[_attack_step]
+	var step: Dictionary = _combo()[_attack_step]
 	if not _attack_vfx_done and _attack_time >= step.hit_time - 0.07:
 		_attack_vfx_done = true
-		var color := HEAVY_COLOR if step.heavy else SLASH_COLOR
-		CombatVfx.slash(get_parent(), global_position + Vector3.UP * 1.0, _aim_angle(),
-			_reach(step) + 0.2, _arc(step), color, step.reverse, step.tilt, 0.24)
+		_attack_vfx(step, bool(step.get("reverse", false)))
 	if not _attack_hit_done and _attack_time >= step.hit_time:
 		_attack_hit_done = true
 		_apply_hit(step)
+	# Парні клинки: та сама ланка б'є ще раз — другим клинком.
+	var extra: Array = step.get("hits", [])
+	if _attack_hit_done and _extra_hit < extra.size() and _attack_time >= float(extra[_extra_hit]):
+		_extra_hit += 1
+		_attack_vfx(step, not bool(step.get("reverse", false)))
+		_apply_hit(step)
 	if _attack_time >= step.recover:
 		_attack_step = -1
-		_combo_expire = COMBO_WINDOW
-		# Утримання кнопки б'є серією — але лише коли є кого бити, щоб
-		# герой не махав мечем у порожнечу.
-		if _attack_queued or (_attack_held and _target != null):
-			_start_attack()
+		# Перепочинок після удару: наступний почнеться не одразу, а важкий
+		# завершальний удар серії дає довшу паузу.
+		_attack_cooldown_left = float(step.get("pause", 0.0)) / maxf(attack_speed(), 0.1)
+		_combo_expire = COMBO_WINDOW + _attack_cooldown_left
+
+## Слід удару за його формою: дуга, повне коло довкола героя або прямий
+## укол уперед.
+func _attack_vfx(step: Dictionary, reverse: bool) -> void:
+	var color := HEAVY_COLOR if step.heavy else SLASH_COLOR
+	var origin := global_position + Vector3.UP * 1.0
+	match String(step.get("shape", "arc")):
+		"circle":
+			CombatVfx.slash(get_parent(), origin, _aim_angle(), _reach(step) + 0.2, 359.0, color,
+				reverse, 0.0, 0.3)
+			CombatVfx.shockwave(get_parent(), global_position, _reach(step), color, 0.3)
+		"line":
+			CombatVfx.thrust(get_parent(), origin, _aim_angle(), _reach(step) + 0.3, color)
+		_:
+			CombatVfx.slash(get_parent(), origin, _aim_angle(), _reach(step) + 0.2, _arc(step), color,
+				reverse, float(step.get("tilt", 0.0)), 0.24)
 
 ## Шкода всім ворогам у дузі перед героєм. Стіна захищає: крізь неї
 ## меч не дістає.
@@ -1012,25 +1150,61 @@ func _arc(step: Dictionary) -> float:
 func _apply_hit(step: Dictionary) -> void:
 	var aim := _aim_angle()
 	var forward := Vector3(sin(aim), 0.0, cos(aim))
+	var side := Vector3(forward.z, 0.0, -forward.x)
+	var shape: String = step.get("shape", "arc")
+	var reach := _reach(step)
 	var half_arc := deg_to_rad(_arc(step)) * 0.5
-	var hits := 0
+	var half_width: float = float(step.get("width", 1.2)) * 0.5
+	var knockback: float = step.knockback * (weapon_def.knockback_mult_3d if weapon_def != null else 1.0)
+	var hit: Array[Enemy3D] = []
 	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
 		if not enemy.is_alive():
 			continue
 		var offset := enemy.global_position - global_position
 		offset.y = 0.0
 		var distance := offset.length()
-		if distance > _reach(step) + 0.5:
-			continue
-		if distance > 0.4 and forward.angle_to(offset / distance) > half_arc:
-			continue
+		match shape:
+			"circle":
+				if distance > reach + 0.5:
+					continue
+			"line":
+				# Укол: вузька смуга вперед — дістає всіх, хто в ній стоїть.
+				var along := offset.dot(forward)
+				if along < -0.3 or along > reach + 0.4 or absf(offset.dot(side)) > half_width + 0.3:
+					continue
+			_:
+				if distance > reach + 0.5:
+					continue
+				if distance > 0.4 and forward.angle_to(offset / distance) > half_arc:
+					continue
 		if not _can_see(enemy):
 			continue
-		var knockback: float = step.knockback * (weapon_def.knockback_mult_3d if weapon_def != null else 1.0)
 		deal_damage(enemy, step.damage, offset.normalized() * knockback, step.heavy)
-		hits += 1
-	if hits > 0:
-		_feel_hit(step.heavy)
+		if step.has("stun"):
+			enemy.stun(float(step.stun))
+		hit.append(enemy)
+	if hit.is_empty():
+		return
+	if step.has("burst"):
+		_burst(step, hit)
+	_feel_hit(step.heavy)
+
+## Вибух довкола цілі (кинджали, завершальний удар тесака): зачіпає
+## сусідів тієї, в кого влучили, — невеликою часткою шкоди.
+func _burst(step: Dictionary, hit: Array[Enemy3D]) -> void:
+	var center_enemy: Enemy3D = hit[0]
+	if _target != null and is_instance_valid(_target) and hit.has(_target):
+		center_enemy = _target
+	var center := center_enemy.global_position
+	var radius: float = float(step.burst[0])
+	CombatVfx.shockwave(get_parent(), center, radius, BURST_COLOR, 0.25)
+	CombatVfx.impact(get_parent(), center + Vector3.UP * 0.8, BURST_COLOR, true)
+	for enemy: Enemy3D in enemies_near(center, radius):
+		if hit.has(enemy):
+			continue
+		var push := enemy.global_position - center
+		push.y = 0.0
+		deal_damage(enemy, float(step.burst[1]), push.normalized() * 1.2, false)
 
 ## Здібності й пасивка живуть своїм життям: перезарядка, накопичення
 ## люті, тик вогняного кола.
