@@ -31,7 +31,7 @@ func _use(player: Node) -> bool:
 	player.spin_model(SPIN_TIME)
 	var parent := player.get_parent()
 	var chest: Vector3 = player.global_position + Vector3.UP
-	var radius := RADIUS + 0.15 * level
+	var radius := _radius(player, level)
 	CombatVfx.slash(parent, chest, player.facing_angle(), radius, 359.0, color, false, 0.0, SPIN_TIME)
 	CombatVfx.slash(parent, chest + Vector3.UP * 0.25, player.facing_angle() + PI, radius * 0.85, 359.0, color, true, 0.1, SPIN_TIME)
 	CombatVfx.shockwave(parent, player.global_position, radius, color, 0.4)
@@ -45,8 +45,8 @@ func _update(player: Node, delta: float) -> void:
 		return
 	_hit_left = -1.0
 	var level := talent_level(player)
-	var radius := RADIUS + 0.15 * level
-	var damage := DAMAGE * (1.0 + 0.18 * level)
+	var radius := _radius(player, level)
+	var damage: float = DAMAGE * (1.0 + 0.18 * level) * player.whirl_power()
 	var hits := 0
 	for enemy: Enemy3D in player.enemies_in_radius(radius):
 		var push: Vector3 = enemy.global_position - player.global_position
@@ -55,3 +55,8 @@ func _update(player: Node, delta: float) -> void:
 		hits += 1
 	CombatVfx.hitstop(player.get_tree(), 0.05 if hits > 0 else 0.0)
 	player.shake_camera(0.1 if hits > 0 else 0.05)
+
+## Радіус з урахуванням особистого таланту героя й здібності "Буря
+## клинків", узятої в поході.
+func _radius(player: Node, level: int) -> float:
+	return (RADIUS + 0.15 * level) * (1.0 + (player.whirl_power() - 1.0) * 0.5)

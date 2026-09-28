@@ -42,6 +42,8 @@ func _ready() -> void:
 	await _test_skill()
 	await _test_passive_charge()
 	await _test_shooting()
+	_test_upgrade_choices()
+	await _test_pierce_and_explosive()
 	await _test_ranged()
 	await _test_enemy_windup()
 	if _shot_path != "":
@@ -149,6 +151,80 @@ func _test_shooting() -> void:
 				attack_button.inner_text, attack_button.visible, attack_button.size])
 	print("COMBAT: перезарядка %.1f с, набоїв після неї %d/%d" % [
 		reload.y, _player.get_ammo().x, _player.get_ammo().y])
+
+## Які здібності пропонують цьому героєві. Мечниці не має випадати
+## нічого про кулі, стрільцю — нічого про замахи.
+func _test_upgrade_choices() -> void:
+	var offered := {}
+	for i in 40:
+		for card: Dictionary in RunUpgrades.pick(_player, {}, 0.0, 3):
+			offered[card.id] = card.title
+	var melee_only := [&"arc", &"knockback", &"combo_speed", &"rage_gain", &"dash_power", &"whirl_power"]
+	var ranged_only := [&"pierce", &"magazine", &"reload", &"extra_bullet", &"accuracy", &"fire_rate",
+		&"explosive", &"mark_power", &"smoke_power"]
+	var wrong := []
+	for id: StringName in offered:
+		var is_melee_card: bool = melee_only.has(id)
+		var is_ranged_card: bool = ranged_only.has(id)
+		if _player.is_ranged() and is_melee_card:
+			wrong.append(offered[id])
+		if not _player.is_ranged() and is_ranged_card:
+			wrong.append(offered[id])
+	print("COMBAT: здібності походу (%d видів): %s" % [offered.size(), offered.values()])
+	print("COMBAT: невідповідних героєві: %s (має бути порожньо)" % [wrong])
+
+## "Пробивний набій" має прошивати другого ворога, а "Розривні кулі" —
+## зачіпати тих, хто поруч.
+func _test_pierce_and_explosive() -> void:
+	if not _player.is_ranged():
+		print("COMBAT: перевірка куль — герой не стрілець")
+		return
+	var enemies: Array = []
+	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
+		if enemy.is_alive() and enemy.kind != Enemy3D.Kind.BOSS:
+			enemies.append(enemy)
+		if enemies.size() == 2:
+			break
+	if enemies.size() < 2:
+		print("COMBAT: для перевірки куль забракло ворогів")
+		return
+	var first: Enemy3D = enemies[0]
+	var second: Enemy3D = enemies[1]
+	for enemy: Enemy3D in enemies:
+		enemy.max_hp = 4000.0
+		enemy.current_hp = 4000.0
+		enemy.set_sleeping(true)   # хай стоять на місці під час заміру
+
+	# Ставимо їх у лінію перед героєм.
+	_place_player_near(first, 6.0, 4.0)
+	var forward: Vector3 = (first.global_position - _player.global_position)
+	forward.y = 0.0
+	forward = forward.normalized()
+	first.global_position = _player.global_position + forward * 4.0 + Vector3(0, 0.1, 0)
+	second.global_position = _player.global_position + forward * 6.0 + Vector3(0, 0.1, 0)
+	_player._bullet_pierce = 1
+	_player._explosive_bullets = 0
+	_player._ammo = _player.magazine_size()
+	var before_second: float = second.current_hp
+	for i in 6:
+		_player.attack()
+		for frame in 12:
+			await get_tree().physics_frame
+	print("COMBAT: пробивний набій — другий ворог за спиною першого: %.0f -> %.0f HP" % [
+		before_second, second.current_hp])
+
+	# Тепер розрив: другий стоїть збоку, куля в нього не летить.
+	_player._bullet_pierce = 0
+	_player._explosive_bullets = 1
+	second.global_position = first.global_position + Vector3(forward.z, 0.0, -forward.x) * 1.4
+	second.current_hp = 4000.0
+	before_second = second.current_hp
+	_player._ammo = _player.magazine_size()
+	for i in 6:
+		_player.attack()
+		for frame in 12:
+			await get_tree().physics_frame
+	print("COMBAT: розривні кулі — сусід збоку: %.0f -> %.0f HP" % [before_second, second.current_hp])
 
 func _test_health_bar() -> void:
 	var bar: HealthBar3D = _player._health_bar

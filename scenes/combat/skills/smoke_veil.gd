@@ -19,7 +19,7 @@ func _init() -> void:
 	cooldown = 10.0
 
 func _use(player: Node) -> bool:
-	var duration := DURATION + 0.5 * talent_level(player)
+	var duration: float = DURATION + 0.5 * talent_level(player) + player.smoke_bonus()
 	player.set_concealed(duration, DAMAGE_BONUS, SPEED_BONUS)
 	var parent := player.get_parent()
 	CombatVfx.shockwave(parent, player.global_position, 2.6, color, 0.5)

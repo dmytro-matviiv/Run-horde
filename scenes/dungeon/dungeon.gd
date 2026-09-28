@@ -82,6 +82,8 @@ var _chunks: Array = []
 var _lights: Array = []
 var _stream_left := 0.0
 var _run_gold := 0
+## Що герой уже взяв у цьому поході: id здібності -> рівень.
+var _run_upgrades: Dictionary = {}
 
 ## Збирання рівня розкладене на кілька кадрів і сховане за екраном
 ## завантаження (SceneLoader.hold): гравець бачить плавну смужку, а не
@@ -246,18 +248,21 @@ func _add_xp(amount: int) -> void:
 ## Вибір здібності зупиняє гру — як і в меню рівня 2D-частини.
 func _offer_ability() -> void:
 	var luck := TALENT_LUCK_PER_LEVEL * GameState.get_meta_level(GameState.selected_hero_id, &"meta_luck")
-	var choices := UpgradePool.pick_choices({}, luck)
+	# Здібності підбираються під ГЕРОЯ та його зброю: стрільцю — набої й
+	# перезарядка, мечниці — замахи й лють.
+	var choices := RunUpgrades.pick(player, _run_upgrades, luck)
 	if choices.is_empty():
 		return
 	get_tree().paused = true
 	var choice_ui: Node = LEVEL_UP_CHOICE_SCENE.instantiate()
 	choice_ui.process_mode = Node.PROCESS_MODE_ALWAYS
 	hud.add_child(choice_ui)
-	choice_ui.setup(_hero_level, choices, {})
+	choice_ui.setup_cards(_hero_level, choices)
 	var picked: StringName = await choice_ui.upgrade_chosen
 	choice_ui.queue_free()
 	get_tree().paused = false
-	player.apply_ability(picked)
+	_run_upgrades[picked] = int(_run_upgrades.get(picked, 0)) + 1
+	player.apply_run_upgrade(picked)
 	_update_status()
 
 ## Вихід відчиняється лише після боса.

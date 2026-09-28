@@ -187,6 +187,29 @@ var _weapon_node: Node3D
 
 ## Стрільба: скільки набоїв лишилось, коли можна наступний постріл і
 ## скільки триває перезарядка.
+## --- Що дали здібності, набрані в поході (RunUpgrades) ---
+## Кожне поле хтось читає в бою, тож жодна здібність не буває "пустою".
+var _crit_chance := CRIT_CHANCE
+var _lifesteal := 0.0
+var _damage_taken_factor := 1.0
+var _knockback_factor := 1.0
+var _arc_factor := 1.0
+var _reach_bonus := 0.0
+var _skill_cooldown_factor := 1.0
+var _dodge_cooldown_factor := 1.0
+var _rage_gain_factor := 1.0
+var _dash_power := 1.0
+var _whirl_power := 1.0
+var _mark_bonus := 0.0
+var _smoke_bonus := 0.0
+var _bullet_pierce := 0
+var _bullets_extra := 0
+var _spread_factor := 1.0
+var _magazine_factor := 1.0
+var _reload_factor := 1.0
+var _fire_rate_factor := 1.0
+var _explosive_bullets := 0
+
 var _ammo := 0
 var _fire_left := 0.0
 var _reload_left := 0.0
@@ -237,7 +260,7 @@ func _equip_weapon() -> void:
 	if _model_instance != null:
 		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def)
 	if is_ranged():
-		_ammo = weapon_def.magazine
+		_ammo = magazine_size()
 
 ## Числа героя: база + бонуси героя + прокачані таланти + зброя.
 func _apply_loadout() -> void:
@@ -483,16 +506,20 @@ func attack() -> void:
 func get_ammo() -> Vector2i:
 	if not is_ranged():
 		return Vector2i.ZERO
-	return Vector2i(_ammo, weapon_def.magazine)
+	return Vector2i(_ammo, magazine_size())
+
+## Розмір магазина з урахуванням здібності "Розширений магазин".
+func magazine_size() -> int:
+	return maxi(1, int(round(weapon_def.magazine * _magazine_factor)))
 
 ## Скільки лишилось перезаряджатись і скільки вона триває.
 func get_reload() -> Vector2:
-	return Vector2(_reload_left, weapon_def.reload_time if is_ranged() else 0.0)
+	return Vector2(_reload_left, weapon_def.reload_time * _reload_factor if is_ranged() else 0.0)
 
 func reload() -> void:
-	if not is_ranged() or _reload_left > 0.0 or _ammo >= weapon_def.magazine:
+	if not is_ranged() or _reload_left > 0.0 or _ammo >= magazine_size():
 		return
-	_reload_left = weapon_def.reload_time / maxf(attack_speed(), 0.1)
+	_reload_left = weapon_def.reload_time * _reload_factor / maxf(attack_speed(), 0.1)
 	_fire("KickShot", true)
 
 ## Постріл, якщо ствол готовий: не в перезарядці, минула затримка після
@@ -507,7 +534,7 @@ func _try_shoot() -> void:
 
 func _shoot() -> void:
 	_ammo -= 1
-	_fire_left = weapon_def.fire_interval / maxf(attack_speed(), 0.1)
+	_fire_left = weapon_def.fire_interval * _fire_rate_factor / maxf(attack_speed(), 0.1)
 	_combat_left = COMBAT_MEMORY
 	_since_attack = 0.0
 	_refresh_target()
@@ -522,10 +549,16 @@ func _shoot() -> void:
 
 	var parent := get_parent()
 	var muzzle := _muzzle_position()
-	for i in maxi(weapon_def.bullets_per_shot, 1):
-		var spread := deg_to_rad(weapon_def.bullet_spread_deg)
-		var shot_direction := direction.rotated(Vector3.UP, randf_range(-spread, spread))
+	var shots := maxi(weapon_def.bullets_per_shot, 1) + _bullets_extra
+	for i in shots:
+		var spread := deg_to_rad(weapon_def.bullet_spread_deg) * _spread_factor
+		# Додаткові кулі йдуть трохи вбік, щоб їх було видно як чергу.
+		var offset := 0.0 if shots == 1 else lerpf(-0.05, 0.05, float(i) / float(shots - 1))
+		var shot_direction := direction.rotated(Vector3.UP, randf_range(-spread, spread) + offset)
 		var bullet := PlayerProjectile.create(self, 1.0, weapon_def.color, 1.2)
+		bullet.pierce = _bullet_pierce
+		bullet.explosion_radius = 1.9 if _explosive_bullets > 0 else 0.0
+		bullet.explosion_damage = 0.35 * _explosive_bullets
 		parent.add_child(bullet)
 		bullet.launch(muzzle, shot_direction, weapon_def.bullet_speed)
 	CombatVfx.muzzle_flash(parent, muzzle, direction, weapon_def.color)
@@ -547,7 +580,7 @@ func _update_ranged(delta: float) -> void:
 	if _reload_left > 0.0:
 		_reload_left -= delta
 		if _reload_left <= 0.0:
-			_ammo = weapon_def.magazine
+			_ammo = magazine_size()
 	# Утримання кнопки — вогонь чергою, поки є набої.
 	elif _attack_held and _fire_left <= 0.0:
 		_try_shoot()
@@ -568,7 +601,7 @@ func dodge() -> void:
 	_roll_direction = direction.normalized()
 	_roll_left = DODGE_TIME
 	_invulnerable_left = maxf(_invulnerable_left, DODGE_INVULNERABLE)
-	_dodge_cooldown_left = DODGE_COOLDOWN
+	_dodge_cooldown_left = DODGE_COOLDOWN * _dodge_cooldown_factor
 	# Перекат скасовує удар: у небезпеці гравець має реагувати миттєво.
 	_attack_step = -1
 	_lunge_left = 0.0
@@ -599,7 +632,35 @@ func use_skill(index: int = 0) -> void:
 	_fire("SlashFastShot")
 
 func get_dodge_cooldown() -> Vector2:
-	return Vector2(_dodge_cooldown_left, DODGE_COOLDOWN)
+	return Vector2(_dodge_cooldown_left, DODGE_COOLDOWN * _dodge_cooldown_factor)
+
+# --- що здібності походу віддають бою й умінням ---
+
+func skill_cooldown_factor() -> float:
+	return _skill_cooldown_factor
+
+func rage_gain_factor() -> float:
+	return _rage_gain_factor
+
+func dash_power() -> float:
+	return _dash_power
+
+func whirl_power() -> float:
+	return _whirl_power
+
+func mark_bonus() -> float:
+	return _mark_bonus
+
+func smoke_bonus() -> float:
+	return _smoke_bonus
+
+## Вороги біля точки — потрібно розривним кулям, які б'ють по площі.
+func enemies_near(position: Vector3, radius: float) -> Array[Enemy3D]:
+	var result: Array[Enemy3D] = []
+	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
+		if enemy.is_alive() and enemy.global_position.distance_to(position) <= radius:
+			result.append(enemy)
+	return result
 
 # --- те, чим користуються здібності ---
 
@@ -940,13 +1001,13 @@ func _update_attack(delta: float) -> void:
 ## глефа — далеко й вузько.
 func _reach(step: Dictionary) -> float:
 	if weapon_def == null:
-		return step.reach
-	return step.reach * weapon_def.reach_3d / 2.9
+		return step.reach + _reach_bonus
+	return step.reach * weapon_def.reach_3d / 2.9 + _reach_bonus
 
 func _arc(step: Dictionary) -> float:
 	if weapon_def == null:
-		return step.arc
-	return clampf(step.arc * weapon_def.arc_3d / 150.0, 40.0, 359.0)
+		return step.arc * _arc_factor
+	return clampf(step.arc * weapon_def.arc_3d / 150.0 * _arc_factor, 40.0, 359.0)
 
 func _apply_hit(step: Dictionary) -> void:
 	var aim := _aim_angle()
@@ -985,13 +1046,16 @@ func _tick_skills(delta: float) -> void:
 func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool) -> void:
 	if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive():
 		return
-	var crit := randf() < CRIT_CHANCE
+	var crit := randf() < _crit_chance
 	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
 	if _concealed_left > 0.0:
 		amount *= _concealed_damage
 	if passive != null:
 		amount = passive.modify_damage(self, enemy, amount)
-	enemy.take_damage(amount, knockback, crit, heavy)
+	enemy.take_damage(amount, knockback * _knockback_factor, crit, heavy)
+	# Вампіризм: частина завданої шкоди повертається здоров'ям.
+	if _lifesteal > 0.0:
+		heal(amount * _lifesteal)
 	if passive == null:
 		return
 	passive.on_hit(self, enemy, amount, heavy)
@@ -1061,6 +1125,7 @@ func _update_animation(delta: float) -> void:
 func take_damage(amount: float) -> bool:
 	if _dead or _invulnerable_left > 0.0:
 		return false
+	amount *= _damage_taken_factor
 	current_hp = maxf(current_hp - amount, 0.0)
 	_invulnerable_left = HURT_INVULNERABLE
 	_combat_left = COMBAT_MEMORY
@@ -1090,29 +1155,73 @@ func _die() -> void:
 	animation_tree.set("parameters/Dead/blend_amount", 1.0)
 	died.emit()
 
-## Здібності з вибору на рівні. Ідентифікатори ті самі, що й у
-## 2D-частині гри, тож окремого списку заводити не довелось.
-func apply_ability(id: StringName) -> void:
+## Здібність, обрана в поході (див. RunUpgrades). Кожен випадок тут
+## щось реально змінює в бою — саме тому список здібностей у кожного
+## героя свій: мечниці не пропонують пробивних куль, а стрільцю —
+## ширшого замаху.
+func apply_run_upgrade(id: StringName) -> void:
 	match id:
-		&"weapon_damage":
-			_damage *= 1.25
-		&"weapon_cooldown", &"weapon_multishot":
-			_attack_speed *= 1.12
-			_damage *= 1.05
-			_apply_attack_speed()
-		&"move_speed":
-			_speed_bonus += 0.12
-		&"max_hp":
+		&"hp_up":
 			max_hp += 25.0
-			current_hp += 25.0
+			heal(25.0)
 		&"regen":
 			_regen_per_second += 1.0
+		&"speed":
+			_speed_bonus += 0.08
+		&"damage":
+			_damage *= 1.12
+		&"crit":
+			_crit_chance += 0.06
+		&"lifesteal":
+			_lifesteal += 0.05
+		&"armor":
+			_damage_taken_factor *= 0.9
+		&"skill_cd":
+			_skill_cooldown_factor *= 0.88
+		&"dodge_cd":
+			_dodge_cooldown_factor *= 0.82
+		&"arc":
+			_arc_factor *= 1.2
+			_reach_bonus += 0.25
+		&"knockback":
+			_knockback_factor *= 1.6
+		&"combo_speed":
+			_attack_speed *= 1.12
+			_apply_attack_speed()
+		&"rage_gain":
+			_rage_gain_factor *= 1.3
+		&"dash_power":
+			_dash_power *= 1.6
+		&"whirl_power":
+			_whirl_power *= 1.25
+		&"pierce":
+			_bullet_pierce += 1
+		&"magazine":
+			_magazine_factor += 0.4
+			_ammo = magazine_size()
+		&"reload":
+			_reload_factor *= 0.75
+		&"extra_bullet":
+			_bullets_extra += 1
+		&"accuracy":
+			_spread_factor *= 0.5
+			_damage *= 1.1
+		&"fire_rate":
+			_fire_rate_factor *= 0.85
+		&"explosive":
+			_explosive_bullets += 1
+		&"mark_power":
+			_mark_bonus += 0.15
+		&"smoke_power":
+			_smoke_bonus += 1.0
 		_:
-			# Невідома здібність — просто невелике посилення, щоб вибір
-			# ніколи не був порожнім.
-			_damage *= 1.08
+			push_warning("Невідома здібність походу: %s" % id)
 	_update_health_bar()
 	health_changed.emit(current_hp, max_hp)
+
+## Стара назва — щоб не ламати 2D-частину гри, яка ще жива в проєкті.
+func apply_ability(id: StringName) -> void:
+	apply_run_upgrade(id)
 
 func _update_health_bar() -> void:
 	if _health_bar != null:

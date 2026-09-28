@@ -20,6 +20,14 @@ static var _materials: Dictionary = {}
 var damage_multiplier := 1.0
 var knockback := 1.0
 var color := Color(1.0, 0.9, 0.5)
+## Скільки ворогів куля прошиває наскрізь ("Пробивний набій").
+var pierce := 0
+## Розрив на влучанні ("Розривні кулі"): радіус і частка шкоди сусідам.
+var explosion_radius := 0.0
+var explosion_damage := 0.0
+
+## Кого вже зачепили — щоб та сама куля не била одного двічі.
+var _hit_ids: Array = []
 
 var _velocity := Vector3.ZERO
 var _life := LIFETIME
@@ -64,15 +72,38 @@ func _physics_process(delta: float) -> void:
 
 func _impact(position: Vector3, collider: Variant) -> void:
 	var enemy := collider as Enemy3D
-	if enemy != null and enemy.is_alive() and _player != null and is_instance_valid(_player):
+	var alive_player: bool = _player != null and is_instance_valid(_player)
+	if enemy != null and enemy.is_alive() and alive_player:
+		if _hit_ids.has(enemy.get_instance_id()):
+			return   # цього вже зачепили — летимо далі
+		_hit_ids.append(enemy.get_instance_id())
 		var push: Vector3 = _velocity
 		push.y = 0.0
 		_player.deal_damage(enemy, damage_multiplier, push.normalized() * knockback, false)
+		_explode(position)
 		CombatVfx.impact(get_parent(), position, color, false)
-	else:
-		# Об стіну — дрібні іскри, щоб було видно, куди пішла куля.
-		CombatVfx.impact(get_parent(), position, color, false)
+		# "Пробивний набій": куля не зупиняється, поки не витратить
+		# пробиття. Вороги позаду отримують те саме влучання.
+		if pierce > 0:
+			pierce -= 1
+			global_position = position + _velocity.normalized() * 0.25
+			return
+		queue_free()
+		return
+	# Об стіну — дрібні іскри, щоб було видно, куди пішла куля.
+	_explode(position)
+	CombatVfx.impact(get_parent(), position, color, false)
 	queue_free()
+
+## Розривна куля зачіпає всіх поруч із точкою влучання.
+func _explode(position: Vector3) -> void:
+	if explosion_radius <= 0.0 or _player == null or not is_instance_valid(_player):
+		return
+	CombatVfx.shockwave(get_parent(), position, explosion_radius, color, 0.25)
+	for enemy: Enemy3D in _player.enemies_near(position, explosion_radius):
+		if _hit_ids.has(enemy.get_instance_id()):
+			continue
+		_player.deal_damage(enemy, explosion_damage, Vector3.ZERO, false)
 
 ## Витягнута коробочка — на швидкості читається як трасер.
 static func _get_tracer_mesh() -> BoxMesh:

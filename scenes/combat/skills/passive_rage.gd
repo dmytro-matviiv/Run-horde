@@ -26,11 +26,12 @@ func get_charge() -> float:
 func consume_charge() -> void:
 	_charge = 0.0
 
-func on_hit(_player: Node, _enemy: Node, _amount: float, heavy: bool) -> void:
-	_add(PER_HEAVY_HIT if heavy else PER_HIT)
+func on_hit(player: Node, _enemy: Node, _amount: float, heavy: bool) -> void:
+	# Здібність "Невгамовна лють" із походу пришвидшує накопичення.
+	_add((PER_HEAVY_HIT if heavy else PER_HIT) * player.rage_gain_factor())
 
-func on_damage_taken(_player: Node, amount: float) -> void:
-	_add(PER_DAMAGE_TAKEN * amount)
+func on_damage_taken(player: Node, amount: float) -> void:
+	_add(PER_DAMAGE_TAKEN * amount * player.rage_gain_factor())
 
 func tick(_player: Node, delta: float) -> void:
 	_idle_time += delta

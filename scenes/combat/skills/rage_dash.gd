@@ -43,7 +43,9 @@ func _use(player: Node) -> bool:
 	passive.consume_charge()
 	_dash_left = TIME
 	_hit_ids.clear()
-	player.dash(player.facing_vector(), DISTANCE / TIME, TIME)
+	# "Таран" із походу робить ривок довшим і болючішим.
+	var distance: float = DISTANCE * (1.0 + (player.dash_power() - 1.0) * 0.5)
+	player.dash(player.facing_vector(), distance / TIME, TIME)
 	player.grant_invulnerable(INVULNERABLE)
 	player.add_attack_speed(FURY_ATTACK_SPEED, FURY_TIME)
 	var parent := player.get_parent()
@@ -66,7 +68,7 @@ func _update(player: Node, delta: float) -> void:
 		push.y = 0.0
 		if push.length() < 0.1:
 			push = player.facing_vector()
-		player.deal_damage(enemy, DAMAGE, push.normalized() * KNOCKBACK, true)
+		player.deal_damage(enemy, DAMAGE * player.dash_power(), push.normalized() * KNOCKBACK, true)
 		CombatVfx.hitstop(player.get_tree(), 0.04)
 	if _dash_left <= 0.0:
 		_dash_left = -1.0

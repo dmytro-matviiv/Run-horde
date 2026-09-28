@@ -20,8 +20,9 @@ func _init() -> void:
 	description = "Влучання лишають мітку: мічений отримує на чверть більше шкоди, а гинучи — вибухає, зачіпаючи сусідів."
 	color = MARK_COLOR
 
-func modify_damage(_player: Node, enemy: Node, amount: float) -> float:
-	return amount * MARK_BONUS if _is_marked(enemy) else amount
+func modify_damage(player: Node, enemy: Node, amount: float) -> float:
+	# "Мисливець" із походу робить мітку ще болючішою.
+	return amount * (MARK_BONUS + player.mark_bonus()) if _is_marked(enemy) else amount
 
 func on_hit(_player: Node, enemy: Node, _amount: float, _heavy: bool) -> void:
 	_marks[enemy.get_instance_id()] = _now() + MARK_TIME

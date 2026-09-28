@@ -9,6 +9,24 @@ signal upgrade_chosen(id: StringName)
 @onready var level_label: Label = $CenterContainer/VBoxContainer/LevelLabel
 @onready var cards_container: HBoxContainer = $CenterContainer/VBoxContainer/CardsContainer
 
+## Картки нового зразка: кожна вже знає свій рівень і межу. Саме ними
+## користується данж (RunUpgrades), бо його здібності залежать від
+## героя та його зброї.
+func setup_cards(new_level: int, cards: Array) -> void:
+	level_label.text = "Рівень %d!" % new_level
+	for card: Dictionary in cards:
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(250, 190)
+		button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		button.text = "%s
+
+%s
+
+Рівень %d/%d" % [card.title, card.text, card.level, card.max]
+		button.pressed.connect(_on_card_pressed.bind(card.id))
+		cards_container.add_child(button)
+
 func setup(new_level: int, choices: Array[UpgradeDef], current_levels: Dictionary) -> void:
 	level_label.text = "Рівень %d!" % new_level
 	for upgrade in choices:
