@@ -4,6 +4,8 @@ extends Node
 ## кадр (ніби слабкий процесор) і дивимось, чи гра сама опуститься на
 ## нижчий рівень, а коли гальмування зникне — чи не "гойдається".
 
+const ProbeUtil := preload("res://tools/probe_util.gd")
+
 var _slow_ms := 0
 
 func _ready() -> void:
@@ -19,7 +21,7 @@ func _ready() -> void:
 		var picked := false
 		for node in dungeon.get_node("HUD").get_children():
 			if node.has_signal("upgrade_chosen"):
-				node.upgrade_chosen.emit(&"weapon_damage")
+				ProbeUtil.press_first_card(node)
 				picked = true
 		if picked:
 			break

@@ -8,6 +8,8 @@ extends Node
 ##
 ##   godot --path . res://tools/cpu_probe.tscn -- --quality=0
 
+const ProbeUtil := preload("res://tools/probe_util.gd")
+
 const SCENE := "res://scenes/dungeon/dungeon.tscn"
 const SAMPLE_FRAMES := 180
 
@@ -180,7 +182,7 @@ func _dismiss_popups(frames: int) -> void:
 		await get_tree().process_frame
 		for node in _dungeon.get_node("HUD").get_children():
 			if node.has_signal("upgrade_chosen"):
-				node.upgrade_chosen.emit(&"max_hp")
+				ProbeUtil.press_first_card(node)
 				get_tree().paused = false
 				return
 
@@ -189,4 +191,4 @@ func _process(_delta: float) -> void:
 		return
 	for node in _dungeon.get_node("HUD").get_children():
 		if node.has_signal("upgrade_chosen") and not node.is_queued_for_deletion():
-			node.upgrade_chosen.emit(&"max_hp")
+			ProbeUtil.press_first_card(node)

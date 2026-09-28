@@ -8,6 +8,8 @@ extends Node
 ##   godot --path . res://tools/perf_probe.tscn -- --quality=0 --scene=dungeon
 ## quality: 0 низька, 1 середня, 2 висока; scene: dungeon або island.
 
+const ProbeUtil := preload("res://tools/probe_util.gd")
+
 const SCENES := {
 	"dungeon": "res://scenes/dungeon/dungeon.tscn",
 	"island": "res://scenes/world/base_island.tscn",
@@ -15,6 +17,11 @@ const SCENES := {
 
 func _ready() -> void:
 	PerfSettings.persist_settings = false
+	# --level=N — який рівень данжу перевіряти (0, 1, 2).
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--level="):
+			GameState.max_dungeon_level = maxi(GameState.max_dungeon_level, argument.get_slice("=", 1).to_int())
+			GameState.dungeon_level = argument.get_slice("=", 1).to_int()
 	var options := _parse_args()
 	var quality: int = int(options.get("quality", "2"))
 	var scene_key: String = options.get("scene", "dungeon")
@@ -74,7 +81,7 @@ func _dismiss_ability_choice(scene: Node) -> void:
 		await get_tree().process_frame
 		for node in scene.get_node("HUD").get_children():
 			if node.has_signal("upgrade_chosen"):
-				node.upgrade_chosen.emit(&"weapon_damage")
+				ProbeUtil.press_first_card(node)
 				get_tree().paused = false
 				return
 

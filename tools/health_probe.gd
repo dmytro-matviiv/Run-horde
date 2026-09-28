@@ -3,6 +3,8 @@ extends Node
 ## Перевірка смужок здоров'я: у героя зелена й видима завжди, у ворога
 ## червона з'являється від удару й спадає з кожним тіком.
 
+const ProbeUtil := preload("res://tools/probe_util.gd")
+
 const SCENE := "res://scenes/dungeon/dungeon.tscn"
 
 func _find_bar(node: Node) -> HealthBar3D:
@@ -17,7 +19,7 @@ func _ready() -> void:
 	await get_tree().create_timer(2.0).timeout
 	for node in dungeon.get_node("HUD").get_children():
 		if node.has_signal("upgrade_chosen"):
-			node.upgrade_chosen.emit(&"weapon_damage")
+			ProbeUtil.press_first_card(node)
 	await get_tree().create_timer(0.5).timeout
 	get_tree().paused = false
 

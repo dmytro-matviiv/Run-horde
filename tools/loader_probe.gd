@@ -3,6 +3,8 @@ extends Node
 ## Перевіряє переходи через екран завантаження: острів -> данж -> острів.
 ## Друкує, скільки тривав перехід і який був найдовший кадр (ривок).
 
+const ProbeUtil := preload("res://tools/probe_util.gd")
+
 func _ready() -> void:
 	PerfSettings.persist_settings = false
 	# Сам тест не має зникнути разом зі сценою, тож "поточною сценою"
@@ -18,7 +20,7 @@ func _ready() -> void:
 	for node in get_tree().current_scene.get_node("HUD").get_children():
 		if node.has_signal("upgrade_chosen"):
 			choice_found = true
-			node.upgrade_chosen.emit(&"weapon_damage")
+			ProbeUtil.press_first_card(node)
 	print("LOADER: вибір здібності після завантаження: ", choice_found)
 	get_tree().paused = false
 	await get_tree().create_timer(1.0).timeout

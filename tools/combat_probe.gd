@@ -6,6 +6,8 @@ extends Node
 ##
 ##   godot --path . res://tools/combat_probe.tscn -- --shot=D:/x.png
 
+const ProbeUtil := preload("res://tools/probe_util.gd")
+
 const SCENE := "res://scenes/dungeon/dungeon.tscn"
 
 var _dungeon: Node
@@ -16,6 +18,11 @@ func _ready() -> void:
 	# Тест має працювати й під час паузи — щоб закривати вікно вибору.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	PerfSettings.persist_settings = false
+	# --level=N — який рівень данжу перевіряти (0, 1, 2).
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--level="):
+			GameState.max_dungeon_level = maxi(GameState.max_dungeon_level, argument.get_slice("=", 1).to_int())
+			GameState.dungeon_level = argument.get_slice("=", 1).to_int()
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--shot="):
 			_shot_path = argument.get_slice("=", 1)
@@ -57,7 +64,7 @@ func _process(_delta: float) -> void:
 		return
 	for node in _dungeon.get_node("HUD").get_children():
 		if node.has_signal("upgrade_chosen") and not node.is_queued_for_deletion():
-			node.upgrade_chosen.emit(&"max_hp")
+			ProbeUtil.press_first_card(node)
 
 ## Хто в грі: модель, зброя, здібності, пасивка — усе з вибраного героя.
 func _report_loadout() -> void:
@@ -514,6 +521,6 @@ func _dismiss_ability_choice() -> void:
 		await get_tree().process_frame
 		for node in _dungeon.get_node("HUD").get_children():
 			if node.has_signal("upgrade_chosen"):
-				node.upgrade_chosen.emit(&"weapon_damage")
+				ProbeUtil.press_first_card(node)
 				get_tree().paused = false
 				return

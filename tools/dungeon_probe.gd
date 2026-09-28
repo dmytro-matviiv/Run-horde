@@ -5,10 +5,17 @@ extends Node
 ##
 ##   godot --path . res://tools/dungeon_probe.tscn -- --quality=0
 
+const ProbeUtil := preload("res://tools/probe_util.gd")
+
 const SCENE := "res://scenes/dungeon/dungeon.tscn"
 
 func _ready() -> void:
 	PerfSettings.persist_settings = false
+	# --level=N — який рівень данжу перевіряти (0, 1, 2).
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--level="):
+			GameState.max_dungeon_level = maxi(GameState.max_dungeon_level, argument.get_slice("=", 1).to_int())
+			GameState.dungeon_level = argument.get_slice("=", 1).to_int()
 	var quality := 2
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--quality="):
@@ -68,7 +75,7 @@ func _dismiss_ability_choice(dungeon: Node) -> void:
 		await get_tree().process_frame
 		for node in dungeon.get_node("HUD").get_children():
 			if node.has_signal("upgrade_chosen"):
-				node.upgrade_chosen.emit(&"weapon_damage")
+				ProbeUtil.press_first_card(node)
 				get_tree().paused = false
 				return
 	print("PROBE: вікно вибору здібності так і не з'явилось!")
