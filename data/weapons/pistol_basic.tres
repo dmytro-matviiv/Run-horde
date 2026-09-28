@@ -30,4 +30,4 @@ bullet_spread_deg = 2.0
 bullets_per_shot = 1
 model_scale = 0.12
 grip_rotation_deg = Vector3(0, 0, 90)
-muzzle_offset = Vector3(1.6, 0.12, 0)
+muzzle_offset = Vector3(1.55, 0.53, 0)
