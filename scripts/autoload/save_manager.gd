@@ -6,7 +6,16 @@ extends Node
 ## файлу.
 
 const SAVE_PATH := "user://save.json"
-const CURRENT_SCHEMA_VERSION := 5
+const CURRENT_SCHEMA_VERSION := 6
+
+## v6: Жриця Багаття стала Чарівницею з посохами. Куплена стара зброя
+## переходить на відповідні посохи — гравець нічого не втрачає.
+const V6_WEAPON_RENAMES := {
+	"ember_bolt": "arcane_staff",
+	"flamethrower": "ice_staff",
+	"pyre_totem": "venom_staff",
+	"sun_lance": "moon_staff",
+}
 
 func save_game() -> void:
 	var data := {
@@ -75,6 +84,20 @@ func _migrate(data: Dictionary) -> Dictionary:
 		data = _migrate_v3_to_v4(data)
 	if version < 5:
 		data = _migrate_v4_to_v5(data)
+	if version < 6:
+		data = _migrate_v5_to_v6(data)
+	return data
+
+func _migrate_v5_to_v6(data: Dictionary) -> Dictionary:
+	var owned: Array = data.get("owned_weapon_ids", [])
+	for i in owned.size():
+		owned[i] = V6_WEAPON_RENAMES.get(str(owned[i]), owned[i])
+	data["owned_weapon_ids"] = owned
+	var equipped: Dictionary = data.get("equipped_weapon_ids", {})
+	for hero in equipped:
+		equipped[hero] = V6_WEAPON_RENAMES.get(str(equipped[hero]), equipped[hero])
+	data["equipped_weapon_ids"] = equipped
+	data["schema_version"] = 6
 	return data
 
 ## v1 мав один спільний meta_upgrade_levels на всіх героїв разом; v2 —

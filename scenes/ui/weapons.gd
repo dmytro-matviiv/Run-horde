@@ -32,6 +32,14 @@ const STYLE_HINTS := {
 	"cleaver": "Тесак — важкий удар, що оглушає",
 }
 
+## Чари посохів Чарівниці.
+const SPELL_HINTS := {
+	"arcane": "Посох — арканні стріли самі шукають ціль",
+	"frost": "Посох — крига сповільнює, а третій уламок заморожує",
+	"venom": "Посох — отруйна куля лишає хмару",
+	"lightning": "Посох — блискавка перескакує між ворогами",
+}
+
 const STATUS_HINTS := {
 	&"poison": "отрута",
 	&"burn": "підпал",
@@ -129,7 +137,7 @@ func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
 	info.add_child(title)
 
 	var kind := Label.new()
-	kind.text = STYLE_HINTS.get(def.style_3d, ARCHETYPE_HINTS.get(def.archetype, ""))
+	kind.text = SPELL_HINTS.get(def.spell, STYLE_HINTS.get(def.style_3d, ARCHETYPE_HINTS.get(def.archetype, "")))
 	kind.add_theme_font_size_override("font_size", 14)
 	kind.add_theme_color_override("font_color", UiTheme.GEM)
 	info.add_child(kind)
@@ -161,6 +169,15 @@ func _build_stats_text(def: WeaponDef) -> String:
 			"магазин %d" % def.magazine,
 			"перезарядка %.1f с" % def.reload_time,
 		])
+	if def.spell != "none":
+		var parts: Array[String] = [
+			"Шкода %d%%" % roundi(def.damage_mult_3d * 100.0),
+			"чари раз на %.2f с" % def.cast_interval,
+		]
+		var staff_skill := Skills3D.create_skill(def.staff_skill)
+		if staff_skill != null:
+			parts.append("особливе: %s" % staff_skill.title)
+		return "   •   ".join(parts)
 	if STYLE_HINTS.has(def.style_3d):
 		# Ближня зброя в 3D-бою відрізняється множниками до удару героя —
 		# показуємо їх відносно стартового меча (100%).

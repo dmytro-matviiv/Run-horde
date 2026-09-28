@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"venom_staff"
+title = "Посох трясовини"
+description = "Отруйна куля лишає на влучанні хмару, що труїть усіх у ній. Особливе — «Отруйне болото»: велика трясовина сповільнює й труїть."
+hero_id = &"ember_priestess"
+cost_gold = 4500
+cost_gems = 0
+archetype = "projectile"
+damage = 8.0
+cooldown = 0.8
+color = Color(0.45, 0.95, 0.3, 1)
+projectile_speed = 420.0
+muzzle_offset = Vector3(-0.092, 1.414, -0.006)
+spell = "venom"
+cast_interval = 0.8
+spell_speed = 13.0
+staff_skill = &"venom_swamp"
+style_3d = "staff"
+damage_mult_3d = 0.55
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.6
+grip_offset = Vector3(-0.003846, 0.001176, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.15

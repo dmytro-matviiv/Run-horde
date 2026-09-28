@@ -130,6 +130,14 @@ func _draw() -> void:
 				_draw_smoke(center, radius * 0.45, glyph_color)
 			"gun":
 				_draw_gun(center, radius * 0.5, glyph_color)
+			"staff":
+				_draw_staff(center, radius * 0.5, glyph_color)
+			"frost":
+				_draw_frost(center, radius * 0.45, glyph_color)
+			"venom":
+				_draw_venom(center, radius * 0.45, glyph_color)
+			"bolt":
+				_draw_bolt(center, radius * 0.45, glyph_color)
 			_:
 				_draw_whirl(center, radius * 0.45, glyph_color)
 
@@ -238,6 +246,43 @@ func _draw_gun(center: Vector2, size_px: float, color: Color) -> void:
 		center + Vector2(-size_px * 0.1, size_px * 0.05),
 		center + Vector2(-size_px * 0.25, size_px * 0.85),
 		center + Vector2(-size_px * 0.7, size_px * 0.85)]), color)
+
+## Посох навскіс із кулею на верхівці — кнопка чар.
+func _draw_staff(center: Vector2, length: float, color: Color) -> void:
+	var direction := Vector2(1, -1).normalized()
+	var top := center + direction * length * 0.75
+	draw_line(center - direction * length, top, color, length * 0.13)
+	draw_circle(top, length * 0.28, color)
+	draw_arc(top, length * 0.45, 0.0, TAU, 18, Color(color, color.a * 0.5), length * 0.08)
+
+## Сніжинка — крига.
+func _draw_frost(center: Vector2, size_px: float, color: Color) -> void:
+	for i in 3:
+		var direction := Vector2.from_angle(PI / 2.0 + TAU * i / 6.0)
+		draw_line(center - direction * size_px, center + direction * size_px, color, size_px * 0.16)
+		for side: float in [-1.0, 1.0]:
+			var tip := center + direction * size_px * 0.6 * side
+			var branch := direction.rotated(0.7 if side > 0.0 else PI - 0.7) * size_px * 0.3
+			draw_line(tip, tip + branch, color, size_px * 0.1)
+
+## Крапля отрути з бульбашками.
+func _draw_venom(center: Vector2, size_px: float, color: Color) -> void:
+	draw_circle(center + Vector2(0, size_px * 0.25), size_px * 0.55, color)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(0, -size_px * 0.95),
+		center + Vector2(size_px * 0.5, size_px * 0.1),
+		center + Vector2(-size_px * 0.5, size_px * 0.1)]), color)
+	draw_circle(center + Vector2(-size_px * 0.15, size_px * 0.2), size_px * 0.14, Color(1, 1, 1, color.a * 0.6))
+
+## Блискавка — злам.
+func _draw_bolt(center: Vector2, size_px: float, color: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(size_px * 0.25, -size_px),
+		center + Vector2(-size_px * 0.45, size_px * 0.1),
+		center + Vector2(-size_px * 0.02, size_px * 0.1),
+		center + Vector2(-size_px * 0.25, size_px),
+		center + Vector2(size_px * 0.45, -size_px * 0.15),
+		center + Vector2(size_px * 0.02, -size_px * 0.15)]), color)
 
 ## Три дуги по колу — вихор.
 func _draw_whirl(center: Vector2, size_px: float, color: Color) -> void:

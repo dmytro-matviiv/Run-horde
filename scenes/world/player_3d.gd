@@ -303,6 +303,19 @@ var _ammo := 0
 var _fire_left := 0.0
 var _reload_left := 0.0
 
+## Чари посоха: затримка до наступних, відкладений випуск (снаряд
+## злітає з посоха в мить помаху, а не на початку руху) і лічильник для
+## чергування рухів.
+var _cast_left := 0.0
+var _cast_pending_left := -1.0
+var _cast_count := 0
+var _cast_rate_factor := 1.0
+var _spell_extra := 0
+var _spell_pierce := 0
+var _spell_power := 1.0
+var _ring_power := 1.0
+var _phoenix_bonus := 0.0
+
 var _blend_position := Vector2.ZERO
 var _upper_body_filter: Array[NodePath] = []
 
@@ -329,6 +342,11 @@ func _load_hero() -> void:
 
 	passive = Skills3D.create_passive(hero_def.passive_id)
 	_skills = Skills3D.create_for_hero(hero_def)
+	# У посоха своя особлива здібність — вона стає першою кнопкою.
+	if weapon_def != null and weapon_def.staff_skill != &"":
+		var staff_skill := Skills3D.create_skill(weapon_def.staff_skill)
+		if staff_skill != null:
+			_skills.insert(0, staff_skill)
 
 ## Модель героя й зброя в руці — те саме, що показує екран вибору
 ## (HeroBuilder). Немає своєї моделі — береться тимчасова в кольорі героя.
@@ -547,7 +565,9 @@ func _make_looping(player: AnimationPlayer, names: Array) -> void:
 func _apply_attack_speed() -> void:
 	var speed := attack_speed()
 	var speeds := [1.15, 1.45, 1.1]
-	if not is_ranged():
+	if is_caster():
+		speeds = [1.5, 1.6, 1.0]
+	elif not is_ranged():
 		for step: Dictionary in _combo():
 			speeds[SLOTS.find(step.shot)] = float(step.get("anim_speed", 1.0))
 	for i in SLOT_SCALES.size():
@@ -563,6 +583,10 @@ func _attack_slot_animations() -> Array:
 	if is_ranged():
 		# Для стрільця третій слот — рух перезарядки.
 		return ["Gun_Shoot", "Gun_Shoot", "Interact"]
+	if is_caster():
+		# Чарівниця не махає посохом, як мечем: то штовхає його вперед,
+		# то наводить на ворога, мов указку.
+		return ["Punch_Right", "Gun_Shoot", "Interact"]
 	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right"]
 	for step: Dictionary in _combo():
 		result[SLOTS.find(step.shot)] = String(step.get("anim", "Sword_Slash"))
@@ -597,11 +621,18 @@ func set_move_input(direction: Vector2) -> void:
 func is_ranged() -> bool:
 	return weapon_def != null and weapon_def.ranged_3d
 
+## Чи в руках посох: чари замість ударів.
+func is_caster() -> bool:
+	return weapon_def != null and weapon_def.spell != "none"
+
 func attack() -> void:
 	if _dead:
 		return
 	if is_ranged():
 		_try_shoot()
+		return
+	if is_caster():
+		_try_cast()
 		return
 	# Удар ще йде, герой котиться чи переводить подих після удару —
 	# натискання запам'ятовується й спрацює, щойно можна.
@@ -694,6 +725,64 @@ func _update_ranged(delta: float) -> void:
 	# Утримання кнопки — вогонь чергою, поки є набої.
 	elif _attack_held and _fire_left <= 0.0:
 		_try_shoot()
+
+# --- чари ---
+
+## Чари, якщо посох готовий: не в перекаті й минула затримка.
+func _try_cast() -> void:
+	if _roll_left > 0.0 or _cast_left > 0.0 or _cast_pending_left >= 0.0:
+		return
+	_cast_left = weapon_def.cast_interval * _cast_rate_factor / maxf(attack_speed(), 0.1)
+	# Снаряд злітає з посоха в мить помаху — трохи згодом.
+	_cast_pending_left = 0.12 / maxf(attack_speed(), 0.1)
+	_combat_left = COMBAT_MEMORY
+	_since_attack = 0.0
+	_refresh_target()
+	_cast_count += 1
+	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
+	_fire("SlashShot" if _cast_count % 2 == 1 else "SlashFastShot", moving)
+
+func _release_spell() -> void:
+	var origin := _muzzle_position()
+	var aim := _aim_angle()
+	var direction := Vector3(sin(aim), 0.0, cos(aim))
+	var target: Enemy3D = null
+	if _target != null and is_instance_valid(_target) and _target.is_alive():
+		target = _target
+		direction = (_target.global_position + Vector3.UP * _target.target_height * 0.55 - origin).normalized()
+	Spells3D.cast(self, weapon_def, origin, direction, target)
+	_shake_camera(0.02)
+
+func _update_casting(delta: float) -> void:
+	if not is_caster():
+		return
+	_cast_left = maxf(_cast_left - delta, 0.0)
+	if _cast_pending_left >= 0.0:
+		_cast_pending_left -= delta
+		if _cast_pending_left < 0.0 and not _dead:
+			_release_spell()
+	# Утримання кнопки — чари раз за разом, поки кнопку не відпустять.
+	elif _attack_held and _cast_left <= 0.0:
+		_try_cast()
+
+## Звідки летять чари — з "голови" посоха.
+func spell_origin() -> Vector3:
+	return _muzzle_position()
+
+func spell_extra() -> int:
+	return _spell_extra
+
+func spell_pierce() -> int:
+	return _spell_pierce
+
+func spell_power() -> float:
+	return _spell_power
+
+func ring_power() -> float:
+	return _ring_power
+
+func phoenix_bonus() -> float:
+	return _phoenix_bonus
 
 ## Утримання кнопки удару: серія ударів, поки є ціль.
 func set_attack_held(held: bool) -> void:
@@ -867,12 +956,13 @@ func _physics_process(delta: float) -> void:
 	var direction := _get_world_direction()
 	_update_attack(delta)
 	_update_ranged(delta)
+	_update_casting(delta)
 	_tick_skills(delta)
 	# Наступний удар — лише після перепочинку: натиснутий заздалегідь чи
 	# кнопка утримується (тоді — коли є кого бити, щоб герой не махав
 	# зброєю в порожнечу).
 	if _attack_step < 0 and _roll_left <= 0.0 and _spin_left <= 0.0 and _attack_cooldown_left <= 0.0 \
-			and not is_ranged() and (_attack_queued or (_attack_held and _target != null)):
+			and not is_ranged() and not is_caster() and (_attack_queued or (_attack_held and _target != null)):
 		_start_attack()
 	_update_velocity(direction, delta)
 
@@ -1388,6 +1478,18 @@ func apply_run_upgrade(id: StringName) -> void:
 			_mark_bonus += 0.15
 		&"smoke_power":
 			_smoke_bonus += 1.0
+		&"cast_speed":
+			_cast_rate_factor *= 0.87
+		&"spell_extra":
+			_spell_extra += 1
+		&"spell_pierce":
+			_spell_pierce += 1
+		&"spell_power":
+			_spell_power += 0.3
+		&"ring_power":
+			_ring_power += 0.3
+		&"phoenix_power":
+			_phoenix_bonus += 0.2
 		_:
 			push_warning("Невідома здібність походу: %s" % id)
 	_update_health_bar()

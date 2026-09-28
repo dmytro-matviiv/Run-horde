@@ -11,6 +11,12 @@ const SKILLS := {
 	&"rune_nova": preload("res://scenes/combat/skills/rune_nova.gd"),
 	&"fire_ring": preload("res://scenes/combat/skills/fire_ring.gd"),
 	&"smoke_veil": preload("res://scenes/combat/skills/smoke_veil.gd"),
+	# Особливі здібності посохів Чарівниці — кнопка з'являється лише з
+	# відповідним посохом у руках (WeaponDef.staff_skill).
+	&"arcane_barrage": preload("res://scenes/combat/skills/arcane_barrage.gd"),
+	&"frost_nova": preload("res://scenes/combat/skills/frost_nova.gd"),
+	&"venom_swamp": preload("res://scenes/combat/skills/venom_swamp.gd"),
+	&"moon_storm": preload("res://scenes/combat/skills/moon_storm.gd"),
 }
 
 const PASSIVES := {
@@ -38,11 +44,17 @@ static func create_for_hero(hero: HeroDef) -> Array[HeroSkill3D]:
 	return result
 
 ## Короткий опис здібностей героя для вітрини (екран вибору героя).
-static func describe(hero: HeroDef) -> Array:
+## weapon — споряджена зброя: у посоха є своя особлива здібність.
+static func describe(hero: HeroDef, weapon: WeaponDef = null) -> Array:
 	var cards := []
 	var passive := create_passive(hero.passive_id)
 	if passive != null:
 		cards.append({"title": passive.title, "text": passive.description, "color": passive.color, "kind": &"passive"})
-	for skill: HeroSkill3D in create_for_hero(hero):
+	var skills := create_for_hero(hero)
+	if weapon != null and weapon.staff_skill != &"":
+		var staff_skill := create_skill(weapon.staff_skill)
+		if staff_skill != null:
+			skills.insert(0, staff_skill)
+	for skill: HeroSkill3D in skills:
 		cards.append({"title": skill.title, "text": skill.description, "color": skill.color, "kind": &"skill"})
 	return cards

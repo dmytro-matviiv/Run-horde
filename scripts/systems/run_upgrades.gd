@@ -11,6 +11,7 @@ class_name RunUpgrades
 ##   scope = "any"     — будь-кому;
 ##   scope = "melee"   — лише з холодною зброєю;
 ##   scope = "ranged"  — лише з вогнепальною;
+##   scope = "spell"   — лише з посохом (чари);
 ##   scope = id героя  — лише цьому героєві (його особисті прийоми).
 ##
 ## І кожна щось РЕАЛЬНО робить: ефект застосовує герой у
@@ -75,6 +76,22 @@ const UPGRADES := [
 		"text": "Мічені цілі отримують ще на 15% більше шкоди."},
 	{"id": &"smoke_power", "scope": "void_assassin", "max": 2, "title": "Густий дим",
 		"text": "Димова граната тримається на секунду довше."},
+
+	# --- чари (посохи) ---
+	{"id": &"cast_speed", "scope": "spell", "max": 3, "title": "Швидкі чари",
+		"text": "+15% швидкості чаклування."},
+	{"id": &"spell_extra", "scope": "spell", "max": 2, "title": "Подвійні чари",
+		"text": "Кожні чари випускають ще один снаряд, а блискавка — ще одну гілку."},
+	{"id": &"spell_pierce", "scope": "spell", "max": 2, "title": "Пронизливі чари",
+		"text": "Снаряд чар пролітає крізь ще одного ворога, блискавка перескакує на одного більше."},
+	{"id": &"spell_power", "scope": "spell", "max": 3, "title": "Могутні чари",
+		"text": "Сила посоха +30%: довше сповільнення й заморозка, більша отруйна хмара, влучніші арканні стріли, сильніші перескоки блискавки."},
+
+	# --- особисте: Чарівниця ---
+	{"id": &"ring_power", "scope": "ember_priestess", "max": 3, "title": "Жар кола",
+		"text": "Вогняне коло палить на 30% сильніше й ширше."},
+	{"id": &"phoenix_power", "scope": "ember_priestess", "max": 2, "title": "Попіл Фенікса",
+		"text": "Фенікс повертає на 20% більше здоров'я."},
 ]
 
 const CARDS_PER_LEVEL := 3
@@ -90,7 +107,7 @@ static func pick(player: Node, taken: Dictionary, luck: float = 0.0, count: int 
 	for upgrade: Dictionary in UPGRADES:
 		if not _fits(upgrade, player) or int(taken.get(upgrade.id, 0)) >= int(upgrade.max):
 			continue
-		if upgrade.scope == "any" or upgrade.scope == "melee" or upgrade.scope == "ranged":
+		if upgrade.scope in ["any", "melee", "ranged", "spell"]:
 			general.append(upgrade)
 		else:
 			personal.append(upgrade)
@@ -117,8 +134,10 @@ static func _fits(upgrade: Dictionary, player: Node) -> bool:
 	if scope == "any":
 		return true
 	if scope == "melee":
-		return not player.is_ranged()
+		return not player.is_ranged() and not player.is_caster()
 	if scope == "ranged":
 		return player.is_ranged()
+	if scope == "spell":
+		return player.is_caster()
 	var hero: HeroDef = player.hero_def
 	return hero != null and String(hero.id) == scope

@@ -1,6 +1,6 @@
 extends HeroPassive3D
 
-## ФЕНІКС — пасивка Жриці Багаття.
+## ФЕНІКС — пасивка Чарівниці (колишньої Жриці Багаття).
 ## Раз за похід вона не вмирає: замість смерті — спалах, половина
 ## здоров'я назад і вибух, що розкидає тих, хто вже святкував.
 
@@ -27,7 +27,8 @@ func on_lethal(player: Node) -> bool:
 	if _used:
 		return false
 	_used = true
-	player.heal(player.max_hp * HEAL_PART)
+	var bonus: float = player.phoenix_bonus() if player.has_method("phoenix_bonus") else 0.0
+	player.heal(player.max_hp * (HEAL_PART + bonus))
 	player.grant_invulnerable(INVULNERABLE)
 	CombatVfx.shockwave(player.get_parent(), player.global_position, BLAST_RADIUS, FIRE_COLOR, 0.6)
 	CombatVfx.impact(player.get_parent(), player.global_position + Vector3.UP, FIRE_COLOR, true)

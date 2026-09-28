@@ -113,6 +113,8 @@ static var _flare_materials: Dictionary = {}
 static var _ring_mesh: PlaneMesh
 static var _line_materials: Dictionary = {}
 static var _thrust_mesh: BoxMesh
+static var _bolt_mesh: BoxMesh
+static var _beam_mesh: CylinderMesh
 static var _glow_materials: Dictionary = {}
 static var _hitstop_until := 0
 static var _hitstop_token := 0
@@ -208,6 +210,107 @@ static func _get_thrust_mesh() -> BoxMesh:
 		_thrust_mesh = BoxMesh.new()
 		_thrust_mesh.size = Vector3(0.16, 0.06, 1.0)
 	return _thrust_mesh
+
+# --- чари ---
+
+## Слід за снарядом чар: світні іскри лишаються позаду й гаснуть.
+static func make_trail(color: Color, lifetime: float) -> CPUParticles3D:
+	var trail := CPUParticles3D.new()
+	trail.amount = 10
+	trail.lifetime = lifetime
+	# Іскри лишаються там, де пролетів снаряд, а не летять разом із ним.
+	trail.local_coords = false
+	trail.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	trail.emission_sphere_radius = 0.06
+	trail.spread = 180.0
+	trail.gravity = Vector3.ZERO
+	trail.initial_velocity_min = 0.1
+	trail.initial_velocity_max = 0.4
+	trail.scale_amount_min = 1.3
+	trail.scale_amount_max = 2.2
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	trail.scale_amount_curve = curve
+	trail.mesh = _get_spark_mesh()
+	trail.material_override = _get_spark_material()
+	trail.color = color
+	return trail
+
+## Блискавка: ламана лінія через точки (посох -> перший ворог -> другий...),
+## спалахує на мить і зникає.
+static func lightning(parent: Node, points: Array[Vector3], color: Color) -> void:
+	var holder := Node3D.new()
+	parent.add_child(holder)
+	var material := get_glow_material(color)
+	for i in points.size() - 1:
+		var from: Vector3 = points[i]
+		var to: Vector3 = points[i + 1]
+		var side := (to - from).cross(Vector3.UP)
+		side = side.normalized() if side.length() > 0.01 else Vector3.RIGHT
+		var shake := minf(from.distance_to(to), 4.0) / 4.0
+		var joints: Array[Vector3] = [from]
+		for k in range(1, 5):
+			joints.append(from.lerp(to, k / 5.0) + side * randf_range(-0.35, 0.35) * shake
+				+ Vector3.UP * randf_range(-0.2, 0.2) * shake)
+		joints.append(to)
+		for k in joints.size() - 1:
+			_add_segment(holder, joints[k], joints[k + 1], material)
+	_free_after(holder, 0.18)
+
+static func _add_segment(holder: Node3D, a: Vector3, b: Vector3, material: Material) -> void:
+	var length := a.distance_to(b)
+	if length < 0.01:
+		return
+	var segment := MeshInstance3D.new()
+	segment.mesh = _get_bolt_mesh()
+	segment.material_override = material
+	segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(segment)
+	segment.global_position = (a + b) * 0.5
+	var up := Vector3.UP if absf((b - a).normalized().y) < 0.95 else Vector3.FORWARD
+	segment.look_at(b, up)
+	segment.scale = Vector3(1.0, 1.0, length)
+
+## Промінь із неба (Місячна буря): світний стовп падає в точку й гасне.
+static func sky_beam(parent: Node, position: Vector3, color: Color) -> void:
+	var beam := MeshInstance3D.new()
+	beam.mesh = _get_beam_mesh()
+	beam.material_override = get_glow_material(color)
+	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(beam)
+	beam.global_position = position + Vector3.UP * 3.5
+	beam.scale = Vector3(0.25, 1.0, 0.25)
+	var tween := beam.create_tween()
+	tween.tween_property(beam, "scale", Vector3(1.1, 1.0, 1.1), 0.08)
+	tween.tween_property(beam, "transparency", 1.0, 0.28)
+	tween.tween_callback(beam.queue_free)
+	shockwave(parent, position, 1.4, color, 0.3)
+	impact(parent, position + Vector3.UP * 0.4, color, true)
+
+## Іскра й її матеріал — для частинок, що фарбуються власним кольором
+## (слід чар, бульбашки отрути).
+static func spark_mesh() -> QuadMesh:
+	return _get_spark_mesh()
+
+static func spark_material() -> StandardMaterial3D:
+	return _get_spark_material()
+
+static func _get_bolt_mesh() -> BoxMesh:
+	if _bolt_mesh == null:
+		_bolt_mesh = BoxMesh.new()
+		_bolt_mesh.size = Vector3(0.07, 0.07, 1.0)
+	return _bolt_mesh
+
+static func _get_beam_mesh() -> CylinderMesh:
+	if _beam_mesh == null:
+		_beam_mesh = CylinderMesh.new()
+		_beam_mesh.top_radius = 0.22
+		_beam_mesh.bottom_radius = 0.22
+		_beam_mesh.height = 7.0
+		_beam_mesh.radial_segments = 6
+		_beam_mesh.rings = 1
+	return _beam_mesh
 
 # --- влучання ---
 

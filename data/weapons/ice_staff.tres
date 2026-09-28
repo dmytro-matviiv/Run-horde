@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"ice_staff"
+title = "Крижаний посох"
+description = "Крижані уламки сповільнюють ворога, а третій поспіль заморожує його в брилу. Особливе — «Крижана нова»: хвиля холоду заморожує всіх довкола."
+hero_id = &"ember_priestess"
+cost_gold = 3000
+cost_gems = 0
+archetype = "projectile"
+damage = 10.0
+cooldown = 0.7
+color = Color(0.55, 0.85, 1.0, 1)
+projectile_speed = 420.0
+muzzle_offset = Vector3(0.022, 2.87, 0.016)
+spell = "frost"
+cast_interval = 0.7
+spell_speed = 19.0
+staff_skill = &"frost_nova"
+style_3d = "staff"
+damage_mult_3d = 0.75
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.6
+grip_offset = Vector3(-0.000654, 0.001176, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.1297

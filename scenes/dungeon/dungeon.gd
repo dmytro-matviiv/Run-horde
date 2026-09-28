@@ -172,7 +172,14 @@ func _setup_hud(title: String) -> void:
 ## Підказка для ПК: які клавіші що роблять.
 func _add_keyboard_hint() -> void:
 	var hint := Label.new()
-	hint.text = "Пробіл / ЛКМ — удар (утримуй — серія)   •   Shift — перекат   •   E — вихор   •   ПКМ — камера"
+	# Підписи — з того, що вміє саме цей герой: у Чарівниці не "вихор".
+	var action := "чари" if player.is_caster() else ("постріл" if player.is_ranged() else "удар")
+	var parts: Array[String] = ["Пробіл / ЛКМ — %s (утримуй — серія)" % action, "Shift — перекат"]
+	var skills: Array = player.get_skills()
+	for index in mini(skills.size(), 2):
+		parts.append("%s — %s" % [["E", "Q"][index], (skills[index] as HeroSkill3D).title.to_lower()])
+	parts.append("ПКМ — камера")
+	hint.text = "   •   ".join(parts)
 	hint.add_theme_font_size_override("font_size", 15)
 	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
 	hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)

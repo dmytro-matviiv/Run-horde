@@ -21,10 +21,11 @@ const ALL_WEAPONS: Array[WeaponDef] = [
 	preload("res://data/weapons/blade_storm.tres"),
 	preload("res://data/weapons/devils_axe.tres"),
 
-	preload("res://data/weapons/ember_bolt.tres"),
-	preload("res://data/weapons/flamethrower.tres"),
-	preload("res://data/weapons/pyre_totem.tres"),
-	preload("res://data/weapons/sun_lance.tres"),
+	# Чарівниця: посохи, кожен зі своїми чарами й особливою здібністю.
+	preload("res://data/weapons/arcane_staff.tres"),
+	preload("res://data/weapons/ice_staff.tres"),
+	preload("res://data/weapons/venom_staff.tres"),
+	preload("res://data/weapons/moon_staff.tres"),
 
 	# Оперативник: вогнепальна зброя. Стартовий пістолет безкоштовний,
 	# решта купується за золото.

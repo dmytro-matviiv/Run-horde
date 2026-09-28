@@ -30,9 +30,11 @@ func _ready() -> void:
 
 func setup(player: Node) -> void:
 	_player = player
-	# Зі стволом у руках кнопка удару стає кнопкою вогню.
+	# Зі стволом у руках кнопка удару стає кнопкою вогню, з посохом —
+	# кнопкою чар.
 	var ranged: bool = _player.is_ranged()
-	_attack = _make_button("gun" if ranged else "attack", ATTACK_RADIUS, "", Color(0.98, 0.72, 0.25))
+	var icon := "gun" if ranged else ("staff" if _player.is_caster() else "attack")
+	_attack = _make_button(icon, ATTACK_RADIUS, "", Color(0.98, 0.72, 0.25))
 	_dodge = _make_button("dodge", SMALL_RADIUS, "Перекат", Color(0.6, 0.9, 1.0))
 	_attack.pressed_down.connect(func() -> void: _player.set_attack_held(true))
 	_attack.released.connect(func() -> void: _player.set_attack_held(false))

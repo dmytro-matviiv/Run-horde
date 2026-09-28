@@ -118,7 +118,9 @@ func _update_icons(def: HeroDef) -> void:
 ## йде картка про арсенал зброї.
 func _cards_for(def: HeroDef) -> Array:
 	var cards := []
-	for entry: Dictionary in Skills3D.describe(def):
+	# Особлива здібність посоха теж видна — та, що в спорядженого.
+	var equipped := WeaponPool.get_def(GameState.get_equipped_weapon_id(def.id))
+	for entry: Dictionary in Skills3D.describe(def, equipped):
 		cards.append({
 			"kind": &"talent" if entry.kind == &"passive" else &"blade",
 			"color": entry.color,

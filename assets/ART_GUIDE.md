@@ -7,14 +7,14 @@
 
 ## 3D-моделі героїв
 
-    assets/models/heroes/<id героя>.glb
+    assets/models/heroes/<id героя>.glb   (або .fbx)
 
 | Герой | id | Стан |
 |---|---|---|
 | Клинкова Вартова | `blade_warden` | є модель (Hooded Adventurer, Poly Pizza) |
 | Оперативник | `void_assassin` | є модель (SWAT, Poly Pizza) |
 | Руновод | `runewielder` | тимчасова |
-| Жриця Багаття | `ember_priestess` | тимчасова |
+| Чарівниця (колишня Жриця Багаття) | `ember_priestess` | є модель (Witch, Quaternius) |
 
 **Вимоги до моделі героя.** Найпростіше брати персонажів того самого
 автора (Quaternius): у них однаковий скелет і однакові назви анімацій,
@@ -40,7 +40,7 @@
 |---|---|
 | Клинкова Вартова | `war_blade` (меч, вбудований у модель героїні), `talwar`, `twin_daggers`, `harpoon_glaive`, `battle_axe`, `cleaver`, `blade_storm`, `devils_axe` — моделі вже є (MiniPoly) |
 | Руновод | `rune_bolt`, `staff_meteor`, `storm_scepter`, `frost_staff` |
-| Жриця Багаття | `ember_bolt`, `flamethrower`, `pyre_totem`, `sun_lance` |
+| Чарівниця | `arcane_staff`, `ice_staff`, `venom_staff`, `moon_staff` — моделі вже є (Zsky) |
 | Оперативник | `pistol_basic`, `pistol_heavy`, `rifle_standard`, `rifle_heavy` — моделі вже є |
 
 Модель має «дивитись» руків'ям униз, вістрям угору (вісь Y). Якщо лягла
@@ -52,6 +52,11 @@
 `dual_wield = true` — друга така сама модель у лівій руці, дзеркально
 до правої (так тримаються «Парні кинджали» і «Вихор Смерті»).
 
+**Посохи.** Посох не б'є, а чаклує: поле `spell` у `.tres` (arcane,
+frost, venom, lightning) задає вид чар, `cast_interval` — як часто,
+`muzzle_offset` — "голова" посоха, звідки летять чари, а
+`staff_skill` — особлива здібність посоха (окрема кнопка в бою).
+
 **Ліцензії.** Модель під CC BY можна брати, але автора треба вказати в
 самій грі: допишіть її у `scenes/ui/credits.gd` (кнопка «Автори» в
 головному меню). CC0 — без умов.
@@ -59,7 +64,8 @@
 ## Іконки
 
     assets/ui/icons/menu/<назва>.png       play, heroes, weapons, talents, shop, chest
-    assets/ui/icons/skills/<id>.png        whirlwind, rage_dash, rune_nova, fire_ring, smoke_veil
+    assets/ui/icons/skills/<id>.png        whirlwind, rage_dash, rune_nova, fire_ring, smoke_veil,
+                                           arcane_barrage, frost_nova, venom_swamp, moon_storm
     assets/ui/icons/talents/<id>.png       meta_max_hp, meta_damage, meta_move_speed,
                                            meta_pickup_radius, meta_gold_gain, meta_luck,
                                            meta_start_level, talent_extra_blades,
@@ -125,9 +131,8 @@
 
 ## Що зараз тимчасове
 
-- моделі двох героїв (Руновод і Жриця) — це модель Вартової, пофарбована
-  в колір героя;
-- зброя Руновода й Жриці — прості фігури (держак, кулька на посоху),
-  зібрані кодом;
+- модель Руновода — це модель Вартової, пофарбована в його колір;
+- зброя Руновода — прості фігури (держак, кулька на посоху), зібрані
+  кодом;
 - іконки меню, навичок, талантів, магазину й картинки рівнів — кольорові
   рамки-заглушки (іконки зброї вже є).

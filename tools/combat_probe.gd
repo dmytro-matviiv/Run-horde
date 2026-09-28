@@ -105,7 +105,8 @@ func _test_passive_charge() -> void:
 	print("COMBAT: шкала пасивки \"%s\": %.2f -> %.2f" % [_player.passive.title, before, after])
 	# Друга кнопка (Ривок Люті) світиться лише на повній шкалі.
 	var skills: Array = _player.get_skills()
-	if skills.size() > 1:
+	# Лише в люті вартової є шкала, що вмикає другу кнопку (Ривок Люті).
+	if skills.size() > 1 and "_charge" in _player.passive:
 		var dash: HeroSkill3D = skills[1]
 		var ready_before: bool = dash.is_ready(_player)
 		_player.passive._charge = 1.0

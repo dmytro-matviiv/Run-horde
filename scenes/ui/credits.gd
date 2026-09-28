@@ -18,6 +18,11 @@ const TEXT := """[b]3D-моделі[/b]
    Моделі лише масштабовано й вкладено в руку героїні.
 • «Axe», «Cleaver», «Dagger», «Devil's Sword», «Trident» — CC0.
 
+[b]Чарівниця[/b] — «Witch», автор Quaternius — poly.pizza/m/QBEOV9ZUT8
+[b]Посохи Чарівниці[/b] — «Staff», автор Zsky — poly.pizza/m/PE1OrCnscj,
+   poly.pizza/m/DZpBi0DSgZ, poly.pizza/m/bKCpO8LRCM, poly.pizza/m/8RpWxgO3ND
+   Ліцензія CC BY 3.0. Моделі лише масштабовано й вкладено в руку героїні.
+
 [b]Більшість інших моделей[/b] (місто, данж, монстри, персонажі) —
 Quaternius (quaternius.com), CC0.
 """

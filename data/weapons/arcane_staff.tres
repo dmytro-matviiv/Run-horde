@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"arcane_staff"
+title = "Арканний посох"
+description = "Стартовий посох: арканні стріли самі доводяться на ціль. Особливе — «Арканний залп»: вісім стріл розлітаються й шукають ворогів довкола."
+hero_id = &"ember_priestess"
+cost_gold = 0
+cost_gems = 0
+archetype = "projectile"
+damage = 10.0
+cooldown = 0.55
+color = Color(0.78, 0.45, 1.0, 1)
+projectile_speed = 420.0
+muzzle_offset = Vector3(0, 2.142, 0)
+spell = "arcane"
+cast_interval = 0.55
+spell_speed = 17.0
+staff_skill = &"arcane_barrage"
+style_3d = "staff"
+damage_mult_3d = 0.8
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.6
+grip_offset = Vector3(-0.003451, 0.001176, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.1409

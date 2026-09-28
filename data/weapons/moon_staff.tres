@@ -1,0 +1,29 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"moon_staff"
+title = "Місячний посох"
+description = "Блискавка б'є ціль і перескакує ще на трьох ворогів поруч. Особливе — «Місячна буря»: промені з неба б'ють по ворогах довкола."
+hero_id = &"ember_priestess"
+cost_gold = 7000
+cost_gems = 0
+archetype = "projectile"
+damage = 14.0
+cooldown = 0.95
+color = Color(1.0, 0.92, 0.45, 1)
+projectile_speed = 420.0
+muzzle_offset = Vector3(-0.211, 3.844, 0)
+spell = "lightning"
+cast_interval = 0.95
+spell_speed = 40.0
+staff_skill = &"moon_storm"
+style_3d = "staff"
+damage_mult_3d = 1.0
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.6
+grip_offset = Vector3(0.000108, 0.001176, -0.000273)
+grip_rotation_deg = Vector3(0, 0, 90)
+model_scale = 0.143

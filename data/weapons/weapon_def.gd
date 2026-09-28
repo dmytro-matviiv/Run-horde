@@ -75,8 +75,24 @@ var archetype: String = "projectile"
 @export var bullet_speed := 45.0
 @export var bullet_spread_deg := 2.0
 @export var bullets_per_shot := 1
-## Звідки вилітає куля відносно моделі зброї (кінчик ствола).
+## Звідки вилітає куля відносно моделі зброї (кінчик ствола). У посоха —
+## його "голова": кристал чи куля, звідки летять чари.
 @export var muzzle_offset := Vector3(0, 0, 0.5)
+
+@export_group("3D: чари посоха")
+## Посох не б'є і не стріляє, а чаклує. Кожен вид чар — своя механіка
+## (див. Spells3D):
+##   arcane    — арканна стріла, що сама доводиться на ціль;
+##   frost     — крижаний уламок: сповільнює, а третій поспіль заморожує;
+##   venom     — отруйна куля: на влучанні лишає хмару, що труїть;
+##   lightning — блискавка, що перескакує з ворога на ворога.
+@export_enum("none", "arcane", "frost", "venom", "lightning") var spell: String = "none"
+## Секунд між чарами.
+@export var cast_interval := 0.6
+## Швидкість снаряда чар (м/с).
+@export var spell_speed := 16.0
+## Особлива здібність посоха — окрема кнопка в бою (id з Skills3D).
+@export var staff_skill: StringName = &""
 
 @export_group("3D: зброя в руці")
 ## Модель зброї (.glb). Порожньо — гра шукає
