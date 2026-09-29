@@ -40,7 +40,7 @@ func resolve() -> void:
 			var angle := TAU * i / (count - 1) + randf() * 0.5
 			spot += Vector3(cos(angle), 0.0, sin(angle)) * 2.6
 		LobShell.launch(world(), from, spot, hero, float(config.get("radius", 1.6)), damage(), _color(),
-			float(config.get("pool", 0.0)), shell)
+			float(config.get("pool", 0.0)), shell, enemy)
 
 func _color() -> Color:
 	return config.get("color", Color(1.0, 0.45, 0.12))

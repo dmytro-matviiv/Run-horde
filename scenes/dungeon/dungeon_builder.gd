@@ -137,6 +137,88 @@ const DECOR_SETS := {
 		"furniture": [preload("res://assets/models/dungeon/Table_Big.fbx"), preload("res://assets/models/dungeon/Pedestal2.fbx"), preload("res://assets/models/dungeon/Woodfire.fbx")],
 		"treasure": [preload("res://assets/models/dungeon/Chest_Gold.fbx"), preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Chest.fbx")],
 	},
+	## Нижче — п'ять нових тем (рівні 4-8): моделі з Halloween Bits (Kay
+	## Lousberg), Medieval Village Pack і Ultimate RPG Items Bundle
+	## (Quaternius), розібраної кузні Forge Parts (Don Carson) — усі CC0,
+	## крім кузні (CC BY 3.0, є в credits.gd).
+	"graveyard": {
+		"clutter": [
+			preload("res://assets/models/graveyard/skull.glb"), preload("res://assets/models/graveyard/bone.glb"),
+			preload("res://assets/models/graveyard/candle_melted.glb"), preload("res://assets/models/graveyard/grave_marker.glb"),
+			preload("res://assets/models/graveyard/rocks.glb"),
+		],
+		"wall": [
+			preload("res://assets/models/graveyard/candles.glb"), preload("res://assets/models/graveyard/skull_candle.glb"),
+			preload("res://assets/models/graveyard/bone.glb"),
+		],
+		"furniture": [
+			preload("res://assets/models/graveyard/shrine.glb"), preload("res://assets/models/graveyard/coffin.glb"),
+			preload("res://assets/models/graveyard/dead_tree_small.glb"),
+		],
+		"treasure": [
+			preload("res://assets/models/graveyard/coffin_open.glb"), preload("res://assets/models/graveyard/grave.glb"),
+			preload("res://assets/models/graveyard/gravestone.glb"),
+		],
+	},
+	"forge": {
+		"clutter": [
+			preload("res://assets/models/village/crate.glb"), preload("res://assets/models/village/barrel.glb"),
+			preload("res://assets/models/forge/forge_barrel.tscn"), preload("res://assets/models/forge/forge_tub.tscn"),
+		],
+		"wall": WALL_DECOR_SCENES,
+		"furniture": [
+			preload("res://assets/models/forge/forge_hearth.tscn"), preload("res://assets/models/forge/forge_anvil.tscn"),
+			preload("res://assets/models/forge/forge_bench.tscn"), preload("res://assets/models/forge/forge_cage.tscn"),
+			preload("res://assets/models/forge/forge_grindstone.tscn"),
+		],
+		"treasure": [
+			preload("res://assets/models/treasure/chest.glb"), preload("res://assets/models/treasure/gold_ingots.glb"),
+			preload("res://assets/models/treasure/sword.glb"),
+		],
+	},
+	"vault": {
+		"clutter": [
+			preload("res://assets/models/treasure/coin_pouch.glb"), preload("res://assets/models/treasure/mineral.glb"),
+			preload("res://assets/models/treasure/scroll.glb"), preload("res://assets/models/treasure/potion.glb"),
+		],
+		"wall": [preload("res://assets/models/treasure/scroll.glb"), preload("res://assets/models/dungeon/Banner_wall.fbx")],
+		"furniture": [
+			preload("res://assets/models/treasure/chest.glb"), preload("res://assets/models/treasure/armor_golden.glb"),
+			preload("res://assets/models/graveyard/pillar.glb"),
+		],
+		"treasure": [
+			preload("res://assets/models/treasure/chest.glb"), preload("res://assets/models/treasure/gold_ingots.glb"),
+			preload("res://assets/models/treasure/chalice.glb"), preload("res://assets/models/treasure/crown.glb"),
+		],
+	},
+	"village": {
+		"clutter": [
+			preload("res://assets/models/village/crate.glb"), preload("res://assets/models/village/barrel.glb"),
+			preload("res://assets/models/village/hay.glb"), preload("res://assets/models/village/bags.glb"),
+			preload("res://assets/models/village/package.glb"),
+		],
+		"wall": WALL_DECOR_SCENES,
+		"furniture": [
+			preload("res://assets/models/village/cart.glb"), preload("res://assets/models/village/well.glb"),
+			preload("res://assets/models/village/bonfire.glb"), preload("res://assets/models/village/cauldron.glb"),
+		],
+		"treasure": [
+			preload("res://assets/models/village/bags.glb"), preload("res://assets/models/treasure/chest.glb"),
+			preload("res://assets/models/treasure/coin_pouch.glb"),
+		],
+	},
+	"abyss": {
+		"clutter": [
+			preload("res://assets/models/graveyard/bone.glb"), preload("res://assets/models/graveyard/skull.glb"),
+			preload("res://assets/models/graveyard/ribcage.glb"), preload("res://assets/models/treasure/mineral.glb"),
+		],
+		"wall": [preload("res://assets/models/graveyard/candles.glb"), preload("res://assets/models/graveyard/skull_candle.glb")],
+		"furniture": [preload("res://assets/models/graveyard/shrine.glb"), preload("res://assets/models/treasure/chest.glb")],
+		"treasure": [
+			preload("res://assets/models/treasure/chest.glb"), preload("res://assets/models/treasure/gold_ingots.glb"),
+			preload("res://assets/models/treasure/crown.glb"),
+		],
+	},
 }
 
 ## Усі моделі, з яких збирається данж (для прогріву графіки).

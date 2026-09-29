@@ -14,11 +14,16 @@ var _speed := 8.0
 var _damage := 10.0
 var _color := Color(1.0, 0.5, 0.15)
 var _player: Node3D
+## Хто вдарив (для перевірки "ще живий" — упав боса, поки кільце
+## розбігається, останній помах не ранить: чесно й узгоджено з дощем
+## небезпек BossPhases).
+var _owner: Enemy3D
 var _age := 0.0
 var _hit := false
 var _marker: MeshInstance3D
 
-static func spawn(world: Node, center: Vector3, player: Node3D, max_radius: float, speed: float, damage: float, color: Color) -> HazardRing:
+static func spawn(world: Node, center: Vector3, player: Node3D, max_radius: float, speed: float, damage: float,
+		color: Color, owner: Enemy3D = null) -> HazardRing:
 	var ring := HazardRing.new()
 	ring._center = Vector3(center.x, DungeonBuilder.FLOOR_TOP + 0.05, center.z)
 	ring._max_radius = max_radius
@@ -26,6 +31,7 @@ static func spawn(world: Node, center: Vector3, player: Node3D, max_radius: floa
 	ring._damage = damage
 	ring._color = color
 	ring._player = player
+	ring._owner = owner
 	world.add_child(ring)
 	return ring
 
@@ -44,6 +50,8 @@ func _physics_process(delta: float) -> void:
 		return
 	_marker.set_instance_shader_parameter(&"progress", radius / _max_radius)
 	if _hit or _player == null or not is_instance_valid(_player):
+		return
+	if _owner != null and (not is_instance_valid(_owner) or not _owner.is_alive()):
 		return
 	var offset := _player.global_position - _center
 	offset.y = 0.0

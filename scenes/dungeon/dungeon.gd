@@ -778,6 +778,8 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	enemy.global_position = position + Vector3(0, 0.2, 0)
 	enemy.setup(player, _model(definition.model))
 	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null))
+	enemy.spawn_requested.connect(_on_spawn_requested)
+	enemy.ward_broken.connect(_on_ward_broken.bind(enemy))
 	if is_boss:
 		enemy.summon_requested.connect(_on_summon_requested)
 		enemy.phases.phase_changed.connect(_on_boss_phase)
@@ -806,6 +808,21 @@ func _on_summon_requested(position: Vector3, count: int) -> void:
 		enemy.died.connect(func(_p: Vector3, _xp: int) -> void: _alive_summons -= 1)
 		_alive_summons += 1
 		CombatVfx.impact(level_root, spot + Vector3.UP * 0.5, Color(0.5, 1.0, 0.4), false)
+
+## Здібність кличе істоту (RaiseDead — мерців, Split — половинки слизу,
+## Pylons — пілони довкола боса). source рахує своїх живих (summons_alive)
+## — Pylons так дізнається, коли впав останній.
+func _on_spawn_requested(position: Vector3, definition: Dictionary, source: Enemy3D) -> void:
+	var enemy := _spawn_enemy(position, definition, false)
+	if source != null and is_instance_valid(source):
+		source.summons_alive += 1
+		enemy.died.connect(func(_p: Vector3, _xp: int) -> void:
+			if is_instance_valid(source):
+				source.summons_alive -= 1)
+
+## Пілони боса всі впали — він на кілька секунд відкритий для ударів.
+func _on_ward_broken(boss: Enemy3D) -> void:
+	_show_banner("%s знесилений!" % boss.display_name, "б'є щосили")
 
 func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_elite: bool) -> void:
 	_alive_enemies -= 1

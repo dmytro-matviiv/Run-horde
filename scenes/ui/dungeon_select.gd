@@ -12,7 +12,9 @@ extends Control
 signal level_chosen(index: int)
 signal closed
 
-const DIFFICULTY_TITLES := ["", "Легка", "Середня", "Висока", "Дуже висока"]
+const DIFFICULTY_TITLES := [
+	"", "Легка", "Середня", "Висока", "Дуже висока", "Смертельна", "Жахлива", "Немислима", "Позамежна",
+]
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -34,13 +36,30 @@ func _ready() -> void:
 
 	column.add_child(UiTheme.make_title("Данж — обери рівень", 28))
 
+	# Рівнів більше, ніж влазить у ширину екрана (8 карток), тож ряд
+	# гортається вбік — палець чи колесо миші. Прокрутку одразу ставимо
+	# на розблокований/незавершений рівень, щоб гравець не гортав вручну
+	# крізь пройдені.
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(scroll)
+
 	var cards := HBoxContainer.new()
-	cards.alignment = BoxContainer.ALIGNMENT_CENTER
 	cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cards.add_theme_constant_override("separation", 14)
-	column.add_child(cards)
+	scroll.add_child(cards)
+	var focus_index := mini(GameState.max_dungeon_level, DungeonLevels.get_level_count() - 1)
+	var focus_card: Control = null
 	for index in DungeonLevels.get_level_count():
-		cards.add_child(_build_card(index))
+		var card := _build_card(index)
+		cards.add_child(card)
+		if index == focus_index:
+			focus_card = card
+	if focus_card != null:
+		# Розмір картки й контейнера відомий лише після розкладки —
+		# гортаємо на наступному кадрі, не раніше.
+		_scroll_to_card.call_deferred(scroll, focus_card)
 
 	var close := Button.new()
 	close.text = "Назад у місто"
@@ -49,6 +68,9 @@ func _ready() -> void:
 	close.add_theme_font_size_override("font_size", 20)
 	close.pressed.connect(_on_close_pressed)
 	column.add_child(close)
+
+func _scroll_to_card(scroll: ScrollContainer, card: Control) -> void:
+	scroll.scroll_horizontal = int(card.position.x - scroll.size.x * 0.5 + card.size.x * 0.5)
 
 func _build_card(index: int) -> Control:
 	var level := DungeonLevels.get_level(index)
@@ -86,7 +108,7 @@ func _build_card(index: int) -> Control:
 
 	box.add_child(_label("Рівень %d. %s" % [index + 1, level.title], 20,
 		accent if unlocked else UiTheme.TEXT_DIM))
-	box.add_child(_label("Складність: %s" % DIFFICULTY_TITLES[clampi(level.difficulty, 1, 4)], 15, UiTheme.GOLD))
+	box.add_child(_label("Складність: %s" % DIFFICULTY_TITLES[clampi(level.difficulty, 1, DIFFICULTY_TITLES.size() - 1)], 15, UiTheme.GOLD))
 	box.add_child(_label(level.subtitle, 14, UiTheme.TEXT if unlocked else UiTheme.TEXT_DIM))
 	box.add_child(_label("Вороги: %s" % ", ".join(DungeonLevels.get_enemy_names(index)), 13, UiTheme.TEXT_DIM))
 	box.add_child(_label("Бос: %s" % level.boss.name, 13, UiTheme.DANGER))

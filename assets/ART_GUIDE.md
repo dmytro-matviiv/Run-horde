@@ -139,6 +139,29 @@
 `scenes/dungeon/dungeon_levels.gd` (там же пояснено символи карти й
 поля ворога; правити можна прямо в тому файлі).
 
+Рівні 4-8 переважно переставляють ті самі 19 моделей з новими
+поведінками (`kind`, `abilities`) і кольором (`tint`/`glow` — див.
+`Enemy3D.paint_model`), а не новими моделями: так один меш дає різних
+на вигляд ворогів без нового арту. `"abilities"` — список прийомів із
+`scenes/dungeon/abilities/` (мерехтіння, кидок бомби, павутина, тотем-
+оберіг, стрибок і прийоми боса — кільце, промені, коло снарядів,
+пілони); реєстр — `EnemyAbilities.SCRIPTS`.
+
+## Прикраси нових рівнів (4-8)
+
+    assets/models/graveyard/<назва>.glb   Halloween Bits, Kay Lousberg, CC0
+    assets/models/village/<назва>.glb     Medieval Village Pack, Quaternius, CC0
+    assets/models/treasure/<назва>.glb    Ultimate RPG Items Bundle, Quaternius, CC0
+    assets/models/forge/<назва>.tscn      Forge Parts, Don Carson, CC BY 3.0
+
+Набори кузні розібрано на окремі деталі інструментом
+`tools/split_model.gd` (одна GLB-сцена з десятками деталей рядочком ->
+кожна деталь власним `.tscn`). Огляд усього набору без імпорту в
+проєкт — `tools/model_gallery.gd`. Який набір прикрас іде на який
+рівень — `DungeonBuilder.DECOR_SETS` (ключ `"decor"` у темі рівня).
+CC BY 3.0 (кузня) уже вказано в `scenes/ui/credits.gd` — обов'язково,
+CC0-пакети там же — про людське око.
+
 ## Місто
 
 Місто — звичайна сцена `scenes/world/base_island.tscn`: будинки, стіни,

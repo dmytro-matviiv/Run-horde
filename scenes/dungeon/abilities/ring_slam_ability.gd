@@ -32,7 +32,7 @@ func _spawn_ring() -> void:
 	if not is_instance_valid(enemy) or not enemy.is_alive():
 		return
 	HazardRing.spawn(world(), enemy.global_position, player(), float(config.get("radius", 12.0)),
-		float(config.get("speed", 8.0)), damage() * 1.2, _color())
+		float(config.get("speed", 8.0)), damage() * 1.2, _color(), enemy)
 
 func _color() -> Color:
 	return config.get("color", COLOR)

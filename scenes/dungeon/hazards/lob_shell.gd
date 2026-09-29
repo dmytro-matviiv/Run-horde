@@ -15,12 +15,15 @@ var _damage := 8.0
 var _color := Color(1.0, 0.45, 0.1)
 var _pool_seconds := 0.0
 var _player: Node3D
+## Хто кинув (перевірка "ще живий" на вибуху — кинуте до смерті долітає
+## й показує вибух, але вже не ранить і не лишає калюжі).
+var _owner: Enemy3D
 var _marker: MeshInstance3D
 var _shell: Node3D
 
 ## shell_scene — чим кидає (гарбуз, казанок); порожньо — світна куля.
 static func launch(world: Node, from: Vector3, to: Vector3, player: Node3D, radius: float, damage: float,
-		color: Color, pool_seconds: float = 0.0, shell_scene: PackedScene = null) -> LobShell:
+		color: Color, pool_seconds: float = 0.0, shell_scene: PackedScene = null, owner: Enemy3D = null) -> LobShell:
 	var lob := LobShell.new()
 	lob._from = from
 	lob._to = Vector3(to.x, DungeonBuilder.FLOOR_TOP, to.z)
@@ -29,6 +32,7 @@ static func launch(world: Node, from: Vector3, to: Vector3, player: Node3D, radi
 	lob._color = color
 	lob._pool_seconds = pool_seconds
 	lob._player = player
+	lob._owner = owner
 	if shell_scene != null:
 		lob._shell = shell_scene.instantiate()
 	world.add_child(lob)
@@ -68,11 +72,16 @@ func _explode() -> void:
 	CombatVfx.shockwave(world, _to, _radius, _color, 0.35)
 	CombatVfx.impact(world, _to + Vector3.UP * 0.5, _color, true)
 	AudioManager.play(&"explosion", 0.15)
-	if _player != null and is_instance_valid(_player):
+	# Кинуте до смерті долітає й вибухає — видовищно, але кривдника вже
+	# нема, тож не ранить і не лишає калюжі.
+	var owner_alive := _owner == null or (is_instance_valid(_owner) and _owner.is_alive())
+	if owner_alive and _player != null and is_instance_valid(_player):
 		var offset := _player.global_position - _to
 		offset.y = 0.0
 		if offset.length() <= _radius:
 			_player.take_damage(_damage)
-	if _pool_seconds > 0.0:
+	if owner_alive and _pool_seconds > 0.0:
+		# Калюжа далі горить сама: вона вже не залежить від того, хто її
+		# кинув — так само, як пастки чи бочки данжу.
 		HazardPool.spawn(world, _to, _player, _radius * 0.9, _damage * 0.3, _pool_seconds, _color)
 	queue_free()

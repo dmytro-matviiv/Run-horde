@@ -29,6 +29,15 @@ const TEXT := """[b]3D-моделі[/b]
 [b]Більшість інших моделей[/b] (місто, данж, монстри, персонажі) —
 Quaternius (quaternius.com), CC0.
 
+[b]Кузня Присмерку[/b] (рівень 5) — «Forge Parts», автор Don Carson —
+poly.pizza/m/4o-ge5uJXXO. Ліцензія CC BY 3.0. Розібрана на окремі
+деталі (кожна — своя сцена) і розставлена по залу.
+
+[b]Прикраси нових рівнів[/b] (кладовище, село, скарбниця):
+«Halloween Bits», автор Kay Lousberg (poly.pizza/u/kaylousberg);
+«Medieval Village Pack» і «Ultimate RPG Items Bundle», Quaternius.
+Усі три — CC0.
+
 [b]Інтерфейс[/b]
 
 Рамки, кнопки, джойстик, іконки кнопок бою й курсор — Kenney (kenney.nl):

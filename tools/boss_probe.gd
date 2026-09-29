@@ -68,7 +68,12 @@ func _ready() -> void:
 	await _wait(2.5)
 
 	# Сфера здоров'я: при повному здоров'ї чекає, пораненого — лікує.
-	# Перевіряємо у вхідній кімнаті — там нікого, хто б поранив героя.
+	# Ізольовано від бою: приспані вцілілі (скелети некроманта, дозорці
+	# біля входу) присипляємо, щоб перевірка сфери не залежала від того,
+	# хто саме ще бродить рівнем.
+	for node in _dungeon.get_node("Enemies").get_children():
+		if node is Enemy3D and (node as Enemy3D).is_alive():
+			(node as Enemy3D).stun(10.0)
 	_player.global_position = start
 	await _wait(0.5)
 	_set_hp(1000.0, 1000.0)
