@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_anvil_mesh.res" id="1_fbp5i"]
+
+[node name="ForgeAnvil" type="Node3D" unique_id=736109623]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1907816989]
+transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, 0.19940193, 0.65904796, -0.30695933)
+mesh = ExtResource("1_fbp5i")

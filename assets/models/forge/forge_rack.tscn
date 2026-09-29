@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_rack_mesh.res" id="1_sog00"]
+
+[node name="ForgeRack" type="Node3D" unique_id=591889873]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=587990896]
+transform = Transform3D(2.4, 0, 0, 0, 2.4, 0, 0, 0, 2.4, 0.1087367, 0.5658694, 1.7842692)
+mesh = ExtResource("1_sog00")

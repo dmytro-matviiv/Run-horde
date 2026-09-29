@@ -29,6 +29,11 @@ class_name Enemy3D
 signal died(position: Vector3, xp_reward: int)
 ## Бос-закликач просить данж привести йому підмогу.
 signal summon_requested(position: Vector3, count: int)
+## Здібність просить данж створити істоту (мерці некроманта, половинки
+## слизу, пілони боса). source — хто кличе (рахує своїх живих), або null.
+signal spawn_requested(position: Vector3, definition: Dictionary, source: Enemy3D)
+## Бос утратив захист пілонів — данж покаже напис.
+signal ward_broken
 
 ## MELEE — б'є впритул, RANGED — стріляє, BOSS — бос, EXPLODER — біжить
 ## до героя й вибухає, CHARGER — розганяється по прямій.
@@ -144,6 +149,19 @@ var display_name := ""
 var elite: EliteAffixes
 ## Фази боса (лише в боса).
 var phases: BossPhases
+## Опис ворога з рівня (здібності беруть із нього налаштування).
+var definition: Dictionary = {}
+## Здібності (EnemyAbility): мерехтіння, кидки, павутина, тотем...
+var abilities: Array[EnemyAbility] = []
+## Тотем: стоїть на місці й сам не б'є.
+var stationary := false
+## Скільки живих істот, яких покликав цей ворог.
+var summons_alive := 0
+var _hidden := false
+var _ward_factor := 1.0
+var _ward_until := 0
+## Пофарбовані матеріали моделей (тон і світіння з опису ворога).
+static var _painted: Dictionary = {}
 ## Ворог за ґратами засідки: поки вона триває, героя він не помічає — не
 ## біжить до ґраток і не збирається там юрбою, а після бою не вривається
 ## в залу всією кімнатою. Вмикає й вимикає данж.
@@ -211,8 +229,10 @@ var _path_step := false
 ## Налаштовує ворога за описом із DungeonLevels. Викликати ДО того, як
 ## ворога додано в сцену: від цих чисел залежать смужка здоров'я й
 ## дальність, на якій він зупиняється.
-func configure(definition: Dictionary, hp_scale: float, damage_scale: float) -> void:
+func configure(source: Dictionary, hp_scale: float, damage_scale: float) -> void:
+	definition = source
 	display_name = definition.get("name", "")
+	abilities = EnemyAbilities.create_all(self, definition.get("abilities", []))
 	match String(definition.get("kind", "melee")):
 		"ranged":
 			kind = Kind.RANGED
@@ -232,6 +252,11 @@ func configure(definition: Dictionary, hp_scale: float, damage_scale: float) -> 
 			attack_range = 2.6
 		"boss":
 			kind = Kind.BOSS
+		"totem":
+			kind = Kind.MELEE
+			stationary = true
+			attack_range = 0.0
+			aggro_range = 30.0
 		_:
 			kind = Kind.MELEE
 	max_hp = float(definition.get("hp", max_hp)) * hp_scale
@@ -262,8 +287,8 @@ func make_elite(affix_list: Array) -> void:
 		attack_cooldown *= 0.65
 
 ## Бос: окремі числа й свій набір прийомів.
-func configure_boss(definition: Dictionary, hp_scale: float, damage_scale: float) -> void:
-	configure(definition, hp_scale, damage_scale)
+func configure_boss(source: Dictionary, hp_scale: float, damage_scale: float) -> void:
+	configure(source, hp_scale, damage_scale)
 	kind = Kind.BOSS
 	boss_style = String(definition.get("style", "demon"))
 	# Перші прийоми — невдовзі після того, як бос помітив героя.
@@ -278,6 +303,7 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_player = player
 	_model = model_scene.instantiate()
 	add_child(_model)
+	paint_model(_model, definition.get("tint", Color.WHITE), definition.get("glow", Color.BLACK))
 	_normalize_size()
 	var players := _model.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
@@ -298,6 +324,97 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 
 func is_alive() -> bool:
 	return not _dying
+
+## Перефарбувати модель: tint множить колір, glow — світіння. Так із
+## однієї моделі виходять різні істоти (вогняний біс, золотий вартовий).
+## Матеріали кешуються: однаково пофарбовані вороги ділять їх.
+static func paint_model(model: Node, tint: Color, glow: Color) -> void:
+	if tint == Color.WHITE and glow == Color.BLACK:
+		return
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		for surface in mesh.get_surface_override_material_count():
+			var source := mesh.get_active_material(surface) as StandardMaterial3D
+			if source == null:
+				continue
+			var key := "%d|%s|%s" % [source.get_rid().get_id(), tint.to_html(), glow.to_html()]
+			if not _painted.has(key):
+				var painted := source.duplicate() as StandardMaterial3D
+				painted.albedo_color = source.albedo_color * tint
+				if glow != Color.BLACK:
+					painted.emission_enabled = true
+					painted.emission = glow
+					painted.emission_energy_multiplier = 1.0
+				_painted[key] = painted
+			mesh.set_surface_override_material(surface, _painted[key])
+
+# --- для здібностей (EnemyAbility) ---
+
+func get_player() -> Node3D:
+	return _player
+
+func begin_special(special: String, windup: float, color: Color, radius: float) -> void:
+	_begin_special(special, windup, color, radius)
+
+func face_player(speed: float) -> void:
+	_face_player(speed)
+
+func play_once(candidates: Array) -> void:
+	_play_once(candidates)
+
+func hold_still(seconds: float) -> void:
+	_hold_still(seconds)
+
+func sees_player() -> bool:
+	return _sees_player()
+
+func teleport_to(point: Vector3) -> void:
+	global_position = point + Vector3.UP * 0.1
+	velocity = Vector3.ZERO
+	_knockback = Vector3.ZERO
+	_repath_left = 0.0
+
+## Одразу замахнутись (після мерехтіння за спину героя).
+func strike_now(windup: float) -> void:
+	_attack_left = 0.0
+	_face_player(100.0)
+	_begin_windup()
+	if _windup_left > 0.0:
+		_windup_total = windup
+		_windup_left = windup
+
+## Сховатись (під землю, у дим): не видно, не вдарити, приціл не бачить.
+func set_hidden(hidden: bool) -> void:
+	_hidden = hidden
+	_model.visible = not hidden
+	collision_layer = 0 if hidden else 4
+	if _health_bar != null:
+		_health_bar.visible = not hidden and (elite != null or kind == Kind.BOSS or current_hp < max_hp)
+	if hidden:
+		_cancel_windup()
+
+func is_hidden() -> bool:
+	return _hidden
+
+## Захист тотема: поки нитка тримається, проходить лише частка шкоди.
+func apply_ward(factor: float, seconds: float) -> void:
+	_ward_factor = factor
+	_ward_until = Time.get_ticks_msec() + int(seconds * 1000.0)
+
+func is_warded() -> bool:
+	return Time.get_ticks_msec() < _ward_until
+
+## Снаряд здібності (павутина, коло снарядів боса). on_hit — що ще
+## зробити з героєм, коли влучив (сповільнити).
+func spawn_shot(origin: Vector3, direction: Vector3, color: Color, speed: float, shot_damage: float,
+		on_hit: Callable = Callable()) -> EnemyProjectile:
+	var shot := EnemyProjectile.create(shot_damage, color, speed)
+	shot.on_hit = on_hit
+	get_parent().add_child(shot)
+	shot.global_position = origin
+	shot.set_charge(1.0)
+	shot.launch(direction, _player, get_parent())
+	return shot
 
 ## Куди дивиться ворог (кут повороту моделі й напрямок на підлозі).
 func facing_angle() -> float:
@@ -337,9 +454,10 @@ func emerge(seconds: float) -> void:
 	alert()
 
 ## Чи наводиться сюди приціл: автоприціл героя й самонавідні чари.
-## Вибухова бочка — "ворог" лише для ударів, переслідувати її не треба.
+## Вибухова бочка — "ворог" лише для ударів, переслідувати її не треба;
+## ворога під землею не видно.
 func is_aim_target() -> bool:
-	return not _dying
+	return not _dying and not _hidden
 
 ## Смужка висить трохи вище за голову й ширшає разом із розміром ворога.
 func _add_health_bar() -> void:
@@ -443,6 +561,16 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	if _dying or _player == null:
 		return
+	# Здібності рахують перезарядку щокроку, а зайнята (під землею, у
+	# стрибку, у тумані) сама веде ворога.
+	for ability in abilities:
+		ability.tick(delta)
+	for ability in abilities:
+		if ability.is_busy():
+			return
+	if stationary:
+		_process_stationary(delta)
+		return
 
 	var distance := global_position.distance_to(_player.global_position)
 	_update_aggro(distance)
@@ -471,6 +599,8 @@ func _physics_process(delta: float) -> void:
 	elif _stagger_left > 0.0:
 		velocity.x = 0.0
 		velocity.z = 0.0
+	elif _aggro and _use_abilities(distance):
+		pass
 	elif _aggro:
 		match kind:
 			Kind.RANGED:
@@ -490,6 +620,23 @@ func _physics_process(delta: float) -> void:
 		_play("Idle")
 
 	_move(delta)
+
+## Здібність бере хід, коли ворог вільний, не на перезарядці удару й
+## бачить героя (що саме потрібно — вирішує сама здібність).
+func _use_abilities(distance: float) -> bool:
+	if abilities.is_empty() or _attack_left > 0.0:
+		return false
+	for ability in abilities:
+		if ability.ready_to_use() and ability.try_use(distance):
+			return true
+	return false
+
+## Тотем стоїть на місці: лише падає на підлогу, якщо з'явився трохи вище.
+func _process_stationary(delta: float) -> void:
+	if not _grounded:
+		velocity.y -= GRAVITY * delta
+		_move(delta)
+	_play("Idle")
 
 ## Рух ворога.
 ##
@@ -672,6 +819,11 @@ func _resolve_attack() -> void:
 	_windup_left = 0.0
 	_attack_left = attack_cooldown
 	_hide_telegraph()
+	for ability in abilities:
+		if ability.id == _special:
+			_special = ""
+			ability.resolve()
+			return
 	if kind == Kind.RANGED:
 		_release_shot()
 		return
@@ -1046,11 +1198,17 @@ static func _get_ice_material() -> StandardMaterial3D:
 ## Удар героя. knockback — напрямок і сила відкидання, heavy — сильний
 ## удар, що збиває замах.
 func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = false, heavy: bool = false) -> void:
-	if _dying:
+	if _dying or _hidden:
 		return
-	# Щит еліти спереду пропускає лише частину шкоди.
+	# Щит еліти спереду пропускає лише частину шкоди, тотем — ще менше.
 	if elite != null:
 		amount *= elite.damage_factor(heavy)
+	# Під захистом тотема й сам тотем не відкидаються.
+	if is_warded():
+		amount *= _ward_factor
+		knockback = Vector3.ZERO
+	if stationary:
+		knockback = Vector3.ZERO
 	current_hp -= amount
 	if not _aggro:
 		_repath_left = 0.0
@@ -1084,6 +1242,8 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 func _die() -> void:
 	if elite != null:
 		elite.on_death()
+	for ability in abilities:
+		ability.on_death()
 	# Убитий до вибуху — не вибухає; таран, убитий на бігу, падає.
 	_fuse_left = -1.0
 	_charge_state = 0

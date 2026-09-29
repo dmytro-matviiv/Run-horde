@@ -26,6 +26,8 @@ var _life := LIFETIME
 var _launched := false
 var _target: Node3D
 var _core: MeshInstance3D
+## Що ще зробити з героєм, коли влучив (павутина сповільнює).
+var on_hit: Callable
 
 ## Колір і швидкість — свої в кожного стрільця: отруйні плювки в
 ## печерах повільні й зелені, крижані стріли в цитаделі швидкі й сині.
@@ -75,6 +77,8 @@ func _physics_process(delta: float) -> void:
 		var chest := _target.global_position + Vector3.UP * 1.0
 		# Під час перекату герой невразливий — снаряд пролітає крізь нього.
 		if chest.distance_to(global_position) < HIT_RADIUS and _target.take_damage(damage):
+			if on_hit.is_valid():
+				on_hit.call(_target)
 			_burst(global_position)
 			return
 

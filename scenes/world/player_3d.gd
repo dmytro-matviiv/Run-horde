@@ -296,6 +296,10 @@ var _perfect_crit_left := 0.0
 ## Тимчасовий множник шкоди (серія ударів у данжі).
 var _bonus_damage := 1.0
 var _bonus_damage_left := 0.0
+## Сповільнення (павутина): частка швидкості й скільки ще діє.
+var _slow_factor := 1.0
+var _slow_left := 0.0
+var _slow_marker: MeshInstance3D
 
 var _skills: Array[HeroSkill3D] = []
 var _spin_left := 0.0
@@ -1079,6 +1083,12 @@ func _tick_timers(delta: float) -> void:
 	_roll_guard_left = maxf(_roll_guard_left - delta, 0.0)
 	_perfect_crit_left = maxf(_perfect_crit_left - delta, 0.0)
 	_bonus_damage_left = maxf(_bonus_damage_left - delta, 0.0)
+	if _slow_left > 0.0:
+		_slow_left -= delta
+		if _slow_left <= 0.0:
+			_slow_factor = 1.0
+			if _slow_marker != null:
+				_slow_marker.visible = false
 	_attack_cooldown_left = maxf(_attack_cooldown_left - delta, 0.0)
 	_since_attack += delta
 	if _spin_left > 0.0:
@@ -1112,6 +1122,8 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 
 	var factor := 1.0 + _speed_bonus + (_concealed_speed if _concealed_left > 0.0 else 0.0) \
 		+ (SHRINE_HASTE_SPEED if _has_shrine(&"haste") else 0.0)
+	if _slow_left > 0.0:
+		factor *= _slow_factor
 	if _is_facing_target() and direction.length() > 0.05:
 		# Задки й убік — повільніше, ніж уперед: так відчувається, що герой
 		# тримає оборону, а не тікає.
@@ -1541,6 +1553,26 @@ func register_perfect_dodge() -> void:
 ## Чи діють зараз гарантовані крити після ідеального перекату.
 func has_perfect_crits() -> bool:
 	return _perfect_crit_left > 0.0
+
+## Куди дивиться герой (на підлозі) — ворог, що мерехтить, стає за спину.
+func get_facing() -> Vector3:
+	return _facing_vector()
+
+## Павутина: герой повільніший кілька секунд, під ним біле коло.
+## Перекат не сповільнюється — ним і вириваються.
+func apply_slow(factor: float, seconds: float) -> void:
+	_slow_factor = minf(_slow_factor, factor) if _slow_left > 0.0 else factor
+	_slow_left = maxf(_slow_left, seconds)
+	CombatVfx.flash_model(model, Color(0.9, 0.95, 1.0), 0.15)
+	if _slow_marker == null:
+		_slow_marker = CombatVfx.make_ground_marker(Color(0.92, 0.92, 1.0, 0.7), 0.8)
+		_slow_marker.set_instance_shader_parameter(&"progress", 1.0)
+		_slow_marker.position.y = 0.05
+		add_child(_slow_marker)
+	_slow_marker.visible = true
+
+func is_slowed() -> bool:
+	return _slow_left > 0.0
 
 ## Тимчасово сильніші удари (серія ударів у данжі).
 func add_damage_buff(multiplier: float, seconds: float) -> void:

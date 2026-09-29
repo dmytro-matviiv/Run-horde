@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_tub_mesh.res" id="1_udr6j"]
+
+[node name="ForgeTub" type="Node3D" unique_id=833237054]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=413189841]
+transform = Transform3D(2.4, 0, 0, 0, 2.4, 0, 0, 0, 2.4, -0.034656003, 1.8573195, -2.32374)
+mesh = ExtResource("1_udr6j")

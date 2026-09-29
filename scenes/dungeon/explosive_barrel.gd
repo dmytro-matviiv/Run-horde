@@ -34,8 +34,10 @@ var _fuse := -1.0
 var _fuse_total := BARREL_FUSE
 var _ember: MeshInstance3D
 
-## Пофарбовані матеріали спільні для всіх бочок рівня.
-static var _painted: Dictionary = {}
+## Пофарбовані матеріали спільні для всіх бочок рівня (своя назва:
+## Enemy3D має власний кеш _painted для paint_model, і поле з тим самим
+## іменем у нащадку конфліктує з ним).
+static var _barrel_painted: Dictionary = {}
 
 func _ready() -> void:
 	add_to_group(&"enemies")
@@ -62,11 +64,11 @@ static func _paint(source: Material) -> Material:
 	if standard == null:
 		return source
 	var key := standard.get_rid()
-	if not _painted.has(key):
+	if not _barrel_painted.has(key):
 		var painted := standard.duplicate() as StandardMaterial3D
 		painted.albedo_color = standard.albedo_color * TINT
-		_painted[key] = painted
-	return _painted[key]
+		_barrel_painted[key] = painted
+	return _barrel_painted[key]
 
 ## Тліючий ґніт на кришці: жаринка "дихає" — бочка жива, її можна рвонути.
 func _add_ember() -> void:

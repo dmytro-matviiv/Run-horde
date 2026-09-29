@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_grindstone_mesh.res" id="1_qosh2"]
+
+[node name="ForgeGrindstone" type="Node3D" unique_id=1818063822]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1815450181]
+transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, -0.051395904, 2.0600638, -3.5716264)
+mesh = ExtResource("1_qosh2")

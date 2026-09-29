@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_quench_mesh.res" id="1_7di77"]
+
+[node name="ForgeQuench" type="Node3D" unique_id=182951697]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=477250332]
+transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, -0.106382124, 0.51462185, -3.1473148)
+mesh = ExtResource("1_7di77")

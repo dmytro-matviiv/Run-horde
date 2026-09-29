@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_bellows_mesh.res" id="1_y4tud"]
+
+[node name="ForgeBellows" type="Node3D" unique_id=1915815938]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=632649570]
+transform = Transform3D(1.8, 0, 0, 0, 1.8, 0, 0, 0, 1.8, -0.007870942, 1.3380455, -4.0929003)
+mesh = ExtResource("1_y4tud")

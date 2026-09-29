@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_hearth_mesh.res" id="1_5esfi"]
+
+[node name="ForgeHearth" type="Node3D" unique_id=1038646174]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1596403706]
+transform = Transform3D(2.4, 0, 0, 0, 2.4, 0, 0, 0, 2.4, -0.10112919, 0.5825359, 4.8349104)
+mesh = ExtResource("1_5esfi")

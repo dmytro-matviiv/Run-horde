@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_cauldron_mesh.res" id="1_wmjho"]
+
+[node name="ForgeCauldron" type="Node3D" unique_id=1854621063]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1604370392]
+transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, -0.07829141, 1.394945, -1.6053728)
+mesh = ExtResource("1_wmjho")

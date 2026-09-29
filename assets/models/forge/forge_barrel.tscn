@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/forge/forge_barrel_mesh.res" id="1_eloqr"]
+
+[node name="ForgeBarrel" type="Node3D" unique_id=485863036]
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=921576524]
+transform = Transform3D(2.6, 0, 0, 0, 2.6, 0, 0, 0, 2.6, 0.06324333, 0.64469755, 0.61975294)
+mesh = ExtResource("1_eloqr")
