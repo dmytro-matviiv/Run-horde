@@ -222,19 +222,19 @@ static func place_props(map_rows: Array, markers: Dictionary, level_seed: int, s
 	var keep_clear: Array[Vector2i] = []
 	for key: String in ["start", "exit", "boss"]:
 		if markers[key] != Vector3.ZERO:
-			keep_clear.append(_cell_of(markers[key]))
+			keep_clear.append(cell_of(markers[key]))
 
 	# Бочки: поруч із ворогами, щоб було кого підірвати.
 	for spawn: Dictionary in markers.spawns:
 		if rng.randf() > BARREL_CHANCE:
 			continue
-		var origin := _cell_of(spawn.position)
+		var origin := cell_of(spawn.position)
 		for attempt in 8:
 			var cell := origin + Vector2i(rng.randi_range(-2, 2), rng.randi_range(-2, 2))
 			if cell == origin or _near_any(cell, keep_clear, KEEP_CLEAR) or not _is_room_cell(map_rows, cell, reserved):
 				continue
 			reserved[cell] = true
-			result.barrels.append(_cell_center(cell))
+			result.barrels.append(cell_center(cell))
 			break
 
 	# Пастки: коридор — поперек не більше двох прохідних клітинок, уздовж
@@ -252,7 +252,7 @@ static func place_props(map_rows: Array, markers: Dictionary, level_seed: int, s
 				candidates.append({"cell": cell, "across": Vector2i(1, 0)})
 			elif run_z <= 2 and run_x >= 4:
 				candidates.append({"cell": cell, "across": Vector2i(0, 1)})
-	_shuffle(candidates, rng)
+	shuffle(candidates, rng)
 	var trap_cells: Array[Vector2i] = []
 	for candidate: Dictionary in candidates:
 		if result.trap_lines.size() >= MAX_TRAP_LINES:
@@ -272,12 +272,12 @@ static func place_props(map_rows: Array, markers: Dictionary, level_seed: int, s
 		for c in line:
 			reserved[c] = true
 			trap_cells.append(c)
-			positions.append(_cell_center(c))
+			positions.append(cell_center(c))
 		result.trap_lines.append(positions)
 
 	# Святилища: усі вісім сусідів прохідні (середина зали), далеко від
 	# входу (щоб не взяти силу одразу) і від боса.
-	var start := _cell_of(markers.start)
+	var start := cell_of(markers.start)
 	var spots: Array[Vector2i] = []
 	for z in map_rows.size():
 		var row: String = map_rows[z]
@@ -289,9 +289,9 @@ static func place_props(map_rows: Array, markers: Dictionary, level_seed: int, s
 				continue
 			if _count_open_neighbours(map_rows, cell) == 8:
 				spots.append(cell)
-	_shuffle(spots, rng)
+	shuffle(spots, rng)
 	var kinds: Array[StringName] = SHRINE_KINDS.duplicate()
-	_shuffle(kinds, rng)
+	shuffle(kinds, rng)
 	var chosen: Array[Vector2i] = []
 	for cell in spots:
 		if chosen.size() >= shrine_count:
@@ -302,13 +302,15 @@ static func place_props(map_rows: Array, markers: Dictionary, level_seed: int, s
 		for dz in range(-1, 2):
 			for dx in range(-1, 2):
 				reserved[cell + Vector2i(dx, dz)] = true
-		result.shrines.append({"position": _cell_center(cell), "kind": kinds[(chosen.size() - 1) % kinds.size()]})
+		result.shrines.append({"position": cell_center(cell), "kind": kinds[(chosen.size() - 1) % kinds.size()]})
 	return result
 
-static func _cell_of(position: Vector3) -> Vector2i:
+## Клітинка карти під точкою світу.
+static func cell_of(position: Vector3) -> Vector2i:
 	return Vector2i(roundi(position.x / CELL), roundi(position.z / CELL))
 
-static func _cell_center(cell: Vector2i) -> Vector3:
+## Середина клітинки карти у світі (на рівні нуля, не верху підлоги).
+static func cell_center(cell: Vector2i) -> Vector3:
 	return Vector3(cell.x * CELL, 0.0, cell.y * CELL)
 
 ## Скільки прохідних клітинок поспіль уздовж осі через цю клітинку.
@@ -345,7 +347,7 @@ static func _is_room_cell(map_rows: Array, cell: Vector2i, reserved: Dictionary)
 	return _run_length(map_rows, cell, Vector2i(1, 0)) >= 3 and _run_length(map_rows, cell, Vector2i(0, 1)) >= 3
 
 ## Перемішати масив генератором рівня — детерміновано.
-static func _shuffle(items: Array, rng: RandomNumberGenerator) -> void:
+static func shuffle(items: Array, rng: RandomNumberGenerator) -> void:
 	for i in range(items.size() - 1, 0, -1):
 		var j := rng.randi_range(0, i)
 		var swap: Variant = items[i]
@@ -728,6 +730,10 @@ static func _count_open_sides(map_rows: Array, x: int, z: int) -> int:
 		if _is_walkable(map_rows, x + offset.x, z + offset.y):
 			count += 1
 	return count
+
+## Чи можна ходити клітинкою (x, z). За межами карти — ні.
+static func is_walkable(map_rows: Array, x: int, z: int) -> bool:
+	return _is_walkable(map_rows, x, z)
 
 static func _is_walkable(map_rows: Array, x: int, z: int) -> bool:
 	if z < 0 or z >= map_rows.size():

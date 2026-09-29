@@ -47,6 +47,9 @@ const SETTINGS_PATH := "user://settings.cfg"
 ##   view_distance    — на якій відстані від краю шматок данжу ховається.
 ##   decor_density    — частка дрібних прикрас (бочки, павутиння).
 ##   enemy_awake      — далі за цю відстань ворог спить.
+##   arena_max_enemies — скільки ворогів засідки живуть одночасно (решта
+##                      хвилі чекає черги).
+##   horde_size       — скільки дрібноти в орді засідки.
 const PROFILES := {
 	Quality.LOW: {
 		"max_fps": 30,
@@ -58,6 +61,8 @@ const PROFILES := {
 		"view_distance": 20.0,
 		"decor_density": 0.45,
 		"enemy_awake": 22.0,
+		"arena_max_enemies": 9,
+		"horde_size": 4,
 	},
 	Quality.MEDIUM: {
 		"max_fps": 60,
@@ -69,6 +74,8 @@ const PROFILES := {
 		"view_distance": 24.0,
 		"decor_density": 0.8,
 		"enemy_awake": 30.0,
+		"arena_max_enemies": 12,
+		"horde_size": 5,
 	},
 	Quality.HIGH: {
 		"max_fps": 60,
@@ -80,6 +87,8 @@ const PROFILES := {
 		"view_distance": 30.0,
 		"decor_density": 1.0,
 		"enemy_awake": 34.0,
+		"arena_max_enemies": 15,
+		"horde_size": 6,
 	},
 }
 

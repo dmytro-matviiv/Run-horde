@@ -260,6 +260,21 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 func is_alive() -> bool:
 	return not _dying
 
+## Помітити героя одразу, хоч би де він був (засідка).
+func alert() -> void:
+	_aggro = true
+	_repath_left = 0.0
+
+## Вилізти з-під підлоги (засідка): модель підіймається з порталу, а
+## ворог тим часом стоїть і не б'є. Потім одразу йде на героя.
+func emerge(seconds: float) -> void:
+	var rest := _model.position.y
+	_model.position.y = rest - target_height - 0.3
+	var tween := create_tween()
+	tween.tween_property(_model, "position:y", rest, seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_hold_still(seconds)
+	alert()
+
 ## Чи наводиться сюди приціл: автоприціл героя й самонавідні чари.
 ## Вибухова бочка — "ворог" лише для ударів, переслідувати її не треба.
 func is_aim_target() -> bool:

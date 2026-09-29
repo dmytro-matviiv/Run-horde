@@ -28,6 +28,8 @@ class_name DungeonLevels
 const LEVELS := [
 	{
 		"id": &"crypts",
+		# Засідки (ArenaAmbush): зали в клітинках карти — Rect2i(x, z, ширина, висота).
+		"arenas": [Rect2i(2, 12, 36, 7)],
 		"title": "Забуті склепи",
 		"subtitle": "Старі гробниці під містом. Орки, слизні й чаклуни.",
 		"difficulty": 1,
@@ -93,6 +95,7 @@ const LEVELS := [
 	},
 	{
 		"id": &"fungal",
+		"arenas": [Rect2i(20, 30, 11, 11), Rect2i(15, 12, 23, 10)],
 		"title": "Грибні нетрі",
 		"subtitle": "Печери, де дихає отрутою грибниця. Рої, слизні, що вибухають, і Грибний Король.",
 		"difficulty": 2,
@@ -175,6 +178,7 @@ const LEVELS := [
 	},
 	{
 		"id": &"citadel",
+		"arenas": [Rect2i(18, 25, 14, 12), Rect2i(17, 10, 16, 9)],
 		"title": "Крижана цитадель",
 		"subtitle": "Мерзла фортеця. Тарани, кам'яні големи, крижані чаклуни і Дракон.",
 		"difficulty": 3,
