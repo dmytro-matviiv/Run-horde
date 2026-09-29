@@ -67,6 +67,10 @@ const COMBO_BUFF_TIME := 6.0
 const COMBO_COLOR := Color(1.0, 0.86, 0.4)
 const PERFECT_DODGE_COLOR := Color(0.5, 0.95, 1.0)
 
+## СФЕРИ ЗДОРОВ'Я (HealthOrb): шанс, що випаде зі звичайного ворога й з еліти.
+const HEALTH_ORB_CHANCE := 0.1
+const HEALTH_ORB_ELITE_CHANCE := 0.7
+
 ## ВІДЧУТТЯ ВБИВСТВА. Кожне вбивство на мить пригальмовує гру, а бос —
 ## майже на секунду: перемога має відчуватись.
 const KILL_HITSTOP := 0.05
@@ -151,6 +155,10 @@ var _banner: Control
 var _callout: Control
 var _combo: ComboMeter
 var _last_hp := 0.0
+## Бос рівня і його велика смуга здоров'я внизу екрана.
+var _boss: Enemy3D
+var _boss_panel: Control
+var _boss_bar: ProgressBar
 var _hud_title: Label
 var _health_bar: ProgressBar
 var _xp_bar: ProgressBar
@@ -238,6 +246,7 @@ func _setup_hud(title: String) -> void:
 	var combat_buttons: Control = COMBAT_BUTTONS_SCRIPT.new()
 	hud.add_child(combat_buttons)
 	combat_buttons.setup(player)
+	_build_boss_bar()
 	# Серія ударів — праворуч над бойовими кнопками.
 	_combo = ComboMeter.new()
 	hud.add_child(_combo)
@@ -498,7 +507,7 @@ func _minion_definition(rng: RandomNumberGenerator) -> Dictionary:
 	minion.height = float(base.height) * MINION_SIZE
 	minion.speed = float(base.speed) * 1.15
 	minion.xp = 1
-	minion.minion = true
+	minion.no_elite = true
 	minion.erase("group")
 	return minion
 
@@ -545,6 +554,48 @@ func _on_chest_opened(position: Vector3) -> void:
 	_loot.burst(position, LootSwarm.Kind.GOLD, int(round(ARENA_CHEST_GOLD * _gold_scale)), 10)
 	_loot.burst(position, LootSwarm.Kind.XP, ARENA_CHEST_XP, 4)
 	_offer_ability()
+
+## Бос перейшов у нову фазу — великий напис.
+func _on_boss_phase(phase: int, title: String) -> void:
+	_show_banner(title, "швидший і небезпечніший" if phase == 2 else "останній ривок!")
+
+## Смуга здоров'я боса внизу посередині: видно, щойно бій почався.
+func _build_boss_bar() -> void:
+	_boss_panel = VBoxContainer.new()
+	_boss_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_boss_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_boss_panel.offset_left = -230.0
+	_boss_panel.offset_right = 230.0
+	_boss_panel.offset_top = -78.0
+	_boss_panel.offset_bottom = -30.0
+	_boss_panel.add_theme_constant_override("separation", 2)
+	var name_label := Label.new()
+	name_label.name = "Name"
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UiTheme.hud_text(name_label, 18, UiTheme.HEADING)
+	_boss_panel.add_child(name_label)
+	_boss_bar = UiTheme.make_bar(Color(0.8, 0.16, 0.2), Vector2(460, 16))
+	_boss_panel.add_child(_boss_bar)
+	# Позначки фаз: на половині й чверті здоров'я бос змінюється.
+	for threshold: float in BossPhases.THRESHOLDS:
+		var tick := ColorRect.new()
+		tick.color = Color(UiTheme.LINE, 0.8)
+		tick.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tick.size = Vector2(2, 16)
+		tick.position = Vector2(460.0 * threshold - 1.0, 0)
+		_boss_bar.add_child(tick)
+	_boss_panel.visible = false
+	hud.add_child(_boss_panel)
+
+func _update_boss_bar() -> void:
+	if _boss_panel == null:
+		return
+	var shown := _boss != null and is_instance_valid(_boss) and _boss.is_aggro()
+	_boss_panel.visible = shown
+	if shown:
+		(_boss_panel.get_node("Name") as Label).text = _boss.display_name
+		_boss_bar.max_value = _boss.max_hp
+		_boss_bar.value = _boss.current_hp
 
 func _on_combo_tier(tier: int, title: String) -> void:
 	var reward := ""
@@ -682,10 +733,10 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	else:
 		enemy.configure(definition, _hp_scale, _damage_scale)
 		# Еліта: риси задані в описі ("affixes"), або їх кількість ("elite"),
-		# або випадок (ELITE_CHANCE) — дрібнота орди елітою не буває.
+		# або випадок (ELITE_CHANCE). "no_elite" — ніколи (дрібнота орди).
 		var affixes: Array = definition.get("affixes", [])
 		var affix_count := int(definition.get("elite", 0))
-		if affixes.is_empty() and affix_count == 0 and not definition.get("minion", false) \
+		if affixes.is_empty() and affix_count == 0 and not definition.get("no_elite", false) \
 				and randf() < ELITE_CHANCE[mini(_level_index, ELITE_CHANCE.size() - 1)]:
 			affix_count = 1
 		if affixes.is_empty() and affix_count > 0:
@@ -711,6 +762,8 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null))
 	if is_boss:
 		enemy.summon_requested.connect(_on_summon_requested)
+		enemy.phases.phase_changed.connect(_on_boss_phase)
+		_boss = enemy
 	_alive_enemies += 1
 	return enemy
 
@@ -745,6 +798,11 @@ func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_el
 	var pieces := 12 if is_boss else (8 if is_elite else clampi(gold / 3, 1, 4))
 	_loot.burst(position, LootSwarm.Kind.GOLD, gold, pieces)
 	_loot.burst(position, LootSwarm.Kind.XP, xp_reward, 6 if is_boss or is_elite else clampi(xp_reward, 1, 3))
+	if not is_boss and randf() < (HEALTH_ORB_ELITE_CHANCE if is_elite else HEALTH_ORB_CHANCE):
+		var orb := HealthOrb.new()
+		orb.setup(player)
+		add_child(orb)
+		orb.global_position = position + Vector3(0, DungeonBuilder.FLOOR_TOP, 0)
 	if is_boss:
 		_boss_defeated = true
 		_celebrate_boss(position)
@@ -830,6 +888,7 @@ func _open_exit() -> void:
 
 func _process(delta: float) -> void:
 	_update_shrine_label()
+	_update_boss_bar()
 	_stream_left -= delta
 	if _stream_left <= 0.0:
 		_stream_left = STREAM_INTERVAL

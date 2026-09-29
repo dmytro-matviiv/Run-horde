@@ -32,7 +32,9 @@ func _ready() -> void:
 	# Здоров'я змінене напряму — повідомляємо данж, як це зробила б гра.
 	_player.health_changed.emit(_player.current_hp, _player.max_hp)
 	_player.perfect_dodge.connect(func() -> void: _perfect += 1)
-	var base: Dictionary = DungeonLevels.get_level(0).enemies.m[0]
+	# Звичайний ворог, не еліта: випадкові риси зробили б перевірку нестабільною.
+	var base: Dictionary = DungeonLevels.get_level(0).enemies.m[0].duplicate()
+	base.no_elite = true
 	var enemy: Enemy3D = _dungeon.call("_spawn_enemy", _player.global_position + Vector3(0, 0, -1.4), base, false)
 	enemy.max_hp = 100000.0
 	enemy.current_hp = 100000.0
@@ -70,7 +72,8 @@ func _ready() -> void:
 	await _shot("combo")
 	var bonus: float = _player.get("_bonus_damage_left")
 	print("PROBE серія: %d ударів, посилення шкоди ще %.1f с" % [combo.get_count(), bonus])
-	if combo.get_count() != 26 or bonus <= 0.0:
+	# Щонайменше 26: пасивки й узяті здібності героя теж можуть влучити.
+	if combo.get_count() < 26 or bonus <= 0.0:
 		_failed = true
 	await _wait(0.6)
 	_player.take_damage(1.0)

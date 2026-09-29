@@ -142,6 +142,8 @@ static var _ice_material: StandardMaterial3D
 var display_name := ""
 ## Риси еліти; null — звичайний ворог.
 var elite: EliteAffixes
+## Фази боса (лише в боса).
+var phases: BossPhases
 var tank := false
 var slam_every := 0
 var boss_style := "demon"
@@ -285,6 +287,10 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	if elite != null:
 		add_child(elite)
 		elite.attach(self, _player)
+	if kind == Kind.BOSS:
+		phases = BossPhases.new()
+		add_child(phases)
+		phases.attach(self, _player)
 
 func is_alive() -> bool:
 	return not _dying
@@ -298,6 +304,10 @@ func facing_vector() -> Vector3:
 
 func is_sleeping() -> bool:
 	return _sleeping
+
+## Чи помітив ворог героя (бос — чи почався бій).
+func is_aggro() -> bool:
+	return _aggro and not _dying
 
 ## Відновити здоров'я (цілитель-еліта лікує сусідів).
 func heal(amount: float) -> void:

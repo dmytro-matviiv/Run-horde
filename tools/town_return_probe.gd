@@ -9,7 +9,9 @@ extends Node
 
 const TOWN := "res://scenes/world/base_island.tscn"
 ## Скільки герой має пройти за пів секунди, щоб вважати, що він не застряг.
-const MIN_STEP := 0.8
+## Застряглий проходив 0,00 м; вільний — 1,2-1,8 м (з центру зали один бік
+## упирається в стіну будівлі).
+const MIN_STEP := 0.4
 
 var _failed := false
 
