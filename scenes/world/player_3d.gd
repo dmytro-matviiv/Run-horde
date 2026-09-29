@@ -296,6 +296,15 @@ var _weapon_node: Node3D
 var _crit_chance := CRIT_CHANCE
 var _lifesteal := 0.0
 var _damage_taken_factor := 1.0
+
+## СВЯТИЛИЩА ДАНЖУ (Shrine): тимчасова сила — лють (більше шкоди), вітер
+## (швидше бігає й б'є) або камінь (менше шкоди по герою).
+const SHRINE_FURY_DAMAGE := 1.5
+const SHRINE_HASTE_SPEED := 0.3
+const SHRINE_HASTE_ATTACK := 1.3
+const SHRINE_GUARD_FACTOR := 0.6
+var _shrine_kind := &""
+var _shrine_left := 0.0
 var _knockback_factor := 1.0
 var _arc_factor := 1.0
 var _reach_bonus := 0.0
@@ -905,6 +914,30 @@ func dash(direction: Vector3, speed: float, time: float) -> void:
 	_lunge_velocity = flat.normalized() * speed
 	_lunge_left = time
 
+func add_shrine_buff(kind: StringName, seconds: float) -> void:
+	_shrine_kind = kind
+	_shrine_left = seconds
+	if kind == &"haste":
+		add_attack_speed(SHRINE_HASTE_ATTACK, seconds)
+
+## Сила святилища, що діє зараз: {kind, left}, або порожньо.
+func get_shrine_buff() -> Dictionary:
+	if _shrine_left <= 0.0:
+		return {}
+	return {"kind": _shrine_kind, "left": _shrine_left}
+
+func _has_shrine(kind: StringName) -> bool:
+	return _shrine_left > 0.0 and _shrine_kind == kind
+
+## Живі вороги в радіусі, на яких можна навестись (без вибухових бочок) —
+## для самонавідних чар і вмінь, що самі обирають ціль.
+func aim_targets_in_radius(radius: float, require_sight: bool = true) -> Array[Enemy3D]:
+	var result: Array[Enemy3D] = []
+	for enemy in enemies_in_radius(radius, require_sight):
+		if enemy.is_aim_target():
+			result.append(enemy)
+	return result
+
 func grant_invulnerable(seconds: float) -> void:
 	_invulnerable_left = maxf(_invulnerable_left, seconds)
 
@@ -1015,6 +1048,7 @@ func _tick_timers(delta: float) -> void:
 	_invulnerable_left = maxf(_invulnerable_left - delta, 0.0)
 	_combat_left = maxf(_combat_left - delta, 0.0)
 	_attack_speed_left = maxf(_attack_speed_left - delta, 0.0)
+	_shrine_left = maxf(_shrine_left - delta, 0.0)
 	_attack_cooldown_left = maxf(_attack_cooldown_left - delta, 0.0)
 	_since_attack += delta
 	if _spin_left > 0.0:
@@ -1046,7 +1080,8 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 			velocity.z = flat.y
 		return
 
-	var factor := 1.0 + _speed_bonus + (_concealed_speed if _concealed_left > 0.0 else 0.0)
+	var factor := 1.0 + _speed_bonus + (_concealed_speed if _concealed_left > 0.0 else 0.0) \
+		+ (SHRINE_HASTE_SPEED if _has_shrine(&"haste") else 0.0)
 	if _is_facing_target() and direction.length() > 0.05:
 		# Задки й убік — повільніше, ніж уперед: так відчувається, що герой
 		# тримає оборону, а не тікає.
@@ -1103,7 +1138,7 @@ func _refresh_target() -> void:
 	var best_score := INF
 	var forward := _facing_vector()
 	for enemy: Enemy3D in get_tree().get_nodes_in_group(&"enemies"):
-		if not enemy.is_alive():
+		if not enemy.is_aim_target():
 			continue
 		var offset := enemy.global_position - global_position
 		offset.y = 0.0
@@ -1343,6 +1378,8 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
 	if _concealed_left > 0.0:
 		amount *= _concealed_damage
+	if _has_shrine(&"fury"):
+		amount *= SHRINE_FURY_DAMAGE
 	if passive != null:
 		amount = passive.modify_damage(self, enemy, amount)
 	enemy.take_damage(amount, knockback * _knockback_factor, crit, heavy)
@@ -1419,6 +1456,8 @@ func take_damage(amount: float) -> bool:
 	if _dead or _invulnerable_left > 0.0:
 		return false
 	amount *= _damage_taken_factor
+	if _has_shrine(&"guard"):
+		amount *= SHRINE_GUARD_FACTOR
 	current_hp = maxf(current_hp - amount, 0.0)
 	_invulnerable_left = HURT_INVULNERABLE
 	_combat_left = COMBAT_MEMORY

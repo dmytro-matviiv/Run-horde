@@ -260,6 +260,11 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 func is_alive() -> bool:
 	return not _dying
 
+## Чи наводиться сюди приціл: автоприціл героя й самонавідні чари.
+## Вибухова бочка — "ворог" лише для ударів, переслідувати її не треба.
+func is_aim_target() -> bool:
+	return not _dying
+
 ## Смужка висить трохи вище за голову й ширшає разом із розміром ворога.
 func _add_health_bar() -> void:
 	_health_bar = HEALTH_BAR_SCRIPT.new()

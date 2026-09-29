@@ -103,7 +103,7 @@ static func volley_targets(player: Node, target: Enemy3D, count: int) -> Array[E
 	if count <= 1:
 		return result
 	var others: Array[Enemy3D] = []
-	for enemy: Enemy3D in player.enemies_in_radius(LIGHTNING_RANGE):
+	for enemy: Enemy3D in player.aim_targets_in_radius(LIGHTNING_RANGE):
 		if enemy != target and enemy.global_position.distance_to(target.global_position) < 6.0:
 			others.append(enemy)
 	others.sort_custom(func(a: Enemy3D, b: Enemy3D) -> bool:
@@ -226,7 +226,7 @@ static func _lightning(player: Node, origin: Vector3, direction: Vector3, target
 static func _nearest_ahead(player: Node, direction: Vector3) -> Enemy3D:
 	var best: Enemy3D = null
 	var best_score := INF
-	for enemy: Enemy3D in player.enemies_in_radius(LIGHTNING_RANGE):
+	for enemy: Enemy3D in player.aim_targets_in_radius(LIGHTNING_RANGE):
 		var offset: Vector3 = enemy.global_position - player.global_position
 		offset.y = 0.0
 		if offset.length() > 0.1 and direction.dot(offset.normalized()) < 0.4:

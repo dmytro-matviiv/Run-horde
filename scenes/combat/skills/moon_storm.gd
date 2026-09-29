@@ -37,7 +37,7 @@ func _update(player: Node, delta: float) -> void:
 	_left -= 1
 	# Промінь падає на випадкового ворога поруч, а як нікого — просто
 	# поряд із Чарівницею (буря однаково видна й лякає).
-	var enemies: Array[Enemy3D] = player.enemies_in_radius(RADIUS, false)
+	var enemies: Array[Enemy3D] = player.aim_targets_in_radius(RADIUS, false)
 	var spot: Vector3 = player.global_position + Vector3(randf_range(-4, 4), 0, randf_range(-4, 4))
 	if not enemies.is_empty():
 		spot = enemies[randi() % enemies.size()].global_position

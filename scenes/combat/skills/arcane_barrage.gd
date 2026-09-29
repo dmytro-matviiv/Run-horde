@@ -19,7 +19,7 @@ func _init() -> void:
 	cooldown = 9.0
 
 func _use(player: Node) -> bool:
-	var enemies: Array[Enemy3D] = player.enemies_in_radius(RADIUS)
+	var enemies: Array[Enemy3D] = player.aim_targets_in_radius(RADIUS)
 	var origin: Vector3 = player.spell_origin()
 	var parent: Node = player.get_parent()
 	for i in BOLTS:

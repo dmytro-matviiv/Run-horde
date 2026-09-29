@@ -37,6 +37,8 @@ class_name DungeonBuilder
 
 const CELL := 2.0          # розмір клітинки в метрах
 const WALL_HEIGHT := 2.0
+## Верх плитки підлоги: на цю висоту ставляться бочки, пастки й святилища.
+const FLOOR_TOP := 0.125
 
 ## Верх скелі навколо залів — трохи нижче за верх стін, щоб гребінь стіни
 ## лишався видно й кімната читалась вирубаною в камені.
@@ -106,10 +108,6 @@ const TREASURE_SCENES := [
 	preload("res://assets/models/dungeon/Coin_Pile.fbx"),
 	preload("res://assets/models/dungeon/Bag_Coins.fbx"),
 ]
-const TRAP_SCENES := [
-	preload("res://assets/models/dungeon/Trap_spikes.fbx"),
-	preload("res://assets/models/dungeon/Spikes.fbx"),
-]
 
 ## ПРИКРАСИ ПІД ТЕМУ РІВНЯ. Склепи захаращені бочками й скринями,
 ## грибні печери — порожні, у павутинні й черепах, цитадель — з
@@ -120,7 +118,6 @@ const DECOR_SETS := {
 		"wall": WALL_DECOR_SCENES,
 		"furniture": FURNITURE_SCENES,
 		"treasure": TREASURE_SCENES,
-		"traps": TRAP_SCENES,
 	},
 	"fungal": {
 		"clutter": [
@@ -130,7 +127,6 @@ const DECOR_SETS := {
 		"wall": [preload("res://assets/models/dungeon/Cobweb.fbx"), preload("res://assets/models/dungeon/Cobweb2.fbx"), preload("res://assets/models/dungeon/Decorative_Wall.fbx")],
 		"furniture": [preload("res://assets/models/dungeon/Woodfire.fbx"), preload("res://assets/models/dungeon/Pedestal.fbx")],
 		"treasure": [preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Bag_Coins.fbx")],
-		"traps": [preload("res://assets/models/dungeon/Spikes.fbx")],
 	},
 	"citadel": {
 		"clutter": [preload("res://assets/models/dungeon/Crate.fbx"), preload("res://assets/models/dungeon/Barrel2.fbx"), preload("res://assets/models/dungeon/Chair.fbx")],
@@ -140,7 +136,6 @@ const DECOR_SETS := {
 		],
 		"furniture": [preload("res://assets/models/dungeon/Table_Big.fbx"), preload("res://assets/models/dungeon/Pedestal2.fbx"), preload("res://assets/models/dungeon/Woodfire.fbx")],
 		"treasure": [preload("res://assets/models/dungeon/Chest_Gold.fbx"), preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Chest.fbx")],
-		"traps": [preload("res://assets/models/dungeon/Trap_spikes.fbx")],
 	},
 }
 
@@ -203,6 +198,159 @@ static func build_base(map_rows: Array, parent: Node3D, theme: Dictionary = DEFA
 	_create_chunks(parent, map_rows, result)
 	_add_rock_top(parent, map_rows, theme)
 	return result
+
+## ПРЕДМЕТИ В ЗАЛАХ (ExplosiveBarrel, SpikeTrap, Shrine):
+##   бочки     — біля міток ворогів, на клітинках зали, не в коридорі;
+##   пастки    — рядком поперек коридору: плити одного рядка б'ють разом;
+##   святилища — посеред великих зал, подалі від входу й боса.
+## Розкладка залежить лише від карти й насіння: той самий рівень щоразу
+## виглядає однаково. reserved — зайняті клітинки (для прикрас).
+const BARREL_CHANCE := 0.4
+const MAX_TRAP_LINES := 4
+## Відстань між рядками пасток і між святилищами, у клітинках.
+const TRAP_SPACING := 5
+const SHRINE_SPACING := 10
+## Стільки клітинок довкола входу, виходу й боса лишаються вільними.
+const KEEP_CLEAR := 3
+const SHRINE_KINDS: Array[StringName] = [&"fury", &"haste", &"guard", &"life"]
+
+static func place_props(map_rows: Array, markers: Dictionary, level_seed: int, shrine_count: int) -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = level_seed
+	var result := {"barrels": [], "trap_lines": [], "shrines": [], "reserved": {}}
+	var reserved: Dictionary = result.reserved
+	var keep_clear: Array[Vector2i] = []
+	for key: String in ["start", "exit", "boss"]:
+		if markers[key] != Vector3.ZERO:
+			keep_clear.append(_cell_of(markers[key]))
+
+	# Бочки: поруч із ворогами, щоб було кого підірвати.
+	for spawn: Dictionary in markers.spawns:
+		if rng.randf() > BARREL_CHANCE:
+			continue
+		var origin := _cell_of(spawn.position)
+		for attempt in 8:
+			var cell := origin + Vector2i(rng.randi_range(-2, 2), rng.randi_range(-2, 2))
+			if cell == origin or _near_any(cell, keep_clear, KEEP_CLEAR) or not _is_room_cell(map_rows, cell, reserved):
+				continue
+			reserved[cell] = true
+			result.barrels.append(_cell_center(cell))
+			break
+
+	# Пастки: коридор — поперек не більше двох прохідних клітинок, уздовж
+	# щонайменше чотири. Рядок плит перекриває коридор на всю ширину.
+	var candidates: Array[Dictionary] = []
+	for z in map_rows.size():
+		var row: String = map_rows[z]
+		for x in row.length():
+			var cell := Vector2i(x, z)
+			if not _is_walkable(map_rows, x, z) or _near_any(cell, keep_clear, KEEP_CLEAR):
+				continue
+			var run_x := _run_length(map_rows, cell, Vector2i(1, 0))
+			var run_z := _run_length(map_rows, cell, Vector2i(0, 1))
+			if run_x <= 2 and run_z >= 4:
+				candidates.append({"cell": cell, "across": Vector2i(1, 0)})
+			elif run_z <= 2 and run_x >= 4:
+				candidates.append({"cell": cell, "across": Vector2i(0, 1)})
+	_shuffle(candidates, rng)
+	var trap_cells: Array[Vector2i] = []
+	for candidate: Dictionary in candidates:
+		if result.trap_lines.size() >= MAX_TRAP_LINES:
+			break
+		var cell: Vector2i = candidate.cell
+		if _near_any(cell, trap_cells, TRAP_SPACING):
+			continue
+		var line: Array[Vector2i] = [cell]
+		for side: int in [-1, 1]:
+			var probe: Vector2i = cell + candidate.across * side
+			while _is_walkable(map_rows, probe.x, probe.y):
+				line.append(probe)
+				probe += candidate.across * side
+		if line.any(func(c: Vector2i) -> bool: return reserved.has(c)):
+			continue
+		var positions: Array[Vector3] = []
+		for c in line:
+			reserved[c] = true
+			trap_cells.append(c)
+			positions.append(_cell_center(c))
+		result.trap_lines.append(positions)
+
+	# Святилища: усі вісім сусідів прохідні (середина зали), далеко від
+	# входу (щоб не взяти силу одразу) і від боса.
+	var start := _cell_of(markers.start)
+	var spots: Array[Vector2i] = []
+	for z in map_rows.size():
+		var row: String = map_rows[z]
+		for x in row.length():
+			var cell := Vector2i(x, z)
+			if not _is_room_cell(map_rows, cell, reserved) or _near_any(cell, keep_clear, KEEP_CLEAR + 2):
+				continue
+			if maxi(absi(cell.x - start.x), absi(cell.y - start.y)) < 8:
+				continue
+			if _count_open_neighbours(map_rows, cell) == 8:
+				spots.append(cell)
+	_shuffle(spots, rng)
+	var kinds: Array[StringName] = SHRINE_KINDS.duplicate()
+	_shuffle(kinds, rng)
+	var chosen: Array[Vector2i] = []
+	for cell in spots:
+		if chosen.size() >= shrine_count:
+			break
+		if _near_any(cell, chosen, SHRINE_SPACING):
+			continue
+		chosen.append(cell)
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				reserved[cell + Vector2i(dx, dz)] = true
+		result.shrines.append({"position": _cell_center(cell), "kind": kinds[(chosen.size() - 1) % kinds.size()]})
+	return result
+
+static func _cell_of(position: Vector3) -> Vector2i:
+	return Vector2i(roundi(position.x / CELL), roundi(position.z / CELL))
+
+static func _cell_center(cell: Vector2i) -> Vector3:
+	return Vector3(cell.x * CELL, 0.0, cell.y * CELL)
+
+## Скільки прохідних клітинок поспіль уздовж осі через цю клітинку.
+static func _run_length(map_rows: Array, cell: Vector2i, axis: Vector2i) -> int:
+	var count := 1
+	for side: int in [-1, 1]:
+		var probe := cell + axis * side
+		while _is_walkable(map_rows, probe.x, probe.y):
+			count += 1
+			probe += axis * side
+	return count
+
+static func _count_open_neighbours(map_rows: Array, cell: Vector2i) -> int:
+	var count := 0
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			if (dx != 0 or dz != 0) and _is_walkable(map_rows, cell.x + dx, cell.y + dz):
+				count += 1
+	return count
+
+static func _near_any(cell: Vector2i, cells: Array[Vector2i], distance: int) -> bool:
+	for other in cells:
+		if maxi(absi(cell.x - other.x), absi(cell.y - other.y)) <= distance:
+			return true
+	return false
+
+## Клітинка всередині зали: прохідна, не колона, не зайнята, і зала тут
+## ширша за коридор в обидва боки.
+static func _is_room_cell(map_rows: Array, cell: Vector2i, reserved: Dictionary) -> bool:
+	if not _is_walkable(map_rows, cell.x, cell.y) or reserved.has(cell):
+		return false
+	if _is_column_cell(map_rows, map_rows[cell.y], cell.x, cell.y):
+		return false
+	return _run_length(map_rows, cell, Vector2i(1, 0)) >= 3 and _run_length(map_rows, cell, Vector2i(0, 1)) >= 3
+
+## Перемішати масив генератором рівня — детерміновано.
+static func _shuffle(items: Array, rng: RandomNumberGenerator) -> void:
+	for i in range(items.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var swap: Variant = items[i]
+		items[i] = items[j]
+		items[j] = swap
 
 ## ТЕМНА СКЕЛЯ НАВКОЛО ЗАЛІВ
 ##
@@ -324,7 +472,10 @@ static func _rock_shade(distance: int) -> float:
 ## decor_density — частка дрібних прикрас (1.0 — усі). На слабкому
 ## телефоні бочок і павутиння менше, але стіни, скрині й колони ті самі:
 ## рівень упізнаваний на будь-якій якості.
-static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float = 1.0, theme: Dictionary = DEFAULT_THEME) -> void:
+##
+## reserved — клітинки під бочки, пастки й святилища (place_props): туди
+## прикраси не ставимо, щоб стіл не стояв посеред святилища.
+static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float = 1.0, theme: Dictionary = DEFAULT_THEME, reserved: Dictionary = {}) -> void:
 	if chunk.built:
 		return
 	chunk.built = true
@@ -357,7 +508,8 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 				batcher.add(COLUMN_SCENE, Transform3D(Basis(), position), stone)
 				continue
 			_add_wall_visuals(batcher, map_rows, x, z, position, decor_density, stone, decor)
-			_decorate_cell(batcher, map_rows, x, z, position, rng, decor_density, decor)
+			if not reserved.has(Vector2i(x, z)):
+				_decorate_cell(batcher, map_rows, x, z, position, rng, decor_density, decor)
 
 	batcher.flush(chunk.node)
 
@@ -563,8 +715,6 @@ static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int
 	if open_sides == 2 and rng.randf() < 0.26:
 		_place(batcher, decor.treasure[rng.randi() % decor.treasure.size()],
 			position, rng.randf_range(0.0, TAU), 1.0)
-	if open_sides == 2 and rng.randf() < 0.12:
-		_place(batcher, decor.traps[rng.randi() % decor.traps.size()], position, 0.0, 1.0)
 	if rng.randf() < 0.08 and small_decor:
 		_place(batcher, FLOOR_BRICKS_SCENE, position + Vector3(0, 0.02, 0), 0.0, 1.0)
 
