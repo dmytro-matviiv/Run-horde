@@ -74,6 +74,9 @@ const BOSS_WINDUP := 0.75
 const SLAM_WINDUP := 1.0
 const SLAM_RADIUS := 3.6
 const SLAM_EVERY := 3
+## Ідеальний перекат: герой почав перекат у червоній зоні не раніше, ніж
+## за стільки секунд до удару, — і вискочив.
+const LATE_DODGE_WINDOW := 0.3
 
 ## Під час замаху ворог повільно довертається за героєм — достатньо, щоб
 ## влучити в того, хто стоїть, але не в того, хто відскочив убік.
@@ -674,14 +677,34 @@ func _resolve_attack() -> void:
 		var rig := get_tree().get_first_node_in_group(&"camera_rig")
 		if rig != null:
 			rig.shake(0.12)
-		if offset.length() <= SLAM_RADIUS + 0.3:
+		if _zone_covers(_player.global_position, true):
 			_player.take_damage(damage * 1.5)
+		else:
+			_check_late_dodge(true)
 		return
 	# Звичайний удар влучає, лише якщо герой досі в червоній зоні.
+	if _zone_covers(_player.global_position, false) and _has_line_of_sight():
+		_player.take_damage(damage)
+	else:
+		_check_late_dodge(false)
+
+## Чи накриває червона зона удару точку на підлозі.
+func _zone_covers(point: Vector3, slam: bool) -> bool:
+	var offset := point - global_position
+	offset.y = 0.0
+	if slam:
+		return offset.length() <= SLAM_RADIUS + 0.3
 	var in_reach := offset.length() <= _melee_reach() + 0.35
 	var in_front := offset.length() < 0.5 or _model_forward().angle_to(offset.normalized()) <= deg_to_rad(65.0)
-	if in_reach and in_front and _has_line_of_sight():
-		_player.take_damage(damage)
+	return in_reach and in_front
+
+## Герой вискочив перекатом із зони в останню мить — ідеальний перекат.
+func _check_late_dodge(slam: bool) -> void:
+	if not _player.has_method("late_dodge_origin"):
+		return
+	var origin: Vector3 = _player.late_dodge_origin(LATE_DODGE_WINDOW)
+	if origin != Vector3.INF and _zone_covers(origin, slam):
+		_player.register_perfect_dodge()
 
 func _release_shot() -> void:
 	if _charging_shot == null or not is_instance_valid(_charging_shot):

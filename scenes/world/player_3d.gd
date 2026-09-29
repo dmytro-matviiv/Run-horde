@@ -36,6 +36,10 @@ extends CharacterBody3D
 
 signal died
 signal health_changed(current: float, maximum: float)
+## Удар героя влучив (для лічильника серії в данжі).
+signal hit_landed(amount: float, crit: bool)
+## Ворожий удар прилетів у перші миті перекату — ухилився в останню мить.
+signal perfect_dodge
 
 const WALK_SPEED := 2.6
 const RUN_SPEED := 5.4
@@ -212,6 +216,16 @@ const TALENT_SPEED_PER_LEVEL := 0.03
 ## героя за один кадр.
 const HURT_INVULNERABLE := 0.35
 
+## ІДЕАЛЬНИЙ ПЕРЕКАТ: ворожий удар (меч, куля, вибух) влучив би, але
+## герой саме котився. Світ на мить сповільнюється, наступні кілька
+## секунд усі удари критичні, а перекат одразу готовий знову. Червоні
+## зони замаху для цього й існують: перекотитись треба тоді, коли зона
+## вже майже заповнилась.
+const PERFECT_SLOWMO := 0.5
+const PERFECT_SLOWMO_SCALE := 0.35
+const PERFECT_CRIT_TIME := 2.0
+const PERFECT_COLOR := Color(0.5, 0.95, 1.0)
+
 const HEALTH_BAR_SCRIPT := preload("res://scenes/dungeon/health_bar_3d.gd")
 
 ## Зелена смужка — для своїх: героя й дружніх NPC.
@@ -273,6 +287,15 @@ var _roll_direction := Vector3.ZERO
 var _roll_left := 0.0
 var _dodge_cooldown_left := 0.0
 var _invulnerable_left := 0.0
+## Скільки ще триває невразливість саме від перекату (не після поранення).
+var _roll_guard_left := 0.0
+var _roll_origin := Vector3.INF
+var _roll_started_msec := 0
+var _perfect_this_roll := false
+var _perfect_crit_left := 0.0
+## Тимчасовий множник шкоди (серія ударів у данжі).
+var _bonus_damage := 1.0
+var _bonus_damage_left := 0.0
 
 var _skills: Array[HeroSkill3D] = []
 var _spin_left := 0.0
@@ -838,6 +861,10 @@ func dodge() -> void:
 	_roll_direction = direction.normalized()
 	_roll_left = DODGE_TIME
 	_invulnerable_left = maxf(_invulnerable_left, DODGE_INVULNERABLE)
+	_roll_guard_left = DODGE_INVULNERABLE
+	_roll_origin = global_position
+	_roll_started_msec = Time.get_ticks_msec()
+	_perfect_this_roll = false
 	_dodge_cooldown_left = DODGE_COOLDOWN * _dodge_cooldown_factor
 	# Перекат скасовує удар: у небезпеці гравець має реагувати миттєво.
 	_attack_step = -1
@@ -1049,6 +1076,9 @@ func _tick_timers(delta: float) -> void:
 	_combat_left = maxf(_combat_left - delta, 0.0)
 	_attack_speed_left = maxf(_attack_speed_left - delta, 0.0)
 	_shrine_left = maxf(_shrine_left - delta, 0.0)
+	_roll_guard_left = maxf(_roll_guard_left - delta, 0.0)
+	_perfect_crit_left = maxf(_perfect_crit_left - delta, 0.0)
+	_bonus_damage_left = maxf(_bonus_damage_left - delta, 0.0)
 	_attack_cooldown_left = maxf(_attack_cooldown_left - delta, 0.0)
 	_since_attack += delta
 	if _spin_left > 0.0:
@@ -1374,8 +1404,10 @@ func _tick_skills(delta: float) -> void:
 func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool) -> void:
 	if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive():
 		return
-	var crit := randf() < _crit_chance
+	var crit := randf() < _crit_chance or _perfect_crit_left > 0.0
 	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
+	if _bonus_damage_left > 0.0:
+		amount *= _bonus_damage
 	if _concealed_left > 0.0:
 		amount *= _concealed_damage
 	if _has_shrine(&"fury"):
@@ -1383,6 +1415,7 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 	if passive != null:
 		amount = passive.modify_damage(self, enemy, amount)
 	enemy.take_damage(amount, knockback * _knockback_factor, crit, heavy)
+	hit_landed.emit(amount, crit)
 	# Вампіризм: частина завданої шкоди повертається здоров'ям.
 	if _lifesteal > 0.0:
 		heal(amount * _lifesteal)
@@ -1453,7 +1486,11 @@ func _update_animation(delta: float) -> void:
 
 ## Повертає false, якщо удар не пройшов (перекат, мить після удару).
 func take_damage(amount: float) -> bool:
-	if _dead or _invulnerable_left > 0.0:
+	if _dead:
+		return false
+	if _invulnerable_left > 0.0:
+		if _roll_guard_left > 0.0 and not _perfect_this_roll:
+			_on_perfect_dodge()
 		return false
 	amount *= _damage_taken_factor
 	if _has_shrine(&"guard"):
@@ -1477,6 +1514,38 @@ func take_damage(amount: float) -> bool:
 	if current_hp <= 0.0:
 		_die()
 	return true
+
+func _on_perfect_dodge() -> void:
+	_perfect_this_roll = true
+	_perfect_crit_left = PERFECT_CRIT_TIME
+	_dodge_cooldown_left = 0.0
+	CombatVfx.hitstop(get_tree(), PERFECT_SLOWMO, PERFECT_SLOWMO_SCALE)
+	CombatVfx.shockwave(get_parent(), global_position, 2.2, PERFECT_COLOR, 0.45)
+	perfect_dodge.emit()
+
+## Звідки герой почав перекат, якщо це було щойно (не давніше за window
+## секунд) і ідеальний перекат за нього ще не зараховано; інакше INF.
+## Ворог перевіряє: чи накрив би його удар ту точку — тоді герой
+## вискочив із червоної зони в останню мить.
+func late_dodge_origin(window: float) -> Vector3:
+	if _perfect_this_roll or _roll_origin == Vector3.INF:
+		return Vector3.INF
+	if Time.get_ticks_msec() - _roll_started_msec > int(window * 1000.0):
+		return Vector3.INF
+	return _roll_origin
+
+func register_perfect_dodge() -> void:
+	if not _perfect_this_roll and not _dead:
+		_on_perfect_dodge()
+
+## Чи діють зараз гарантовані крити після ідеального перекату.
+func has_perfect_crits() -> bool:
+	return _perfect_crit_left > 0.0
+
+## Тимчасово сильніші удари (серія ударів у данжі).
+func add_damage_buff(multiplier: float, seconds: float) -> void:
+	_bonus_damage = multiplier
+	_bonus_damage_left = seconds
 
 func _die() -> void:
 	_dead = true
