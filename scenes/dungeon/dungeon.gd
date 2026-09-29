@@ -34,6 +34,12 @@ const BASE_SCENE_PATH := "res://scenes/world/base_island.tscn"
 ## Скільки досвіду треба на наступний рівень героя в данжі.
 const XP_PER_LEVEL := 12
 
+## ВІДЧУТТЯ ВБИВСТВА. Кожне вбивство на мить пригальмовує гру, а бос —
+## майже на секунду: перемога має відчуватись.
+const KILL_HITSTOP := 0.05
+const BOSS_SLOWMO_SECONDS := 0.9
+const BOSS_SLOWMO_SCALE := 0.3
+
 ## КАМЕРА. У данжі вона дивиться круто згори і не нахиляється пологіше
 ## за CAMERA_MAX_PITCH: з пологого кута було видно горизонт, далекі зали
 ## й темряву між ними. Гравцеві потрібна його зала, а не весь рівень.
@@ -100,6 +106,7 @@ var _exit_choice: Control
 ## Що герой уже взяв у цьому поході: id здібності -> рівень.
 var _run_upgrades: Dictionary = {}
 var _buff_bar: HFlowContainer
+var _loot: LootSwarm
 var _hud_title: Label
 var _health_bar: ProgressBar
 var _xp_bar: ProgressBar
@@ -129,6 +136,11 @@ func _ready() -> void:
 	_setup_hud(level.title)
 	player.died.connect(_on_player_died)
 	player.health_changed.connect(_on_player_health_changed)
+	# Здобич з убитих ворогів летить до героя й зараховується, коли долетить.
+	_loot = LootSwarm.new()
+	add_child(_loot)
+	_loot.setup(player)
+	_loot.collected.connect(_on_loot_collected)
 	PerfSettings.quality_changed.connect(_on_quality_changed)
 
 	# Карту прохідності печемо ПІСЛЯ того, як перешкоди створено: інакше
@@ -400,13 +412,36 @@ func _on_summon_requested(position: Vector3, count: int) -> void:
 		_alive_summons += 1
 		CombatVfx.impact(level_root, spot + Vector3.UP * 0.5, Color(0.5, 1.0, 0.4), false)
 
-func _on_enemy_died(_position: Vector3, xp_reward: int, kind: Enemy3D.Kind) -> void:
+func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind) -> void:
 	_alive_enemies -= 1
-	_add_gold(int(round((GOLD_PER_BOSS if kind == Enemy3D.Kind.BOSS else GOLD_PER_KILL) * _gold_scale)))
-	_add_xp(xp_reward)
-	if kind == Enemy3D.Kind.BOSS:
+	var is_boss := kind == Enemy3D.Kind.BOSS
+	# Золото й досвід вилітають фонтаном і зараховуються, коли долетять до
+	# героя (_on_loot_collected).
+	var gold := int(round((GOLD_PER_BOSS if is_boss else GOLD_PER_KILL) * _gold_scale))
+	_loot.burst(position, LootSwarm.Kind.GOLD, gold, 12 if is_boss else clampi(gold / 3, 1, 4))
+	_loot.burst(position, LootSwarm.Kind.XP, xp_reward, 6 if is_boss else clampi(xp_reward, 1, 3))
+	if is_boss:
 		_boss_defeated = true
+		_celebrate_boss(position)
 		_open_exit()
+	else:
+		CombatVfx.hitstop(get_tree(), KILL_HITSTOP)
+	_update_status()
+
+func _on_loot_collected(kind: int, amount: int) -> void:
+	if kind == LootSwarm.Kind.GOLD:
+		AudioManager.play(&"gold")
+		_add_gold(amount)
+	else:
+		AudioManager.play(&"pickup")
+		_add_xp(amount)
+
+## Бос упав: сповільнення, велика хвиля й трус камери.
+func _celebrate_boss(position: Vector3) -> void:
+	CombatVfx.hitstop(get_tree(), BOSS_SLOWMO_SECONDS, BOSS_SLOWMO_SCALE)
+	CombatVfx.shockwave(self, position, 7.0, Color(1.0, 0.78, 0.4), 0.8)
+	CombatVfx.impact(self, position + Vector3.UP * 1.6, Color(1.0, 0.85, 0.45), true)
+	player.shake_camera(0.35)
 
 ## Золото з походу. Талант "Приріст золота" множить здобич, а
 ## зараховується вона одразу — щоб прогрес не пропав, якщо гравець
@@ -544,6 +579,7 @@ func _warm_up_rendering() -> void:
 	CombatVfx.impact(holder, center, Color(1.0, 0.65, 0.25), true)
 	CombatVfx.damage_number(holder, center, 12.0, true)
 	CombatVfx.shockwave(holder, center, 1.5, Color(0.35, 0.95, 1.0), 0.5)
+	_loot.warm_up(center)
 	var marker := CombatVfx.make_ground_marker(Color(1.0, 0.22, 0.15, 0.85), 1.0, 1.0)
 	holder.add_child(marker)
 	marker.global_position = center - Vector3(0, 0.9, 0)

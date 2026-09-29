@@ -43,6 +43,12 @@ const TELEGRAPH_COLOR := Color(1.0, 0.22, 0.15, 0.85)
 const SLAM_COLOR := Color(1.0, 0.45, 0.1, 0.9)
 const HIT_COLOR := Color(1.0, 0.95, 0.8)
 const HEAVY_HIT_COLOR := Color(1.0, 0.65, 0.25)
+## Смерть: блідо-блакитні іскри й хвиля ("душа розвіюється") — не
+## помаранчеві, щоб не плутати з червоними зонами замаху. Тіло лежить,
+## поки дограє анімація, а тоді провалюється під підлогу.
+const DEATH_COLOR := Color(0.78, 0.88, 1.0)
+const DEATH_LINGER := 1.2
+const SINK_TIME := 0.6
 
 const GRAVITY := 20.0
 
@@ -987,12 +993,20 @@ func _die() -> void:
 		_health_bar.visible = false
 	# Мертвий ворог більше не заступає дорогу.
 	collision_layer = 0
+	var parent := get_parent()
+	CombatVfx.impact(parent, global_position + Vector3.UP * target_height * 0.5, DEATH_COLOR, true)
+	CombatVfx.shockwave(parent, global_position, 4.0 if kind == Kind.BOSS else 1.1, DEATH_COLOR, 0.3)
 	died.emit(global_position, xp_reward)
 	_play_once(["Death"])
-	# Даємо дограти смерть, а тоді прибираємо. Таймер стоїть на паузі
-	# разом із грою, і прив'язаний до самого ворога: якщо той зникне
-	# раніше (гравець вийшов з данжу), виклик просто не відбудеться.
-	get_tree().create_timer(1.6, false).timeout.connect(queue_free)
+	# Даємо дограти смерть, а тоді тіло провалюється під підлогу. Таймер
+	# стоїть на паузі разом із грою; якщо ворог зникне раніше (гравець
+	# вийшов з данжу), виклик просто не відбудеться.
+	get_tree().create_timer(DEATH_LINGER, false).timeout.connect(_sink)
+
+func _sink() -> void:
+	var tween := create_tween()
+	tween.tween_property(self, "position:y", position.y - 1.6, SINK_TIME).set_ease(Tween.EASE_IN)
+	tween.tween_callback(queue_free)
 
 # --- поворот і анімації ---
 

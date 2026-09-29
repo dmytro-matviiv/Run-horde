@@ -486,7 +486,10 @@ static func shockwave(parent: Node, position: Vector3, radius: float, color: Col
 ## таймер останнього. Порівнювати час тут не можна: таймер буває
 ## спрацьовує на кілька мілісекунд раніше, і тоді гра застрягала б в
 ## уповільненні назавжди.
-static func hitstop(tree: SceneTree, duration: float) -> void:
+##
+## time_scale — наскільки пригальмувати: 0.25 для удару, трохи більше
+## для довгого сповільнення (вбивство боса), щоб воно не тягнулось.
+static func hitstop(tree: SceneTree, duration: float, time_scale: float = 0.25) -> void:
 	var until := Time.get_ticks_msec() + int(duration * 1000.0)
 	if Engine.time_scale < 1.0 and until <= _hitstop_until:
 		return
@@ -495,7 +498,7 @@ static func hitstop(tree: SceneTree, duration: float) -> void:
 	var token := _hitstop_token
 	# Не повна зупинка, а різке пригальмування: удар відчувається, але
 	# картинка не "застигає", що на телефоні сприймалось би як лаг.
-	Engine.time_scale = 0.25
+	Engine.time_scale = time_scale
 	tree.create_timer(duration, true, false, true).timeout.connect(func() -> void:
 		if token == _hitstop_token:
 			Engine.time_scale = 1.0)
