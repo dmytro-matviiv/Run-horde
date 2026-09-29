@@ -69,6 +69,12 @@ func pitch_by(amount: float) -> void:
 func shake(strength: float) -> void:
 	_shake = maxf(_shake, strength)
 
+## Миттєво стати над героєм. Коли героя переставили (повернувся з
+## будівлі), камера інакше летіла б до нього через усе місто.
+func snap_to_target() -> void:
+	if _target != null:
+		global_position = _target.global_position + Vector3.UP * HEIGHT_OFFSET
+
 func _physics_process(delta: float) -> void:
 	if _target == null:
 		return

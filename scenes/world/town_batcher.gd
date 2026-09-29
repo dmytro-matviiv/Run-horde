@@ -52,10 +52,14 @@ static func batch(root: Node3D, cell_size: float = CELL_SIZE) -> int:
 ##
 ## shrink — наскільки зменшити коробку від габаритів моделі (дахи й
 ## ґанки виступають, і повна коробка не пускала б героя до дверей).
+##
+## Зони будівель (Area3D) пропускаємо: це не стіни. Раніше напис над
+## зоною ставав невидимою брилою посеред неї — і герой, якого після
+## екрана будівлі ставили туди, застрягав.
 static func add_box_colliders(root: Node3D, body: StaticBody3D, shrink: float = 0.8) -> void:
 	for child in root.get_children():
 		var object := child as Node3D
-		if object == null:
+		if object == null or object is CollisionObject3D:
 			continue
 		var bounds := visual_bounds(object)
 		if bounds.size.length() < 0.2:
@@ -67,15 +71,17 @@ static func add_box_colliders(root: Node3D, body: StaticBody3D, shrink: float = 
 		body.add_child(shape)
 		shape.global_position = bounds.get_center()
 
-## Габарити всього видимого в об'єкті, у світових координатах.
+## Габарити мешів об'єкта у світових координатах. Лише меші: написи,
+## частинки й світло мають свої "габарити" (напис-білборд — цілий куб
+## навколо себе), а стінами вони не є.
 static func visual_bounds(object: Node3D) -> AABB:
 	var bounds := AABB()
 	var first := true
-	for node in object.find_children("*", "VisualInstance3D", true, false):
-		var visual := node as VisualInstance3D
+	for node in object.find_children("*", "MeshInstance3D", true, false):
+		var visual := node as MeshInstance3D
 		var box: AABB = visual.global_transform * visual.get_aabb()
 		bounds = box if first else bounds.merge(box)
 		first = false
-	if first and object is VisualInstance3D:
-		bounds = (object as VisualInstance3D).global_transform * (object as VisualInstance3D).get_aabb()
+	if first and object is MeshInstance3D:
+		bounds = (object as MeshInstance3D).global_transform * (object as MeshInstance3D).get_aabb()
 	return bounds

@@ -61,11 +61,13 @@ var _select: Control
 func _ready() -> void:
 	SceneLoader.hold()
 	player.set_torch_enabled(false)
-	# Повернулись з екрана будівлі — стоїмо біля її дверей, а не на вході.
+	# Повернулись з екрана будівлі — стоїмо там, де стояли біля її дверей
+	# (а не на вході в місто). Саме там, де стояв герой: центр зони
+	# будівлі може бути впритул до стіни.
 	if GameState.town_return_spot != Vector3.INF:
-		var spot := GameState.town_return_spot
-		player.global_position = Vector3(spot.x, player.global_position.y, spot.z)
+		player.global_position = GameState.town_return_spot + Vector3.UP * 0.05
 		GameState.town_return_spot = Vector3.INF
+		$CameraRig.snap_to_target()
 	# У місті пробіл — "зайти в будівлю", бій з клавіатури тут вимкнено.
 	player.combat_input_enabled = false
 
@@ -213,7 +215,7 @@ func _on_action_pressed() -> void:
 	var path: String = ACTION_SCENES.get(_nearby.action, "")
 	if path != "":
 		# "Назад" на екрані будівлі поверне героя сюди ж, до її дверей.
-		GameState.open_from_town(path, _nearby.global_position)
+		GameState.open_from_town(path, player.global_position)
 
 ## Вибір рівня данжу: наступний відкривається, лише коли пройдено
 ## попередній.
