@@ -100,6 +100,27 @@ void fragment() {
 }
 """
 
+## Спалах — м'яка зірка, намальована в шейдері як яскравий центр з
+## променями.
+const FLARE_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+uniform vec4 color : source_color;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * length(MODEL_MATRIX[0].xyz),
+		INV_VIEW_MATRIX[1] * length(MODEL_MATRIX[1].xyz), INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+}
+void fragment() {
+	vec2 d = (UV - 0.5) * 2.0;
+	float r = length(d);
+	float core = 1.0 - smoothstep(0.0, 0.45, r);
+	float rays = max(1.0 - smoothstep(0.0, 0.08, abs(d.x)), 1.0 - smoothstep(0.0, 0.08, abs(d.y)));
+	rays *= 1.0 - smoothstep(0.3, 1.0, r);
+	ALBEDO = mix(color.rgb, vec3(1.0), core) * 1.5;
+	ALPHA = clamp(core + rays * 0.8, 0.0, 1.0);
+}
+"""
+
 const SLASH_SEGMENTS := 26
 
 static var _slash_meshes: Dictionary = {}
@@ -116,6 +137,7 @@ static var _thrust_mesh: BoxMesh
 static var _bolt_mesh: BoxMesh
 static var _beam_mesh: CylinderMesh
 static var _glow_materials: Dictionary = {}
+static var _shaders: Dictionary = {}
 static var _hitstop_until := 0
 static var _hitstop_token := 0
 
@@ -509,13 +531,25 @@ static func _get_material(cache: Dictionary, code: String, color: Color) -> Shad
 	var key := "%d|%s" % [code.hash(), color.to_html()]
 	if cache.has(key):
 		return cache[key]
-	var shader := Shader.new()
-	shader.code = code
 	var material := ShaderMaterial.new()
-	material.shader = shader
+	material.shader = _shared_shader(code)
 	material.set_shader_parameter(&"color", color)
 	cache[key] = material
 	return material
+
+## Один Shader на кожен вид ефекту: матеріали різних кольорів ділять його,
+## тож відеочип збирає програму малювання ОДИН раз (під екраном
+## завантаження, див. прогрів у данжі). Раніше кожен новий колір —
+## смерть ворога, портал, шипи — мав свій Shader, і перша поява кольору
+## гальмувала гру на збирання: на ПК на 10-25 мс, на телефоні помітним
+## ривком.
+static func _shared_shader(code: String) -> Shader:
+	var key := code.hash()
+	if not _shaders.has(key):
+		var shader := Shader.new()
+		shader.code = code
+		_shaders[key] = shader
+	return _shaders[key]
 
 static func _get_ring_mesh() -> PlaneMesh:
 	if _ring_mesh == null:
@@ -545,36 +579,9 @@ static func _get_flare_mesh() -> QuadMesh:
 		_flare_mesh.size = Vector2(1.0, 1.0)
 	return _flare_mesh
 
-## Спалах — м'яка зірка, намальована в шейдері як яскравий центр з
-## променями.
+## Матеріал спалаху потрібного кольору (шейдер у всіх кольорів спільний).
 static func _get_flare_material(color: Color) -> ShaderMaterial:
-	var key := color.to_html()
-	if _flare_materials.has(key):
-		return _flare_materials[key]
-	var shader := Shader.new()
-	shader.code = """
-shader_type spatial;
-render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
-uniform vec4 color : source_color;
-void vertex() {
-	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * length(MODEL_MATRIX[0].xyz),
-		INV_VIEW_MATRIX[1] * length(MODEL_MATRIX[1].xyz), INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
-}
-void fragment() {
-	vec2 d = (UV - 0.5) * 2.0;
-	float r = length(d);
-	float core = 1.0 - smoothstep(0.0, 0.45, r);
-	float rays = max(1.0 - smoothstep(0.0, 0.08, abs(d.x)), 1.0 - smoothstep(0.0, 0.08, abs(d.y)));
-	rays *= 1.0 - smoothstep(0.3, 1.0, r);
-	ALBEDO = mix(color.rgb, vec3(1.0), core) * 1.5;
-	ALPHA = clamp(core + rays * 0.8, 0.0, 1.0);
-}
-"""
-	var material := ShaderMaterial.new()
-	material.shader = shader
-	material.set_shader_parameter(&"color", color)
-	_flare_materials[key] = material
-	return material
+	return _get_material(_flare_materials, FLARE_SHADER, color)
 
 ## Прибрати вузол через кілька секунд. Підписуємо сам метод вузла, а не
 ## лямбду: якщо вузол зникне раніше (разом із батьком), підписка
