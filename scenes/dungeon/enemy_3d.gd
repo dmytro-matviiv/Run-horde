@@ -144,6 +144,10 @@ var display_name := ""
 var elite: EliteAffixes
 ## Фази боса (лише в боса).
 var phases: BossPhases
+## Ворог за ґратами засідки: поки вона триває, героя він не помічає — не
+## біжить до ґраток і не збирається там юрбою, а після бою не вривається
+## в залу всією кімнатою. Вмикає й вимикає данж.
+var shut_out := false
 var tank := false
 var slam_every := 0
 var boss_style := "demon"
@@ -522,7 +526,7 @@ func _move(delta: float) -> void:
 ## Героя, що сховався (димова завіса асасина), ворог не бачить узагалі:
 ## губить ціль і кидає замах.
 func _update_aggro(distance: float) -> void:
-	if _player.has_method("is_targetable") and not _player.is_targetable():
+	if shut_out or (_player.has_method("is_targetable") and not _player.is_targetable()):
 		if _aggro:
 			_aggro = false
 			_cancel_windup()

@@ -32,7 +32,9 @@ func _ready() -> void:
 	var volatile := _spawn(base, EliteAffixes.Affix.VOLATILE, center + Vector3(3.0, 0, -3.0))
 	var shielded := _spawn(base, EliteAffixes.Affix.SHIELDED, center + Vector3(0, 0, -4.0))
 	var mender := _spawn(base, EliteAffixes.Affix.MENDER, center + Vector3(-4.0, 0, 1.0))
-	var ally: Enemy3D = _dungeon.call("_spawn_enemy", center + Vector3(-5.5, 0, 1.0), base, false)
+	var plain := base.duplicate()
+	plain.no_elite = true
+	var ally: Enemy3D = _dungeon.call("_spawn_enemy", center + Vector3(-5.5, 0, 1.0), plain, false)
 	await _wait(0.8)
 	for enemy: Enemy3D in [swift, volatile, shielded, mender, ally]:
 		enemy.stun(30.0)
@@ -81,10 +83,16 @@ func _ready() -> void:
 	var hp_before: float = _player.current_hp
 	var gold_before: int = _dungeon.get("_run_gold")
 	volatile.take_damage(volatile.max_hp * 5.0)
-	await _wait(2.2)
+	# Найменше здоров'я за час очікування: сфера здоров'я з еліти може
+	# одразу вилікувати героя назад.
+	var lowest := hp_before
+	var until := Time.get_ticks_msec() + 2200
+	while Time.get_ticks_msec() < until:
+		await _wait(0.0)
+		lowest = minf(lowest, _player.current_hp)
 	var gold_gain: int = int(_dungeon.get("_run_gold")) - gold_before
-	print("PROBE вибуховий: здоров'я героя %.0f -> %.0f, золота за еліту +%d" % [hp_before, _player.current_hp, gold_gain])
-	if _player.current_hp >= hp_before or gold_gain < 12:
+	print("PROBE вибуховий: здоров'я героя %.0f -> найменше %.0f, золота за еліту +%d" % [hp_before, lowest, gold_gain])
+	if lowest >= hp_before or gold_gain < 12:
 		_failed = true
 	print("RESULT: ", "FAIL" if _failed else "OK")
 	get_tree().quit(1 if _failed else 0)
@@ -105,10 +113,14 @@ func _hit(enemy: Enemy3D, amount: float, heavy: bool) -> float:
 	enemy.take_damage(amount, Vector3.ZERO, false, heavy)
 	return before - enemy.current_hp
 
+## Чекати справжні секунди, закриваючи вікна вибору здібності (вони
+## ставлять гру на паузу). 0 — один кадр.
 func _wait(seconds: float) -> void:
 	var until := Time.get_ticks_msec() + int(seconds * 1000.0)
-	while Time.get_ticks_msec() < until:
+	while true:
 		await get_tree().process_frame
 		for node in _dungeon.get_node("HUD").get_children():
 			if node.has_signal("upgrade_chosen") and not node.is_queued_for_deletion():
 				ProbeUtil.press_first_card(node)
+		if Time.get_ticks_msec() >= until:
+			break

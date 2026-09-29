@@ -464,8 +464,24 @@ func _spawn_arenas() -> void:
 			func(position: Vector3, definition: Dictionary) -> Enemy3D:
 				return _spawn_enemy(position, definition, false),
 			PerfSettings.get_value("arena_max_enemies"))
+		arena.started.connect(_shut_out_around.bind(arena))
 		arena.wave_started.connect(_on_arena_wave)
 		arena.cleared.connect(_on_arena_cleared)
+
+## Засідка почалась: вороги поза залою героя "не чують", доки вона триває,
+## — інакше сусідня кімната збігалась до ґраток. Ті, хто встиг забігти
+## в залу, б'ються разом із хвилями.
+func _shut_out_around(arena: ArenaAmbush) -> void:
+	for node in enemies_root.get_children():
+		var enemy := node as Enemy3D
+		if enemy != null and enemy.is_alive():
+			enemy.shut_out = not arena.contains(enemy.global_position)
+
+func _release_shut_out() -> void:
+	for node in enemies_root.get_children():
+		var enemy := node as Enemy3D
+		if enemy != null:
+			enemy.shut_out = false
 
 ## ХВИЛІ ЗАСІДКИ: 1) половина тих, хто жив у залі; 2) решта разом з
 ## ордою дрібноти; 3) у великій залі чи в останній засідці рівня — ще
@@ -541,6 +557,7 @@ func _on_arena_wave(index: int, total: int) -> void:
 
 func _on_arena_cleared(center: Vector3) -> void:
 	_arena_status = ""
+	_release_shut_out()
 	_show_banner("Засідку відбито!", "Скриня посеред зали")
 	_update_status()
 	var chest := RewardChest.new()

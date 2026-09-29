@@ -46,6 +46,18 @@ func _ready() -> void:
 		print("PROBE хвиля %d з %d" % [index, total]))
 	var rect: Rect2i = arena.get("_rect")
 	var center := DungeonBuilder.cell_center(rect.get_center()) + Vector3(0, 0.3, 0)
+	# Сусід за ґратами: ворог просто за першим виходом із зали. Поки засідка
+	# триває, він не має бігти до героя.
+	var edges: Array = arena.get("_edges")
+	var first_edge: Dictionary = edges[0]
+	var outward: Vector3 = first_edge.center - DungeonBuilder.cell_center(rect.get_center())
+	outward.y = 0.0
+	var outside_spot: Vector3 = first_edge.center + outward.normalized() * 3.0
+	var neighbour_def: Dictionary = DungeonLevels.get_level(GameState.dungeon_level).enemies.m[0].duplicate()
+	neighbour_def.no_elite = true
+	var neighbour: Enemy3D = _dungeon.call("_spawn_enemy", outside_spot, neighbour_def, false)
+	neighbour.max_hp = 100000.0
+	neighbour.current_hp = 100000.0
 	_player.global_position = center
 	await _wait(0.5)
 	print("PROBE засідка почалась: %s, ґраток: %d" % [arena.is_active(), (arena.get("_edges") as Array).size()])
@@ -54,6 +66,13 @@ func _ready() -> void:
 	await _wait(0.4)
 	await _shot("arena_start")
 	await _test_barrier(arena, rect)
+	# Герой стоїть біля ґратки, за якою сусід, — сусід не рушає з місця.
+	var neighbour_start := neighbour.global_position
+	await _wait(2.5)
+	var neighbour_moved := neighbour.global_position.distance_to(neighbour_start)
+	print("PROBE сусід за ґратами: зрушив на %.2f м, помітив героя: %s" % [neighbour_moved, neighbour.get("_aggro")])
+	if neighbour_moved > 0.5 or neighbour.get("_aggro"):
+		_failed = true
 
 	# Б'ємо всіх, хто вилазить, поки засідку не відбито (або минуть 90 с).
 	var killed := 0
@@ -74,6 +93,9 @@ func _ready() -> void:
 	if arena.is_active() or _waves_seen < 2:
 		_failed = true
 	await _wait(1.0)
+	print("PROBE після засідки сусід знову чує героя: %s" % (not neighbour.shut_out))
+	if neighbour.shut_out:
+		_failed = true
 	var body: Variant = arena.get("_barrier_body")
 	print("PROBE ґратки після бою прибрано: %s" % (body == null))
 	if body != null:

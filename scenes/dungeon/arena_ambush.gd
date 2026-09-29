@@ -70,6 +70,10 @@ func setup(player: Node3D, map_rows: Array, rect: Rect2i, waves: Array, spawn: C
 func is_active() -> bool:
 	return _state == State.FIGHTING
 
+## Чи стоїть точка всередині зали засідки.
+func contains(position: Vector3) -> bool:
+	return _rect.has_point(DungeonBuilder.cell_of(position))
+
 ## Межі зали, через які можна вийти: сторона клітинки всередині, за якою
 ## прохідна клітинка ззовні. На кожну таку сторону — секція ґратки.
 func _find_edges() -> void:
