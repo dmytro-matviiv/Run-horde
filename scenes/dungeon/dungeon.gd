@@ -155,6 +155,7 @@ var _banner: Control
 var _callout: Control
 var _combo: ComboMeter
 var _last_hp := 0.0
+var _offering_ability := false
 ## Бос рівня і його велика смуга здоров'я внизу екрана.
 var _boss: Enemy3D
 var _boss_panel: Control
@@ -852,6 +853,16 @@ func _add_xp(amount: int) -> void:
 
 ## Вибір здібності зупиняє гру — як і в меню рівня 2D-частини.
 func _offer_ability() -> void:
+	# Вікна вибору йдуть по черзі: здібність зі скрині засідки й новий
+	# рівень від досвіду, що саме долетів, можуть збігтися. Два вікна
+	# одночасно зняли б паузу, поки друге ще відкрите.
+	while _offering_ability:
+		await get_tree().process_frame
+	_offering_ability = true
+	await _show_ability_choice()
+	_offering_ability = false
+
+func _show_ability_choice() -> void:
 	var luck := TALENT_LUCK_PER_LEVEL * GameState.get_meta_level(GameState.selected_hero_id, &"meta_luck")
 	# Здібності підбираються під ГЕРОЯ та його зброю: стрільцю — набої й
 	# перезарядка, мечниці — замахи й лють.
