@@ -48,9 +48,15 @@ const ARENA_CHEST_XP := 8
 const MINION_HP := 0.3
 const MINION_DAMAGE := 0.5
 const MINION_SIZE := 0.72
-const CHAMPION_HP := 2.6
-const CHAMPION_DAMAGE := 1.3
-const CHAMPION_SIZE := 1.3
+## Ватажок ще й еліта з двома рисами — тож власні множники скромні.
+const CHAMPION_HP := 1.4
+const CHAMPION_DAMAGE := 1.1
+const CHAMPION_SIZE := 1.1
+
+## ЕЛІТА: шанс, що звичайний ворог рівня виявиться елітним (EliteAffixes),
+## і скільки золота дає елітний ворог порівняно зі звичайним.
+const ELITE_CHANCE := [0.07, 0.1, 0.13]
+const ELITE_GOLD := 3
 
 ## ВІДЧУТТЯ ВБИВСТВА. Кожне вбивство на мить пригальмовує гру, а бос —
 ## майже на секунду: перемога має відчуватись.
@@ -474,6 +480,7 @@ func _minion_definition(rng: RandomNumberGenerator) -> Dictionary:
 	minion.height = float(base.height) * MINION_SIZE
 	minion.speed = float(base.speed) * 1.15
 	minion.xp = 1
+	minion.minion = true
 	minion.erase("group")
 	return minion
 
@@ -491,7 +498,8 @@ func _champion_definition() -> Dictionary:
 	champion.hp = float(best.hp) * CHAMPION_HP
 	champion.damage = float(best.damage) * CHAMPION_DAMAGE
 	champion.height = float(best.height) * CHAMPION_SIZE
-	champion.xp = int(best.get("xp", 3)) * 5
+	champion.xp = int(best.get("xp", 3)) * 3
+	champion.elite = 2
 	champion.erase("group")
 	return champion
 
@@ -603,6 +611,19 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 		enemy.configure_boss(definition, _hp_scale, _damage_scale)
 	else:
 		enemy.configure(definition, _hp_scale, _damage_scale)
+		# Еліта: риси задані в описі ("affixes"), або їх кількість ("elite"),
+		# або випадок (ELITE_CHANCE) — дрібнота орди елітою не буває.
+		var affixes: Array = definition.get("affixes", [])
+		var affix_count := int(definition.get("elite", 0))
+		if affixes.is_empty() and affix_count == 0 and not definition.get("minion", false) \
+				and randf() < ELITE_CHANCE[mini(_level_index, ELITE_CHANCE.size() - 1)]:
+			affix_count = 1
+		if affixes.is_empty() and affix_count > 0:
+			affixes = EliteAffixes.INFO.keys()
+			affixes.shuffle()
+			affixes = affixes.slice(0, affix_count)
+		if not affixes.is_empty():
+			enemy.make_elite(affixes)
 
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
@@ -617,7 +638,7 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	enemies_root.add_child(enemy)
 	enemy.global_position = position + Vector3(0, 0.2, 0)
 	enemy.setup(player, _model(definition.model))
-	enemy.died.connect(_on_enemy_died.bind(enemy.kind))
+	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null))
 	if is_boss:
 		enemy.summon_requested.connect(_on_summon_requested)
 	_alive_enemies += 1
@@ -645,18 +666,24 @@ func _on_summon_requested(position: Vector3, count: int) -> void:
 		_alive_summons += 1
 		CombatVfx.impact(level_root, spot + Vector3.UP * 0.5, Color(0.5, 1.0, 0.4), false)
 
-func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind) -> void:
+func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_elite: bool) -> void:
 	_alive_enemies -= 1
 	var is_boss := kind == Enemy3D.Kind.BOSS
 	# Золото й досвід вилітають фонтаном і зараховуються, коли долетять до
-	# героя (_on_loot_collected).
-	var gold := int(round((GOLD_PER_BOSS if is_boss else GOLD_PER_KILL) * _gold_scale))
-	_loot.burst(position, LootSwarm.Kind.GOLD, gold, 12 if is_boss else clampi(gold / 3, 1, 4))
-	_loot.burst(position, LootSwarm.Kind.XP, xp_reward, 6 if is_boss else clampi(xp_reward, 1, 3))
+	# героя (_on_loot_collected). Еліта сипле втричі щедріше.
+	var gold := int(round((GOLD_PER_BOSS if is_boss else GOLD_PER_KILL) * _gold_scale * (ELITE_GOLD if is_elite else 1)))
+	var pieces := 12 if is_boss else (8 if is_elite else clampi(gold / 3, 1, 4))
+	_loot.burst(position, LootSwarm.Kind.GOLD, gold, pieces)
+	_loot.burst(position, LootSwarm.Kind.XP, xp_reward, 6 if is_boss or is_elite else clampi(xp_reward, 1, 3))
 	if is_boss:
 		_boss_defeated = true
 		_celebrate_boss(position)
 		_open_exit()
+	elif is_elite:
+		# Упала еліта — довша зупинка кадру й золота хвиля.
+		CombatVfx.hitstop(get_tree(), KILL_HITSTOP * 2.0)
+		CombatVfx.shockwave(self, position, 3.0, Enemy3D.ELITE_BAR_COLOR, 0.45)
+		player.shake_camera(0.12)
 	else:
 		CombatVfx.hitstop(get_tree(), KILL_HITSTOP)
 	_update_status()

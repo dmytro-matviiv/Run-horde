@@ -43,6 +43,14 @@ const TELEGRAPH_COLOR := Color(1.0, 0.22, 0.15, 0.85)
 const SLAM_COLOR := Color(1.0, 0.45, 0.1, 0.9)
 const HIT_COLOR := Color(1.0, 0.95, 0.8)
 const HEAVY_HIT_COLOR := Color(1.0, 0.65, 0.25)
+## ЕЛІТА (EliteAffixes): у скільки разів більше здоров'я, шкоди, зросту
+## й досвіду; смужка здоров'я золота.
+const ELITE_HP := 2.2
+const ELITE_DAMAGE := 1.25
+const ELITE_SIZE := 1.25
+const ELITE_XP := 4
+const ELITE_BAR_COLOR := Color(1.0, 0.78, 0.3)
+
 ## Смерть: блідо-блакитні іскри й хвиля ("душа розвіюється") — не
 ## помаранчеві, щоб не плутати з червоними зонами замаху. Тіло лежить,
 ## поки дограє анімація, а тоді провалюється під підлогу.
@@ -129,6 +137,8 @@ static var _ice_material: StandardMaterial3D
 
 ## Налаштування з опису рівня (DungeonLevels), див. configure().
 var display_name := ""
+## Риси еліти; null — звичайний ворог.
+var elite: EliteAffixes
 var tank := false
 var slam_every := 0
 var boss_style := "demon"
@@ -229,6 +239,19 @@ func configure(definition: Dictionary, hp_scale: float, damage_scale: float) -> 
 		projectile_speed = float(shot.get("speed", projectile_speed))
 		volley = int(shot.get("volley", 1))
 
+## Зробити ворога елітним (до setup: зріст і здоров'я вже інші).
+func make_elite(affix_list: Array) -> void:
+	elite = EliteAffixes.new()
+	for affix in affix_list:
+		elite.affixes.append(int(affix))
+	max_hp *= ELITE_HP
+	damage *= ELITE_DAMAGE
+	target_height *= ELITE_SIZE
+	xp_reward *= ELITE_XP
+	if elite.has(EliteAffixes.Affix.SWIFT):
+		move_speed *= 1.5
+		attack_cooldown *= 0.65
+
 ## Бос: окремі числа й свій набір прийомів.
 func configure_boss(definition: Dictionary, hp_scale: float, damage_scale: float) -> void:
 	configure(definition, hp_scale, damage_scale)
@@ -256,9 +279,30 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 		_animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	_add_health_bar()
 	_add_screen_notifier()
+	if elite != null:
+		add_child(elite)
+		elite.attach(self, _player)
 
 func is_alive() -> bool:
 	return not _dying
+
+## Куди дивиться ворог (кут повороту моделі й напрямок на підлозі).
+func facing_angle() -> float:
+	return _model.rotation.y
+
+func facing_vector() -> Vector3:
+	return _model_forward()
+
+func is_sleeping() -> bool:
+	return _sleeping
+
+## Відновити здоров'я (цілитель-еліта лікує сусідів).
+func heal(amount: float) -> void:
+	if _dying:
+		return
+	current_hp = minf(current_hp + amount, max_hp)
+	if _health_bar != null:
+		_health_bar.set_ratio(current_hp / max_hp)
 
 ## Помітити героя одразу, хоч би де він був (засідка).
 func alert() -> void:
@@ -285,7 +329,8 @@ func _add_health_bar() -> void:
 	_health_bar = HEALTH_BAR_SCRIPT.new()
 	add_child(_health_bar)
 	var is_boss := kind == Kind.BOSS
-	_health_bar.setup(ENEMY_BAR_COLOR, target_height + hover + 0.45, is_boss, 1.0 if not is_boss else 1.8)
+	var color := ELITE_BAR_COLOR if elite != null else ENEMY_BAR_COLOR
+	_health_bar.setup(color, target_height + hover + 0.45, is_boss or elite != null, 1.0 if not is_boss else 1.8)
 
 ## Масштабує модель так, щоб її висота дорівнювала target_height.
 ##
@@ -966,6 +1011,9 @@ static func _get_ice_material() -> StandardMaterial3D:
 func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = false, heavy: bool = false) -> void:
 	if _dying:
 		return
+	# Щит еліти спереду пропускає лише частину шкоди.
+	if elite != null:
+		amount *= elite.damage_factor(heavy)
 	current_hp -= amount
 	if not _aggro:
 		_repath_left = 0.0
@@ -997,6 +1045,8 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 		_die()
 
 func _die() -> void:
+	if elite != null:
+		elite.on_death()
 	# Убитий до вибуху — не вибухає; таран, убитий на бігу, падає.
 	_fuse_left = -1.0
 	_charge_state = 0
