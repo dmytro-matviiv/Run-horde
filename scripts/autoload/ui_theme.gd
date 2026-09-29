@@ -186,6 +186,81 @@ static func make_slot(texture: Texture2D, side: float = 52.0, tint: Color = Colo
 	slot.add_child(image)
 	return slot
 
+## СЛОТ ВИБОРУ (герой, зброя, рівень данжу) — квадратна кнопка-іконка в
+## рамці, як предмет в інвентарі зі зразка Kenney. Обраний слот світиться
+## акцентним кільцем; некуплений/непройдений — приглушений.
+##
+## Кнопки в горизонтальному ScrollContainer за замовчуванням ковтають
+## колесо миші й перетягування (Control.mouse_filter = STOP), і прокрутка
+## працює лише в порожньому місці збоку. tag_scroll_pass() лікує це:
+## робить кнопку й усе всередині "прозорими" для прокрutki, лишаючи клік.
+static func make_picker_slot(texture: Texture2D, tint: Color, side: float = 84.0) -> Button:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(side, side)
+	button.toggle_mode = true
+	button.flat = true
+	for state: String in ["normal", "hover", "pressed", "focus"]:
+		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	var slot := PanelContainer.new()
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slot.add_theme_stylebox_override("panel", slot_box())
+	slot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.add_child(slot)
+	var image := TextureRect.new()
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	image.texture = texture
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.modulate = tint
+	slot.add_child(image)
+	tag_scroll_pass(button)
+	return button
+
+## Підсвітка слота: акцентне кільце навколо обраного, приглушення
+## некупленого/непройденого. own_color — рамка слота саме цього предмета
+## (зброя героя, колір рівня), сіра — коли він ще не доступний.
+static func style_picker_slot(button: Button, selected: bool, available: bool, own_color: Color) -> void:
+	var slot := button.get_child(0) as PanelContainer
+	var accent := own_color if available else Color(0.45, 0.45, 0.48)
+	if selected:
+		accent = accent.lerp(Color.WHITE, 0.4)
+	var box := slot_box()
+	if box is StyleBoxTexture:
+		(box as StyleBoxTexture).modulate_color = accent
+	slot.add_theme_stylebox_override("panel", box)
+	(slot.get_child(0) as TextureRect).modulate = Color.WHITE if available else Color(1, 1, 1, 0.55)
+	button.modulate = Color(1.08, 1.08, 1.08) if selected else Color(0.86, 0.86, 0.86)
+
+## Ряд слотів, що гортається вбік (герої, зброя, рівні данжу). Повертає
+## {scroll, row}: додавай слоти в row, а коли розмір відомий — гортай
+## scroll_to_center(scroll, обраний_слот).
+static func make_picker_row() -> Dictionary:
+	var scroll := ScrollContainer.new()
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(0, 100)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(row)
+	return {"scroll": scroll, "row": row}
+
+## Прогорнути так, щоб item опинився посередині scroll. Розмір контейнера
+## відомий лише після розкладки, тож клич це через call_deferred.
+static func scroll_to_center(scroll: ScrollContainer, item: Control) -> void:
+	scroll.scroll_horizontal = int(item.position.x - scroll.size.x * 0.5 + item.size.x * 0.5)
+
+## Позначає вузол і все під ним "прозорим" для прокрутки (PASS): клік і
+## наведення далі працюють, а колесо миші й перетягування, які цей вузол
+## сам не використав, ідуть далі — до ScrollContainer над ним. Без цього
+## прокрутка горизонтального ряду слотів ловиться лише в порожньому
+## місці збоку, а не над самими іконками.
+static func tag_scroll_pass(node: Control) -> void:
+	if node.mouse_filter == Control.MOUSE_FILTER_STOP:
+		node.mouse_filter = Control.MOUSE_FILTER_PASS
+	for child in node.get_children():
+		if child is Control:
+			tag_scroll_pass(child as Control)
+
 ## Обгорнути вже наявний вузол екрана (заголовок, опис) розділювачами
 ## обабіч — не перебудовуючи сцену.
 static func add_dividers(label: Control) -> HBoxContainer:

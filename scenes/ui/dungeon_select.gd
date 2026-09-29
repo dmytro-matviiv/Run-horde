@@ -2,12 +2,14 @@ extends Control
 
 ## Вибір рівня данжу — відкривається біля арки на півночі міста.
 ##
-## Картка на кожен рівень: назва, складність, хто там водиться і хто бос,
-## скільки золота дають. Наступний рівень закритий, доки не пройдено
-## попередній, — і картка прямо про це пише.
+## Рівні гортаєш іконками (ряд слотів, як зброя чи герой), а внизу одна
+## велика панель з описом обраного: хто там водиться, хто бос, скільки
+## золота дає, і кнопка "Увійти". Наступний рівень закритий, доки не
+## пройдено попередній, — і панель прямо про це пише.
 ##
 ## Картинка рівня — слот під арт: assets/ui/icons/dungeons/<id рівня>.png
-## (crypts, fungal, citadel). Поки її немає, стоїть рамка в кольорі теми.
+## (crypts, fungal, citadel...). Поки її немає, стоїть черепок кольору
+## смолоскипів рівня.
 
 signal level_chosen(index: int)
 signal closed
@@ -15,6 +17,19 @@ signal closed
 const DIFFICULTY_TITLES := [
 	"", "Легка", "Середня", "Висока", "Дуже висока", "Смертельна", "Жахлива", "Немислима", "Позамежна",
 ]
+
+var _index := 0
+var _slot_row: HBoxContainer
+var _slot_scroll: ScrollContainer
+var _slot_buttons: Array[Button] = []
+var _name_label: Label
+var _difficulty_label: Label
+var _subtitle_label: Label
+var _enemies_label: Label
+var _boss_label: Label
+var _gold_label: Label
+var _lock_label: Label
+var _enter_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -36,115 +51,156 @@ func _ready() -> void:
 
 	column.add_child(UiTheme.make_title("Данж — обери рівень", 28))
 
-	# Рівнів більше, ніж влазить у ширину екрана (8 карток), тож ряд
-	# гортається вбік — палець чи колесо миші. Прокрутку одразу ставимо
-	# на розблокований/незавершений рівень, щоб гравець не гортав вручну
-	# крізь пройдені.
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(scroll)
-
-	var cards := HBoxContainer.new()
-	cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cards.add_theme_constant_override("separation", 14)
-	scroll.add_child(cards)
-	var focus_index := mini(GameState.max_dungeon_level, DungeonLevels.get_level_count() - 1)
-	var focus_card: Control = null
+	# Рівнів більше, ніж влазить у ширину екрана, тож ряд гортається
+	# вбік — палець чи колесо миші, прямо над самими іконками.
+	var picker := UiTheme.make_picker_row()
+	_slot_scroll = picker.scroll
+	_slot_row = picker.row
+	_slot_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_child(_slot_scroll)
 	for index in DungeonLevels.get_level_count():
-		var card := _build_card(index)
-		cards.add_child(card)
-		if index == focus_index:
-			focus_card = card
-	if focus_card != null:
-		# Розмір картки й контейнера відомий лише після розкладки —
-		# гортаємо на наступному кадрі, не раніше.
-		_scroll_to_card.call_deferred(scroll, focus_card)
+		var level := DungeonLevels.get_level(index)
+		var accent: Color = level.theme.torch
+		var texture := ArtSlots.dungeon_icon(level.id)
+		var tint := Color.WHITE
+		if texture == null:
+			texture = UiTheme.control_icon("skull")
+			tint = accent
+		var slot := UiTheme.make_picker_slot(texture, tint, 88.0)
+		slot.pressed.connect(_on_slot_pressed.bind(index))
+		_slot_row.add_child(slot)
+		_slot_buttons.append(slot)
 
-	var close := Button.new()
-	close.text = "Назад у місто"
-	close.custom_minimum_size = Vector2(240, 52)
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	close.add_theme_font_size_override("font_size", 20)
-	close.pressed.connect(_on_close_pressed)
-	column.add_child(close)
+	# Опис обраного рівня — одна велика панель, як діалог квесту.
+	var info_panel := PanelContainer.new()
+	info_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info_panel.add_theme_stylebox_override("panel", UiTheme.panel_box())
+	column.add_child(info_panel)
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 6)
+	info_panel.add_child(info)
 
-func _scroll_to_card(scroll: ScrollContainer, card: Control) -> void:
-	scroll.scroll_horizontal = int(card.position.x - scroll.size.x * 0.5 + card.size.x * 0.5)
+	_name_label = Label.new()
+	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name_label.add_theme_font_size_override("font_size", 24)
+	info.add_child(_name_label)
 
-func _build_card(index: int) -> Control:
-	var level := DungeonLevels.get_level(index)
-	var theme: Dictionary = level.theme
-	var unlocked := index <= GameState.max_dungeon_level
-	var cleared := index < GameState.max_dungeon_level
-	var accent: Color = theme.torch
+	_difficulty_label = Label.new()
+	_difficulty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_difficulty_label.add_theme_font_size_override("font_size", 16)
+	_difficulty_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	info.add_child(_difficulty_label)
 
-	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(250, 0)
-	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	# Рамка — кольору світла цього рівня; закритий рівень — сірий.
-	card.add_theme_stylebox_override("panel", UiTheme.panel_box(
-		accent.lerp(Color.WHITE, 0.35) if unlocked else Color(0.45, 0.45, 0.48)))
+	_subtitle_label = Label.new()
+	_subtitle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_subtitle_label.add_theme_font_size_override("font_size", 15)
+	_subtitle_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	info.add_child(_subtitle_label)
 
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 6)
-	card.add_child(box)
+	_enemies_label = Label.new()
+	_enemies_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_enemies_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_enemies_label.add_theme_font_size_override("font_size", 13)
+	_enemies_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	info.add_child(_enemies_label)
 
-	var picture := TextureRect.new()
-	picture.custom_minimum_size = Vector2(0, 92)
-	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	var own_picture := ArtSlots.dungeon_icon(level.id)
-	if own_picture != null:
-		picture.texture = own_picture
-		picture.modulate = Color.WHITE if unlocked else Color(0.4, 0.4, 0.45)
-		box.add_child(picture)
-	else:
-		# Своєї картинки рівня ще немає — черепок у слоті кольору рівня.
-		var slot := UiTheme.make_slot(UiTheme.control_icon("skull"), 56.0,
-			accent if unlocked else Color(0.4, 0.4, 0.45))
-		slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		box.add_child(slot)
+	var stat_row := HBoxContainer.new()
+	stat_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	stat_row.add_theme_constant_override("separation", 24)
+	info.add_child(stat_row)
+	_boss_label = Label.new()
+	_boss_label.add_theme_font_size_override("font_size", 15)
+	_boss_label.add_theme_color_override("font_color", UiTheme.DANGER)
+	stat_row.add_child(_boss_label)
+	_gold_label = Label.new()
+	_gold_label.add_theme_font_size_override("font_size", 15)
+	_gold_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	stat_row.add_child(_gold_label)
 
-	box.add_child(_label("Рівень %d. %s" % [index + 1, level.title], 20,
-		accent if unlocked else UiTheme.TEXT_DIM))
-	box.add_child(_label("Складність: %s" % DIFFICULTY_TITLES[clampi(level.difficulty, 1, DIFFICULTY_TITLES.size() - 1)], 15, UiTheme.GOLD))
-	box.add_child(_label(level.subtitle, 14, UiTheme.TEXT if unlocked else UiTheme.TEXT_DIM))
-	box.add_child(_label("Вороги: %s" % ", ".join(DungeonLevels.get_enemy_names(index)), 13, UiTheme.TEXT_DIM))
-	box.add_child(_label("Бос: %s" % level.boss.name, 13, UiTheme.DANGER))
-	box.add_child(_label("Золото: ×%.1f" % float(level.stats.gold), 13, UiTheme.GOLD))
+	_lock_label = Label.new()
+	_lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_lock_label.add_theme_font_size_override("font_size", 14)
+	_lock_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	info.add_child(_lock_label)
 
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(spacer)
+	info.add_child(spacer)
 
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(0, 50)
-	button.add_theme_font_size_override("font_size", 18)
-	if not unlocked:
-		var previous := DungeonLevels.get_level(index - 1)
-		button.text = "Закрито"
-		button.disabled = true
-		box.add_child(_label("Спершу пройди «%s»" % previous.title, 13, UiTheme.TEXT_DIM))
-	elif cleared:
-		button.text = "Пройдено — увійти знову"
+	var bottom_row := HBoxContainer.new()
+	bottom_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom_row.add_theme_constant_override("separation", 16)
+	column.add_child(bottom_row)
+
+	var close := Button.new()
+	close.text = "Назад у місто"
+	close.custom_minimum_size = Vector2(220, 52)
+	close.add_theme_font_size_override("font_size", 18)
+	close.pressed.connect(_on_close_pressed)
+	bottom_row.add_child(close)
+
+	_enter_button = Button.new()
+	_enter_button.custom_minimum_size = Vector2(240, 52)
+	_enter_button.add_theme_font_size_override("font_size", 18)
+	bottom_row.add_child(_enter_button)
+
+	_index = mini(GameState.max_dungeon_level, DungeonLevels.get_level_count() - 1)
+	_refresh()
+	UiTheme.scroll_to_center.call_deferred(_slot_scroll, _slot_buttons[_index])
+
+func _on_slot_pressed(index: int) -> void:
+	_index = index
+	_refresh()
+	UiTheme.scroll_to_center(_slot_scroll, _slot_buttons[_index])
+
+func _refresh() -> void:
+	var level := DungeonLevels.get_level(_index)
+	var accent: Color = level.theme.torch
+	var unlocked := _index <= GameState.max_dungeon_level
+	var cleared := _index < GameState.max_dungeon_level
+
+	for index in _slot_buttons.size():
+		var other := DungeonLevels.get_level(index)
+		var other_accent: Color = other.theme.torch
+		UiTheme.style_picker_slot(_slot_buttons[index], index == _index, index <= GameState.max_dungeon_level, other_accent)
+		_slot_buttons[index].button_pressed = index == _index
+
+	_name_label.text = "Рівень %d. %s" % [_index + 1, level.title]
+	_name_label.add_theme_color_override("font_color", accent if unlocked else UiTheme.TEXT_DIM)
+	_difficulty_label.text = "Складність: %s" % DIFFICULTY_TITLES[clampi(level.difficulty, 1, DIFFICULTY_TITLES.size() - 1)]
+	_subtitle_label.text = level.subtitle
+	_subtitle_label.add_theme_color_override("font_color", UiTheme.TEXT if unlocked else UiTheme.TEXT_DIM)
+	_enemies_label.text = "Вороги: %s" % ", ".join(DungeonLevels.get_enemy_names(_index))
+	_boss_label.text = "Бос: %s" % level.boss.name
+	_gold_label.text = "Золото: ×%.1f" % float(level.stats.gold)
+
+	if unlocked:
+		_lock_label.visible = false
 	else:
-		button.text = "Увійти"
-		UiTheme.make_primary(button)
-	button.pressed.connect(_on_level_pressed.bind(index))
-	box.add_child(button)
-	return card
+		_lock_label.visible = true
+		var previous := DungeonLevels.get_level(_index - 1)
+		_lock_label.text = "Спершу пройди «%s»" % previous.title
 
-func _label(text: String, size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", color)
-	return label
+	if not unlocked:
+		_enter_button.text = "Закрито"
+		_enter_button.disabled = true
+		_enter_button.theme_type_variation = &""
+	elif cleared:
+		_enter_button.text = "Пройдено — увійти знову"
+		_enter_button.disabled = false
+		_enter_button.theme_type_variation = &""
+	else:
+		_enter_button.text = "Увійти"
+		_enter_button.disabled = false
+		UiTheme.make_primary(_enter_button)
+	if _enter_button.pressed.is_connected(_on_enter_pressed):
+		_enter_button.pressed.disconnect(_on_enter_pressed)
+	_enter_button.pressed.connect(_on_enter_pressed)
 
-func _on_level_pressed(index: int) -> void:
-	level_chosen.emit(index)
+func _on_enter_pressed() -> void:
+	level_chosen.emit(_index)
 	queue_free()
 
 func _on_close_pressed() -> void:

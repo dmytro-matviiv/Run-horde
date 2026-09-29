@@ -30,7 +30,7 @@ func _run() -> void:
 	await _wait_for_scene(TOWN)
 	# Зала героїв: стоїмо з боку площі, біля краю зони; обираємо іншого героя.
 	await _visit("HeroesHallZone", Vector3(3.0, 0, 0), func(screen: Node) -> void:
-		screen.call("_on_next_pressed")
+		screen.call("_on_slot_pressed", 1)
 		screen.call("_on_action_pressed"))
 	# Збройня: споряджаємо іншу зброю.
 	await _visit("ArmoryZone", Vector3(2.2, 0, -2.0), func(_screen: Node) -> void:

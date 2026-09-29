@@ -1,14 +1,11 @@
 extends Control
 
-## Арсенал обраного героя. Кожна зброя — картка: місце під картинку
-## (WeaponIcon), назва, як саме вона б'є, головні числа й дія (купити,
-## спорядити або "вже в руках").
-##
-## У кожного героя свій набір: сокира вартової не з'являється в жриці.
-## Спорядженою зброєю герой б'ється в наступному рані
-## (GameState.get_equipped_weapon_id -> run.gd -> Hero.equip_weapon).
+## Арсенал обраного героя — вітрина, як вибір героя: зброю гортаєш
+## ІКОНКАМИ (ряд слотів, як інвентар у зразку Kenney), не читаючи
+## список карток одну за одною. Вибір лише підсвічує слот і оновлює
+## вітрину внизу; спорядити чи купити — окремою кнопкою, щоб дотик по
+## слоту під час гортання нічого не спорядив випадково.
 
-const WEAPON_ICON_SCRIPT := preload("res://scenes/ui/weapon_icon.gd")
 const MODEL_PREVIEW_SCRIPT := preload("res://scenes/ui/model_preview.gd")
 
 const ARCHETYPE_HINTS := {
@@ -49,135 +46,190 @@ const STATUS_HINTS := {
 	&"mark": "мітка",
 }
 
-@onready var hero_label: Label = $VBoxContainer/HeroLabel
-@onready var gems_label: Label = $VBoxContainer/GemsLabel
-@onready var rows_container: VBoxContainer = $VBoxContainer/ScrollContainer/RowsContainer
-
 var _hero_id: StringName
+var _weapons: Array[WeaponDef] = []
+var _index := 0
 
 var _preview: ModelPreview
 var _preview_note: Label
+var _currency_label: Label
+var _slot_row: HBoxContainer
+var _slot_scroll: ScrollContainer
+var _slot_buttons: Array[Button] = []
+var _name_label: Label
+var _kind_label: Label
+var _stats_label: Label
+var _description_label: Label
+var _action_button: Button
 
-## Над списком — 3D-вітрина спорядженої зброї: видно, що саме герой
-## візьме в руку. Немає моделі — показуємо тимчасову й пишемо про це.
-func _build_preview() -> void:
-	var holder := VBoxContainer.new()
-	holder.custom_minimum_size = Vector2(0, 150)
+func _ready() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var background := ColorRect.new()
+	background.color = Color(0.055, 0.065, 0.078)
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(background)
+
+	_hero_id = GameState.selected_hero_id
+	_weapons = WeaponPool.get_for_hero(_hero_id)
+	var equipped := GameState.get_equipped_weapon_id(_hero_id)
+	_index = maxi(_weapons.map(func(w: WeaponDef) -> StringName: return w.id).find(equipped), 0)
+
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.offset_left = 28.0
+	column.offset_top = 16.0
+	column.offset_right = -28.0
+	column.offset_bottom = -16.0
+	column.add_theme_constant_override("separation", 10)
+	add_child(column)
+
+	var top_row := HBoxContainer.new()
+	column.add_child(top_row)
+	var title_box := UiTheme.make_title("Збройня", 30)
+	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(title_box)
+	_currency_label = Label.new()
+	_currency_label.add_theme_font_size_override("font_size", 17)
+	_currency_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	top_row.add_child(_currency_label)
+
+	var hero_label := Label.new()
+	hero_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
+	hero_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_label.add_theme_font_size_override("font_size", 16)
+	hero_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	column.add_child(hero_label)
+
+	# Вітрина: 3D-модель обраної зброї в руці героя — велика, посередині.
+	var stage := PanelContainer.new()
+	stage.custom_minimum_size = Vector2(0, 200)
+	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stage.add_theme_stylebox_override("panel", UiTheme.panel_box())
+	column.add_child(stage)
 	_preview = MODEL_PREVIEW_SCRIPT.new()
-	_preview.custom_minimum_size = Vector2(0, 120)
-	_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	holder.add_child(_preview)
+	_preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stage.add_child(_preview)
 	_preview_note = Label.new()
 	_preview_note.text = "Тимчасова модель зброї — справжню підключимо пізніше"
 	_preview_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_preview_note.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_preview_note.offset_top = -22.0
 	_preview_note.add_theme_font_size_override("font_size", 13)
 	_preview_note.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
-	holder.add_child(_preview_note)
-	var column: VBoxContainer = $VBoxContainer
-	column.add_child(holder)
-	column.move_child(holder, 3)
+	stage.add_child(_preview_note)
 
-func _ready() -> void:
-	_build_preview()
-	_hero_id = GameState.selected_hero_id
-	_style()
-	_rebuild()
+	# Ряд слотів — зброю гортаєш і обираєш іконками, як інвентар.
+	var picker := UiTheme.make_picker_row()
+	_slot_scroll = picker.scroll
+	_slot_row = picker.row
+	_slot_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_child(_slot_scroll)
+	for i in _weapons.size():
+		var def := _weapons[i]
+		var texture := ArtSlots.weapon_icon(def.id, def.icon)
+		if texture == null:
+			texture = ArtSlots.placeholder_icon(def.color, 96)
+		var slot := UiTheme.make_picker_slot(texture, Color.WHITE, 88.0)
+		slot.pressed.connect(_on_slot_pressed.bind(i))
+		_slot_row.add_child(slot)
+		_slot_buttons.append(slot)
 
-## Фентезійне оформлення (UiTheme): заголовок Збройні між розділювачами.
-func _style() -> void:
-	var title := $VBoxContainer/TitleLabel as Label
-	if title != null:
-		title.text = "Збройня"
-		title.add_theme_color_override("font_color", UiTheme.HEADING)
-		UiTheme.add_dividers(title)
-	hero_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
-	hero_label.add_theme_color_override("font_color", UiTheme.TEXT)
-	gems_label.add_theme_color_override("font_color", UiTheme.GOLD)
-	# Список — посередині екрана: на широкому телефоні він інакше тулився
-	# до лівого краю, а праворуч зяяла порожнеча.
-	rows_container.size_flags_horizontal = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
-
-func _show_equipped() -> void:
-	var equipped := GameState.get_equipped_weapon_id(GameState.selected_hero_id)
-	var def := WeaponPool.get_def(equipped)
-	if def != null and _preview != null:
-		_preview_note.visible = _preview.show_weapon(def)
-
-func _rebuild() -> void:
-	_show_equipped()
-	gems_label.text = "Золото: %d        Геми: %d" % [GameState.gold, GameState.gems]
-	for child in rows_container.get_children():
-		child.queue_free()
-	var equipped := GameState.get_equipped_weapon_id(_hero_id)
-	for def in WeaponPool.get_for_hero(_hero_id):
-		rows_container.add_child(_build_card(def, equipped))
-
-func _build_card(def: WeaponDef, equipped_id: StringName) -> Control:
-	var owned := GameState.is_weapon_owned(def.id)
-	var card := PanelContainer.new()
-	# Споряджену зброю підсвічуємо рамкою її ж кольору — видно з першого погляду.
-	card.add_theme_stylebox_override("panel", UiTheme.panel_box(def.color if equipped_id == def.id else Color.WHITE))
-
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 18)
-	card.add_child(row)
-
-	# Є готова картинка (assets/ui/icons/weapons/<id>.png) — беремо її,
-	# інакше малюємо фігуру за архетипом зброї.
-	var picture := ArtSlots.weapon_icon(def.id, def.icon)
-	if picture != null:
-		var image := TextureRect.new()
-		image.texture = picture
-		image.custom_minimum_size = Vector2(84, 84)
-		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		# Некуплена зброя — приглушена, як і намальована заглушка.
-		if not owned:
-			image.modulate = Color(0.6, 0.6, 0.6, 0.7)
-		# Картинка — у слоті з рамкою, як предмет в інвентарі.
-		var slot := PanelContainer.new()
-		slot.add_theme_stylebox_override("panel", UiTheme.slot_box())
-		slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		slot.add_child(image)
-		row.add_child(slot)
-	else:
-		var icon: Control = WEAPON_ICON_SCRIPT.new()
-		icon.setup(def, owned)
-		row.add_child(icon)
-
+	# Опис обраної зброї — панель у рамці, як діалог квесту в зразку.
+	var info_panel := PanelContainer.new()
+	info_panel.add_theme_stylebox_override("panel", UiTheme.panel_box())
+	column.add_child(info_panel)
 	var info := VBoxContainer.new()
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.add_theme_constant_override("separation", 2)
-	row.add_child(info)
+	info.add_theme_constant_override("separation", 4)
+	info_panel.add_child(info)
 
-	var title := Label.new()
-	title.text = def.title
-	title.add_theme_font_size_override("font_size", 21)
-	title.add_theme_color_override("font_color", def.color if owned else UiTheme.TEXT_DIM)
-	info.add_child(title)
+	_name_label = Label.new()
+	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_name_label.add_theme_font_size_override("font_size", 24)
+	info.add_child(_name_label)
 
-	var kind := Label.new()
-	kind.text = SPELL_HINTS.get(def.spell, STYLE_HINTS.get(def.style_3d, ARCHETYPE_HINTS.get(def.archetype, "")))
-	kind.add_theme_font_size_override("font_size", 14)
-	kind.add_theme_color_override("font_color", UiTheme.GEM)
-	info.add_child(kind)
+	_kind_label = Label.new()
+	_kind_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_kind_label.add_theme_font_size_override("font_size", 15)
+	_kind_label.add_theme_color_override("font_color", UiTheme.GEM)
+	info.add_child(_kind_label)
 
-	var stats := Label.new()
-	stats.text = _build_stats_text(def)
-	stats.add_theme_font_size_override("font_size", 14)
-	stats.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
-	info.add_child(stats)
+	_stats_label = Label.new()
+	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_stats_label.add_theme_font_size_override("font_size", 14)
+	_stats_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	info.add_child(_stats_label)
 
-	var description := Label.new()
-	description.text = def.description
-	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.custom_minimum_size = Vector2(360, 0)
-	description.add_theme_font_size_override("font_size", 14)
-	description.add_theme_color_override("font_color", UiTheme.TEXT)
-	info.add_child(description)
+	_description_label = Label.new()
+	_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_description_label.add_theme_font_size_override("font_size", 15)
+	_description_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	info.add_child(_description_label)
 
-	row.add_child(_build_action_button(def, equipped_id, owned))
-	return card
+	var bottom_row := HBoxContainer.new()
+	bottom_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom_row.add_theme_constant_override("separation", 16)
+	column.add_child(bottom_row)
+
+	var back := Button.new()
+	back.text = "Назад"
+	back.custom_minimum_size = Vector2(170, 56)
+	back.add_theme_font_size_override("font_size", 20)
+	back.pressed.connect(_on_back_pressed)
+	bottom_row.add_child(back)
+
+	_action_button = Button.new()
+	_action_button.custom_minimum_size = Vector2(260, 56)
+	_action_button.add_theme_font_size_override("font_size", 20)
+	bottom_row.add_child(_action_button)
+
+	_refresh()
+	UiTheme.scroll_to_center.call_deferred(_slot_scroll, _slot_buttons[_index])
+
+func _current() -> WeaponDef:
+	return _weapons[_index]
+
+func _on_slot_pressed(index: int) -> void:
+	_index = index
+	_refresh()
+	UiTheme.scroll_to_center(_slot_scroll, _slot_buttons[_index])
+
+func _refresh() -> void:
+	_currency_label.text = "Золото: %d    Геми: %d" % [GameState.gold, GameState.gems]
+	var equipped := GameState.get_equipped_weapon_id(_hero_id)
+	for i in _slot_buttons.size():
+		var def := _weapons[i]
+		UiTheme.style_picker_slot(_slot_buttons[i], i == _index, GameState.is_weapon_owned(def.id), def.color)
+		_slot_buttons[i].button_pressed = i == _index
+
+	var def := _current()
+	var owned := GameState.is_weapon_owned(def.id)
+	_preview_note.visible = _preview.show_weapon(def)
+	_name_label.text = def.title
+	_name_label.add_theme_color_override("font_color", def.color if owned else UiTheme.TEXT_DIM)
+	_kind_label.text = SPELL_HINTS.get(def.spell, STYLE_HINTS.get(def.style_3d, ARCHETYPE_HINTS.get(def.archetype, "")))
+	_stats_label.text = _build_stats_text(def)
+	_description_label.text = def.description
+
+	if _action_button.pressed.is_connected(_on_equip_pressed):
+		_action_button.pressed.disconnect(_on_equip_pressed)
+	if _action_button.pressed.is_connected(_on_buy_pressed):
+		_action_button.pressed.disconnect(_on_buy_pressed)
+	if equipped == def.id:
+		_action_button.text = "У руках"
+		_action_button.disabled = true
+		UiTheme.make_primary(_action_button)
+	elif owned:
+		_action_button.text = "Спорядити"
+		_action_button.disabled = false
+		UiTheme.make_primary(_action_button)
+		_action_button.pressed.connect(_on_equip_pressed)
+	else:
+		_action_button.text = "%d золота" % def.cost_gold
+		_action_button.disabled = GameState.gold < def.cost_gold
+		_action_button.theme_type_variation = &""
+		_action_button.pressed.connect(_on_buy_pressed)
 
 ## Головні числа зброї людською мовою: скільки б'є, як часто і що
 ## лишає на ворогові. Для вогнепальної — ще магазин і перезарядка.
@@ -218,35 +270,18 @@ func _build_stats_text(def: WeaponDef) -> String:
 		parts.append(STATUS_HINTS[def.status])
 	return "   •   ".join(parts)
 
-func _build_action_button(def: WeaponDef, equipped_id: StringName, owned: bool) -> Button:
-	var button := Button.new()
-	button.custom_minimum_size = Vector2(170, 56)
-	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if equipped_id == def.id:
-		button.text = "У руках"
-		button.disabled = true
-	elif owned:
-		button.text = "Спорядити"
-		UiTheme.make_primary(button)
-		button.pressed.connect(_on_equip_pressed.bind(def.id))
-	else:
-		# Уся зброя купується за золото — те саме, що падає в походах.
-		button.text = "%d золота" % def.cost_gold
-		button.disabled = GameState.gold < def.cost_gold
-		button.pressed.connect(_on_buy_pressed.bind(def.id))
-	return button
-
 ## Куплену зброю одразу вдягаємо — гравець хотів саме її, зайвий
 ## другий клік нічого не додає.
-func _on_buy_pressed(id: StringName) -> void:
+func _on_buy_pressed() -> void:
+	var id := _current().id
 	if GameState.buy_weapon(id):
 		AudioManager.play(&"purchase", 0.0)
 		GameState.equip_weapon(_hero_id, id)
-	_rebuild()
+	_refresh()
 
-func _on_equip_pressed(id: StringName) -> void:
-	GameState.equip_weapon(_hero_id, id)
-	_rebuild()
+func _on_equip_pressed() -> void:
+	GameState.equip_weapon(_hero_id, _current().id)
+	_refresh()
 
 func _on_back_pressed() -> void:
 	# Назад — туди, звідки прийшли: у місто до дверей будівлі чи в меню.
