@@ -34,6 +34,13 @@ const BASE_SCENE_PATH := "res://scenes/world/base_island.tscn"
 ## Скільки досвіду треба на наступний рівень героя в данжі.
 const XP_PER_LEVEL := 12
 
+## КАМЕРА. У данжі вона дивиться круто згори і не нахиляється пологіше
+## за CAMERA_MAX_PITCH: з пологого кута було видно горизонт, далекі зали
+## й темряву між ними. Гравцеві потрібна його зала, а не весь рівень.
+const CAMERA_PITCH := -54.0
+const CAMERA_MIN_PITCH := -66.0
+const CAMERA_MAX_PITCH := -46.0
+
 ## ЗОЛОТО ЗА ПОХІД (числа тимчасові — баланс підженемо, коли буде більше
 ## рівнів). Талант "Приріст золота" додає свої відсотки, а талант
 ## "Удача" покращує вибір здібностей, "Стартовий рівень" дає зайвий
@@ -159,6 +166,7 @@ func _setup_hud(title: String) -> void:
 	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
 	hud.add_child(camera_touch)
 	$CameraRig.set_world_collision(false)
+	$CameraRig.set_pitch_limits(CAMERA_MIN_PITCH, CAMERA_MAX_PITCH, CAMERA_PITCH)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
 	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
 	camera_touch.tap_attack.connect(player.attack)

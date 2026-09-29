@@ -59,6 +59,14 @@ func set_world_collision(enabled: bool) -> void:
 func rotate_by(amount: float) -> void:
 	_yaw = wrapf(_yaw + amount, -PI, PI)
 
+## Межі нахилу й початковий нахил — для місць, де потрібен свій кут
+## (у данжі камера дивиться круто згори).
+func set_pitch_limits(min_degrees: float, max_degrees: float, start_degrees: float) -> void:
+	min_pitch_degrees = min_degrees
+	max_pitch_degrees = max_degrees
+	_pitch = deg_to_rad(clampf(start_degrees, min_degrees, max_degrees))
+	spring_arm.rotation.x = _pitch
+
 ## Нахил камери вгору-вниз тим самим пальцем.
 func pitch_by(amount: float) -> void:
 	_pitch = clampf(_pitch + amount, deg_to_rad(min_pitch_degrees), deg_to_rad(max_pitch_degrees))

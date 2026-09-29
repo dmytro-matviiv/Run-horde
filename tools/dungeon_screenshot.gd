@@ -62,6 +62,14 @@ func _ready() -> void:
 	for enemy in dungeon.get_node("Enemies").get_children():
 		if enemy.global_position.distance_to(player.global_position) < 18.0:
 			enemy.take_damage(enemy.max_hp * 0.45)
+	# --pitch=N — нахил камери (у межах, які дозволяє данж), --yaw=N — поворот.
+	var rig: Node = dungeon.get_node("CameraRig")
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--pitch="):
+			rig.set_pitch_limits(rig.min_pitch_degrees, rig.max_pitch_degrees, argument.get_slice("=", 1).to_float())
+		elif argument.begins_with("--yaw="):
+			rig.rotate_by(deg_to_rad(argument.get_slice("=", 1).to_float()))
+	await get_tree().create_timer(0.5).timeout
 	# --pause — знімок із відкритим меню паузи.
 	if "--pause" in OS.get_cmdline_user_args():
 		dungeon.call("_open_pause")

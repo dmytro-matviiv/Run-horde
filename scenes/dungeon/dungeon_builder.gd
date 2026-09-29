@@ -38,6 +38,21 @@ class_name DungeonBuilder
 const CELL := 2.0          # розмір клітинки в метрах
 const WALL_HEIGHT := 2.0
 
+## Верх скелі навколо залів — трохи нижче за верх стін, щоб гребінь стіни
+## лишався видно й кімната читалась вирубаною в камені.
+const ROCK_TOP_HEIGHT := WALL_HEIGHT - 0.03
+## На скільки клітинок скеля виходить за край карти: край рівня теж не
+## має виглядати проваллям.
+const ROCK_MARGIN := 12
+## Скільки метрів займає один повтор текстури каменю.
+const ROCK_TEXTURE_METERS := 7.0
+const ROCK_TEXTURE := preload("res://assets/textures/rock_top.png")
+## Колір верху скелі до відтінку теми: темний, як камінь у тіні.
+const ROCK_COLOR := Color(0.17, 0.16, 0.15)
+## Яскравість скелі за відстанню до найближчої підлоги (у клітинках):
+## біля залу камінь ледь видно, за кілька клітинок — майже темрява.
+const ROCK_FADE := [1.0, 0.6, 0.34, 0.18, 0.08]
+
 ## Розмір шматка в клітинках. 10 клітинок = 20 метрів: приблизно одна
 ## велика зала або довгий коридор.
 const CHUNK_CELLS := 10
@@ -186,7 +201,121 @@ static func build_base(map_rows: Array, parent: Node3D, theme: Dictionary = DEFA
 	_add_floor_collision(obstacles, map_rows)
 	_add_column_obstacles(obstacles, map_rows)
 	_create_chunks(parent, map_rows, result)
+	_add_rock_top(parent, map_rows, theme)
 	return result
+
+## ТЕМНА СКЕЛЯ НАВКОЛО ЗАЛІВ
+##
+## Камера дивиться на данж згори, а стіни — по пояс. Раніше за ними була
+## порожнеча: чорні провалля між залами, що різали око. Тепер над кожною
+## непрохідною клітинкою (і ще трохи за краєм карти) лежить темний камінь
+## на висоті верху стін — зали читаються як вирубані в скелі. Біля залу
+## камінь ледь видно, а далі від нього він плавно тоне в темряві
+## (ROCK_FADE), тож далекі зали не відволікають.
+##
+## Це ОДИН меш на весь рівень і один виклик малювання. Камінь не
+## освітлюється (unshaded): смолоскипам не треба його рахувати.
+static func _add_rock_top(parent: Node3D, map_rows: Array, theme: Dictionary) -> void:
+	var width := 0
+	for row: String in map_rows:
+		width = maxi(width, row.length())
+	var cols := width + ROCK_MARGIN * 2
+	var rows := map_rows.size() + ROCK_MARGIN * 2
+	var distance := _rock_distances(map_rows, cols, rows)
+
+	# Сітка вершин по кутах клітинок: сусідні клітинки ділять вершини, а
+	# колір вершини — найсвітліший із чотирьох клітинок довкола. Так
+	# згасання плавне, без сходинок.
+	var half := CELL * 0.5
+	var vertex_cols := cols + 1
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var colors := PackedColorArray()
+	for gz in rows + 1:
+		for gx in vertex_cols:
+			var corner := Vector3((gx - ROCK_MARGIN) * CELL - half, ROCK_TOP_HEIGHT, (gz - ROCK_MARGIN) * CELL - half)
+			vertices.append(corner)
+			normals.append(Vector3.UP)
+			uvs.append(Vector2(corner.x, corner.z) / ROCK_TEXTURE_METERS)
+			var shade := 0.0
+			for cz in [gz - 1, gz]:
+				for cx in [gx - 1, gx]:
+					if cx >= 0 and cz >= 0 and cx < cols and cz < rows and distance[cz * cols + cx] > 0:
+						shade = maxf(shade, _rock_shade(distance[cz * cols + cx]))
+			# Легкі плями світлішого й темнішого каменю: без них на великій
+			# площі помітно, що текстура повторюється.
+			shade *= 0.8 + 0.4 * _hash01(gx, gz, 29)
+			colors.append(Color(shade, shade, shade))
+	var indices := PackedInt32Array()
+	for z in rows:
+		for x in cols:
+			if distance[z * cols + x] == 0:
+				continue
+			var top_left := z * vertex_cols + x
+			var bottom_left := top_left + vertex_cols
+			indices.append(top_left)
+			indices.append(top_left + 1)
+			indices.append(bottom_left + 1)
+			indices.append(top_left)
+			indices.append(bottom_left + 1)
+			indices.append(bottom_left)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = ROCK_TEXTURE
+	material.albedo_color = ROCK_COLOR * theme.get("stone", Color.WHITE)
+	# Згори видно лише один бік, але так не залежимо від порядку вершин.
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var rock := MeshInstance3D.new()
+	rock.name = "RockTop"
+	rock.mesh = mesh
+	rock.material_override = material
+	rock.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(rock)
+
+## Відстань кожної клітинки (з полями ROCK_MARGIN) до найближчої підлоги,
+## у клітинках, хвилею від підлоги назовні. 0 — сама підлога; далі
+## за ROCK_FADE.size() хвиля не йде.
+static func _rock_distances(map_rows: Array, cols: int, rows: int) -> PackedInt32Array:
+	var distance := PackedInt32Array()
+	distance.resize(cols * rows)
+	distance.fill(ROCK_FADE.size())
+	var frontier: Array[Vector2i] = []
+	for z in rows:
+		for x in cols:
+			if _is_walkable(map_rows, x - ROCK_MARGIN, z - ROCK_MARGIN):
+				distance[z * cols + x] = 0
+				frontier.append(Vector2i(x, z))
+	var step := 0
+	while not frontier.is_empty() and step < ROCK_FADE.size() - 1:
+		step += 1
+		var next: Array[Vector2i] = []
+		for cell in frontier:
+			for dz in range(-1, 2):
+				for dx in range(-1, 2):
+					var nx := cell.x + dx
+					var nz := cell.y + dz
+					if nx < 0 or nz < 0 or nx >= cols or nz >= rows:
+						continue
+					if distance[nz * cols + nx] > step:
+						distance[nz * cols + nx] = step
+						next.append(Vector2i(nx, nz))
+		frontier = next
+	return distance
+
+static func _rock_shade(distance: int) -> float:
+	return ROCK_FADE[mini(distance, ROCK_FADE.size()) - 1]
 
 ## Будує видиму геометрію одного шматка. Викликається тоді, коли гравець
 ## до нього підходить, — і саме тому вхід у данж не гальмує: спершу
