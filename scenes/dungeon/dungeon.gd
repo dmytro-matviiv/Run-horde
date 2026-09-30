@@ -160,6 +160,10 @@ var _offering_ability := false
 var _boss: Enemy3D
 var _boss_panel: Control
 var _boss_bar: ProgressBar
+## Мега-бос (boss_gate у описі рівня): бос не стоїть від початку, а чекає,
+## поки ворота зачиняться й відгримить вступне кіно (BossIntro).
+var _boss_gate: BossGate
+var _pending_boss_position := Vector3.ZERO
 var _hud_title: Label
 var _health_bar: ProgressBar
 var _xp_bar: ProgressBar
@@ -217,6 +221,7 @@ func _ready() -> void:
 	_spawn_enemies(markers)
 	_spawn_props()
 	_spawn_arenas()
+	_spawn_boss_gate()
 	await _warm_up_rendering()
 	_update_streaming()
 	SceneLoader.release()
@@ -440,7 +445,11 @@ func _spawn_enemies(markers: Dictionary) -> void:
 				offset = Vector3(cos(angle), 0.0, sin(angle)) * 1.1
 			_spawn_enemy(spawn.position + offset, definition, false)
 	if markers.boss != Vector3.ZERO:
-		_spawn_enemy(markers.boss, _level.boss, true)
+		if _level.get("boss_gate", false):
+			# Мега-бос не виходить одразу: чекає за воротами (_spawn_boss_gate).
+			_pending_boss_position = markers.boss
+		else:
+			_spawn_enemy(markers.boss, _level.boss, true)
 
 func _arena_at(cell: Vector2i) -> int:
 	var arenas: Array = _level.get("arenas", [])
@@ -448,6 +457,40 @@ func _arena_at(cell: Vector2i) -> int:
 		if (arenas[i] as Rect2i).has_point(cell):
 			return i
 	return -1
+
+## Мега-бос (рівень з "boss_gate"): ворота на всю залу з босом — герой
+## заходить, виходи зачиняються, а сам бос виходить лише після вступного
+## кіно (_start_boss_encounter).
+func _spawn_boss_gate() -> void:
+	if not _level.get("boss_gate", false) or _pending_boss_position == Vector3.ZERO:
+		return
+	var rect: Rect2i = _level.get("boss_arena", Rect2i())
+	_boss_gate = BossGate.new()
+	add_child(_boss_gate)
+	_boss_gate.setup(player, _map_rows, rect)
+	_boss_gate.sealed.connect(_start_boss_encounter)
+
+## Ворота щойно зачинились: пауза, вступне кіно (модель боса й агресивний
+## напис), і лише тоді бос виринає з підлоги в бій.
+func _start_boss_encounter() -> void:
+	var boss_def: Dictionary = _level.boss
+	get_tree().paused = true
+	var intro := BossIntro.new()
+	intro.process_mode = Node.PROCESS_MODE_ALWAYS
+	hud.add_child(intro)
+	intro.setup(_model(boss_def.model), boss_def.get("tint", Color.WHITE), boss_def.get("glow", Color.BLACK),
+		_level.get("boss_title", boss_def.get("name", "Бос")), _level.get("boss_flavor", ""))
+	await intro.finished
+	intro.queue_free()
+	get_tree().paused = false
+	var boss := _spawn_enemy(_pending_boss_position, boss_def, true)
+	var reveal_color: Color = boss_def.get("tint", Color(0.85, 0.16, 0.2))
+	if reveal_color == Color.WHITE:
+		reveal_color = Color(0.85, 0.16, 0.2)
+	CombatVfx.shockwave(self, boss.global_position, 3.5, reveal_color, 0.5)
+	CombatVfx.impact(self, boss.global_position + Vector3.UP * boss.target_height * 0.6, reveal_color, true)
+	boss.emerge(1.1)
+	player.shake_camera(0.2)
 
 ## Засідки: зали, що зачиняються, щойно герой зайде, і вороги вилазять
 ## хвилями (ArenaAmbush).
@@ -842,6 +885,8 @@ func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_el
 		_boss_defeated = true
 		_celebrate_boss(position)
 		_open_exit()
+		if _boss_gate != null:
+			_boss_gate.open()
 	elif is_elite:
 		# Упала еліта — довша зупинка кадру й золота хвиля.
 		CombatVfx.hitstop(get_tree(), KILL_HITSTOP * 2.0)

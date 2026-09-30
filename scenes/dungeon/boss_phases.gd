@@ -30,6 +30,10 @@ const STYLES := {
 	"demon": {"color": Color(1.0, 0.45, 0.12), "rage": "лютує", "frenzy": "у нестямі"},
 	"summoner": {"color": Color(0.55, 1.0, 0.3), "rage": "лютує", "frenzy": "у нестямі"},
 	"dragon": {"color": Color(0.55, 0.85, 1.0), "rage": "лютує", "frenzy": "у нестямі"},
+	# Мега-боси (лише вони мають "boss_gate" на рівні):
+	"doom": {"color": Color(1.0, 0.4, 0.1), "rage": "кличе метеори", "frenzy": "рве небо навпіл"},
+	"abyssal": {"color": Color(0.55, 0.2, 0.85), "rage": "розкриває Безодню", "frenzy": "тоне в Безодні"},
+	"shadow": {"color": Color(0.35, 0.1, 0.5), "rage": "розколюється", "frenzy": "губиться у тінях"},
 }
 
 var phase := 1
@@ -70,6 +74,17 @@ func _enter_phase(next: int) -> void:
 	CombatVfx.shockwave(parent, _boss.global_position, 6.5, style.color, 0.6)
 	CombatVfx.impact(parent, _boss.global_position + Vector3.UP * _boss.target_height * 0.6, style.color, true)
 	CombatVfx.flash_model(_boss.get("_model"), style.color, 0.3)
+	# Мега-боси (лише вони мають "transform_tints" в описі): фарба лишається
+	# назавжди, а не згасає, як звичайний спалах, — бос і справді змінився,
+	# а не просто блимнув. Своя анімація нам не по кишені — переродження
+	# продає колір і світіння.
+	var transform_tints: Array = _boss.definition.get("transform_tints", [])
+	var idx := phase - 2
+	if idx >= 0 and idx < transform_tints.size():
+		var transform_glows: Array = _boss.definition.get("transform_glows", [])
+		var tint: Color = transform_tints[idx]
+		var glow: Color = transform_glows[idx] if idx < transform_glows.size() else style.color
+		Enemy3D.paint_model(_boss.get("_model"), tint, glow)
 	var rig := get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
 		rig.shake(0.3)

@@ -300,6 +300,10 @@ var _bonus_damage_left := 0.0
 var _slow_factor := 1.0
 var _slow_left := 0.0
 var _slow_marker: MeshInstance3D
+## Стороннє тягнення (вир Безодні мега-боса): гравець не втрачає керування,
+## але його зносить до центру, поки він не вийде з зони. Задає сама
+## небезпека щокадру (0 — не тягне).
+var _pull_velocity := Vector3.ZERO
 
 var _skills: Array[HeroSkill3D] = []
 var _spin_left := 0.0
@@ -1136,6 +1140,16 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 	var rate := ACCELERATION if direction.length() > 0.05 else DECELERATION
 	velocity.x = move_toward(velocity.x, target_velocity.x, rate * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, rate * delta)
+	# Тягнення вихору додається зверху: герой і далі сам керує рухом, але
+	# його зносить, якщо не тікати. Перекат (return вище) від нього вільний.
+	velocity.x += _pull_velocity.x
+	velocity.z += _pull_velocity.z
+	_pull_velocity = Vector3.ZERO
+
+## Вир Безодні (мега-боса) зносить героя до центру. sec_strength — метрів
+## за секунду, вже помножено на delta небезпекою, що викликає щокадру.
+func apply_pull(step: Vector3) -> void:
+	_pull_velocity += step
 
 ## Напрямок руху у світових координатах: джойстик дає напрямок відносно
 ## ЕКРАНА, а рухатись треба відносно камери.

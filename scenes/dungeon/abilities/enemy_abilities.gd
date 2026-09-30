@@ -14,7 +14,10 @@ class_name EnemyAbilities
 ##   ring_slam    — (бос) кільце ударної хвилі, що розбігається по підлозі;
 ##   radial_volley — (бос) коло снарядів навсібіч із проходом для втечі;
 ##   beams        — (бос) промені, що обертаються довкола нього;
-##   pylons       — (бос) пілони: поки стоять, бос невразливий.
+##   pylons       — (бос) пілони: поки стоять, бос невразливий;
+##   meteor_storm — (мега-бос) метеоритний дощ по всій залі одразу;
+##   void_rift    — (мега-бос) вир, що затягує героя й пече, поки той у ньому;
+##   mirror_split — (мега-бос) розколюється на тьмяних двійників-приманок.
 
 const SCRIPTS := {
 	"blink": preload("res://scenes/dungeon/abilities/blink_ability.gd"),
@@ -29,6 +32,9 @@ const SCRIPTS := {
 	"radial_volley": preload("res://scenes/dungeon/abilities/radial_volley_ability.gd"),
 	"beams": preload("res://scenes/dungeon/abilities/beams_ability.gd"),
 	"pylons": preload("res://scenes/dungeon/abilities/pylons_ability.gd"),
+	"meteor_storm": preload("res://scenes/dungeon/abilities/meteor_storm_ability.gd"),
+	"void_rift": preload("res://scenes/dungeon/abilities/void_rift_ability.gd"),
+	"mirror_split": preload("res://scenes/dungeon/abilities/mirror_split_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).
