@@ -33,6 +33,9 @@ var _boss_label: Label
 var _gold_label: Label
 var _lock_label: Label
 var _enter_button: Button
+var _prev_button: Button
+var _next_button: Button
+var _art_display: TextureRect
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -75,14 +78,37 @@ func _ready() -> void:
 		_slot_row.add_child(slot)
 		_slot_buttons.append(slot)
 
-	# Опис обраного рівня — одна велика панель, як діалог квесту.
+	# Опис обраного рівня — одна велика панель, як діалог квесту, зі
+	# стрілками обабіч: гортати можна і ними, і рядом іконок вище, і
+	# колесом миші / пальцем по самому ряду.
+	var paging_row := HBoxContainer.new()
+	paging_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	paging_row.add_theme_constant_override("separation", 10)
+	column.add_child(paging_row)
+
+	_prev_button = _make_arrow_button("‹")
+	_prev_button.pressed.connect(_on_step_pressed.bind(-1))
+	paging_row.add_child(_prev_button)
+
 	var info_panel := PanelContainer.new()
+	info_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	info_panel.add_theme_stylebox_override("panel", UiTheme.panel_box())
-	column.add_child(info_panel)
+	paging_row.add_child(info_panel)
 	var info := VBoxContainer.new()
 	info.add_theme_constant_override("separation", 6)
 	info_panel.add_child(info)
+
+	_art_display = TextureRect.new()
+	_art_display.custom_minimum_size = Vector2(0, 150)
+	_art_display.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_art_display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_art_display.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	info.add_child(_art_display)
+
+	_next_button = _make_arrow_button("›")
+	_next_button.pressed.connect(_on_step_pressed.bind(1))
+	paging_row.add_child(_next_button)
 
 	_name_label = Label.new()
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -158,6 +184,22 @@ func _on_slot_pressed(index: int) -> void:
 	_refresh()
 	UiTheme.scroll_to_center(_slot_scroll, _slot_buttons[_index])
 
+## Стрілки обабіч картки — на сусідній рівень; за межею просто нічого не
+## робить (кнопка й так вимкнена на першому/останньому рівні).
+func _on_step_pressed(step: int) -> void:
+	var next := _index + step
+	if next < 0 or next >= DungeonLevels.get_level_count():
+		return
+	_on_slot_pressed(next)
+
+func _make_arrow_button(glyph: String) -> Button:
+	var button := Button.new()
+	button.text = glyph
+	button.custom_minimum_size = Vector2(60, 0)
+	button.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 34)
+	return button
+
 func _refresh() -> void:
 	var level := DungeonLevels.get_level(_index)
 	var accent: Color = level.theme.torch
@@ -169,6 +211,13 @@ func _refresh() -> void:
 		var other_accent: Color = other.theme.torch
 		UiTheme.style_picker_slot(_slot_buttons[index], index == _index, index <= GameState.max_dungeon_level, other_accent)
 		_slot_buttons[index].button_pressed = index == _index
+
+	_prev_button.disabled = _index <= 0
+	_next_button.disabled = _index >= DungeonLevels.get_level_count() - 1
+
+	var art := ArtSlots.dungeon_icon(level.id)
+	_art_display.visible = art != null
+	_art_display.texture = art
 
 	_name_label.text = "Рівень %d. %s" % [_index + 1, level.title]
 	_name_label.add_theme_color_override("font_color", accent if unlocked else UiTheme.TEXT_DIM)

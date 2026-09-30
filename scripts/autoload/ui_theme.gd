@@ -107,8 +107,13 @@ static func panel_box(accent: Color = Color.WHITE) -> StyleBox:
 	return box
 
 ## Слот під іконку (зброя в арсеналі, здібність) — кольорове тло в рамці.
-static func slot_box() -> StyleBox:
-	return _texture_box("slot.png", 20, 8, 8)
+## accent — свій відтінок слота (колір прийому, зброї), як у зразку, де
+## кожен предмет спорядження сидить у слоті свого кольору.
+static func slot_box(accent: Color = Color.WHITE) -> StyleBox:
+	var box := _texture_box("slot.png", 20, 8, 8)
+	if box is StyleBoxTexture:
+		(box as StyleBoxTexture).modulate_color = accent
+	return box
 
 ## Панель поверх гри (здоров'я, золото в місті): та сама рамка, але
 ## тонші поля й прозоріша — щоб не затуляти бій.

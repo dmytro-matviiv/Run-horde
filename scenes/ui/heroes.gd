@@ -8,20 +8,25 @@ extends Control
 const ABILITY_ICON_SCRIPT := preload("res://scenes/ui/ability_icon.gd")
 const MODEL_PREVIEW_SCRIPT := preload("res://scenes/ui/model_preview.gd")
 const STAGE_GLOW_SCRIPT := preload("res://scenes/ui/stage_glow.gd")
+const SKY_STAGE_SCRIPT := preload("res://scenes/ui/sky_stage.gd")
+## Скільки карток здібностей лягає зліва від вітрини — решта праворуч.
+const LEFT_SLOT_COUNT := 2
 
 var _index := 0
 var _preview: ModelPreview
 var _placeholder_label: Label
 var _glow: Control
 
-var _currency_label: Label
+var _gold_label: Label
+var _gem_label: Label
 var _slot_row: HBoxContainer
 var _slot_scroll: ScrollContainer
 var _slot_buttons: Array[Button] = []
 var _name_label: Label
 var _description_label: Label
 var _stats_label: Label
-var _icons_row: HBoxContainer
+var _left_slots: VBoxContainer
+var _right_slots: VBoxContainer
 var _action_button: Button
 
 var _popup: Control
@@ -45,21 +50,38 @@ func _ready() -> void:
 	add_child(column)
 
 	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 10)
 	column.add_child(top_row)
 	var title_box := UiTheme.make_title("Зала героїв", 30)
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(title_box)
-	_currency_label = Label.new()
-	_currency_label.add_theme_font_size_override("font_size", 17)
-	_currency_label.add_theme_color_override("font_color", UiTheme.GOLD)
-	top_row.add_child(_currency_label)
+	_gold_label = Label.new()
+	top_row.add_child(_currency_badge(UiTheme.GOLD, _gold_label))
+	_gem_label = Label.new()
+	top_row.add_child(_currency_badge(UiTheme.GEM, _gem_label))
 
-	# Вітрина: 3D-модель героя зі спорядженою зброєю, з м'яким сяйвом під ногами.
+	# Вітрина: герой стоїть просто неба, а обабіч — картки його прийомів
+	# (як спорядження в зразку мобільної гри), а не рядком під описом.
+	var stage_row := HBoxContainer.new()
+	stage_row.custom_minimum_size = Vector2(0, 220)
+	stage_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stage_row.add_theme_constant_override("separation", 10)
+	column.add_child(stage_row)
+
+	_left_slots = VBoxContainer.new()
+	_left_slots.alignment = BoxContainer.ALIGNMENT_CENTER
+	_left_slots.add_theme_constant_override("separation", 12)
+	_left_slots.custom_minimum_size = Vector2(96, 0)
+	stage_row.add_child(_left_slots)
+
 	var stage := PanelContainer.new()
-	stage.custom_minimum_size = Vector2(0, 220)
-	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stage.add_theme_stylebox_override("panel", UiTheme.panel_box())
-	column.add_child(stage)
+	stage.clip_contents = true
+	stage_row.add_child(stage)
+	var sky := SKY_STAGE_SCRIPT.new()
+	sky.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stage.add_child(sky)
 	_glow = STAGE_GLOW_SCRIPT.new()
 	_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -74,7 +96,15 @@ func _ready() -> void:
 	_placeholder_label.offset_top = -22.0
 	_placeholder_label.add_theme_font_size_override("font_size", 13)
 	_placeholder_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	_placeholder_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	_placeholder_label.add_theme_constant_override("outline_size", 4)
 	stage.add_child(_placeholder_label)
+
+	_right_slots = VBoxContainer.new()
+	_right_slots.alignment = BoxContainer.ALIGNMENT_CENTER
+	_right_slots.add_theme_constant_override("separation", 12)
+	_right_slots.custom_minimum_size = Vector2(96, 0)
+	stage_row.add_child(_right_slots)
 
 	# Ряд слотів — героя гортаєш і обираєш іконками.
 	var picker := UiTheme.make_picker_row()
@@ -118,11 +148,6 @@ func _ready() -> void:
 	_stats_label.add_theme_font_size_override("font_size", 14)
 	_stats_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 	info.add_child(_stats_label)
-
-	_icons_row = HBoxContainer.new()
-	_icons_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_icons_row.add_theme_constant_override("separation", 22)
-	info.add_child(_icons_row)
 
 	var bottom_row := HBoxContainer.new()
 	bottom_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -202,7 +227,8 @@ func _process(_delta: float) -> void:
 
 func _rebuild() -> void:
 	var def := _current()
-	_currency_label.text = "Золото: %d    Геми: %d" % [GameState.gold, GameState.gems]
+	_gold_label.text = str(GameState.gold)
+	_gem_label.text = str(GameState.gems)
 	for i in _slot_buttons.size():
 		var other := HeroPool.ALL_HEROES[i]
 		var unlocked := GameState.is_hero_unlocked(other.id)
@@ -220,23 +246,15 @@ func _rebuild() -> void:
 	var speed_percent := int(round(def.move_speed_percent * 100.0))
 	_stats_label.text = "Здоров'я %d    Швидкість %+d%%    Зброя: %s" % [hp, speed_percent, weapon.title]
 
-	for child in _icons_row.get_children():
+	for child in _left_slots.get_children():
 		child.queue_free()
-	for card: Dictionary in _cards_for(def):
-		var holder := VBoxContainer.new()
-		holder.alignment = BoxContainer.ALIGNMENT_CENTER
-		holder.add_theme_constant_override("separation", 4)
-		var icon: Button = ABILITY_ICON_SCRIPT.new()
-		icon.setup(card.kind, card.color, card.title)
-		icon.pressed.connect(_on_ability_pressed.bind(card))
-		holder.add_child(icon)
-		var label := Label.new()
-		label.text = card.title
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		label.add_theme_font_size_override("font_size", 13)
-		label.add_theme_color_override("font_color", card.color)
-		holder.add_child(label)
-		_icons_row.add_child(holder)
+	for child in _right_slots.get_children():
+		child.queue_free()
+	var cards := _cards_for(def)
+	for i in cards.size():
+		var card: Dictionary = cards[i]
+		var target := _left_slots if i < LEFT_SLOT_COUNT else _right_slots
+		target.add_child(_build_ability_slot(card))
 
 	if GameState.selected_hero_id == def.id:
 		_action_button.text = "Обрано"
@@ -254,6 +272,50 @@ func _rebuild() -> void:
 		_action_button.text = "Купити за %d золота" % def.unlock_cost
 		_action_button.disabled = GameState.gold < def.unlock_cost
 		_action_button.theme_type_variation = &""
+
+## Кругла кольорова плашка золота чи гемів угорі — як бейджик валюти в
+## мобільній грі, а не простий рядок тексту.
+func _currency_badge(color: Color, value_label: Label) -> PanelContainer:
+	var badge := PanelContainer.new()
+	badge.add_theme_stylebox_override("panel", UiTheme.make_box(Color(color, 0.16), 14, 2, Color(color, 0.55)))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	badge.add_child(row)
+	var dot := ColorRect.new()
+	dot.color = color
+	dot.custom_minimum_size = Vector2(14, 14)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(dot)
+	value_label.add_theme_font_size_override("font_size", 16)
+	value_label.add_theme_color_override("font_color", color)
+	row.add_child(value_label)
+	return badge
+
+## Картка прийому обабіч вітрини — кольоровий квадратний слот (як
+## спорядження в зразку), а не рядок іконок під описом; назва — під ним,
+## щоб зрозуміло без наведення, що саме це за прийом.
+func _build_ability_slot(card: Dictionary) -> VBoxContainer:
+	var holder := VBoxContainer.new()
+	holder.alignment = BoxContainer.ALIGNMENT_CENTER
+	holder.add_theme_constant_override("separation", 4)
+	var slot := PanelContainer.new()
+	slot.add_theme_stylebox_override("panel", UiTheme.slot_box(card.color))
+	slot.custom_minimum_size = Vector2(84, 84)
+	slot.tooltip_text = card.title
+	var icon: Button = ABILITY_ICON_SCRIPT.new()
+	icon.setup(card.kind, card.color, card.title)
+	icon.pressed.connect(_on_ability_pressed.bind(card))
+	slot.add_child(icon)
+	holder.add_child(slot)
+	var label := Label.new()
+	label.text = card.title
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size = Vector2(84, 0)
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", card.color)
+	holder.add_child(label)
+	return holder
 
 ## Картки здібностей беремо з того, що герой СПРАВДІ вміє в бою
 ## (Skills3D), а не з окремого опису — тоді вітрина не бреше. Третьою
