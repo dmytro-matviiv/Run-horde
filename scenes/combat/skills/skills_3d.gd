@@ -52,12 +52,12 @@ static func describe(hero: HeroDef, weapon: WeaponDef = null) -> Array:
 	var cards := []
 	var passive := create_passive(hero.passive_id)
 	if passive != null:
-		cards.append({"title": passive.title, "text": passive.description, "color": passive.color, "kind": &"passive"})
+		cards.append({"title": passive.title, "text": passive.description, "color": passive.color, "kind": &"passive", "id": passive.id})
 	var skills := create_for_hero(hero)
 	if weapon != null and weapon.staff_skill != &"":
 		var staff_skill := create_skill(weapon.staff_skill)
 		if staff_skill != null:
 			skills.insert(0, staff_skill)
 	for skill: HeroSkill3D in skills:
-		cards.append({"title": skill.title, "text": skill.description, "color": skill.color, "kind": &"skill"})
+		cards.append({"title": skill.title, "text": skill.description, "color": skill.color, "kind": &"skill", "id": skill.id})
 	return cards

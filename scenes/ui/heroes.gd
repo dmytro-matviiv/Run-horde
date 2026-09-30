@@ -302,8 +302,21 @@ func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 	slot.add_theme_stylebox_override("panel", UiTheme.slot_box(card.color))
 	slot.custom_minimum_size = Vector2(84, 84)
 	slot.tooltip_text = card.title
-	var icon: Button = ABILITY_ICON_SCRIPT.new()
-	icon.setup(card.kind, card.color, card.title)
+	# Своя іконка здібності (згенерований арт) — якщо гравець її поклав;
+	# інакше та сама фігура кодом, що й раніше.
+	var own_icon := ArtSlots.skill_icon(card.get("id", &""))
+	var icon: Button
+	if own_icon != null:
+		icon = Button.new()
+		icon.custom_minimum_size = Vector2(AbilityIcon.SIZE, AbilityIcon.SIZE)
+		icon.icon = own_icon
+		icon.expand_icon = true
+		icon.flat = true
+		for state: String in ["normal", "hover", "pressed", "focus", "disabled"]:
+			icon.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	else:
+		icon = ABILITY_ICON_SCRIPT.new()
+		icon.setup(card.kind, card.color, card.title)
 	icon.pressed.connect(_on_ability_pressed.bind(card))
 	slot.add_child(icon)
 	holder.add_child(slot)
@@ -329,6 +342,7 @@ func _cards_for(def: HeroDef) -> Array:
 			"color": entry.color,
 			"title": entry.title,
 			"text": entry.text,
+			"id": entry.id,
 		})
 	var weapons := WeaponPool.get_for_hero(def.id)
 	var lines := []
