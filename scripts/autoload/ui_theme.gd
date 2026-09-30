@@ -4,30 +4,34 @@ extends Node
 ## корінь дерева сцен — звідти Godot роздає її всім вікнам і кнопкам
 ## автоматично, тож кожен екран не мусить знати про стилі нічого.
 ##
-## СТИЛЬ — фентезійні рамки Kenney (Fantasy UI Borders, CC0): темні
-## напівпрозорі панелі з тонкою кремовою рамкою й візерунчастими кутами,
-## кнопки з квадратиками на кутах, головна дія — світла кнопка з темним
-## текстом, заголовки — блідо-зелені між розділювачами з руків'ям меча.
-## Текстури лежать в assets/ui/theme (їх збирає скрипт build_ui_theme.py з
-## білих рамок набору). Немає файла — лишається проста плоска рамка.
+## СТИЛЬ — "пухкі" округлі кнопки мобільної гри: градієнт, товста темніша
+## рамка, глянцевий відблиск зверху й м'яка тінь під кожною кнопкою чи
+## панеллю; заголовки — на кольоровій плашці-пігулці. Текстури генерує
+## tools/build_new_theme_textures.py (лежить поза репозиторієм — одноразовий
+## скрипт, результат зберігається тут, у assets/ui/theme). Шрифт — Baloo 2
+## (Google Fonts, OFL), змінної ваги: UiTheme.font(600) і важче для великих
+## заголовків. Немає файла текстури — лишається проста плоска рамка.
 
-# Палітра: темний сланець, кремові лінії, блідо-зелені заголовки.
-const BG_DARK := Color(0.055, 0.06, 0.09)
-const PANEL := Color(0.086, 0.106, 0.125)
-const PANEL_LIGHT := Color(0.13, 0.155, 0.18)
-const ACCENT := Color(0.98, 0.72, 0.25)
-const ACCENT_DARK := Color(0.72, 0.5, 0.14)
-const HEADING := Color(0.68, 0.84, 0.52)
-const LINE := Color(0.91, 0.89, 0.84)
-const TEXT := Color(0.94, 0.93, 0.89)
-const TEXT_DIM := Color(0.64, 0.66, 0.68)
+# Палітра: глибокий індиго, лавандові лінії, зелена головна дія.
+const BG_DARK := Color(0.055, 0.05, 0.11)
+const PANEL := Color(0.118, 0.102, 0.227)
+const PANEL_LIGHT := Color(0.19, 0.17, 0.34)
+const ACCENT := Color(1.0, 0.78, 0.25)
+const ACCENT_DARK := Color(0.75, 0.52, 0.12)
+const HEADING := Color(0.88, 0.85, 1.0)
+const LINE := Color(0.75, 0.78, 0.95)
+const TEXT := Color(0.96, 0.96, 1.0)
+const TEXT_DIM := Color(0.68, 0.68, 0.82)
 const TEXT_DARK := Color(0.1, 0.11, 0.12)
 const GOLD := Color(1.0, 0.86, 0.4)
 const GEM := Color(0.55, 0.9, 1.0)
-const DANGER := Color(0.95, 0.4, 0.4)
+const DANGER := Color(1.0, 0.35, 0.35)
 
 const THEME_DIR := "res://assets/ui/theme/"
 const CURSOR_DIR := "res://assets/ui/cursors/"
+const FONT_PATH := "res://assets/ui/fonts/Baloo2-Variable.ttf"
+
+static var _font_cache: Dictionary = {}
 
 ## Розмір, під який зверстано всі екрани. На більшому екрані (телефон
 ## 2400×1080) інтерфейс пропорційно збільшується, а зайва ширина просто
@@ -57,6 +61,22 @@ func _setup_scaling() -> void:
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 
+## Baloo 2 певної ваги (300-800). Шрифт змінний (один файл, вага — вісь
+## "wght"), тож важчі заголовки не тягнуть окремого файла. Результат
+## кешується — FontVariation не створюємо заново на кожен виклик.
+static func font(weight: int = 600) -> Font:
+	if _font_cache.has(weight):
+		return _font_cache[weight]
+	var result: Font
+	if ResourceLoader.exists(FONT_PATH):
+		var base := load(FONT_PATH)
+		var variant := FontVariation.new()
+		variant.base_font = base
+		variant.variation_opentype = {"wght": weight}
+		result = variant
+	_font_cache[weight] = result
+	return result
+
 ## Заготовка прямокутника зі скругленням — для дрібних плашок (бафи,
 ## підкладки), де візерунчаста рамка була б завеликою.
 static func make_box(color: Color, radius: int = 10, border: int = 0, border_color: Color = Color.TRANSPARENT) -> StyleBoxFlat:
@@ -81,19 +101,19 @@ static func make_box(color: Color, radius: int = 10, border: int = 0, border_col
 ## Панель із візерунчастою рамкою. accent — відтінок рамки (біле — як є):
 ## так споряджена зброя чи обраний рівень виділяються своїм кольором.
 static func panel_box(accent: Color = Color.WHITE) -> StyleBox:
-	var box := _texture_box("panel.png", 14, 22, 16)
+	var box := _texture_box("panel.png", 34, 22, 16)
 	if box is StyleBoxTexture:
 		(box as StyleBoxTexture).modulate_color = accent
 	return box
 
-## Слот під іконку (зброя в арсеналі, здібність) — сіре тло в рамці.
+## Слот під іконку (зброя в арсеналі, здібність) — кольорове тло в рамці.
 static func slot_box() -> StyleBox:
-	return _texture_box("slot.png", 14, 8, 8)
+	return _texture_box("slot.png", 20, 8, 8)
 
 ## Панель поверх гри (здоров'я, золото в місті): та сама рамка, але
 ## тонші поля й прозоріша — щоб не затуляти бій.
 static func hud_box() -> StyleBox:
-	var box := _texture_box("panel.png", 14, 14, 10)
+	var box := _texture_box("panel.png", 34, 14, 10)
 	if box is StyleBoxTexture:
 		(box as StyleBoxTexture).modulate_color = Color(1, 1, 1, 0.88)
 	return box
@@ -117,7 +137,7 @@ static func make_icon_button(icon_name: String, side: float = 56.0, tooltip: Str
 	button.tooltip_text = tooltip
 	for state: String in ["normal", "hover", "pressed"]:
 		var file := "button.png" if state == "normal" else "button_%s.png" % state
-		button.add_theme_stylebox_override(state, _texture_box(file, 12, 13, 13))
+		button.add_theme_stylebox_override(state, _texture_box(file, 16, 13, 13))
 	return button
 
 ## Смуга (здоров'я, досвід) у кольорі fill.
@@ -140,25 +160,22 @@ static func make_bar(fill: Color, bar_size: Vector2) -> ProgressBar:
 	bar.add_theme_stylebox_override("background", back)
 	return bar
 
-## Заголовок між двома розділювачами з руків'ям меча — як "Location
-## discovered" у зразку. Повертає готовий рядок для контейнера.
-static func make_title(text: String, font_size: int = 26, color: Color = HEADING) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 12)
-	var left := _divider(true)
-	if left != null:
-		row.add_child(left)
+## Заголовок на кольоровій плашці-пігулці — як "Hero49.Darkest Dungeon" у
+## зразку. Повертає PanelContainer; сам напис — його прямий (єдиний)
+## нащадок-Label, тож "for child in title.get_children(): if child is
+## Label" і далі працює як раніше.
+static func make_title(text: String, font_size: int = 26, color: Color = HEADING) -> PanelContainer:
+	var pill := PanelContainer.new()
+	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pill.add_theme_stylebox_override("panel", _texture_box("title_pill.png", 22, 26, 8))
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_font_override("font", font(700))
 	label.add_theme_color_override("font_color", color)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	row.add_child(label)
-	var right := _divider(false)
-	if right != null:
-		row.add_child(right)
-	return row
+	pill.add_child(label)
+	return pill
 
 ## Головна дія екрана — світла кнопка з темним текстом ("Грати",
 ## "Увійти", "Обрати").
@@ -261,25 +278,19 @@ static func tag_scroll_pass(node: Control) -> void:
 		if child is Control:
 			tag_scroll_pass(child as Control)
 
-## Обгорнути вже наявний вузол екрана (заголовок, опис) розділювачами
-## обабіч — не перебудовуючи сцену.
-static func add_dividers(label: Control) -> HBoxContainer:
+## Обгорнути вже наявний вузол екрана (заголовок, опис) плашкою-пігулкою
+## — не перебудовуючи сцену.
+static func add_dividers(label: Control) -> PanelContainer:
 	var parent := label.get_parent()
 	var index := label.get_index()
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 12)
+	var pill := PanelContainer.new()
+	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pill.add_theme_stylebox_override("panel", _texture_box("title_pill.png", 22, 26, 8))
 	parent.remove_child(label)
-	var left := _divider(true)
-	if left != null:
-		row.add_child(left)
-	row.add_child(label)
-	var right := _divider(false)
-	if right != null:
-		row.add_child(right)
-	parent.add_child(row)
-	parent.move_child(row, index)
-	return row
+	pill.add_child(label)
+	parent.add_child(pill)
+	parent.move_child(pill, index)
+	return pill
 
 ## Покласти кілька сусідніх вузлів екрана на одну панель у рамці.
 static func wrap_in_panel(nodes: Array[Control], accent: Color = Color.WHITE) -> PanelContainer:
@@ -296,20 +307,6 @@ static func wrap_in_panel(nodes: Array[Control], accent: Color = Color.WHITE) ->
 	parent.add_child(panel)
 	parent.move_child(panel, index)
 	return panel
-
-static func _divider(mirrored: bool) -> TextureRect:
-	var path := THEME_DIR + "divider.png"
-	if not ResourceLoader.exists(path):
-		return null
-	var divider := TextureRect.new()
-	divider.texture = load(path)
-	divider.flip_h = mirrored
-	divider.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	divider.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	divider.custom_minimum_size = Vector2(96, 22)
-	divider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return divider
 
 ## Текстура з рамкою, що тягнеться лише серединою (кути лишаються як є).
 static func _texture_box(file: String, margin: int, content_h: int, content_v: int) -> StyleBox:
@@ -336,29 +333,31 @@ static func _texture_box(file: String, margin: int, content_h: int, content_v: i
 func _build_theme() -> Theme:
 	var new_theme := Theme.new()
 	new_theme.default_font_size = 18
+	new_theme.default_font = font(600)
 
-	# --- кнопки: темні з кремовою рамкою й квадратиками на кутах ---
-	new_theme.set_stylebox("normal", "Button", _texture_box("button.png", 12, 16, 8))
-	new_theme.set_stylebox("hover", "Button", _texture_box("button_hover.png", 12, 16, 8))
-	new_theme.set_stylebox("pressed", "Button", _texture_box("button_pressed.png", 12, 16, 8))
-	new_theme.set_stylebox("disabled", "Button", _texture_box("button_disabled.png", 12, 16, 8))
+	# --- кнопки: округлі, градієнт, товста рамка, глянець і тінь ---
+	new_theme.set_stylebox("normal", "Button", _texture_box("button.png", 16, 22, 12))
+	new_theme.set_stylebox("hover", "Button", _texture_box("button_hover.png", 16, 22, 12))
+	new_theme.set_stylebox("pressed", "Button", _texture_box("button_pressed.png", 16, 22, 12))
+	new_theme.set_stylebox("disabled", "Button", _texture_box("button_disabled.png", 16, 22, 12))
 	new_theme.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 	new_theme.set_color("font_color", "Button", TEXT)
 	new_theme.set_color("font_hover_color", "Button", Color.WHITE)
-	new_theme.set_color("font_pressed_color", "Button", LINE.darkened(0.15))
+	new_theme.set_color("font_pressed_color", "Button", TEXT_DIM)
 	new_theme.set_color("font_focus_color", "Button", TEXT)
-	new_theme.set_color("font_disabled_color", "Button", TEXT_DIM.darkened(0.2))
+	new_theme.set_color("font_disabled_color", "Button", TEXT_DIM.darkened(0.3))
+	new_theme.set_font("font", "Button", font(700))
 	new_theme.set_font_size("font_size", "Button", 18)
 
-	# --- головна кнопка: світла, текст темний ---
+	# --- головна кнопка: зелена, текст білий ---
 	new_theme.set_type_variation(&"PrimaryButton", &"Button")
-	new_theme.set_stylebox("normal", "PrimaryButton", _texture_box("button_primary.png", 12, 16, 8))
-	new_theme.set_stylebox("hover", "PrimaryButton", _texture_box("button_primary_hover.png", 12, 16, 8))
-	new_theme.set_stylebox("pressed", "PrimaryButton", _texture_box("button_primary_pressed.png", 12, 16, 8))
-	new_theme.set_color("font_color", "PrimaryButton", TEXT_DARK)
-	new_theme.set_color("font_hover_color", "PrimaryButton", Color.BLACK)
-	new_theme.set_color("font_pressed_color", "PrimaryButton", TEXT_DARK)
-	new_theme.set_color("font_focus_color", "PrimaryButton", TEXT_DARK)
+	new_theme.set_stylebox("normal", "PrimaryButton", _texture_box("button_primary.png", 16, 22, 12))
+	new_theme.set_stylebox("hover", "PrimaryButton", _texture_box("button_primary_hover.png", 16, 22, 12))
+	new_theme.set_stylebox("pressed", "PrimaryButton", _texture_box("button_primary_pressed.png", 16, 22, 12))
+	new_theme.set_color("font_color", "PrimaryButton", Color.WHITE)
+	new_theme.set_color("font_hover_color", "PrimaryButton", Color.WHITE)
+	new_theme.set_color("font_pressed_color", "PrimaryButton", Color(1, 1, 1, 0.82))
+	new_theme.set_color("font_focus_color", "PrimaryButton", Color.WHITE)
 
 	# --- панелі ---
 	new_theme.set_stylebox("panel", "PanelContainer", panel_box())
@@ -366,6 +365,7 @@ func _build_theme() -> Theme:
 
 	# --- текст ---
 	new_theme.set_color("font_color", "Label", TEXT)
+	new_theme.set_font("font", "Label", font(600))
 	new_theme.set_font_size("font_size", "Label", 18)
 
 	# --- прокрутка: тонка кремова смужка замість сірої ---

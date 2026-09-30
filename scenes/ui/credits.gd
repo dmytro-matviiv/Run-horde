@@ -40,8 +40,11 @@ poly.pizza/m/4o-ge5uJXXO. Ліцензія CC BY 3.0. Розібрана на о
 
 [b]Інтерфейс[/b]
 
-Рамки, кнопки, джойстик, іконки кнопок бою й курсор — Kenney (kenney.nl):
-«Fantasy UI Borders», «Mobile Controls», «Cursor Pixel Pack». Ліцензія CC0.
+Джойстик, кругла кнопка бою й курсор — Kenney (kenney.nl):
+«Mobile Controls», «Cursor Pixel Pack». Ліцензія CC0.
+
+Шрифт «Baloo 2» — Ek Type (fonts.google.com/specimen/Baloo+2).
+Ліцензія SIL Open Font License 1.1.
 """
 
 func _ready() -> void:
