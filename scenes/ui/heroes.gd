@@ -116,9 +116,11 @@ func _ready() -> void:
 	column.add_child(_slot_scroll)
 	for i in HeroPool.ALL_HEROES.size():
 		var def := HeroPool.ALL_HEROES[i]
-		# Портрета ще немає — щит-емблема; колір героя видно з рамки слота
-		# (style_picker_slot фарбує її нижче, у _refresh).
-		var texture := UiTheme.control_icon("shield")
+		# Портрет героя, якщо гравець його поклав; інакше — щит-емблема.
+		# Колір героя видно з рамки слота (style_picker_slot, у _refresh).
+		var texture := ArtSlots.hero_portrait(def.id)
+		if texture == null:
+			texture = UiTheme.control_icon("shield")
 		var slot := UiTheme.make_picker_slot(texture, Color.WHITE, 88.0)
 		slot.pressed.connect(_on_slot_pressed.bind(i))
 		_slot_row.add_child(slot)

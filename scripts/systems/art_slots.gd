@@ -36,6 +36,8 @@ const COMBAT_ICON_DIR := "res://assets/ui/icons/combat/"
 ## Дуже витягнута смуга (ширина в ~4 рази за висоту) — вітрина низька й
 ## широка, тож квадратна чи портретна картинка сильно обріжеться.
 const HERO_BACKGROUND_DIR := "res://assets/ui/icons/hero_backgrounds/"
+## Портрет героя в ряду вибору — квадратний, замінює щит-емблему.
+const HERO_PORTRAIT_DIR := "res://assets/ui/icons/hero_portraits/"
 
 const MODEL_EXTENSIONS := [".glb", ".gltf", ".fbx", ".tscn"]
 const ICON_EXTENSIONS := [".png", ".webp", ".jpg", ".svg"]
@@ -84,6 +86,10 @@ static func dungeon_icon(level_id: StringName) -> Texture2D:
 ## Фон вітрини конкретного героя в Залі героїв (blade_warden, void_assassin...).
 static func hero_background(hero_id: StringName) -> Texture2D:
 	return _find_texture(HERO_BACKGROUND_DIR, String(hero_id))
+
+## Портрет героя для ряду вибору (blade_warden, void_assassin...).
+static func hero_portrait(hero_id: StringName) -> Texture2D:
+	return _find_texture(HERO_PORTRAIT_DIR, String(hero_id))
 
 static func shop_icon(name: String) -> Texture2D:
 	return _find_texture(SHOP_ICON_DIR, name) if name != "" else null

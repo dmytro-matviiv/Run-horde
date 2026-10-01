@@ -14,6 +14,9 @@ var _background: TextureRect
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# COVERED малює картинку більшою за смугу — без обрізки зайве лізло б
+	# на рамку панелі вітрини.
+	clip_contents = true
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
 	for i in 5:
