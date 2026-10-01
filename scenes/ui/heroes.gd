@@ -11,10 +11,19 @@ const STAGE_GLOW_SCRIPT := preload("res://scenes/ui/stage_glow.gd")
 const SKY_STAGE_SCRIPT := preload("res://scenes/ui/sky_stage.gd")
 ## Скільки карток здібностей лягає зліва від вітрини — решта праворуч.
 const LEFT_SLOT_COUNT := 2
+## Ширина стовпчика здібностей — під найдовшу назву ("Димова Граната")
+## одним рядком: у два рядки картки ставали вищими й низ екрана вилазив.
+const RACK_WIDTH := 132.0
 const HALL_BACKGROUND := "res://assets/ui/backgrounds/hero_hall.jpg"
 const SELECT_BUTTON := "res://assets/ui/theme/button_hero_select.png"
 const SELECT_BUTTON_DISABLED := "res://assets/ui/theme/button_hero_select_disabled.png"
 const BACK_BUTTON := "res://assets/ui/theme/button_hero_back.png"
+const NAME_COLOR := Color(1.0, 0.85, 0.45)
+## Кольори чисел у рядку характеристик (bbcode, тому — hex).
+const HP_COLOR := "#ff8f80"
+const SPEED_COLOR := "#7fe3ff"
+const PENALTY_COLOR := "#ff9a6b"
+const WEAPON_COLOR := "#ffd36b"
 
 var _index := 0
 var _preview: ModelPreview
@@ -29,7 +38,7 @@ var _slot_scroll: ScrollContainer
 var _slot_buttons: Array[Button] = []
 var _name_label: Label
 var _description_label: Label
-var _stats_label: Label
+var _stats_label: RichTextLabel
 var _left_slots: VBoxContainer
 var _right_slots: VBoxContainer
 var _action_button: Button
@@ -84,8 +93,8 @@ func _ready() -> void:
 
 	_left_slots = VBoxContainer.new()
 	_left_slots.alignment = BoxContainer.ALIGNMENT_CENTER
-	_left_slots.add_theme_constant_override("separation", 4)
-	_left_slots.custom_minimum_size = Vector2(96, 0)
+	_left_slots.add_theme_constant_override("separation", 6)
+	_left_slots.custom_minimum_size = Vector2(RACK_WIDTH, 0)
 	stage_row.add_child(_left_slots)
 
 	var stage := PanelContainer.new()
@@ -116,8 +125,8 @@ func _ready() -> void:
 
 	_right_slots = VBoxContainer.new()
 	_right_slots.alignment = BoxContainer.ALIGNMENT_CENTER
-	_right_slots.add_theme_constant_override("separation", 4)
-	_right_slots.custom_minimum_size = Vector2(96, 0)
+	_right_slots.add_theme_constant_override("separation", 6)
+	_right_slots.custom_minimum_size = Vector2(RACK_WIDTH, 0)
 	stage_row.add_child(_right_slots)
 
 	# Ряд слотів — героя гортаєш і обираєш іконками.
@@ -154,22 +163,42 @@ func _ready() -> void:
 	info.add_theme_constant_override("separation", 6)
 	info_panel.add_child(info)
 
+	# Текст на темній панелі: ім'я — золоте (як різьблення рамки), опис —
+	# теплий білий, а не сіро-блакитний колір героя, що зливався з тлом.
 	_name_label = Label.new()
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.add_theme_font_size_override("font_size", 24)
+	_name_label.add_theme_font_override("font", UiTheme.font(900))
+	_name_label.add_theme_font_size_override("font_size", 26)
+	_name_label.add_theme_color_override("font_color", NAME_COLOR)
+	_name_label.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.0, 0.85))
+	_name_label.add_theme_constant_override("outline_size", 6)
 	info.add_child(_name_label)
 
 	_description_label = Label.new()
 	_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_description_label.add_theme_font_size_override("font_size", 15)
-	_description_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	_description_label.add_theme_font_override("font", UiTheme.font(700))
+	_description_label.add_theme_font_size_override("font_size", 17)
+	_description_label.add_theme_color_override("font_color", Color(0.98, 0.96, 0.9))
+	_description_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	_description_label.add_theme_constant_override("outline_size", 3)
 	info.add_child(_description_label)
 
-	_stats_label = Label.new()
-	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_stats_label.add_theme_font_size_override("font_size", 14)
-	_stats_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	# Характеристики — назва приглушена, а число своїм яскравим кольором:
+	# око одразу ловить "85" і "+18%", а не читає весь рядок.
+	_stats_label = RichTextLabel.new()
+	_stats_label.bbcode_enabled = true
+	_stats_label.fit_content = true
+	_stats_label.scroll_active = false
+	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stats_label.add_theme_font_override("normal_font", UiTheme.font(700))
+	_stats_label.add_theme_font_override("bold_font", UiTheme.font(900))
+	_stats_label.add_theme_font_size_override("normal_font_size", 16)
+	_stats_label.add_theme_font_size_override("bold_font_size", 16)
+	_stats_label.add_theme_color_override("default_color", Color(0.8, 0.78, 0.92))
+	_stats_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	_stats_label.add_theme_constant_override("outline_size", 3)
 	info.add_child(_stats_label)
 
 	var actions := VBoxContainer.new()
@@ -267,11 +296,11 @@ func _rebuild() -> void:
 	_placeholder_label.visible = _preview.show_hero(def, weapon)
 
 	_name_label.text = def.title
-	_name_label.add_theme_color_override("font_color", def.color)
 	_description_label.text = def.description
 	var hp := int(Balance.HERO_MAX_HP + def.bonus_max_hp)
 	var speed_percent := int(round(def.move_speed_percent * 100.0))
-	_stats_label.text = "Здоров'я %d    Швидкість %+d%%    Зброя: %s" % [hp, speed_percent, weapon.title]
+	_stats_label.text = "[center]Здоров'я [b][color=%s]%d[/color][/b]      Швидкість [b][color=%s]%+d%%[/color][/b]      Зброя: [b][color=%s]%s[/color][/b][/center]" % [
+		HP_COLOR, hp, SPEED_COLOR if speed_percent >= 0 else PENALTY_COLOR, speed_percent, WEAPON_COLOR, weapon.title]
 
 	for child in _left_slots.get_children():
 		child.queue_free()
@@ -309,8 +338,11 @@ func _currency_badge(color: Color, value_label: Label) -> PanelContainer:
 	dot.custom_minimum_size = Vector2(14, 14)
 	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(dot)
-	value_label.add_theme_font_size_override("font_size", 16)
-	value_label.add_theme_color_override("font_color", color)
+	value_label.add_theme_font_override("font", UiTheme.font(800))
+	value_label.add_theme_font_size_override("font_size", 18)
+	value_label.add_theme_color_override("font_color", color.lerp(Color.WHITE, 0.25))
+	value_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	value_label.add_theme_constant_override("outline_size", 4)
 	row.add_child(value_label)
 	return badge
 
@@ -320,7 +352,7 @@ func _currency_badge(color: Color, value_label: Label) -> PanelContainer:
 func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 	var holder := VBoxContainer.new()
 	holder.alignment = BoxContainer.ALIGNMENT_CENTER
-	holder.add_theme_constant_override("separation", 4)
+	holder.add_theme_constant_override("separation", 2)
 	# Своя іконка здібності (згенерований арт) — якщо гравець її поклав, без
 	# рамки-слота (вона лише забруднює готову картинку), лише трохи більша;
 	# інакше — та сама фігура кодом, що й раніше, на кольоровій підкладці.
@@ -328,7 +360,7 @@ func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 	var icon: Button
 	if own_icon != null:
 		icon = Button.new()
-		icon.custom_minimum_size = Vector2(80, 80)
+		icon.custom_minimum_size = Vector2(74, 74)
 		icon.icon = own_icon
 		icon.expand_icon = true
 		icon.flat = true
@@ -347,17 +379,8 @@ func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 		icon.pressed.connect(_on_ability_pressed.bind(card))
 		slot.add_child(icon)
 		holder.add_child(slot)
-	var label := Label.new()
-	label.text = card.title
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size = Vector2(84, 0)
-	label.add_theme_font_size_override("font_size", 12)
-	label.add_theme_color_override("font_color", card.color)
-	# Тло зали строкате — без контуру підпис губився на кам'яних стінах.
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
-	label.add_theme_constant_override("outline_size", 5)
-	holder.add_child(label)
+	# Тло зали строкате — підпис на темній плашці, інакше губився на стінах.
+	holder.add_child(UiTheme.make_caption(card.title, card.color))
 	return holder
 
 ## Картки здібностей беремо з того, що герой СПРАВДІ вміє в бою

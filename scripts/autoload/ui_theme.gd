@@ -8,9 +8,13 @@ extends Node
 ## рамка, глянцевий відблиск зверху й м'яка тінь під кожною кнопкою чи
 ## панеллю; заголовки — на кольоровій плашці-пігулці. Текстури генерує
 ## tools/build_new_theme_textures.py (лежить поза репозиторієм — одноразовий
-## скрипт, результат зберігається тут, у assets/ui/theme). Шрифт — Baloo 2
-## (Google Fonts, OFL), змінної ваги: UiTheme.font(600) і важче для великих
+## скрипт, результат зберігається тут, у assets/ui/theme). Шрифт — Nunito
+## (Google Fonts, OFL), змінної ваги: UiTheme.font(700) і важче для великих
 ## заголовків. Немає файла текстури — лишається проста плоска рамка.
+##
+## ШРИФТ МУСИТЬ МАТИ КИРИЛИЦЮ (з і, ї, є, ґ). Попередній, Baloo 2, її не
+## мав — і вся українська тихо малювалась тонким запасним шрифтом Godot,
+## на який ще й вага не діяла: текст губився на темних панелях.
 
 # Палітра: глибокий індиго, лавандові лінії, зелена головна дія.
 const BG_DARK := Color(0.055, 0.05, 0.11)
@@ -29,7 +33,7 @@ const DANGER := Color(1.0, 0.35, 0.35)
 
 const THEME_DIR := "res://assets/ui/theme/"
 const CURSOR_DIR := "res://assets/ui/cursors/"
-const FONT_PATH := "res://assets/ui/fonts/Baloo2-Variable.ttf"
+const FONT_PATH := "res://assets/ui/fonts/Nunito-Variable.ttf"
 
 static var _font_cache: Dictionary = {}
 
@@ -61,10 +65,13 @@ func _setup_scaling() -> void:
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 
-## Baloo 2 певної ваги (300-800). Шрифт змінний (один файл, вага — вісь
+## Nunito певної ваги (200-1000). Шрифт змінний (один файл, вага — вісь
 ## "wght"), тож важчі заголовки не тягнуть окремого файла. Результат
 ## кешується — FontVariation не створюємо заново на кожен виклик.
-static func font(weight: int = 600) -> Font:
+## Ключ осі — числовий тег, а не рядок "wght": рядкові ключі Godot звіряє
+## зі своїми назвами ("weight"), тож {"wght": ...} мовчки ігнорувався і
+## весь текст лишався найтоншим.
+static func font(weight: int = 700) -> Font:
 	if _font_cache.has(weight):
 		return _font_cache[weight]
 	var result: Font
@@ -72,7 +79,8 @@ static func font(weight: int = 600) -> Font:
 		var base := load(FONT_PATH)
 		var variant := FontVariation.new()
 		variant.base_font = base
-		variant.variation_opentype = {"wght": weight}
+		var weight_tag := TextServerManager.get_primary_interface().name_to_tag("wght")
+		variant.variation_opentype = {weight_tag: weight}
 		result = variant
 	_font_cache[weight] = result
 	return result
@@ -131,6 +139,32 @@ static func hud_text(label: Label, font_size: int = 18, color: Color = TEXT) -> 
 	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	label.add_theme_constant_override("outline_size", 6)
 
+## Підпис під іконкою, що стоїть просто на строкатому арті (стіни зали,
+## данж): світлий жирний текст на темній напівпрозорій плашці з облямівкою
+## кольору предмета. Самого контуру мало — дрібні літери тонули в тлі.
+static func make_caption(text: String, accent: Color, font_size: int = 15) -> PanelContainer:
+	var pill := PanelContainer.new()
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var box := make_box(Color(0.04, 0.03, 0.09, 0.82), 9, 1, Color(accent, 0.7))
+	box.content_margin_left = 8
+	box.content_margin_right = 8
+	box.content_margin_top = 2
+	box.content_margin_bottom = 3
+	box.anti_aliasing = true
+	pill.add_theme_stylebox_override("panel", box)
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.custom_minimum_size = Vector2(56, 0)
+	label.add_theme_font_override("font", font(800))
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", accent.lerp(Color.WHITE, 0.55))
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	label.add_theme_constant_override("outline_size", 4)
+	pill.add_child(label)
+	return pill
+
 ## Квадратна кнопка з білою іконкою набору (пауза, меню). Поля рамки
 ## тонші, ніж у текстових кнопок, — інакше іконка не влізе.
 static func make_icon_button(icon_name: String, side: float = 56.0, tooltip: String = "") -> Button:
@@ -176,7 +210,7 @@ static func make_title(text: String, font_size: int = 26, color: Color = HEADING
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_font_override("font", font(700))
+	label.add_theme_font_override("font", font(800))
 	label.add_theme_color_override("font_color", color)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pill.add_child(label)
@@ -204,13 +238,13 @@ static func art_button(button: Button, path: String, margin_x: int, margin_y: in
 	disabled_box.modulate_color = disabled_tint
 	button.add_theme_stylebox_override("disabled", disabled_box)
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	button.add_theme_font_override("font", font(700))
+	button.add_theme_font_override("font", font(800))
 	for state: String in ["font_color", "font_hover_color", "font_focus_color"]:
 		button.add_theme_color_override(state, Color.WHITE)
 	button.add_theme_color_override("font_pressed_color", Color(0.9, 0.9, 0.9))
-	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.5))
-	button.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
-	button.add_theme_constant_override("outline_size", 5)
+	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.72))
+	button.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	button.add_theme_constant_override("outline_size", 6)
 
 static func _art_box(texture: Texture2D, margin_x: int, margin_y: int) -> StyleBoxTexture:
 	var box := StyleBoxTexture.new()
@@ -498,7 +532,7 @@ static func _texture_box(file: String, margin: int, content_h: int, content_v: i
 func _build_theme() -> Theme:
 	var new_theme := Theme.new()
 	new_theme.default_font_size = 18
-	new_theme.default_font = font(600)
+	new_theme.default_font = font(700)
 
 	# --- кнопки: округлі, градієнт, товста рамка, глянець і тінь ---
 	new_theme.set_stylebox("normal", "Button", _texture_box("button.png", 16, 22, 12))
@@ -510,8 +544,9 @@ func _build_theme() -> Theme:
 	new_theme.set_color("font_hover_color", "Button", Color.WHITE)
 	new_theme.set_color("font_pressed_color", "Button", TEXT_DIM)
 	new_theme.set_color("font_focus_color", "Button", TEXT)
-	new_theme.set_color("font_disabled_color", "Button", TEXT_DIM.darkened(0.3))
-	new_theme.set_font("font", "Button", font(700))
+	# Вимкнена кнопка ("У руках", "Обрано") — сіра, але напис мусить читатись.
+	new_theme.set_color("font_disabled_color", "Button", Color(0.86, 0.86, 0.92, 0.85))
+	new_theme.set_font("font", "Button", font(800))
 	new_theme.set_font_size("font_size", "Button", 18)
 
 	# --- головна кнопка: зелена, текст білий ---
@@ -530,7 +565,7 @@ func _build_theme() -> Theme:
 
 	# --- текст ---
 	new_theme.set_color("font_color", "Label", TEXT)
-	new_theme.set_font("font", "Label", font(600))
+	new_theme.set_font("font", "Label", font(700))
 	new_theme.set_font_size("font_size", "Label", 18)
 
 	# --- прокрутка: тонка кремова смужка замість сірої ---
