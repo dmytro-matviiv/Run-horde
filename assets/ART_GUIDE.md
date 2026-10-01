@@ -91,7 +91,13 @@
                                            talent_bolt_pierce, talent_aura_power,
                                            talent_shadow_clones
     assets/ui/icons/weapons/<id зброї>.png  (рендер моделі — див. нижче)
-    assets/ui/icons/shop/<назва товару>.png  gems_small, gems_medium, gems_large, exchange
+    assets/ui/icons/shop/<назва товару>.png  gems_small, gems_medium, gems_large, exchange,
+                                           starter_ads, starter_hero, starter_gold (стартові
+                                           набори), remove_ads ("Без реклами")
+    assets/ui/theme/item_card.png          картка товару на Ринку з відсіком під іконку
+                                           (висота текстури = висота картки, 120)
+    assets/ui/theme/section_banner*.png    банер розділу Ринку + ромбики згори/знизу окремо
+    assets/ui/backgrounds/shop.jpg         тло Ринку (крамниця), hero_hall.jpg — Зали героїв
     assets/ui/icons/currency/<вид>.png     gold (монета), gem (гем) — біля числа валюти
                                            на всіх екранах і в цінах на кнопках
                                            (обрізані по краю, без полів довкола)

@@ -115,6 +115,36 @@ static func panel_box(accent: Color = Color.WHITE) -> StyleBox:
 		(box as StyleBoxTexture).modulate_color = accent
 	return box
 
+## КАРТКА ТОВАРУ (арт гравця): темна рамка з рунами по кутах і квадратний
+## відсік під іконку зліва. Текстура вже зменшена до ITEM_CARD_HEIGHT, а
+## лівий край разом із відсіком у 9-slice не тягнеться — відсік лишається
+## квадратним, лише поки картка саме такої висоти. Тому висоту картки
+## фіксуй (custom_minimum_size.y), а іконку ITEM_ICON став першою в ряд:
+## content_margin_left уже виводить її рівно в центр відсіку.
+const ITEM_CARD_HEIGHT := 120.0
+const ITEM_ICON := 64.0
+## Від іконки до тексту — щоб текст починався за відсіком, а не на ньому.
+const ITEM_ICON_GAP := 36
+
+static func item_card_box() -> StyleBox:
+	var path := THEME_DIR + "item_card.png"
+	if not ResourceLoader.exists(path):
+		return panel_box()
+	var box := StyleBoxTexture.new()
+	box.texture = load(path)
+	# Лівий край — рамка й відсік (118 px), правий — рамка з рунами.
+	# Згори/знизу — по половині висоти: посередині не тягнеться нічого.
+	box.texture_margin_left = 118
+	box.texture_margin_right = 27
+	box.texture_margin_top = 59
+	box.texture_margin_bottom = 59
+	# Центр відсіку — 60 px від лівого краю й посередині висоти.
+	box.content_margin_left = 60 - ITEM_ICON * 0.5
+	box.content_margin_right = 26
+	box.content_margin_top = 12
+	box.content_margin_bottom = 12
+	return box
+
 ## Слот під іконку (зброя в арсеналі, здібність) — кольорове тло в рамці.
 ## accent — свій відтінок слота (колір прийому, зброї), як у зразку, де
 ## кожен предмет спорядження сидить у слоті свого кольору.
