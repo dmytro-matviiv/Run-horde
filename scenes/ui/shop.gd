@@ -205,26 +205,13 @@ func _build_header(text: String) -> Control:
 ## рівно одна під одною. Іконка — файл res://assets/ui/icons/shop/<назва>.png
 ## (див. assets/ART_GUIDE.md); немає — біла заглушка в кольорі товару.
 func _build_row(item_title: String, description: String, icon_name: String = "", accent: Color = Color(1, 0.86, 0.4)) -> Button:
-	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", UiTheme.item_card_box())
-	card.custom_minimum_size = Vector2(0, UiTheme.ITEM_CARD_HEIGHT)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	card.add_child(row)
 	var own_icon := ArtSlots.shop_icon(icon_name)
-	var icon: TextureRect
+	var card: PanelContainer
 	if own_icon != null:
-		icon = UiTheme.make_bare_icon(own_icon, UiTheme.ITEM_ICON)
+		card = UiTheme.make_item_card(own_icon)
 	else:
-		var fallback := UiTheme.control_icon("money" if icon_name == "exchange" else "star")
-		icon = UiTheme.make_bare_icon(fallback, UiTheme.ITEM_ICON)
-		icon.modulate = accent
-	row.add_child(icon)
-	# Текст — за відсіком, а не на ньому (separation ряду теж додається).
-	var icon_gap := Control.new()
-	icon_gap.custom_minimum_size = Vector2(UiTheme.ITEM_ICON_GAP - 32, 0)
-	icon_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(icon_gap)
+		card = UiTheme.make_item_card(UiTheme.control_icon("money" if icon_name == "exchange" else "star"), accent)
+	var row := card.get_child(0) as HBoxContainer
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL

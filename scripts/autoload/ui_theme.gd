@@ -145,6 +145,27 @@ static func item_card_box() -> StyleBox:
 	box.content_margin_bottom = 12
 	return box
 
+## Картка товару (Ринок, Храм) з іконкою у відсіку. Повертає картку; її
+## єдиний нащадок — ряд (HBoxContainer), де вже стоять іконка й відступ за
+## відсіком: додай туди опис і кнопку. tint — колір білої заглушки, коли
+## власного арту ще немає (для готової картинки — WHITE).
+static func make_item_card(icon: Texture2D, tint: Color = Color.WHITE) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", item_card_box())
+	card.custom_minimum_size = Vector2(0, ITEM_CARD_HEIGHT)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	card.add_child(row)
+	var image := make_bare_icon(icon, ITEM_ICON)
+	image.modulate = tint
+	row.add_child(image)
+	# Текст — за відсіком, а не на ньому (по 16 дає й separation ряду).
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(ITEM_ICON_GAP - 32, 0)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(gap)
+	return card
+
 ## Слот під іконку (зброя в арсеналі, здібність) — кольорове тло в рамці.
 ## accent — свій відтінок слота (колір прийому, зброї), як у зразку, де
 ## кожен предмет спорядження сидить у слоті свого кольору.

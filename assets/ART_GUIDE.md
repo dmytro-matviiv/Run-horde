@@ -97,7 +97,8 @@
     assets/ui/theme/item_card.png          картка товару на Ринку з відсіком під іконку
                                            (висота текстури = висота картки, 120)
     assets/ui/theme/section_banner*.png    банер розділу Ринку + ромбики згори/знизу окремо
-    assets/ui/backgrounds/shop.jpg         тло Ринку (крамниця), hero_hall.jpg — Зали героїв
+    assets/ui/backgrounds/shop.jpg         тло Ринку (крамниця), hero_hall.jpg — Зали героїв,
+                                           temple.jpg — Храму талантів
     assets/ui/icons/currency/<вид>.png     gold (монета), gem (гем) — біля числа валюти
                                            на всіх екранах і в цінах на кнопках
                                            (обрізані по краю, без полів довкола)
