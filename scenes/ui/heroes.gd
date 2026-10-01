@@ -133,9 +133,8 @@ func _ready() -> void:
 	bottom.add_theme_constant_override("separation", 14)
 	column.add_child(bottom)
 
-	var info_panel := PanelContainer.new()
+	var info_panel := OrnatePanel.new()
 	info_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info_panel.add_theme_stylebox_override("panel", UiTheme.panel_box())
 	bottom.add_child(info_panel)
 	var info := VBoxContainer.new()
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -364,10 +363,12 @@ func _cards_for(def: HeroDef) -> Array:
 	var lines := []
 	for weapon: WeaponDef in weapons:
 		lines.append("%s — %s" % [weapon.title, weapon.description])
+	# id "arsenal" — та сама картинка для всіх героїв (icons/skills/arsenal.png).
 	cards.append({
 		"kind": &"weapon", "color": Color(1.0, 0.85, 0.4),
 		"title": "Арсенал",
 		"text": "\n".join(lines),
+		"id": &"arsenal",
 	})
 	return cards
 

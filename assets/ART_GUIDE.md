@@ -77,7 +77,11 @@
                                            гравець обирає в будівлях міста)
     assets/ui/icons/skills/<id>.png        whirlwind, rage_dash, rune_nova, fire_ring, smoke_veil,
                                            arcane_barrage, frost_nova, venom_swamp, moon_storm,
-                                           great_seal, card_storm
+                                           great_seal, card_storm; пасивки героїв — rage,
+                                           rune_charge, phoenix, death_mark; arsenal — картка
+                                           "Арсенал" у Залі героїв (одна на всіх)
+    assets/ui/theme/ornate_panel*.png      рамка панелі опису героя (OrnatePanel): сама рамка
+                                           + вензель зверху й ромбик знизу окремо
     assets/ui/icons/combat/<вид>.png       кнопки бою: attack (меч), gun, staff, book, cards
                                            (удар / постріл / чари залежно від зброї), dodge,
                                            whirl, dash, nova, fire, frost, venom, bolt, rune
