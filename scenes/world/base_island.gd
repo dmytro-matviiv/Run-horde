@@ -54,6 +54,8 @@ const BATCH_GROUPS := {"Town": 0.0, "Buildings": 0.0, "Nature": 40.0}
 @onready var player: CharacterBody3D = $Player
 @onready var action_button: Button = $HUD/ActionButton
 @onready var gold_label: Label = $HUD/GoldLabel
+var _gold_badge: CurrencyBadge
+var _gems_badge: CurrencyBadge
 
 var _nearby: Interactable
 var _select: Control
@@ -96,7 +98,8 @@ func _ready() -> void:
 		interactable.player_entered.connect(_on_player_entered)
 		interactable.player_exited.connect(_on_player_exited)
 
-	gold_label.text = "Золото: %d    Геми: %d" % [GameState.gold, GameState.gems]
+	_gold_badge.set_amount(GameState.gold)
+	_gems_badge.set_amount(GameState.gems)
 
 	# Важке — під екраном завантаження: фізика будівель, пакування,
 	# вогні. Гравець бачить смужку, а не ривки першої секунди.
@@ -122,8 +125,16 @@ func _style_hud() -> void:
 	panel.add_child(column)
 	$HUD.add_child(panel)
 	$HUD.move_child(panel, 0)
-	gold_label.reparent(column, false)
-	gold_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	# Золото й геми — значками з монетою й гемом, а не рядком тексту.
+	gold_label.visible = false
+	var wallet := HBoxContainer.new()
+	wallet.add_theme_constant_override("separation", 16)
+	wallet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(wallet)
+	_gold_badge = CurrencyBadge.new(&"gold", 18, false)
+	wallet.add_child(_gold_badge)
+	_gems_badge = CurrencyBadge.new(&"gem", 18, false)
+	wallet.add_child(_gems_badge)
 	var hint := $HUD/HintLabel as Label
 	hint.reparent(column, false)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

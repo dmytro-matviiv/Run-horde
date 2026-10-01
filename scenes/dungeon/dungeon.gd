@@ -165,6 +165,7 @@ var _boss_bar: ProgressBar
 var _boss_gate: BossGate
 var _pending_boss_position := Vector3.ZERO
 var _hud_title: Label
+var _hud_gold: CurrencyBadge
 var _health_bar: ProgressBar
 var _xp_bar: ProgressBar
 var _pause_menu: Control
@@ -310,7 +311,14 @@ func _style_hud() -> void:
 	UiTheme.hud_text(_shrine_label, 15)
 	_shrine_label.visible = false
 
-	status_label.reparent(column, false)
+	# Золото походу — монетою поруч зі станом данжу, не словом у рядку.
+	var status_row := HBoxContainer.new()
+	status_row.add_theme_constant_override("separation", 10)
+	status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(status_row)
+	_hud_gold = CurrencyBadge.new(&"gold", 15, false)
+	status_row.add_child(_hud_gold)
+	status_label.reparent(status_row, false)
 	UiTheme.hud_text(status_label, 15, UiTheme.TEXT_DIM.lightened(0.25))
 
 	corner.add_child(_shrine_label)
@@ -1134,7 +1142,8 @@ func _update_status(title: String = "") -> void:
 	if _arena_status != "":
 		state = _arena_status
 	_hud_title.text = "%s  •  рівень героя %d" % [level_title, _hero_level]
-	status_label.text = "Золото %d   •   ворогів %d   •   %s" % [_run_gold, _alive_enemies, state]
+	_hud_gold.set_amount(_run_gold)
+	status_label.text = "•   ворогів %d   •   %s" % [_alive_enemies, state]
 	# Смужка досвіду — скільки лишилось до наступного вибору здібності.
 	_xp_bar.max_value = XP_PER_LEVEL * _hero_level
 	_xp_bar.value = _xp
@@ -1142,6 +1151,7 @@ func _update_status(title: String = "") -> void:
 ## Герой загинув — це має бути видно, а не виглядати як "застряг".
 func _on_player_died() -> void:
 	_run_over = true
+	_hud_gold.visible = false
 	status_label.text = "Ви загинули. Повертаємось на базу…"
 	await get_tree().create_timer(2.0).timeout
 	SceneLoader.change_scene(BASE_SCENE_PATH, "База")
@@ -1184,12 +1194,18 @@ func _build_exit_choice() -> Control:
 	box.add_theme_constant_override("separation", 10)
 	panel.add_child(box)
 	box.add_child(UiTheme.make_title("%s — пройдено!" % _level.title, 24))
-	var reward := Label.new()
-	reward.text = "Золота за похід: %d" % _run_gold
-	reward.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	reward.add_theme_font_size_override("font_size", 20)
-	reward.add_theme_color_override("font_color", UiTheme.GOLD)
+	var reward := HBoxContainer.new()
+	reward.alignment = BoxContainer.ALIGNMENT_CENTER
+	reward.add_theme_constant_override("separation", 10)
 	box.add_child(reward)
+	var reward_caption := Label.new()
+	reward_caption.text = "За похід:"
+	reward_caption.add_theme_font_size_override("font_size", 20)
+	reward_caption.add_theme_color_override("font_color", UiTheme.TEXT)
+	reward.add_child(reward_caption)
+	var reward_gold := CurrencyBadge.new(&"gold", 22, false)
+	reward_gold.set_amount(_run_gold)
+	reward.add_child(reward_gold)
 	var next_index := _level_index + 1
 	if next_index < DungeonLevels.get_level_count():
 		var next := Button.new()

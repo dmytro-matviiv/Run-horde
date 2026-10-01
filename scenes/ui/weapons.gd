@@ -52,7 +52,8 @@ var _index := 0
 
 var _preview: ModelPreview
 var _preview_note: Label
-var _currency_label: Label
+var _gold_badge: CurrencyBadge
+var _gems_badge: CurrencyBadge
 var _slot_row: HBoxContainer
 var _slot_scroll: ScrollContainer
 var _slot_buttons: Array[Button] = []
@@ -88,10 +89,11 @@ func _ready() -> void:
 	var title_box := UiTheme.make_title("Збройня", 30)
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(title_box)
-	_currency_label = Label.new()
-	_currency_label.add_theme_font_size_override("font_size", 17)
-	_currency_label.add_theme_color_override("font_color", UiTheme.GOLD)
-	top_row.add_child(_currency_label)
+	top_row.add_theme_constant_override("separation", 8)
+	_gold_badge = CurrencyBadge.new(&"gold")
+	top_row.add_child(_gold_badge)
+	_gems_badge = CurrencyBadge.new(&"gem")
+	top_row.add_child(_gems_badge)
 
 	var hero_label := Label.new()
 	hero_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
@@ -152,7 +154,7 @@ func _ready() -> void:
 	_kind_label = Label.new()
 	_kind_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_kind_label.add_theme_font_size_override("font_size", 15)
-	_kind_label.add_theme_color_override("font_color", UiTheme.GEM)
+	_kind_label.add_theme_color_override("font_color", Color(0.55, 0.9, 1.0))
 	info.add_child(_kind_label)
 
 	_stats_label = Label.new()
@@ -197,7 +199,8 @@ func _on_slot_pressed(index: int) -> void:
 	UiTheme.scroll_to_center(_slot_scroll, _slot_buttons[_index])
 
 func _refresh() -> void:
-	_currency_label.text = "Золото: %d    Геми: %d" % [GameState.gold, GameState.gems]
+	_gold_badge.set_amount(GameState.gold)
+	_gems_badge.set_amount(GameState.gems)
 	var equipped := GameState.get_equipped_weapon_id(_hero_id)
 	for i in _slot_buttons.size():
 		var def := _weapons[i]
@@ -217,6 +220,7 @@ func _refresh() -> void:
 		_action_button.pressed.disconnect(_on_equip_pressed)
 	if _action_button.pressed.is_connected(_on_buy_pressed):
 		_action_button.pressed.disconnect(_on_buy_pressed)
+	PriceTag.clear(_action_button)
 	if equipped == def.id:
 		_action_button.text = "У руках"
 		_action_button.disabled = true
@@ -227,9 +231,9 @@ func _refresh() -> void:
 		UiTheme.make_primary(_action_button)
 		_action_button.pressed.connect(_on_equip_pressed)
 	else:
-		_action_button.text = "%d золота" % def.cost_gold
 		_action_button.disabled = GameState.gold < def.cost_gold
 		_action_button.theme_type_variation = &""
+		PriceTag.apply(_action_button, &"gold", def.cost_gold, "Купити")
 		_action_button.pressed.connect(_on_buy_pressed)
 
 ## Головні числа зброї людською мовою: скільки б'є, як часто і що

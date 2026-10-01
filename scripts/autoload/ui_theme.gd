@@ -28,7 +28,8 @@ const TEXT := Color(0.96, 0.96, 1.0)
 const TEXT_DIM := Color(0.68, 0.68, 0.82)
 const TEXT_DARK := Color(0.1, 0.11, 0.12)
 const GOLD := Color(1.0, 0.86, 0.4)
-const GEM := Color(0.55, 0.9, 1.0)
+## Фіолетовий — як гем на іконці валюти (арт гравця).
+const GEM := Color(0.86, 0.58, 1.0)
 const DANGER := Color(1.0, 0.35, 0.35)
 
 const THEME_DIR := "res://assets/ui/theme/"
@@ -138,6 +139,21 @@ static func hud_text(label: Label, font_size: int = 18, color: Color = TEXT) -> 
 	label.add_theme_color_override("font_color", color)
 	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	label.add_theme_constant_override("outline_size", 6)
+
+## Колір валюти — для числа поруч з іконкою й облямівки плашки.
+static func currency_color(kind: StringName) -> Color:
+	return GEM if kind == &"gem" else GOLD
+
+## Число валюти розрядами: "134 056", а не "134056" — велике золото
+## читається з першого погляду.
+static func format_amount(value: int) -> String:
+	var digits := str(absi(value))
+	var groups := PackedStringArray()
+	while digits.length() > 3:
+		groups.insert(0, digits.right(3))
+		digits = digits.left(digits.length() - 3)
+	groups.insert(0, digits)
+	return ("-" if value < 0 else "") + " ".join(groups)
 
 ## Підпис під іконкою, що стоїть просто на строкатому арті (стіни зали,
 ## данж): світлий жирний текст на темній напівпрозорій плашці з облямівкою

@@ -34,10 +34,17 @@ const BOTTOM_MARGIN := 24.0
 @onready var rows_container: VBoxContainer = $VBoxContainer/ScrollContainer/RowsContainer
 
 var _hero_id: StringName
+var _gold_badge: CurrencyBadge
 
 func _ready() -> void:
 	_hero_id = GameState.selected_hero_id
 	hero_label.text = "Таланти: %s" % HeroPool.get_def(_hero_id).title
+	# Золото — значком з монетою на місці текстового "Золото: N" зі сцени.
+	_gold_badge = CurrencyBadge.new(&"gold")
+	_gold_badge.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	content.add_child(_gold_badge)
+	content.move_child(_gold_badge, gold_label.get_index())
+	gold_label.visible = false
 	var title := $VBoxContainer/TitleLabel as Label
 	title.text = "Храм — таланти"
 	title.add_theme_color_override("font_color", UiTheme.HEADING)
@@ -61,7 +68,7 @@ func _on_banner_height_changed(height_px: int) -> void:
 	content.offset_bottom = -(BOTTOM_MARGIN + height_px)
 
 func _rebuild() -> void:
-	gold_label.text = "Золото: %d" % GameState.gold
+	_gold_badge.set_amount(GameState.gold)
 	for child in rows_container.get_children():
 		child.queue_free()
 	for upgrade in GENERIC_UPGRADES:
@@ -108,8 +115,8 @@ func _build_row(id: StringName, title: String, per_level: String) -> Control:
 		buy_button.disabled = true
 	else:
 		var cost := GameState.get_meta_upgrade_cost(_hero_id, id)
-		buy_button.text = "Купити (%d)" % cost
 		buy_button.disabled = GameState.gold < cost
+		PriceTag.apply(buy_button, &"gold", cost, "Купити")
 		buy_button.pressed.connect(_on_buy_pressed.bind(id))
 	row.add_child(buy_button)
 

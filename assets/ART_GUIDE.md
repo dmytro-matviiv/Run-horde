@@ -92,6 +92,9 @@
                                            talent_shadow_clones
     assets/ui/icons/weapons/<id зброї>.png  (рендер моделі — див. нижче)
     assets/ui/icons/shop/<назва товару>.png  gems_small, gems_medium, gems_large, exchange
+    assets/ui/icons/currency/<вид>.png     gold (монета), gem (гем) — біля числа валюти
+                                           на всіх екранах і в цінах на кнопках
+                                           (обрізані по краю, без полів довкола)
 
 Іконки — квадратні PNG з прозорим тлом, 128×128 достатньо (кнопки
 менші, але з запасом виглядає різкіше).

@@ -16,8 +16,8 @@ const CREDITS_SCRIPT := preload("res://scenes/ui/credits.gd")
 
 const CHEST_MESSAGE_SEC := 3.0
 
-var _gold_label: Label
-var _gems_label: Label
+var _gold_badge: CurrencyBadge
+var _gems_badge: CurrencyBadge
 var _hero_label: Label
 var _chest_button: Button
 var _graphics_button: Button
@@ -39,16 +39,12 @@ func _ready() -> void:
 	top_bar.offset_left = 20.0
 	top_bar.offset_top = 16.0
 	top_bar.offset_right = -20.0
-	top_bar.add_theme_constant_override("separation", 22)
+	top_bar.add_theme_constant_override("separation", 10)
 	add_child(top_bar)
-	_gold_label = Label.new()
-	_gold_label.add_theme_font_size_override("font_size", 19)
-	_gold_label.add_theme_color_override("font_color", UiTheme.GOLD)
-	top_bar.add_child(_gold_label)
-	_gems_label = Label.new()
-	_gems_label.add_theme_font_size_override("font_size", 19)
-	_gems_label.add_theme_color_override("font_color", UiTheme.GEM)
-	top_bar.add_child(_gems_label)
+	_gold_badge = CurrencyBadge.new(&"gold", 19)
+	top_bar.add_child(_gold_badge)
+	_gems_badge = CurrencyBadge.new(&"gem", 19)
+	top_bar.add_child(_gems_badge)
 
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -169,8 +165,8 @@ func _process(delta: float) -> void:
 		_update_chest_button()
 
 func _update_gold_label() -> void:
-	_gold_label.text = "Золото: %d" % GameState.gold
-	_gems_label.text = "Геми: %d" % GameState.gems
+	_gold_badge.set_amount(GameState.gold)
+	_gems_badge.set_amount(GameState.gems)
 	# Видно одразу, ким і чим підеш у бій — щоб не лізти в меню перевіряти.
 	var hero := HeroPool.get_def(GameState.selected_hero_id)
 	var weapon := WeaponPool.get_def(GameState.get_equipped_weapon_id(hero.id))

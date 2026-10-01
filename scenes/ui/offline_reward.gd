@@ -16,6 +16,12 @@ func _ready() -> void:
 	var title := $CenterContainer/Panel/MarginContainer/VBoxContainer/TitleLabel as Label
 	title.add_theme_color_override("font_color", UiTheme.HEADING)
 	amount_label.add_theme_color_override("font_color", UiTheme.GOLD)
+	# Сума — з монетою (арт гравця) замість слова "золота".
+	var amount := CurrencyBadge.new(&"gold", 30, false)
+	amount.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	amount.set_text("+" + UiTheme.format_amount(GameState.pending_offline_gold))
+	amount_label.add_sibling(amount)
+	amount_label.visible = false
 	UiTheme.make_primary(claim_double_button)
 
 func _on_claim_pressed() -> void:

@@ -38,6 +38,8 @@ const COMBAT_ICON_DIR := "res://assets/ui/icons/combat/"
 const HERO_BACKGROUND_DIR := "res://assets/ui/icons/hero_backgrounds/"
 ## Портрет героя в ряду вибору — квадратний, замінює щит-емблему.
 const HERO_PORTRAIT_DIR := "res://assets/ui/icons/hero_portraits/"
+## Валюта: gold (монета з короною) і gem (фіолетовий гем).
+const CURRENCY_ICON_DIR := "res://assets/ui/icons/currency/"
 
 const MODEL_EXTENSIONS := [".glb", ".gltf", ".fbx", ".tscn"]
 const ICON_EXTENSIONS := [".png", ".webp", ".jpg", ".svg"]
@@ -90,6 +92,11 @@ static func hero_background(hero_id: StringName) -> Texture2D:
 ## Портрет героя для ряду вибору (blade_warden, void_assassin...).
 static func hero_portrait(hero_id: StringName) -> Texture2D:
 	return _find_texture(HERO_PORTRAIT_DIR, String(hero_id))
+
+## Іконка валюти: &"gold" чи &"gem". Немає файла — кольорова заглушка.
+static func currency_icon(kind: StringName) -> Texture2D:
+	var texture := _find_texture(CURRENCY_ICON_DIR, String(kind))
+	return texture if texture != null else placeholder_icon(UiTheme.currency_color(kind), 32)
 
 static func shop_icon(name: String) -> Texture2D:
 	return _find_texture(SHOP_ICON_DIR, name) if name != "" else null

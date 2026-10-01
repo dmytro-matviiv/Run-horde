@@ -19,8 +19,8 @@ const GEM_TITLES := {
 
 const STATUS_SEC := 3.0
 
-var _gems_label: Label
-var _gold_label: Label
+var _gems_badge: CurrencyBadge
+var _gold_badge: CurrencyBadge
 var _rows_container: VBoxContainer
 var _status_label: Label
 var _restore_button: Button
@@ -48,17 +48,11 @@ func _ready() -> void:
 	var title_box := UiTheme.make_title("Ринок", 30)
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(title_box)
-	_gold_label = Label.new()
-	_gold_label.add_theme_font_size_override("font_size", 17)
-	_gold_label.add_theme_color_override("font_color", UiTheme.GOLD)
-	top_row.add_child(_gold_label)
-	var currency_gap := Control.new()
-	currency_gap.custom_minimum_size = Vector2(18, 0)
-	top_row.add_child(currency_gap)
-	_gems_label = Label.new()
-	_gems_label.add_theme_font_size_override("font_size", 17)
-	_gems_label.add_theme_color_override("font_color", UiTheme.GEM)
-	top_row.add_child(_gems_label)
+	top_row.add_theme_constant_override("separation", 8)
+	_gold_badge = CurrencyBadge.new(&"gold")
+	top_row.add_child(_gold_badge)
+	_gems_badge = CurrencyBadge.new(&"gem")
+	top_row.add_child(_gems_badge)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -107,15 +101,15 @@ func _process(delta: float) -> void:
 			_status_label.text = ""
 
 func _rebuild() -> void:
-	_gems_label.text = "Геми: %d" % GameState.gems
-	_gold_label.text = "Золото: %d" % GameState.gold
+	_gems_badge.set_amount(GameState.gems)
+	_gold_badge.set_amount(GameState.gold)
 	for child in _rows_container.get_children():
 		child.queue_free()
 
 	_rows_container.add_child(_build_header("Геми"))
 	for product_id: String in IapManager.GEM_PRODUCTS:
 		var amount: int = IapManager.GEM_PRODUCTS[product_id]
-		var button := _build_row(GEM_TITLES[product_id], "%d гемів" % amount, product_id, Color(0.55, 0.9, 1.0))
+		var button := _build_row(GEM_TITLES[product_id], "%d гемів" % amount, product_id, UiTheme.GEM)
 		button.text = IapManager.get_price_text(product_id)
 		UiTheme.make_primary(button)
 		button.pressed.connect(IapManager.purchase.bind(product_id))
@@ -124,10 +118,10 @@ func _rebuild() -> void:
 	for i in Balance.GEM_EXCHANGES.size():
 		var exchange: Array = Balance.GEM_EXCHANGES[i]
 		var button := _build_row("Обмін", "%d золота" % exchange[1], "exchange")
-		button.text = "%d гемів" % exchange[0]
 		button.disabled = GameState.gems < exchange[0]
 		if not button.disabled:
 			UiTheme.make_primary(button)
+		PriceTag.apply(button, &"gem", exchange[0])
 		button.pressed.connect(_on_exchange_pressed.bind(i))
 
 	_rows_container.add_child(_build_header("Стартові набори (кожен — один раз)"))
@@ -146,10 +140,10 @@ func _rebuild() -> void:
 				button.disabled = true
 			else:
 				var cost := GameState.get_starter_pack_cost(pack_id)
-				button.text = "%d гемів" % cost
 				button.disabled = GameState.gems < cost
 				if not button.disabled:
 					UiTheme.make_primary(button)
+				PriceTag.apply(button, &"gem", cost)
 				button.pressed.connect(_on_starter_pack_pressed.bind(pack_id))
 
 	_rows_container.add_child(_build_header("Без реклами"))

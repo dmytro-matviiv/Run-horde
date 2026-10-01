@@ -31,8 +31,8 @@ var _placeholder_label: Label
 var _glow: Control
 var _sky: SkyStage
 
-var _gold_label: Label
-var _gem_label: Label
+var _gold_badge: CurrencyBadge
+var _gem_badge: CurrencyBadge
 var _slot_row: HBoxContainer
 var _slot_scroll: ScrollContainer
 var _slot_buttons: Array[Button] = []
@@ -78,10 +78,17 @@ func _ready() -> void:
 	var title_box := OrnateBanner.new("Зала героїв", 30)
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(title_box)
-	_gold_label = Label.new()
-	top_row.add_child(_currency_badge(UiTheme.GOLD, _gold_label))
-	_gem_label = Label.new()
-	top_row.add_child(_currency_badge(UiTheme.GEM, _gem_label))
+	# Валюта — навпроти полотна банера, а не його герба: відступ згори.
+	var wallet := MarginContainer.new()
+	wallet.add_theme_constant_override("margin_top", int(OrnateBanner.CREST_RISE))
+	top_row.add_child(wallet)
+	var wallet_row := HBoxContainer.new()
+	wallet_row.add_theme_constant_override("separation", 8)
+	wallet.add_child(wallet_row)
+	_gold_badge = CurrencyBadge.new(&"gold", 20)
+	wallet_row.add_child(_gold_badge)
+	_gem_badge = CurrencyBadge.new(&"gem", 20)
+	wallet_row.add_child(_gem_badge)
 
 	# Вітрина: герой стоїть просто неба, а обабіч — картки його прийомів
 	# (як спорядження в зразку мобільної гри), а не рядком під описом.
@@ -282,8 +289,8 @@ func _process(_delta: float) -> void:
 
 func _rebuild() -> void:
 	var def := _current()
-	_gold_label.text = str(GameState.gold)
-	_gem_label.text = str(GameState.gems)
+	_gold_badge.set_amount(GameState.gold)
+	_gem_badge.set_amount(GameState.gems)
 	for i in _slot_buttons.size():
 		var other := HeroPool.ALL_HEROES[i]
 		var unlocked := GameState.is_hero_unlocked(other.id)
@@ -312,6 +319,7 @@ func _rebuild() -> void:
 		var target := _left_slots if i < LEFT_SLOT_COUNT else _right_slots
 		target.add_child(_build_ability_slot(card))
 
+	PriceTag.clear(_action_button)
 	if GameState.selected_hero_id == def.id:
 		_action_button.text = "Обрано"
 		_action_button.disabled = true
@@ -319,32 +327,11 @@ func _rebuild() -> void:
 		_action_button.text = "Обрати"
 		_action_button.disabled = false
 	elif def.gem_cost > 0:
-		_action_button.text = "Купити за %d гемів" % def.gem_cost
 		_action_button.disabled = GameState.gems < def.gem_cost
+		PriceTag.apply(_action_button, &"gem", def.gem_cost, "Купити")
 	else:
-		_action_button.text = "Купити за %d золота" % def.unlock_cost
 		_action_button.disabled = GameState.gold < def.unlock_cost
-
-## Кругла кольорова плашка золота чи гемів угорі — як бейджик валюти в
-## мобільній грі, а не простий рядок тексту.
-func _currency_badge(color: Color, value_label: Label) -> PanelContainer:
-	var badge := PanelContainer.new()
-	badge.add_theme_stylebox_override("panel", UiTheme.make_box(Color(color, 0.16), 14, 2, Color(color, 0.55)))
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	badge.add_child(row)
-	var dot := ColorRect.new()
-	dot.color = color
-	dot.custom_minimum_size = Vector2(14, 14)
-	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(dot)
-	value_label.add_theme_font_override("font", UiTheme.font(800))
-	value_label.add_theme_font_size_override("font_size", 18)
-	value_label.add_theme_color_override("font_color", color.lerp(Color.WHITE, 0.25))
-	value_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
-	value_label.add_theme_constant_override("outline_size", 4)
-	row.add_child(value_label)
-	return badge
+		PriceTag.apply(_action_button, &"gold", def.unlock_cost, "Купити")
 
 ## Картка прийому обабіч вітрини — кольоровий квадратний слот (як
 ## спорядження в зразку), а не рядок іконок під описом; назва — під ним,
