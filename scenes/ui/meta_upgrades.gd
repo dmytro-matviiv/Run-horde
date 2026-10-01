@@ -87,8 +87,11 @@ func _build_row(id: StringName, title: String, per_level: String) -> Control:
 	row.add_theme_constant_override("separation", 16)
 	card.add_child(row)
 	var own_icon := ArtSlots.talent_icon(id)
-	row.add_child(UiTheme.make_slot(own_icon if own_icon != null else UiTheme.control_icon("star"),
-		44.0, Color.WHITE if own_icon != null else UiTheme.HEADING))
+	if own_icon != null:
+		# Готовий арт — без рамки-слота, вона лише забруднює картинку.
+		row.add_child(UiTheme.make_bare_icon(own_icon, 60.0))
+	else:
+		row.add_child(UiTheme.make_slot(UiTheme.control_icon("star"), 44.0, UiTheme.HEADING))
 
 	var info := Label.new()
 	info.custom_minimum_size = Vector2(400, 0)

@@ -298,28 +298,32 @@ func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 	var holder := VBoxContainer.new()
 	holder.alignment = BoxContainer.ALIGNMENT_CENTER
 	holder.add_theme_constant_override("separation", 4)
-	var slot := PanelContainer.new()
-	slot.add_theme_stylebox_override("panel", UiTheme.slot_box(card.color))
-	slot.custom_minimum_size = Vector2(84, 84)
-	slot.tooltip_text = card.title
-	# Своя іконка здібності (згенерований арт) — якщо гравець її поклав;
-	# інакше та сама фігура кодом, що й раніше.
+	# Своя іконка здібності (згенерований арт) — якщо гравець її поклав, без
+	# рамки-слота (вона лише забруднює готову картинку), лише трохи більша;
+	# інакше — та сама фігура кодом, що й раніше, на кольоровій підкладці.
 	var own_icon := ArtSlots.skill_icon(card.get("id", &""))
 	var icon: Button
 	if own_icon != null:
 		icon = Button.new()
-		icon.custom_minimum_size = Vector2(AbilityIcon.SIZE, AbilityIcon.SIZE)
+		icon.custom_minimum_size = Vector2(92, 92)
 		icon.icon = own_icon
 		icon.expand_icon = true
 		icon.flat = true
+		icon.tooltip_text = card.title
 		for state: String in ["normal", "hover", "pressed", "focus", "disabled"]:
 			icon.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+		icon.pressed.connect(_on_ability_pressed.bind(card))
+		holder.add_child(icon)
 	else:
+		var slot := PanelContainer.new()
+		slot.add_theme_stylebox_override("panel", UiTheme.slot_box(card.color))
+		slot.custom_minimum_size = Vector2(84, 84)
+		slot.tooltip_text = card.title
 		icon = ABILITY_ICON_SCRIPT.new()
 		icon.setup(card.kind, card.color, card.title)
-	icon.pressed.connect(_on_ability_pressed.bind(card))
-	slot.add_child(icon)
-	holder.add_child(slot)
+		icon.pressed.connect(_on_ability_pressed.bind(card))
+		slot.add_child(icon)
+		holder.add_child(slot)
 	var label := Label.new()
 	label.text = card.title
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

@@ -200,9 +200,12 @@ func _build_row(item_title: String, description: String, icon_name: String = "",
 	row.add_theme_constant_override("separation", 16)
 	card.add_child(row)
 	var own_icon := ArtSlots.shop_icon(icon_name)
-	var fallback := UiTheme.control_icon("money" if icon_name == "exchange" else "star")
-	row.add_child(UiTheme.make_slot(own_icon if own_icon != null else fallback, 48.0,
-		Color.WHITE if own_icon != null else accent))
+	if own_icon != null:
+		# Готовий арт — без рамки-слота, вона лише забруднює картинку.
+		row.add_child(UiTheme.make_bare_icon(own_icon, 64.0))
+	else:
+		var fallback := UiTheme.control_icon("money" if icon_name == "exchange" else "star")
+		row.add_child(UiTheme.make_slot(fallback, 48.0, accent))
 
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL

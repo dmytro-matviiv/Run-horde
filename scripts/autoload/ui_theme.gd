@@ -208,6 +208,19 @@ static func make_slot(texture: Texture2D, side: float = 52.0, tint: Color = Colo
 	slot.add_child(image)
 	return slot
 
+## Сама картинка, без рамки-слота: для готового арту (здібність, талант,
+## товар) рамка лише забруднює малюнок — досить показати його трохи
+## більшим, ніж був у слоті. Для заглушки (own_icon == null на виклику)
+## і далі краще make_slot — порожня фігурка без тла губиться на екрані.
+static func make_bare_icon(texture: Texture2D, side: float = 64.0) -> TextureRect:
+	var image := TextureRect.new()
+	image.texture = texture
+	image.custom_minimum_size = Vector2(side, side)
+	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return image
+
 ## СЛОТ ВИБОРУ (герой, зброя, рівень данжу) — квадратна кнопка-іконка в
 ## рамці, як предмет в інвентарі зі зразка Kenney. Обраний слот світиться
 ## акцентним кільцем; некуплений/непройдений — приглушений.
