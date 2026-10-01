@@ -11,6 +11,10 @@ const STAGE_GLOW_SCRIPT := preload("res://scenes/ui/stage_glow.gd")
 const SKY_STAGE_SCRIPT := preload("res://scenes/ui/sky_stage.gd")
 ## Скільки карток здібностей лягає зліва від вітрини — решта праворуч.
 const LEFT_SLOT_COUNT := 2
+const HALL_BACKGROUND := "res://assets/ui/backgrounds/hero_hall.jpg"
+const SELECT_BUTTON := "res://assets/ui/theme/button_hero_select.png"
+const SELECT_BUTTON_DISABLED := "res://assets/ui/theme/button_hero_select_disabled.png"
+const BACK_BUTTON := "res://assets/ui/theme/button_hero_back.png"
 
 var _index := 0
 var _preview: ModelPreview
@@ -40,6 +44,15 @@ func _ready() -> void:
 	background.color = Color(0.055, 0.065, 0.078)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
+	# Тло — зала зі статуями лицарів (арт гравця), обрізане під екран.
+	if ResourceLoader.exists(HALL_BACKGROUND):
+		var hall := TextureRect.new()
+		hall.texture = load(HALL_BACKGROUND)
+		hall.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		hall.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		hall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		hall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(hall)
 
 	var column := VBoxContainer.new()
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -53,7 +66,7 @@ func _ready() -> void:
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 10)
 	column.add_child(top_row)
-	var title_box := UiTheme.make_title("Зала героїв", 30)
+	var title_box := OrnateBanner.new("Зала героїв", 30)
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(title_box)
 	_gold_label = Label.new()
@@ -164,9 +177,11 @@ func _ready() -> void:
 	actions.add_theme_constant_override("separation", 10)
 	bottom.add_child(actions)
 
+	# Кнопки — арт гравця: зелена з золотими рунами й синя зі срібними.
 	_action_button = Button.new()
 	_action_button.custom_minimum_size = Vector2(240, 56)
 	_action_button.add_theme_font_size_override("font_size", 20)
+	UiTheme.art_button(_action_button, SELECT_BUTTON, 27, 23, SELECT_BUTTON_DISABLED)
 	_action_button.pressed.connect(_on_action_pressed)
 	actions.add_child(_action_button)
 
@@ -174,6 +189,7 @@ func _ready() -> void:
 	back.text = "Назад"
 	back.custom_minimum_size = Vector2(240, 48)
 	back.add_theme_font_size_override("font_size", 18)
+	UiTheme.art_button(back, BACK_BUTTON, 13, 10)
 	back.pressed.connect(_on_back_pressed)
 	actions.add_child(back)
 
@@ -270,19 +286,15 @@ func _rebuild() -> void:
 	if GameState.selected_hero_id == def.id:
 		_action_button.text = "Обрано"
 		_action_button.disabled = true
-		UiTheme.make_primary(_action_button)
 	elif GameState.is_hero_unlocked(def.id):
 		_action_button.text = "Обрати"
 		_action_button.disabled = false
-		UiTheme.make_primary(_action_button)
 	elif def.gem_cost > 0:
 		_action_button.text = "Купити за %d гемів" % def.gem_cost
 		_action_button.disabled = GameState.gems < def.gem_cost
-		_action_button.theme_type_variation = &""
 	else:
 		_action_button.text = "Купити за %d золота" % def.unlock_cost
 		_action_button.disabled = GameState.gold < def.unlock_cost
-		_action_button.theme_type_variation = &""
 
 ## Кругла кольорова плашка золота чи гемів угорі — як бейджик валюти в
 ## мобільній грі, а не простий рядок тексту.
@@ -342,6 +354,9 @@ func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 	label.custom_minimum_size = Vector2(84, 0)
 	label.add_theme_font_size_override("font_size", 12)
 	label.add_theme_color_override("font_color", card.color)
+	# Тло зали строкате — без контуру підпис губився на кам'яних стінах.
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	label.add_theme_constant_override("outline_size", 5)
 	holder.add_child(label)
 	return holder
 

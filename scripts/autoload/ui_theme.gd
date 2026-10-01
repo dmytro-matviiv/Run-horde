@@ -182,6 +182,49 @@ static func make_title(text: String, font_size: int = 26, color: Color = HEADING
 	pill.add_child(label)
 	return pill
 
+## Кнопка з намальованою текстурою (арт гравця) — 9-slice: кути margin_x ×
+## margin_y не тягнуться. Наведена — трохи світліша, натиснута — темніша;
+## вимкнена — окрема сіра текстура (disabled_path) або та сама, притемнена.
+## Немає файла — кнопка лишається в звичайній темі.
+static func art_button(button: Button, path: String, margin_x: int, margin_y: int, disabled_path: String = "") -> void:
+	if not ResourceLoader.exists(path):
+		return
+	var texture: Texture2D = load(path)
+	var tints := {"normal": Color.WHITE, "hover": Color(1.12, 1.12, 1.12), "pressed": Color(0.78, 0.78, 0.78)}
+	for state: String in tints:
+		var box := _art_box(texture, margin_x, margin_y)
+		box.modulate_color = tints[state]
+		button.add_theme_stylebox_override(state, box)
+	var disabled_texture := texture
+	var disabled_tint := Color(0.55, 0.55, 0.58)
+	if disabled_path != "" and ResourceLoader.exists(disabled_path):
+		disabled_texture = load(disabled_path)
+		disabled_tint = Color.WHITE
+	var disabled_box := _art_box(disabled_texture, margin_x, margin_y)
+	disabled_box.modulate_color = disabled_tint
+	button.add_theme_stylebox_override("disabled", disabled_box)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_font_override("font", font(700))
+	for state: String in ["font_color", "font_hover_color", "font_focus_color"]:
+		button.add_theme_color_override(state, Color.WHITE)
+	button.add_theme_color_override("font_pressed_color", Color(0.9, 0.9, 0.9))
+	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.5))
+	button.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	button.add_theme_constant_override("outline_size", 5)
+
+static func _art_box(texture: Texture2D, margin_x: int, margin_y: int) -> StyleBoxTexture:
+	var box := StyleBoxTexture.new()
+	box.texture = texture
+	box.texture_margin_left = margin_x
+	box.texture_margin_right = margin_x
+	box.texture_margin_top = margin_y
+	box.texture_margin_bottom = margin_y
+	box.content_margin_left = margin_x + 6
+	box.content_margin_right = margin_x + 6
+	box.content_margin_top = 4
+	box.content_margin_bottom = 4
+	return box
+
 ## Головна дія екрана — світла кнопка з темним текстом ("Грати",
 ## "Увійти", "Обрати").
 static func make_primary(button: Button) -> void:
