@@ -62,7 +62,6 @@ func _ready() -> void:
 	var picker := UiTheme.make_picker_row()
 	_slot_scroll = picker.scroll
 	_slot_row = picker.row
-	_slot_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(_slot_scroll)
 	for index in DungeonLevels.get_level_count():
@@ -100,7 +99,7 @@ func _ready() -> void:
 	info_panel.add_child(info)
 
 	_art_display = TextureRect.new()
-	_art_display.custom_minimum_size = Vector2(0, 150)
+	_art_display.custom_minimum_size = Vector2(0, 130)
 	_art_display.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_art_display.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_art_display.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

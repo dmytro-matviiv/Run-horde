@@ -64,14 +64,14 @@ func _ready() -> void:
 	# Вітрина: герой стоїть просто неба, а обабіч — картки його прийомів
 	# (як спорядження в зразку мобільної гри), а не рядком під описом.
 	var stage_row := HBoxContainer.new()
-	stage_row.custom_minimum_size = Vector2(0, 220)
+	stage_row.custom_minimum_size = Vector2(0, 150)
 	stage_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stage_row.add_theme_constant_override("separation", 10)
 	column.add_child(stage_row)
 
 	_left_slots = VBoxContainer.new()
 	_left_slots.alignment = BoxContainer.ALIGNMENT_CENTER
-	_left_slots.add_theme_constant_override("separation", 12)
+	_left_slots.add_theme_constant_override("separation", 4)
 	_left_slots.custom_minimum_size = Vector2(96, 0)
 	stage_row.add_child(_left_slots)
 
@@ -103,7 +103,7 @@ func _ready() -> void:
 
 	_right_slots = VBoxContainer.new()
 	_right_slots.alignment = BoxContainer.ALIGNMENT_CENTER
-	_right_slots.add_theme_constant_override("separation", 12)
+	_right_slots.add_theme_constant_override("separation", 4)
 	_right_slots.custom_minimum_size = Vector2(96, 0)
 	stage_row.add_child(_right_slots)
 
@@ -111,17 +111,17 @@ func _ready() -> void:
 	var picker := UiTheme.make_picker_row()
 	_slot_scroll = picker.scroll
 	_slot_row = picker.row
-	_slot_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(_slot_scroll)
 	for i in HeroPool.ALL_HEROES.size():
 		var def := HeroPool.ALL_HEROES[i]
-		# Портрет героя, якщо гравець його поклав; інакше — щит-емблема.
-		# Колір героя видно з рамки слота (style_picker_slot, у _refresh).
+		# Портрет героя на всю картку, якщо гравець його поклав; інакше —
+		# щит-емблема. Колір героя — у кільці картки (style_picker_slot).
 		var texture := ArtSlots.hero_portrait(def.id)
-		if texture == null:
+		var portrait := texture != null
+		if not portrait:
 			texture = UiTheme.control_icon("shield")
-		var slot := UiTheme.make_picker_slot(texture, Color.WHITE, 88.0)
+		var slot := UiTheme.make_picker_slot(texture, Color.WHITE, 88.0, portrait)
 		slot.pressed.connect(_on_slot_pressed.bind(i))
 		_slot_row.add_child(slot)
 		_slot_buttons.append(slot)
@@ -309,7 +309,7 @@ func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 	var icon: Button
 	if own_icon != null:
 		icon = Button.new()
-		icon.custom_minimum_size = Vector2(92, 92)
+		icon.custom_minimum_size = Vector2(80, 80)
 		icon.icon = own_icon
 		icon.expand_icon = true
 		icon.flat = true
@@ -321,7 +321,7 @@ func _build_ability_slot(card: Dictionary) -> VBoxContainer:
 	else:
 		var slot := PanelContainer.new()
 		slot.add_theme_stylebox_override("panel", UiTheme.slot_box(card.color))
-		slot.custom_minimum_size = Vector2(84, 84)
+		slot.custom_minimum_size = Vector2(72, 72)
 		slot.tooltip_text = card.title
 		icon = ABILITY_ICON_SCRIPT.new()
 		icon.setup(card.kind, card.color, card.title)

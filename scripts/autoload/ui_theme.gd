@@ -221,68 +221,172 @@ static func make_bare_icon(texture: Texture2D, side: float = 64.0) -> TextureRec
 	image.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return image
 
-## СЛОТ ВИБОРУ (герой, зброя, рівень данжу) — квадратна кнопка-іконка в
-## рамці, як предмет в інвентарі зі зразка Kenney. Обраний слот світиться
-## акцентним кільцем; некуплений/непройдений — приглушений.
+## Заокруглення кутів картинки в картці вибору — частка її сторони. Те
+## саме число йде і в шейдер-маску, і в кільце, щоб краї збігались.
+const PICKER_CORNER := 0.2
+## Глянцеву рамку-слот прибрано: готовий арт (портрет, данж) у ній
+## виглядав як фото, вклеєне в коробку. Тепер картинка сама обрізана по
+## заокруглених кутах, а навколо — лише тонке кільце кольору предмета.
+const ROUNDED_ART_SHADER := """
+shader_type canvas_item;
+uniform float corner = 0.2;
+void fragment() {
+	vec2 q = abs(UV - 0.5) - (0.5 - corner);
+	float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - corner;
+	float aa = max(fwidth(d), 0.0001);
+	COLOR.a *= 1.0 - smoothstep(-aa, aa, d);
+}
+"""
+
+static var _rounded_art_material: ShaderMaterial
+
+## Один матеріал на всі картки: шейдер компілюється раз, а не на кожну.
+static func rounded_art_material() -> ShaderMaterial:
+	if _rounded_art_material == null:
+		var shader := Shader.new()
+		shader.code = ROUNDED_ART_SHADER
+		_rounded_art_material = ShaderMaterial.new()
+		_rounded_art_material.shader = shader
+		_rounded_art_material.set_shader_parameter("corner", PICKER_CORNER)
+	return _rounded_art_material
+
+## КАРТКА ВИБОРУ (герой, зброя, рівень данжу). full_bleed — картинка на
+## всю картку (портрет зі своїм тлом); інакше — трохи всередині, на темній
+## підкладці (зброя чи данж на прозорому тлі не мають "висіти в повітрі").
 ##
 ## Кнопки в горизонтальному ScrollContainer за замовчуванням ковтають
 ## колесо миші й перетягування (Control.mouse_filter = STOP), і прокрутка
 ## працює лише в порожньому місці збоку. tag_scroll_pass() лікує це:
-## робить кнопку й усе всередині "прозорими" для прокрutki, лишаючи клік.
-static func make_picker_slot(texture: Texture2D, tint: Color, side: float = 84.0) -> Button:
+## робить кнопку й усе всередині "прозорими" для прокрутки, лишаючи клік.
+static func make_picker_slot(texture: Texture2D, tint: Color, side: float = 84.0, full_bleed: bool = false) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(side, side)
+	button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	button.toggle_mode = true
 	button.flat = true
 	for state: String in ["normal", "hover", "pressed", "focus"]:
 		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
-	var slot := PanelContainer.new()
-	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	slot.add_theme_stylebox_override("panel", slot_box())
-	slot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	button.add_child(slot)
+
+	var plate := Panel.new()
+	plate.name = "Plate"
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.add_child(plate)
+
 	var image := TextureRect.new()
+	image.name = "Image"
 	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	image.texture = texture
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if full_bleed:
+		image.material = rounded_art_material()
+	else:
+		var inset := roundf(side * 0.1)
+		image.offset_left = inset
+		image.offset_top = inset
+		image.offset_right = -inset
+		image.offset_bottom = -inset
+	image.set_meta(&"tint", tint)
 	image.modulate = tint
-	slot.add_child(image)
+	button.add_child(image)
+
+	var ring := Panel.new()
+	ring.name = "Ring"
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.add_child(ring)
+
+	var lock := TextureRect.new()
+	lock.name = "Lock"
+	lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lock.texture = control_icon("lock")
+	lock.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lock.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	lock.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	var lock_half := side * 0.2
+	lock.offset_left = -lock_half
+	lock.offset_top = -lock_half
+	lock.offset_right = lock_half
+	lock.offset_bottom = lock_half
+	lock.modulate = Color(1, 1, 1, 0.9)
+	lock.visible = false
+	button.add_child(lock)
+
 	tag_scroll_pass(button)
 	return button
 
-## Підсвітка слота: акцентне кільце навколо обраного, приглушення
-## некупленого/непройденого. own_color — рамка слота саме цього предмета
-## (зброя героя, колір рівня), сіра — коли він ще не доступний.
+## Стан картки: обрана — яскрава, з товстішим кільцем свого кольору й
+## сяйвом довкола; не обрана — притемнена, кільце ледь видно; закрита
+## (не куплена / не пройдена) — темна, сіре кільце й замок посередині.
 static func style_picker_slot(button: Button, selected: bool, available: bool, own_color: Color) -> void:
-	var slot := button.get_child(0) as PanelContainer
-	var accent := own_color if available else Color(0.45, 0.45, 0.48)
-	if selected:
-		accent = accent.lerp(Color.WHITE, 0.4)
-	var box := slot_box()
-	if box is StyleBoxTexture:
-		(box as StyleBoxTexture).modulate_color = accent
-	slot.add_theme_stylebox_override("panel", box)
-	(slot.get_child(0) as TextureRect).modulate = Color.WHITE if available else Color(1, 1, 1, 0.55)
-	button.modulate = Color(1.08, 1.08, 1.08) if selected else Color(0.86, 0.86, 0.86)
+	var side := button.custom_minimum_size.x
+	var radius := int(side * PICKER_CORNER)
+	var image := button.get_node("Image") as TextureRect
+	var tint: Color = image.get_meta(&"tint", Color.WHITE)
 
-## Ряд слотів, що гортається вбік (герої, зброя, рівні данжу). Повертає
-## {scroll, row}: додавай слоти в row, а коли розмір відомий — гортай
-## scroll_to_center(scroll, обраний_слот).
+	var plate_box := StyleBoxFlat.new()
+	plate_box.bg_color = Color(0.09, 0.08, 0.17, 0.95)
+	plate_box.set_corner_radius_all(radius)
+	plate_box.anti_aliasing = true
+	if selected and available:
+		plate_box.shadow_color = Color(own_color, 0.6)
+		plate_box.shadow_size = 10
+	(button.get_node("Plate") as Panel).add_theme_stylebox_override("panel", plate_box)
+
+	var ring_box := StyleBoxFlat.new()
+	ring_box.draw_center = false
+	ring_box.set_corner_radius_all(radius)
+	ring_box.anti_aliasing = true
+	if not available:
+		ring_box.border_color = Color(0.55, 0.55, 0.6, 0.45)
+		ring_box.set_border_width_all(2)
+	elif selected:
+		ring_box.border_color = own_color.lerp(Color.WHITE, 0.35)
+		ring_box.set_border_width_all(4)
+	else:
+		ring_box.border_color = Color(own_color, 0.45)
+		ring_box.set_border_width_all(2)
+	(button.get_node("Ring") as Panel).add_theme_stylebox_override("panel", ring_box)
+
+	if not available:
+		image.modulate = tint * Color(0.32, 0.32, 0.36)
+	elif selected:
+		image.modulate = tint
+	else:
+		image.modulate = tint * Color(0.62, 0.62, 0.68)
+	(button.get_node("Lock") as TextureRect).visible = not available
+	button.modulate = Color.WHITE
+
+## Ряд карток, що гортається вбік (герої, зброя, рівні данжу). Повертає
+## {scroll, row}: додавай картки в row, а коли розмір відомий — гортай
+## scroll_to_center(scroll, обрана_картка). Поки картки вміщаються, ряд
+## стоїть посередині; відступи довкола — щоб сяйво обраної не обрізалось.
 static func make_picker_row() -> Dictionary:
 	var scroll := ScrollContainer.new()
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size = Vector2(0, 100)
+	scroll.custom_minimum_size = Vector2(0, 108)
+	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for side: String in ["left", "right", "top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 10)
+	scroll.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.add_child(row)
+	margin.add_child(row)
 	return {"scroll": scroll, "row": row}
 
 ## Прогорнути так, щоб item опинився посередині scroll. Розмір контейнера
 ## відомий лише після розкладки, тож клич це через call_deferred.
 static func scroll_to_center(scroll: ScrollContainer, item: Control) -> void:
-	scroll.scroll_horizontal = int(item.position.x - scroll.size.x * 0.5 + item.size.x * 0.5)
+	var row := item.get_parent() as Control
+	var x := item.position.x + row.position.x
+	scroll.scroll_horizontal = int(x - scroll.size.x * 0.5 + item.size.x * 0.5)
 
 ## Позначає вузол і все під ним "прозорим" для прокрутки (PASS): клік і
 ## наведення далі працюють, а колесо миші й перетягування, які цей вузол

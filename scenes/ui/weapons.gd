@@ -101,8 +101,10 @@ func _ready() -> void:
 	column.add_child(hero_label)
 
 	# Вітрина: 3D-модель обраної зброї в руці героя — велика, посередині.
+	# Мінімум невеликий: вітрина забирає все, що лишилось, а не вимагає
+	# 200 px — інакше на висоті 648 нижні кнопки вилазили за екран.
 	var stage := PanelContainer.new()
-	stage.custom_minimum_size = Vector2(0, 200)
+	stage.custom_minimum_size = Vector2(0, 110)
 	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stage.add_theme_stylebox_override("panel", UiTheme.panel_box())
 	column.add_child(stage)
@@ -122,7 +124,6 @@ func _ready() -> void:
 	var picker := UiTheme.make_picker_row()
 	_slot_scroll = picker.scroll
 	_slot_row = picker.row
-	_slot_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(_slot_scroll)
 	for i in _weapons.size():
