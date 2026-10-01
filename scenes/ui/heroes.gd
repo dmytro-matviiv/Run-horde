@@ -16,6 +16,7 @@ var _index := 0
 var _preview: ModelPreview
 var _placeholder_label: Label
 var _glow: Control
+var _sky: SkyStage
 
 var _gold_label: Label
 var _gem_label: Label
@@ -79,9 +80,9 @@ func _ready() -> void:
 	stage.add_theme_stylebox_override("panel", UiTheme.panel_box())
 	stage.clip_contents = true
 	stage_row.add_child(stage)
-	var sky := SKY_STAGE_SCRIPT.new()
-	sky.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	stage.add_child(sky)
+	_sky = SKY_STAGE_SCRIPT.new()
+	_sky.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stage.add_child(_sky)
 	_glow = STAGE_GLOW_SCRIPT.new()
 	_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -236,6 +237,7 @@ func _rebuild() -> void:
 		_slot_buttons[i].button_pressed = i == _index
 
 	_glow.set("glow_color", def.color)
+	_sky.set_background(ArtSlots.hero_background(def.id))
 	var weapon := WeaponPool.get_def(GameState.get_equipped_weapon_id(def.id))
 	_placeholder_label.visible = _preview.show_hero(def, weapon)
 

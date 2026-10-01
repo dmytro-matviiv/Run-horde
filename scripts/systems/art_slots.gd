@@ -32,6 +32,10 @@ const SHOP_ICON_DIR := "res://assets/ui/icons/shop/"
 const DUNGEON_ICON_DIR := "res://assets/ui/icons/dungeons/"
 ## Кнопки бою: attack, gun, staff, book, cards (удар/постріл/чари) і dodge.
 const COMBAT_ICON_DIR := "res://assets/ui/icons/combat/"
+## Фон вітрини героя в Залі героїв (SkyStage) — свій на кожного героя.
+## Дуже витягнута смуга (ширина в ~4 рази за висоту) — вітрина низька й
+## широка, тож квадратна чи портретна картинка сильно обріжеться.
+const HERO_BACKGROUND_DIR := "res://assets/ui/icons/hero_backgrounds/"
 
 const MODEL_EXTENSIONS := [".glb", ".gltf", ".fbx", ".tscn"]
 const ICON_EXTENSIONS := [".png", ".webp", ".jpg", ".svg"]
@@ -76,6 +80,10 @@ static func combat_icon(kind: String) -> Texture2D:
 ## Картинка рівня данжу на екрані вибору (crypts, fungal, citadel).
 static func dungeon_icon(level_id: StringName) -> Texture2D:
 	return _find_texture(DUNGEON_ICON_DIR, String(level_id))
+
+## Фон вітрини конкретного героя в Залі героїв (blade_warden, void_assassin...).
+static func hero_background(hero_id: StringName) -> Texture2D:
+	return _find_texture(HERO_BACKGROUND_DIR, String(hero_id))
 
 static func shop_icon(name: String) -> Texture2D:
 	return _find_texture(SHOP_ICON_DIR, name) if name != "" else null

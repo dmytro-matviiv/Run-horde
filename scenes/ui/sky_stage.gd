@@ -10,6 +10,7 @@ const BOTTOM := Color(0.72, 0.85, 0.98)
 const CLOUD := Color(1.0, 1.0, 1.0, 0.55)
 
 var _clouds: Array[Dictionary] = []
+var _background: TextureRect
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -22,7 +23,26 @@ func _ready() -> void:
 		})
 	resized.connect(queue_redraw)
 
+	_background = TextureRect.new()
+	_background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# COVERED: картинка завжди заповнює всю смугу, зайве обрізається —
+	# вітрина дуже широка й низька, тож квадратна чи портретна картинка
+	# розтягнутою не лягла б, а обрізаною зверху/знизу — цілком природно.
+	_background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_background.visible = false
+	add_child(_background)
+
+## Свій фон героя (ArtSlots.hero_background) — якщо гравець його поклав;
+## null повертає звичайне небо з хмарками, намальоване кодом.
+func set_background(texture: Texture2D) -> void:
+	_background.texture = texture
+	_background.visible = texture != null
+	queue_redraw()
+
 func _draw() -> void:
+	if _background.visible:
+		return
 	var rect := Rect2(Vector2.ZERO, size)
 	draw_rect(rect, BOTTOM)
 	var steps := 24
