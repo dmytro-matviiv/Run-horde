@@ -109,7 +109,7 @@ func _rebuild() -> void:
 	_rows_container.add_child(_build_header("Геми"))
 	for product_id: String in IapManager.GEM_PRODUCTS:
 		var amount: int = IapManager.GEM_PRODUCTS[product_id]
-		var button := _build_row(GEM_TITLES[product_id], "%d гемів" % amount, product_id, UiTheme.GEM)
+		var button := _build_row(GEM_TITLES[product_id], "%s гемів" % UiTheme.format_amount(amount), product_id, UiTheme.GEM)
 		button.text = IapManager.get_price_text(product_id)
 		UiTheme.make_primary(button)
 		button.pressed.connect(IapManager.purchase.bind(product_id))
@@ -117,7 +117,7 @@ func _rebuild() -> void:
 	_rows_container.add_child(_build_header("Обмін гемів на золото"))
 	for i in Balance.GEM_EXCHANGES.size():
 		var exchange: Array = Balance.GEM_EXCHANGES[i]
-		var button := _build_row("Обмін", "%d золота" % exchange[1], "exchange")
+		var button := _build_row("Обмін", "%s золота" % UiTheme.format_amount(exchange[1]), "exchange")
 		button.disabled = GameState.gems < exchange[0]
 		if not button.disabled:
 			UiTheme.make_primary(button)
@@ -170,7 +170,7 @@ func _get_pack_desc(pack_id: StringName) -> String:
 				return "%d золота (герой уже є — замість нього золото)" % (Balance.STARTER_HERO_GOLD + blade_warden.unlock_cost)
 			return "%s + %d золота" % [blade_warden.title, Balance.STARTER_HERO_GOLD]
 		&"starter_gold":
-			return "%d золота" % Balance.STARTER_GOLD_GOLD
+			return "%s золота" % UiTheme.format_amount(Balance.STARTER_GOLD_GOLD)
 	return ""
 
 func _build_header(text: String) -> Control:
@@ -196,7 +196,7 @@ func _build_row(item_title: String, description: String, icon_name: String = "",
 	var own_icon := ArtSlots.shop_icon(icon_name)
 	if own_icon != null:
 		# Готовий арт — без рамки-слота, вона лише забруднює картинку.
-		row.add_child(UiTheme.make_bare_icon(own_icon, 64.0))
+		row.add_child(UiTheme.make_bare_icon(own_icon, 72.0))
 	else:
 		var fallback := UiTheme.control_icon("money" if icon_name == "exchange" else "star")
 		row.add_child(UiTheme.make_slot(fallback, 48.0, accent))
@@ -232,7 +232,7 @@ func _show_status(text: String) -> void:
 func _on_exchange_pressed(index: int) -> void:
 	if GameState.exchange_gems_for_gold(index):
 		AudioManager.play(&"gold", 0.0)
-		_show_status("Обмін виконано: +%d золота" % Balance.GEM_EXCHANGES[index][1])
+		_show_status("Обмін виконано: +%s золота" % UiTheme.format_amount(Balance.GEM_EXCHANGES[index][1]))
 	_rebuild()
 
 func _on_starter_pack_pressed(id: StringName) -> void:
