@@ -126,11 +126,19 @@ func _ready() -> void:
 		_slot_row.add_child(slot)
 		_slot_buttons.append(slot)
 
-	# Опис обраного героя — панель у рамці, як діалог квесту.
+	# Опис і дії — в одному ряду: ліворуч панель опису, праворуч кнопки
+	# стовпчиком. Окремий ряд кнопок під описом вилазив за низ екрана,
+	# щойно опис переносився на другий рядок (вужчий екран, довший опис).
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 14)
+	column.add_child(bottom)
+
 	var info_panel := PanelContainer.new()
+	info_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info_panel.add_theme_stylebox_override("panel", UiTheme.panel_box())
-	column.add_child(info_panel)
+	bottom.add_child(info_panel)
 	var info := VBoxContainer.new()
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
 	info.add_theme_constant_override("separation", 6)
 	info_panel.add_child(info)
 
@@ -152,23 +160,23 @@ func _ready() -> void:
 	_stats_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 	info.add_child(_stats_label)
 
-	var bottom_row := HBoxContainer.new()
-	bottom_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom_row.add_theme_constant_override("separation", 16)
-	column.add_child(bottom_row)
+	var actions := VBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 10)
+	bottom.add_child(actions)
+
+	_action_button = Button.new()
+	_action_button.custom_minimum_size = Vector2(240, 56)
+	_action_button.add_theme_font_size_override("font_size", 20)
+	_action_button.pressed.connect(_on_action_pressed)
+	actions.add_child(_action_button)
 
 	var back := Button.new()
 	back.text = "Назад"
-	back.custom_minimum_size = Vector2(170, 56)
-	back.add_theme_font_size_override("font_size", 20)
+	back.custom_minimum_size = Vector2(240, 48)
+	back.add_theme_font_size_override("font_size", 18)
 	back.pressed.connect(_on_back_pressed)
-	bottom_row.add_child(back)
-
-	_action_button = Button.new()
-	_action_button.custom_minimum_size = Vector2(260, 56)
-	_action_button.add_theme_font_size_override("font_size", 20)
-	_action_button.pressed.connect(_on_action_pressed)
-	bottom_row.add_child(_action_button)
+	actions.add_child(back)
 
 	_build_popup()
 
