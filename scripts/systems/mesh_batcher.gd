@@ -33,9 +33,10 @@ var _batches: Dictionary = {}
 
 ## Додає одну модель у заданому місці. color — відтінок саме цієї
 ## моделі (стіни й підлога в кожного рівня свого кольору); білий — без
-## зміни, тоді діє загальний tint.
-func add(scene: PackedScene, transform: Transform3D, color: Color = Color.WHITE) -> void:
-	var paint := color if color != Color.WHITE else tint
+## зміни, тоді діє загальний tint. keep_colors — не фарбувати зовсім:
+## власний арт рівня (гігантський гриб) має лишитись своїх кольорів.
+func add(scene: PackedScene, transform: Transform3D, color: Color = Color.WHITE, keep_colors: bool = false) -> void:
+	var paint := Color.WHITE if keep_colors else (color if color != Color.WHITE else tint)
 	for part: Dictionary in _get_parts(scene):
 		var key := "%s|%s|%s" % [part.mesh.get_rid(), part.material.get_rid() if part.material else "-", paint.to_html()]
 		if not _batches.has(key):

@@ -71,6 +71,12 @@ const FLOOR_BRICKS_SCENE := preload("res://assets/models/dungeon/Floor_BricksSep
 const WALL_SCENE := preload("res://assets/models/dungeon/Wall_Modular.fbx")
 const TORCH_SCENE := preload("res://assets/models/dungeon/Torch.fbx")
 const COLUMN_SCENE := preload("res://assets/models/dungeon/Column.fbx")
+## Гігантський гриб (модель гравця, ~4.7 тис. трикутників, одна текстура
+## 1024): у грибних нетрях стоїть замість колон, а зменшені копії ростуть
+## попід стінами. Пластинки світяться власним кольором — без джерел світла.
+const MUSHROOM_GIANT_SCENE := preload("res://assets/models/fungal/mushroom_giant.glb")
+## Частка клітинок попід стінами з грибочками й їхній розмір (від гриба-колони).
+const COVER_CHANCE := 0.16
 
 ## Дрібний непотріб попід стінами.
 const CLUTTER_SCENES := [
@@ -119,7 +125,24 @@ const DECOR_SETS := {
 		"furniture": FURNITURE_SCENES,
 		"treasure": TREASURE_SCENES,
 	},
+	## Грибні нетрі — своя архітектура: замість кам'яних колон у залах
+	## стоять гігантські гриби (column), попід стінами — грибочки (cover).
 	"fungal": {
+		"column": MUSHROOM_GIANT_SCENE,
+		"column_scale": 1.25,
+		"cover": MUSHROOM_GIANT_SCENE,
+		"cover_scale": Vector2(0.26, 0.42),
+		"clutter": [
+			preload("res://assets/models/dungeon/Skull.fbx"), preload("res://assets/models/dungeon/Vase.fbx"), preload("res://assets/models/dungeon/Brick.fbx"),
+			preload("res://assets/models/dungeon/Bucket.fbx"), preload("res://assets/models/dungeon/Skull.fbx"),
+		],
+		"wall": [preload("res://assets/models/dungeon/Cobweb.fbx"), preload("res://assets/models/dungeon/Cobweb2.fbx"), preload("res://assets/models/dungeon/Decorative_Wall.fbx")],
+		"furniture": [preload("res://assets/models/dungeon/Woodfire.fbx"), preload("res://assets/models/dungeon/Pedestal.fbx")],
+		"treasure": [preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Bag_Coins.fbx")],
+	},
+	## Потонулі сади — поки той самий набір, що й у грибних нетрях, але
+	## без грибів: гриби — архітектура саме нетрів.
+	"sunken": {
 		"clutter": [
 			preload("res://assets/models/dungeon/Skull.fbx"), preload("res://assets/models/dungeon/Vase.fbx"), preload("res://assets/models/dungeon/Brick.fbx"),
 			preload("res://assets/models/dungeon/Bucket.fbx"), preload("res://assets/models/dungeon/Skull.fbx"),
@@ -226,7 +249,11 @@ static func all_decor_scenes() -> Array:
 	var scenes: Array = [FLOOR_SCENE, FLOOR_BRICKS_SCENE, WALL_SCENE, TORCH_SCENE, COLUMN_SCENE]
 	for set_name: String in DECOR_SETS:
 		for group: String in DECOR_SETS[set_name]:
-			for scene: PackedScene in DECOR_SETS[set_name][group]:
+			# Група — список моделей, окрема модель (column, cover) або число
+			# (масштаб) — числа пропускаємо.
+			var value: Variant = DECOR_SETS[set_name][group]
+			var group_scenes: Array = value if value is Array else ([value] if value is PackedScene else [])
+			for scene: PackedScene in group_scenes:
 				if not scenes.has(scene):
 					scenes.append(scene)
 	return scenes
@@ -589,7 +616,7 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 			if _is_column_cell(map_rows, row, x, z):
 				# На клітинці з колоною більше нічого не ставимо — інакше
 				# стіл чи скриня стирчали б просто з колони.
-				batcher.add(COLUMN_SCENE, Transform3D(Basis(), position), stone)
+				_add_column(batcher, x, z, position, stone, decor)
 				continue
 			_add_wall_visuals(batcher, map_rows, x, z, position, decor_density, stone, decor)
 			if not reserved.has(Vector2i(x, z)):
@@ -780,6 +807,39 @@ static func _hash01(x: int, z: int, salt: int) -> float:
 	var h := (x * 73856093) ^ (z * 19349663) ^ (salt * 83492791)
 	return float(absi(h) % 1000) / 1000.0
 
+## Колона в залі. Тема може підмінити її своєю архітектурою (у грибних
+## нетрях — гігантський гриб): та сама клітинка й та сама перешкода, лише
+## інша модель, повернута по-різному й у власних кольорах.
+static func _add_column(batcher: MeshBatcher, x: int, z: int, position: Vector3, stone: Color, decor: Dictionary) -> void:
+	var column: PackedScene = decor.get("column", COLUMN_SCENE)
+	if column == COLUMN_SCENE:
+		batcher.add(COLUMN_SCENE, Transform3D(Basis(), position), stone)
+		return
+	var size: float = decor.get("column_scale", 1.0) * lerpf(0.92, 1.08, _hash01(x, z, 12))
+	var basis := Basis(Vector3.UP, _hash01(x, z, 11) * TAU).scaled(Vector3.ONE * size)
+	batcher.add(column, Transform3D(basis, position), Color.WHITE, true)
+
+## Грибочки попід стіною: зменшені копії гриба-колони, по одному-два,
+## зсунуті до стіни, щоб не стояти на проході. Випадковість — з координат
+## клітинки (_hash01), а не з rng: інакше зсунулися б усі інші прикраси.
+static func _add_cover(batcher: MeshBatcher, map_rows: Array, x: int, z: int, position: Vector3, decor: Dictionary) -> void:
+	var toward_wall := Vector3.ZERO
+	for offset in [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]:
+		if not _is_walkable(map_rows, x + offset.x, z + offset.y):
+			toward_wall += Vector3(offset.x, 0.0, offset.y)
+	if toward_wall == Vector3.ZERO:
+		return
+	toward_wall = toward_wall.normalized()
+	var side := Vector3(-toward_wall.z, 0.0, toward_wall.x)
+	var sizes: Vector2 = decor.get("cover_scale", Vector2(0.3, 0.4))
+	var count := 1 + int(_hash01(x, z, 14) < 0.45)
+	for i in count:
+		var along := lerpf(-0.45, 0.45, _hash01(x, z, 15 + i))
+		var spot := position + toward_wall * CELL * 0.3 + side * along * CELL * 0.5
+		var size := lerpf(sizes.x, sizes.y, _hash01(x, z, 17 + i)) * (0.7 if i == 1 else 1.0)
+		var basis := Basis(Vector3.UP, _hash01(x, z, 19 + i) * TAU).scaled(Vector3.ONE * size)
+		batcher.add(decor.cover, Transform3D(basis, spot), Color.WHITE, true)
+
 ## Оздоблення клітинки: мотлох попід стінами, меблі посеред залів,
 ## скрині по кутах, пастки у вузьких місцях.
 static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int, position: Vector3, rng: RandomNumberGenerator, decor_density: float, decor: Dictionary) -> void:
@@ -787,6 +847,8 @@ static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int
 		return   # вхідна зала лишається чистою
 	var open_sides := _count_open_sides(map_rows, x, z)
 	var small_decor := _hash01(x, z, 5) < decor_density
+	if decor.has("cover") and open_sides <= 3 and small_decor and _hash01(x, z, 13) < COVER_CHANCE:
+		_add_cover(batcher, map_rows, x, z, position, decor)
 
 	if open_sides <= 3 and rng.randf() < 0.3 and small_decor:
 		_place(batcher, decor.clutter[rng.randi() % decor.clutter.size()],

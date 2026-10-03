@@ -883,7 +883,7 @@ const LEVELS := [
 			"ambient": Color(0.3, 0.55, 0.52), "ambient_energy": 1.5,
 			"torch": Color(0.4, 0.9, 0.85),
 			"background": Color(0.02, 0.05, 0.05),
-			"decor": "fungal",
+			"decor": "sunken",
 		},
 		"enemies": {
 			"m": [
