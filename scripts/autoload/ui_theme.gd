@@ -308,6 +308,50 @@ static func art_button(button: Button, path: String, margin_x: int, margin_y: in
 	button.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
 	button.add_theme_constant_override("outline_size", 6)
 
+## Кнопки з арту гравця (Зала героїв): зелена з золотими рунами — головна
+## дія екрана ("Обрати", "Грати", "Забрати"), синя зі сріблом — решта
+## ("Назад", "Магазин"). Зеленій нижче ~50 px кути вже не влізуть.
+const ART_PRIMARY := THEME_DIR + "button_hero_select.png"
+const ART_PRIMARY_DISABLED := THEME_DIR + "button_hero_select_disabled.png"
+const ART_SECONDARY := THEME_DIR + "button_hero_back.png"
+
+static func art_primary(button: Button) -> void:
+	art_button(button, ART_PRIMARY, 27, 23, ART_PRIMARY_DISABLED)
+
+static func art_secondary(button: Button) -> void:
+	art_button(button, ART_SECONDARY, 13, 10)
+
+## Тло екрана з арту гравця: перша наявна картинка зі списку (своя для
+## екрана, далі запасні), обрізана під екран. dim — наскільки притемнити
+## (меню на світлому тлі читається гірше). Кладе першими нащадками
+## parent, щоб усе інше малювалося поверх.
+static func add_background(parent: Control, paths: Array, dim: float = 0.0) -> void:
+	var base := ColorRect.new()
+	base.color = BG_DARK
+	base.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(base)
+	parent.move_child(base, 0)
+	for path: String in paths:
+		if not ResourceLoader.exists(path):
+			continue
+		var art := TextureRect.new()
+		art.texture = load(path)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		parent.add_child(art)
+		parent.move_child(art, 1)
+		if dim > 0.0:
+			var shade := ColorRect.new()
+			shade.color = Color(0.02, 0.01, 0.05, dim)
+			shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			parent.add_child(shade)
+			parent.move_child(shade, 2)
+		return
+
 static func _art_box(texture: Texture2D, margin_x: int, margin_y: int) -> StyleBoxTexture:
 	var box := StyleBoxTexture.new()
 	box.texture = texture
