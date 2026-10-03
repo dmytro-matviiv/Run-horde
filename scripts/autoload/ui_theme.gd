@@ -145,6 +145,27 @@ static func item_card_box() -> StyleBox:
 	box.content_margin_bottom = 12
 	return box
 
+## Рунна рамка (арт гравця, та сама, що в картки товару, але без відсіку):
+## темна плашка з рунами по кутах — підкладка під іконку з підписом поверх
+## строкатого арту (здібності на вітрині героя). Середина тягнеться як
+## завгодно. tint — для наведення/натискання кнопки.
+static func rune_frame_box(tint: Color = Color.WHITE) -> StyleBox:
+	var path := THEME_DIR + "rune_frame.png"
+	if not ResourceLoader.exists(path):
+		return panel_box(tint)
+	var box := StyleBoxTexture.new()
+	box.texture = load(path)
+	box.texture_margin_left = 20
+	box.texture_margin_right = 20
+	box.texture_margin_top = 20
+	box.texture_margin_bottom = 20
+	box.content_margin_left = 10
+	box.content_margin_right = 10
+	box.content_margin_top = 8
+	box.content_margin_bottom = 8
+	box.modulate_color = tint
+	return box
+
 ## Картка товару (Ринок, Храм) з іконкою у відсіку. Повертає картку; її
 ## єдиний нащадок — ряд (HBoxContainer), де вже стоять іконка й відступ за
 ## відсіком: додай туди опис і кнопку. tint — колір білої заглушки, коли
@@ -205,32 +226,6 @@ static func format_amount(value: int) -> String:
 		digits = digits.left(digits.length() - 3)
 	groups.insert(0, digits)
 	return ("-" if value < 0 else "") + " ".join(groups)
-
-## Підпис під іконкою, що стоїть просто на строкатому арті (стіни зали,
-## данж): світлий жирний текст на темній напівпрозорій плашці з облямівкою
-## кольору предмета. Самого контуру мало — дрібні літери тонули в тлі.
-static func make_caption(text: String, accent: Color, font_size: int = 15) -> PanelContainer:
-	var pill := PanelContainer.new()
-	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var box := make_box(Color(0.04, 0.03, 0.09, 0.82), 9, 1, Color(accent, 0.7))
-	box.content_margin_left = 8
-	box.content_margin_right = 8
-	box.content_margin_top = 2
-	box.content_margin_bottom = 3
-	box.anti_aliasing = true
-	pill.add_theme_stylebox_override("panel", box)
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.custom_minimum_size = Vector2(56, 0)
-	label.add_theme_font_override("font", font(800))
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", accent.lerp(Color.WHITE, 0.55))
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
-	label.add_theme_constant_override("outline_size", 4)
-	pill.add_child(label)
-	return pill
 
 ## Квадратна кнопка з білою іконкою набору (пауза, меню). Поля рамки
 ## тонші, ніж у текстових кнопок, — інакше іконка не влізе.
