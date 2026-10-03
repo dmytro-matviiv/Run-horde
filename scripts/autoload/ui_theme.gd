@@ -281,14 +281,15 @@ static func make_title(text: String, font_size: int = 26, color: Color = HEADING
 ## Кнопка з намальованою текстурою (арт гравця) — 9-slice: кути margin_x ×
 ## margin_y не тягнуться. Наведена — трохи світліша, натиснута — темніша;
 ## вимкнена — окрема сіра текстура (disabled_path) або та сама, притемнена.
-## Немає файла — кнопка лишається в звичайній темі.
-static func art_button(button: Button, path: String, margin_x: int, margin_y: int, disabled_path: String = "") -> void:
+## margin_right — інший правий край (кнопка "Меню": ліворуч ширша частина
+## з рисками); -1 — як лівий. Немає файла — кнопка лишається в темі.
+static func art_button(button: Button, path: String, margin_x: int, margin_y: int, disabled_path: String = "", margin_right: int = -1) -> void:
 	if not ResourceLoader.exists(path):
 		return
 	var texture: Texture2D = load(path)
 	var tints := {"normal": Color.WHITE, "hover": Color(1.12, 1.12, 1.12), "pressed": Color(0.78, 0.78, 0.78)}
 	for state: String in tints:
-		var box := _art_box(texture, margin_x, margin_y)
+		var box := _art_box(texture, margin_x, margin_y, margin_right)
 		box.modulate_color = tints[state]
 		button.add_theme_stylebox_override(state, box)
 	var disabled_texture := texture
@@ -296,7 +297,7 @@ static func art_button(button: Button, path: String, margin_x: int, margin_y: in
 	if disabled_path != "" and ResourceLoader.exists(disabled_path):
 		disabled_texture = load(disabled_path)
 		disabled_tint = Color.WHITE
-	var disabled_box := _art_box(disabled_texture, margin_x, margin_y)
+	var disabled_box := _art_box(disabled_texture, margin_x, margin_y, margin_right)
 	disabled_box.modulate_color = disabled_tint
 	button.add_theme_stylebox_override("disabled", disabled_box)
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
@@ -352,15 +353,16 @@ static func add_background(parent: Control, paths: Array, dim: float = 0.0) -> v
 			parent.move_child(shade, 2)
 		return
 
-static func _art_box(texture: Texture2D, margin_x: int, margin_y: int) -> StyleBoxTexture:
+static func _art_box(texture: Texture2D, margin_x: int, margin_y: int, margin_right: int = -1) -> StyleBoxTexture:
+	var right := margin_x if margin_right < 0 else margin_right
 	var box := StyleBoxTexture.new()
 	box.texture = texture
 	box.texture_margin_left = margin_x
-	box.texture_margin_right = margin_x
+	box.texture_margin_right = right
 	box.texture_margin_top = margin_y
 	box.texture_margin_bottom = margin_y
 	box.content_margin_left = margin_x + 6
-	box.content_margin_right = margin_x + 6
+	box.content_margin_right = right + 6
 	box.content_margin_top = 4
 	box.content_margin_bottom = 4
 	return box

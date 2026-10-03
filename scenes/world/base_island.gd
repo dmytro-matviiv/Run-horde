@@ -25,6 +25,9 @@ const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
 const DUNGEON_SELECT_SCRIPT := preload("res://scenes/ui/dungeon_select.gd")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 const DUNGEON_PATH := "res://scenes/dungeon/dungeon.tscn"
+## Кнопка "Меню" (арт гравця) і її ширина: риски зліва + напис.
+const MENU_BUTTON_ART := "res://assets/ui/theme/button_menu.png"
+const MENU_BUTTON_WIDTH := 140.0
 
 ## Куди веде кожна будівля. Портал відкриває вибір рівня данжу.
 const ACTION_SCENES := {
@@ -135,18 +138,19 @@ func _style_hud() -> void:
 	wallet.add_child(_gold_badge)
 	_gems_badge = CurrencyBadge.new(&"gem", 18, false)
 	wallet.add_child(_gems_badge)
-	var hint := $HUD/HintLabel as Label
-	hint.reparent(column, false)
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.custom_minimum_size = Vector2(400, 0)
-	hint.add_theme_font_size_override("font_size", 15)
-	hint.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	# Підказку "Джойстик — рух..." гравець бачить щоразу — вона лише
+	# захаращує кут з валютою. Будівлі й так підписані над дахом.
+	($HUD/HintLabel as Label).visible = false
 
+	# "Меню" — синя плашка з рисками зліва (арт гравця); риски — частина
+	# картинки, тож окрема іконка не потрібна. Ширша за сцену, щоб напис
+	# не заходив на риски.
 	var menu := $HUD/MenuButton as Button
-	menu.icon = UiTheme.control_icon("menu")
-	menu.add_theme_constant_override("icon_max_width", 22)
-	menu.add_theme_constant_override("h_separation", 8)
-	UiTheme.make_primary(action_button)
+	menu.icon = null
+	menu.offset_left = -16.0 - MENU_BUTTON_WIDTH
+	UiTheme.art_button(menu, MENU_BUTTON_ART, 54, 23, "", 14)
+	# Вхід у будівлю — зелена кнопка з рунами, як "Обрати" в Залі героїв.
+	UiTheme.art_primary(action_button)
 
 ## Прості коробки замість точної форми кожної моделі: для телефона це
 ## в рази дешевше, а гравцеві різниці не видно.

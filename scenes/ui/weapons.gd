@@ -57,6 +57,7 @@ var _weapons: Array[WeaponDef] = []
 var _index := 0
 
 var _preview: ModelPreview
+var _backdrop_gradient: Gradient
 var _preview_note: Label
 var _gold_badge: CurrencyBadge
 var _gems_badge: CurrencyBadge
@@ -121,6 +122,7 @@ func _ready() -> void:
 	sky.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	stage.add_child(sky)
 	sky.set_background(ArtSlots.hero_background(_hero_id))
+	stage.add_child(_make_backdrop())
 	_preview = MODEL_PREVIEW_SCRIPT.new()
 	_preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	stage.add_child(_preview)
@@ -236,6 +238,31 @@ func _ready() -> void:
 	_refresh()
 	UiTheme.scroll_to_center.call_deferred(_slot_scroll, _slot_buttons[_index])
 
+## Підкладка під зброю: темний овал, а посередині — м'яке світло в кольорі
+## зброї. Без неї темний ствол губився на темній кімнаті Оперативника, а
+## світлий клинок — на світлому небі. Малюється кодом з однієї текстури.
+func _make_backdrop() -> Control:
+	_backdrop_gradient = Gradient.new()
+	_backdrop_gradient.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
+	_backdrop_gradient.colors = PackedColorArray([
+		Color(1, 1, 1, 0.6), Color(0.04, 0.03, 0.09, 0.62), Color(0.04, 0.03, 0.09, 0.0)])
+	var texture := GradientTexture2D.new()
+	texture.gradient = _backdrop_gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.0, 0.5)
+	texture.width = 128
+	texture.height = 128
+	var backdrop := Control.new()
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.draw.connect(func() -> void:
+		# Овал удвічі ширший за висоту — під зброю, що лежить по діагоналі.
+		var height := backdrop.size.y * 1.15
+		var rect := Rect2(backdrop.size * 0.5 - Vector2(height, height * 0.5), Vector2(height * 2.0, height))
+		backdrop.draw_texture_rect(texture, rect, false))
+	backdrop.resized.connect(backdrop.queue_redraw)
+	return backdrop
+
 func _current() -> WeaponDef:
 	return _weapons[_index]
 
@@ -256,6 +283,7 @@ func _refresh() -> void:
 	var def := _current()
 	var owned := GameState.is_weapon_owned(def.id)
 	_preview_note.visible = _preview.show_weapon(def)
+	_backdrop_gradient.set_color(0, Color(def.color.lerp(Color.WHITE, 0.45), 0.6))
 	_name_label.text = def.title
 	_name_label.add_theme_color_override("font_color", def.color.lerp(OrnateDialog.TITLE_COLOR, 0.6) if owned else Color(0.72, 0.72, 0.8))
 	_kind_label.text = SPELL_HINTS.get(def.spell, STYLE_HINTS.get(def.style_3d, ARCHETYPE_HINTS.get(def.archetype, "")))
