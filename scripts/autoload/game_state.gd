@@ -169,12 +169,25 @@ func return_from_ui() -> void:
 var dungeon_level := 0
 var max_dungeon_level := 0
 
+## ЛИШЕ ДЛЯ ПЕРЕВІРКИ: у тестовій (debug) збірці — з редактора чи debug-APK
+## на телефоні — відкриті всі рівні данжу. Сейв не змінюється:
+## max_dungeon_level лишається справжнім, і "Пройдено" показує чесно. У
+## релізній збірці не діє (OS.is_debug_build() там false). ПЕРЕД ВИПУСКОМ
+## ГРИ — постав false.
+const DEV_UNLOCK_ALL_DUNGEONS := true
+
+## Найдальший рівень, куди вже можна зайти (з урахуванням перемикача вище).
+func get_unlocked_dungeon_level() -> int:
+	if DEV_UNLOCK_ALL_DUNGEONS and OS.is_debug_build():
+		return DungeonLevels.get_level_count() - 1
+	return max_dungeon_level
+
 func unlock_next_dungeon_level() -> void:
 	max_dungeon_level = maxi(max_dungeon_level, dungeon_level + 1)
 	SaveManager.save_game()
 
 func select_dungeon_level(index: int) -> void:
-	dungeon_level = clampi(index, 0, max_dungeon_level)
+	dungeon_level = clampi(index, 0, get_unlocked_dungeon_level())
 	SaveManager.save_game()
 
 func register_completed_run() -> void:
