@@ -88,10 +88,10 @@ func add_text(text: String, font_size: int = 18, color: Color = TEXT_COLOR, alig
 	return label
 
 ## Кнопка внизу. Без on_press — просто закриває вікно.
-func add_button(text: String, primary: bool = true, on_press: Callable = Callable()) -> Button:
+func add_button(text: String, primary: bool = true, on_press: Callable = Callable(), width: float = 240.0) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.custom_minimum_size = Vector2(240, 56 if primary else 50)
+	button.custom_minimum_size = Vector2(width, 56 if primary else 50)
 	button.add_theme_font_size_override("font_size", 20 if primary else 18)
 	if primary:
 		UiTheme.art_primary(button)
