@@ -7,6 +7,12 @@ extends Control
 ## слоту під час гортання нічого не спорядив випадково.
 
 const MODEL_PREVIEW_SCRIPT := preload("res://scenes/ui/model_preview.gd")
+const SKY_STAGE_SCRIPT := preload("res://scenes/ui/sky_stage.gd")
+## Тло Збройні: своє (поклади assets/ui/backgrounds/armory.jpg), інакше — зала.
+const ARMORY_BACKGROUND := "res://assets/ui/backgrounds/armory.jpg"
+const HALL_BACKGROUND := "res://assets/ui/backgrounds/hero_hall.jpg"
+## Колір значень у рядку чисел зброї (bbcode, тому — hex).
+const STAT_VALUE_COLOR := "#ffd36b"
 
 const ARCHETYPE_HINTS := {
 	"projectile": "Постріл",
@@ -59,16 +65,16 @@ var _slot_scroll: ScrollContainer
 var _slot_buttons: Array[Button] = []
 var _name_label: Label
 var _kind_label: Label
-var _stats_label: Label
+var _stats_label: RichTextLabel
 var _description_label: Label
 var _action_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var background := ColorRect.new()
-	background.color = Color(0.055, 0.065, 0.078)
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(background)
+	# Тло — своє (armory.jpg), поки його немає — зала героїв зі статуями
+	# лицарів. Суцільний фон зі сцени лягав би поверх картинки.
+	($Background as CanvasItem).visible = false
+	UiTheme.add_background(self, [ARMORY_BACKGROUND, HALL_BACKGROUND])
 
 	_hero_id = GameState.selected_hero_id
 	_weapons = WeaponPool.get_for_hero(_hero_id)
@@ -85,42 +91,64 @@ func _ready() -> void:
 	add_child(column)
 
 	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 10)
 	column.add_child(top_row)
-	var title_box := UiTheme.make_title("Збройня", 30)
+	var title_box := OrnateBanner.new("Збройня", 30)
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_row.add_child(title_box)
-	top_row.add_theme_constant_override("separation", 8)
-	_gold_badge = CurrencyBadge.new(&"gold")
-	top_row.add_child(_gold_badge)
-	_gems_badge = CurrencyBadge.new(&"gem")
-	top_row.add_child(_gems_badge)
+	# Валюта — навпроти полотна банера, а не його герба: відступ згори.
+	var wallet := MarginContainer.new()
+	wallet.add_theme_constant_override("margin_top", int(OrnateBanner.CREST_RISE))
+	top_row.add_child(wallet)
+	var wallet_row := HBoxContainer.new()
+	wallet_row.add_theme_constant_override("separation", 8)
+	wallet.add_child(wallet_row)
+	_gold_badge = CurrencyBadge.new(&"gold", 20)
+	wallet_row.add_child(_gold_badge)
+	_gems_badge = CurrencyBadge.new(&"gem", 20)
+	wallet_row.add_child(_gems_badge)
 
-	var hero_label := Label.new()
-	hero_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
-	hero_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hero_label.add_theme_font_size_override("font_size", 16)
-	hero_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
-	column.add_child(hero_label)
-
-	# Вітрина: 3D-модель обраної зброї в руці героя — велика, посередині.
-	# Мінімум невеликий: вітрина забирає все, що лишилось, а не вимагає
-	# 200 px — інакше на висоті 648 нижні кнопки вилазили за екран.
+	# Вітрина: зброя в руці героя на ЙОГО тлі (те саме, що в Залі героїв).
+	# Мінімум невеликий: вітрина забирає все, що лишилось, — інакше на
+	# висоті 648 низ екрана вилазив би.
 	var stage := PanelContainer.new()
 	stage.custom_minimum_size = Vector2(0, 110)
 	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stage.add_theme_stylebox_override("panel", UiTheme.panel_box())
+	stage.clip_contents = true
 	column.add_child(stage)
+	var sky: SkyStage = SKY_STAGE_SCRIPT.new()
+	sky.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stage.add_child(sky)
+	sky.set_background(ArtSlots.hero_background(_hero_id))
 	_preview = MODEL_PREVIEW_SCRIPT.new()
 	_preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	stage.add_child(_preview)
+	var overlay := Control.new()
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.add_child(overlay)
+	# Чий це арсенал — плашкою в кутку вітрини.
+	var owner_tag := PanelContainer.new()
+	owner_tag.add_theme_stylebox_override("panel", UiTheme.rune_frame_box())
+	owner_tag.position = Vector2(10, 10)
+	owner_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(owner_tag)
+	var owner_label := Label.new()
+	owner_label.text = "Арсенал: %s" % HeroPool.get_def(_hero_id).title
+	owner_label.add_theme_font_override("font", UiTheme.font(800))
+	owner_label.add_theme_font_size_override("font_size", 15)
+	owner_label.add_theme_color_override("font_color", OrnateDialog.TITLE_COLOR)
+	owner_tag.add_child(owner_label)
 	_preview_note = Label.new()
 	_preview_note.text = "Тимчасова модель зброї — справжню підключимо пізніше"
 	_preview_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_preview_note.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	_preview_note.offset_top = -22.0
 	_preview_note.add_theme_font_size_override("font_size", 13)
-	_preview_note.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
-	stage.add_child(_preview_note)
+	_preview_note.add_theme_color_override("font_color", UiTheme.TEXT)
+	_preview_note.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	_preview_note.add_theme_constant_override("outline_size", 4)
+	overlay.add_child(_preview_note)
 
 	# Ряд слотів — зброю гортаєш і обираєш іконками, як інвентар.
 	var picker := UiTheme.make_picker_row()
@@ -138,54 +166,72 @@ func _ready() -> void:
 		_slot_row.add_child(slot)
 		_slot_buttons.append(slot)
 
-	# Опис обраної зброї — панель у рамці, як діалог квесту в зразку.
-	var info_panel := PanelContainer.new()
-	info_panel.add_theme_stylebox_override("panel", UiTheme.panel_box())
-	column.add_child(info_panel)
+	# Опис і дії — в одному ряду, як у Залі героїв: ліворуч різьблена
+	# панель опису, праворуч кнопки стовпчиком.
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 14)
+	column.add_child(bottom)
+	var info_panel := OrnatePanel.new()
+	info_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bottom.add_child(info_panel)
 	var info := VBoxContainer.new()
+	info.alignment = BoxContainer.ALIGNMENT_CENTER
 	info.add_theme_constant_override("separation", 4)
 	info_panel.add_child(info)
 
 	_name_label = Label.new()
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_name_label.add_theme_font_size_override("font_size", 24)
+	_name_label.add_theme_font_override("font", UiTheme.font(900))
+	_name_label.add_theme_font_size_override("font_size", 25)
+	_name_label.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.0, 0.85))
+	_name_label.add_theme_constant_override("outline_size", 6)
 	info.add_child(_name_label)
 
 	_kind_label = Label.new()
 	_kind_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_kind_label.add_theme_font_override("font", UiTheme.font(800))
 	_kind_label.add_theme_font_size_override("font_size", 15)
 	_kind_label.add_theme_color_override("font_color", Color(0.55, 0.9, 1.0))
 	info.add_child(_kind_label)
 
-	_stats_label = Label.new()
-	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_stats_label.add_theme_font_size_override("font_size", 14)
-	_stats_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	# Числа зброї — назва приглушена, значення своїм яскравим кольором.
+	_stats_label = RichTextLabel.new()
+	_stats_label.bbcode_enabled = true
+	_stats_label.fit_content = true
+	_stats_label.scroll_active = false
+	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_stats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stats_label.add_theme_font_override("normal_font", UiTheme.font(700))
+	_stats_label.add_theme_font_override("bold_font", UiTheme.font(900))
+	_stats_label.add_theme_font_size_override("normal_font_size", 15)
+	_stats_label.add_theme_font_size_override("bold_font_size", 15)
+	_stats_label.add_theme_color_override("default_color", Color(0.8, 0.78, 0.92))
 	info.add_child(_stats_label)
 
 	_description_label = Label.new()
 	_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_description_label.add_theme_font_size_override("font_size", 15)
-	_description_label.add_theme_color_override("font_color", UiTheme.TEXT)
+	_description_label.add_theme_font_override("font", UiTheme.font(700))
+	_description_label.add_theme_font_size_override("font_size", 16)
+	_description_label.add_theme_color_override("font_color", Color(0.98, 0.96, 0.9))
 	info.add_child(_description_label)
 
-	var bottom_row := HBoxContainer.new()
-	bottom_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom_row.add_theme_constant_override("separation", 16)
-	column.add_child(bottom_row)
-
+	var actions := VBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 10)
+	bottom.add_child(actions)
+	_action_button = Button.new()
+	_action_button.custom_minimum_size = Vector2(240, 56)
+	_action_button.add_theme_font_size_override("font_size", 20)
+	UiTheme.art_primary(_action_button)
+	actions.add_child(_action_button)
 	var back := Button.new()
 	back.text = "Назад"
-	back.custom_minimum_size = Vector2(170, 56)
-	back.add_theme_font_size_override("font_size", 20)
+	back.custom_minimum_size = Vector2(240, 48)
+	back.add_theme_font_size_override("font_size", 18)
+	UiTheme.art_secondary(back)
 	back.pressed.connect(_on_back_pressed)
-	bottom_row.add_child(back)
-
-	_action_button = Button.new()
-	_action_button.custom_minimum_size = Vector2(260, 56)
-	_action_button.add_theme_font_size_override("font_size", 20)
-	bottom_row.add_child(_action_button)
+	actions.add_child(back)
 
 	_refresh()
 	UiTheme.scroll_to_center.call_deferred(_slot_scroll, _slot_buttons[_index])
@@ -211,9 +257,9 @@ func _refresh() -> void:
 	var owned := GameState.is_weapon_owned(def.id)
 	_preview_note.visible = _preview.show_weapon(def)
 	_name_label.text = def.title
-	_name_label.add_theme_color_override("font_color", def.color if owned else UiTheme.TEXT_DIM)
+	_name_label.add_theme_color_override("font_color", def.color.lerp(OrnateDialog.TITLE_COLOR, 0.6) if owned else Color(0.72, 0.72, 0.8))
 	_kind_label.text = SPELL_HINTS.get(def.spell, STYLE_HINTS.get(def.style_3d, ARCHETYPE_HINTS.get(def.archetype, "")))
-	_stats_label.text = _build_stats_text(def)
+	_stats_label.text = "[center]%s[/center]" % _build_stats_text(def)
 	_description_label.text = def.description
 
 	if _action_button.pressed.is_connected(_on_equip_pressed):
@@ -224,56 +270,57 @@ func _refresh() -> void:
 	if equipped == def.id:
 		_action_button.text = "У руках"
 		_action_button.disabled = true
-		UiTheme.make_primary(_action_button)
 	elif owned:
 		_action_button.text = "Спорядити"
 		_action_button.disabled = false
-		UiTheme.make_primary(_action_button)
 		_action_button.pressed.connect(_on_equip_pressed)
 	else:
 		_action_button.disabled = GameState.gold < def.cost_gold
-		_action_button.theme_type_variation = &""
 		PriceTag.apply(_action_button, &"gold", def.cost_gold, "Купити")
 		_action_button.pressed.connect(_on_buy_pressed)
 
 ## Головні числа зброї людською мовою: скільки б'є, як часто і що
 ## лишає на ворогові. Для вогнепальної — ще магазин і перезарядка.
+## BBCode: назва приглушена, значення — жирним золотом (_stat).
 func _build_stats_text(def: WeaponDef) -> String:
 	if def.ranged_3d:
-		return "   •   ".join([
-			"Шкода %d" % int(def.damage),
-			"%.0f пострілів/с" % (1.0 / maxf(def.fire_interval, 0.01)),
-			"магазин %d" % def.magazine,
-			"перезарядка %.1f с" % def.reload_time,
+		return "    •    ".join([
+			_stat("Шкода", "%d" % int(def.damage)),
+			_stat("Пострілів/с", "%.0f" % (1.0 / maxf(def.fire_interval, 0.01))),
+			_stat("Магазин", "%d" % def.magazine),
+			_stat("Перезарядка", "%.1f с" % def.reload_time),
 		])
 	if def.spell != "none":
 		var parts: Array[String] = [
-			"Шкода %d%%" % roundi(def.damage_mult_3d * 100.0),
-			"чари раз на %.2f с" % def.cast_interval,
+			_stat("Шкода", "%d%%" % roundi(def.damage_mult_3d * 100.0)),
+			_stat("Чари раз на", "%.2f с" % def.cast_interval),
 		]
 		var staff_skill := Skills3D.create_skill(def.staff_skill)
 		if staff_skill != null:
-			parts.append("особливе: %s" % staff_skill.title)
-		return "   •   ".join(parts)
+			parts.append(_stat("Особливе:", staff_skill.title))
+		return "    •    ".join(parts)
 	if STYLE_HINTS.has(def.style_3d):
 		# Ближня зброя в 3D-бою відрізняється множниками до удару героя —
 		# показуємо їх відносно стартового меча (100%).
-		return "   •   ".join([
-			"Шкода %d%%" % roundi(def.damage_mult_3d * 100.0),
-			"швидкість %d%%" % roundi(def.speed_mult_3d * 100.0),
-			"дальність %d%%" % roundi(def.reach_3d / 2.9 * 100.0),
-			"дуга %d°" % roundi(def.arc_3d),
+		return "    •    ".join([
+			_stat("Шкода", "%d%%" % roundi(def.damage_mult_3d * 100.0)),
+			_stat("Швидкість", "%d%%" % roundi(def.speed_mult_3d * 100.0)),
+			_stat("Дальність", "%d%%" % roundi(def.reach_3d / 2.9 * 100.0)),
+			_stat("Дуга", "%d°" % roundi(def.arc_3d)),
 		])
-	var parts: Array[String] = ["Шкода %d" % int(def.damage)]
+	var parts: Array[String] = [_stat("Шкода", "%d" % int(def.damage))]
 	if def.cooldown > 0.0:
-		parts.append("раз на %.1f с" % def.cooldown)
+		parts.append(_stat("Раз на", "%.1f с" % def.cooldown))
 	if def.shots > 1:
-		parts.append("%d снаряди" % def.shots)
+		parts.append(_stat("Снаряди", "%d" % def.shots))
 	if def.pierce > 0:
-		parts.append("пробиває %d" % def.pierce)
+		parts.append(_stat("Пробиває", "%d" % def.pierce))
 	if def.status != &"" and STATUS_HINTS.has(def.status):
-		parts.append(STATUS_HINTS[def.status])
-	return "   •   ".join(parts)
+		parts.append("[b][color=%s]%s[/color][/b]" % [STAT_VALUE_COLOR, STATUS_HINTS[def.status]])
+	return "    •    ".join(parts)
+
+func _stat(title: String, value: String) -> String:
+	return "%s [b][color=%s]%s[/color][/b]" % [title, STAT_VALUE_COLOR, value]
 
 ## Куплену зброю одразу вдягаємо — гравець хотів саме її, зайвий
 ## другий клік нічого не додає.
