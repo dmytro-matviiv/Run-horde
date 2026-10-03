@@ -145,6 +145,27 @@ static func item_card_box() -> StyleBox:
 	box.content_margin_bottom = 12
 	return box
 
+## Компактна картка (84 px) — та сама рамка з відсіком, менша: кнопки
+## "Магазин" і "Скринька" в меню. Відсік — квадрат з центром на
+## (ITEM_SMALL_SLOT_CENTER, посередині висоти); текст — від ITEM_SMALL_TEXT_X.
+const ITEM_CARD_SMALL_HEIGHT := 84.0
+const ITEM_ICON_SMALL := 44.0
+const ITEM_SMALL_SLOT_CENTER := 42.0
+const ITEM_SMALL_TEXT_X := 94.0
+
+static func item_card_small_box(tint: Color = Color.WHITE) -> StyleBox:
+	var path := THEME_DIR + "item_card_small.png"
+	if not ResourceLoader.exists(path):
+		return panel_box(tint)
+	var box := StyleBoxTexture.new()
+	box.texture = load(path)
+	box.texture_margin_left = 83
+	box.texture_margin_right = 19
+	box.texture_margin_top = 41
+	box.texture_margin_bottom = 41
+	box.modulate_color = tint
+	return box
+
 ## Рунна рамка (арт гравця, та сама, що в картки товару, але без відсіку):
 ## темна плашка з рунами по кутах — підкладка під іконку з підписом поверх
 ## строкатого арту (здібності на вітрині героя). Середина тягнеться як
