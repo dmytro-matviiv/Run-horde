@@ -51,9 +51,9 @@ func _ready() -> void:
 	var level_up: Node = load("res://scenes/ui/level_up_choice.tscn").instantiate()
 	add_child(level_up)
 	level_up.setup_cards(3, [
-		{"id": &"a", "title": "Гострота", "text": "Удари завдають на 15% більше шкоди.", "level": 1, "max": 5},
-		{"id": &"b", "title": "Вихор", "text": "Вихор крутиться довше й зачіпає далі.", "level": 2, "max": 3},
-		{"id": &"c", "title": "Жага крові", "text": "Кожен удар повертає трохи здоров'я.", "level": 1, "max": 3},
+		{"id": &"damage", "title": "Гострота", "text": "Удари завдають на 15% більше шкоди.", "level": 1, "max": 5},
+		{"id": &"whirl_power", "title": "Вихор", "text": "Вихор крутиться довше й зачіпає далі.", "level": 2, "max": 3},
+		{"id": &"lifesteal", "title": "Жага крові", "text": "Кожен удар повертає трохи здоров'я.", "level": 1, "max": 3},
 	])
 	await _shot("level_up")
 	level_up.queue_free()

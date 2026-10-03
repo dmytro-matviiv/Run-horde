@@ -17,20 +17,36 @@ signal quit_confirmed
 
 func _ready() -> void:
 	confirm_row.visible = false
-	# Фентезійне оформлення (UiTheme): заголовок між розділювачами,
-	# "Продовжити" — світла головна кнопка.
+	# Оформлення з арту гравця: панель — різьблена рамка (OrnatePanel, задана
+	# у сцені), заголовок золотом, безпечні дії ("Продовжити", "Ні,
+	# повернутись") — зелені кнопки, вихід — сині.
+	($Panel/VBoxContainer as VBoxContainer).add_theme_constant_override("separation", 12)
 	var title := $Panel/VBoxContainer/TitleLabel as Label
-	title.add_theme_color_override("font_color", UiTheme.HEADING)
-	UiTheme.add_dividers(title)
-	($Panel/VBoxContainer/HintLabel as Label).add_theme_color_override("font_color", UiTheme.TEXT_DIM)
-	($Panel/VBoxContainer/ConfirmRow/WarnLabel as Label).add_theme_color_override("font_color", UiTheme.DANGER)
-	UiTheme.make_primary($Panel/VBoxContainer/ResumeButton as Button)
+	title.add_theme_font_override("font", UiTheme.font(900))
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", OrnateDialog.TITLE_COLOR)
+	title.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.1, 0.9))
+	title.add_theme_constant_override("outline_size", 6)
+	_style_text($Panel/VBoxContainer/HintLabel as Label, Color(0.92, 0.9, 0.98))
+	_style_text($Panel/VBoxContainer/ConfirmRow/WarnLabel as Label, Color(1.0, 0.55, 0.5))
+	UiTheme.art_primary($Panel/VBoxContainer/ResumeButton as Button)
+	UiTheme.art_secondary(quit_button)
+	UiTheme.art_secondary($Panel/VBoxContainer/ConfirmRow/ConfirmQuitButton as Button)
+	UiTheme.art_primary($Panel/VBoxContainer/ConfirmRow/CancelQuitButton as Button)
+	($Panel/VBoxContainer/ConfirmRow/CancelQuitButton as Button).custom_minimum_size.y = 52
 	# Панель — за розміром вмісту: у сцені вона задана вищою, і під
 	# кнопками зяяла порожнеча. Прив'язка по центру з ростом в обидва боки
 	# тримає її посередині й тоді, коли з'являється підтвердження.
 	var panel := $Panel as Control
 	panel.offset_top = 0.0
 	panel.offset_bottom = 0.0
+
+func _style_text(label: Label, color: Color) -> void:
+	label.add_theme_font_override("font", UiTheme.font(700))
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	label.add_theme_constant_override("outline_size", 3)
 
 ## Тексти під інший режим. У данжі золото зараховується одразу, тож
 ## вихід забирає лише здібності походу — і попередження інше.
