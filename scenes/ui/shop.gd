@@ -53,11 +53,11 @@ func _ready() -> void:
 	column.add_theme_constant_override("separation", 10)
 	add_child(column)
 
+	# Угорі — лише валюта праворуч: заголовок-плашка "Ринок" тут зайвий,
+	# крамницю й так видно з тла й банерів розділів.
 	var top_row := HBoxContainer.new()
+	top_row.alignment = BoxContainer.ALIGNMENT_END
 	column.add_child(top_row)
-	var title_box := UiTheme.make_title("Ринок", 30)
-	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_row.add_child(title_box)
 	top_row.add_theme_constant_override("separation", 8)
 	_gold_badge = CurrencyBadge.new(&"gold")
 	top_row.add_child(_gold_badge)
