@@ -130,6 +130,9 @@ const DECOR_SETS := {
 	"fungal": {
 		"column": MUSHROOM_GIANT_SCENE,
 		"column_scale": 1.25,
+		## Шапка ~2.5 м завширшки — перешкода ширша за кам'яну колону, щоб
+		## герой і вороги не ховались під шапкою від камери згори.
+		"column_obstacle": 1.8,
 		"cover": MUSHROOM_GIANT_SCENE,
 		"cover_scale": Vector2(0.26, 0.42),
 		"clutter": [
@@ -303,7 +306,8 @@ static func build_base(map_rows: Array, parent: Node3D, theme: Dictionary = DEFA
 
 	_add_merged_walls(obstacles, wall_runs)
 	_add_floor_collision(obstacles, map_rows)
-	_add_column_obstacles(obstacles, map_rows)
+	var decor: Dictionary = DECOR_SETS.get(theme.get("decor", "crypt"), DECOR_SETS.crypt)
+	_add_column_obstacles(obstacles, map_rows, decor.get("column_obstacle", 1.1))
 	_create_chunks(parent, map_rows, result)
 	_add_rock_top(parent, map_rows, theme)
 	return result
@@ -721,12 +725,14 @@ static func _add_floor_collision(obstacles: StaticBody3D, map_rows: Array) -> vo
 	_add_box_shape(obstacles, Vector3(width * 0.5 - CELL * 0.5, -0.125, depth * 0.5 - CELL * 0.5),
 		Vector3(width + CELL, 0.5, depth + CELL))
 
-static func _add_column_obstacles(obstacles: StaticBody3D, map_rows: Array) -> void:
+## width — ширина перешкоди: кам'яна колона 1.1 м, гриб-колона ширший —
+## під шапку не підійти впритул (згори героя під нею не видно).
+static func _add_column_obstacles(obstacles: StaticBody3D, map_rows: Array, width: float = 1.1) -> void:
 	for z in range(1, map_rows.size() - 1):
 		var row: String = map_rows[z]
 		for x in range(1, row.length() - 1):
 			if _is_column_cell(map_rows, row, x, z):
-				_add_box_shape(obstacles, Vector3(x * CELL, 2.0, z * CELL), Vector3(1.1, 4.0, 1.1))
+				_add_box_shape(obstacles, Vector3(x * CELL, 2.0, z * CELL), Vector3(width, 4.0, width))
 
 static func _is_column_cell(map_rows: Array, row: String, x: int, z: int) -> bool:
 	if row[x] != "." or x % 6 != 0 or z % 6 != 0:
