@@ -77,6 +77,21 @@ const COLUMN_SCENE := preload("res://assets/models/dungeon/Column.fbx")
 const MUSHROOM_GIANT_SCENE := preload("res://assets/models/fungal/mushroom_giant.glb")
 ## Частка клітинок попід стінами з грибочками й їхній розмір (від гриба-колони).
 const COVER_CHANCE := 0.16
+## Набір гравця для Грибних нетрів (DungeonKit, уже під клітинку 2 м).
+## Плитки підлоги — [модель, частка]: звичайна, з корінням, світна тріщина.
+const FUNGAL_FLOORS := [
+	[preload("res://assets/models/fungal/kit/floor_plain.glb"), 0.6],
+	[preload("res://assets/models/fungal/kit/floor_roots.glb"), 0.3],
+	[preload("res://assets/models/fungal/kit/floor_glow.glb"), 0.1],
+]
+const FUNGAL_WALLS := [
+	preload("res://assets/models/fungal/kit/wall_plain.glb"), preload("res://assets/models/fungal/kit/wall_plain2.glb"),
+	preload("res://assets/models/fungal/kit/wall_moss.glb"), preload("res://assets/models/fungal/kit/wall_moss2.glb"),
+	preload("res://assets/models/fungal/kit/wall_roots.glb"), preload("res://assets/models/fungal/kit/wall_roots2.glb"),
+	preload("res://assets/models/fungal/kit/wall_shrooms.glb"), preload("res://assets/models/fungal/kit/wall_crack.glb"),
+]
+const FUNGAL_COLUMN_SCENE := preload("res://assets/models/fungal/kit/column.glb")
+const FUNGAL_RUBBLE_SCENE := preload("res://assets/models/fungal/kit/rubble.glb")
 
 ## Дрібний непотріб попід стінами.
 const CLUTTER_SCENES := [
@@ -127,20 +142,30 @@ const DECOR_SETS := {
 	},
 	## Грибні нетрі — своя архітектура: замість кам'яних колон у залах
 	## стоять гігантські гриби (column), попід стінами — грибочки (cover).
+	## Грибні нетрі — своя архітектура з набору гравця (DungeonKit,
+	## assets/models/fungal/kit, легкі версії — process_dungeon_kit.py):
+	## моховита кладка з корінням і слизом, плити з тріщинами, що світяться,
+	## у залах — то гриб-велетень, то колона з набору. Нічого з першого данжу,
+	## крім павутиння, черепів і скарбів. Свій арт не фарбується під камінь.
 	"fungal": {
-		"column": MUSHROOM_GIANT_SCENE,
-		"column_scale": 1.25,
-		## Шапка ~2.5 м завширшки — перешкода ширша за кам'яну колону, щоб
-		## герой і вороги не ховались під шапкою від камери згори.
-		"column_obstacle": 1.8,
+		"keep_colors": true,
+		"floor_tiles": FUNGAL_FLOORS,
+		"wall_tiles": FUNGAL_WALLS,
+		## Лице стіни набору — на 0.25 м усередині клітинки (а не на межі).
+		"wall_inset": 0.25,
+		"columns": [
+			## Шапка ~2.5 м завширшки — перешкода ширша, щоб під шапкою не
+			## ховались від камери згори.
+			{"scene": MUSHROOM_GIANT_SCENE, "scale": 1.25, "obstacle": 1.8, "weight": 0.6},
+			{"scene": FUNGAL_COLUMN_SCENE, "scale": 1.0, "obstacle": 0.8, "weight": 0.4},
+		],
 		"cover": MUSHROOM_GIANT_SCENE,
 		"cover_scale": Vector2(0.26, 0.42),
-		"clutter": [
-			preload("res://assets/models/dungeon/Skull.fbx"), preload("res://assets/models/dungeon/Vase.fbx"), preload("res://assets/models/dungeon/Brick.fbx"),
-			preload("res://assets/models/dungeon/Bucket.fbx"), preload("res://assets/models/dungeon/Skull.fbx"),
-		],
-		"wall": [preload("res://assets/models/dungeon/Cobweb.fbx"), preload("res://assets/models/dungeon/Cobweb2.fbx"), preload("res://assets/models/dungeon/Decorative_Wall.fbx")],
-		"furniture": [preload("res://assets/models/dungeon/Woodfire.fbx"), preload("res://assets/models/dungeon/Pedestal.fbx")],
+		"clutter": [preload("res://assets/models/dungeon/Skull.fbx")],
+		## Черепи — єдиний дрібний мотлох тут, тож рідше, ніж бочки в склепах.
+		"clutter_chance": 0.1,
+		"wall": [preload("res://assets/models/dungeon/Cobweb.fbx"), preload("res://assets/models/dungeon/Cobweb2.fbx")],
+		"furniture": [FUNGAL_RUBBLE_SCENE],
 		"treasure": [preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Bag_Coins.fbx")],
 	},
 	## Потонулі сади — поки той самий набір, що й у грибних нетрях, але
@@ -254,12 +279,24 @@ static func all_decor_scenes() -> Array:
 		for group: String in DECOR_SETS[set_name]:
 			# Група — список моделей, окрема модель (column, cover) або число
 			# (масштаб) — числа пропускаємо.
-			var value: Variant = DECOR_SETS[set_name][group]
-			var group_scenes: Array = value if value is Array else ([value] if value is PackedScene else [])
-			for scene: PackedScene in group_scenes:
+			for scene in _scenes_in(DECOR_SETS[set_name][group]):
 				if not scenes.has(scene):
 					scenes.append(scene)
 	return scenes
+
+## Усі моделі в групі набору прикрас: список моделей, окрема модель,
+## пари [модель, частка] (плитки) чи описи {"scene": ...} (колони).
+## Числа й інші значення (масштаб) — пропускаємо.
+static func _scenes_in(value: Variant) -> Array:
+	if value is PackedScene:
+		return [value]
+	if value is Dictionary:
+		return _scenes_in((value as Dictionary).get("scene"))
+	var found: Array = []
+	if value is Array:
+		for item: Variant in value:
+			found.append_array(_scenes_in(item))
+	return found
 
 ## Символи, по яких можна ходити: підлога, вхід/вихід/бос і всі мітки
 ## ворогів (m r w x c t).
@@ -307,7 +344,7 @@ static func build_base(map_rows: Array, parent: Node3D, theme: Dictionary = DEFA
 	_add_merged_walls(obstacles, wall_runs)
 	_add_floor_collision(obstacles, map_rows)
 	var decor: Dictionary = DECOR_SETS.get(theme.get("decor", "crypt"), DECOR_SETS.crypt)
-	_add_column_obstacles(obstacles, map_rows, decor.get("column_obstacle", 1.1))
+	_add_column_obstacles(obstacles, map_rows, decor)
 	_create_chunks(parent, map_rows, result)
 	_add_rock_top(parent, map_rows, theme)
 	return result
@@ -616,7 +653,7 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 			if x < 0 or x >= row.length() or not WALKABLE.has(row[x]):
 				continue
 			var position := Vector3(x * CELL, 0.0, z * CELL)
-			batcher.add(FLOOR_SCENE, Transform3D(Basis(), position), floor_color)
+			_add_floor(batcher, x, z, position, floor_color, decor)
 			if _is_column_cell(map_rows, row, x, z):
 				# На клітинці з колоною більше нічого не ставимо — інакше
 				# стіл чи скриня стирчали б просто з колони.
@@ -725,14 +762,29 @@ static func _add_floor_collision(obstacles: StaticBody3D, map_rows: Array) -> vo
 	_add_box_shape(obstacles, Vector3(width * 0.5 - CELL * 0.5, -0.125, depth * 0.5 - CELL * 0.5),
 		Vector3(width + CELL, 0.5, depth + CELL))
 
-## width — ширина перешкоди: кам'яна колона 1.1 м, гриб-колона ширший —
-## під шапку не підійти впритул (згори героя під нею не видно).
-static func _add_column_obstacles(obstacles: StaticBody3D, map_rows: Array, width: float = 1.1) -> void:
+## Ширина перешкоди — від моделі колони на цій клітинці (_column_variant):
+## кам'яна колона 1.1 м, гриб ширший — під шапку не підійти впритул.
+static func _add_column_obstacles(obstacles: StaticBody3D, map_rows: Array, decor: Dictionary) -> void:
 	for z in range(1, map_rows.size() - 1):
 		var row: String = map_rows[z]
 		for x in range(1, row.length() - 1):
 			if _is_column_cell(map_rows, row, x, z):
+				var width: float = _column_variant(decor, x, z).get("obstacle", 1.1)
 				_add_box_shape(obstacles, Vector3(x * CELL, 2.0, z * CELL), Vector3(width, 4.0, width))
+
+## Яка колона стоїть на клітинці (x, z): з набору теми "columns" за
+## частками й координатами — однаково для моделі й для перешкоди. Немає
+## набору — звичайна кам'яна колона.
+static func _column_variant(decor: Dictionary, x: int, z: int) -> Dictionary:
+	var variants: Array = decor.get("columns", [])
+	if variants.is_empty():
+		return {"scene": COLUMN_SCENE, "obstacle": 1.1}
+	var roll := _hash01(x, z, 21)
+	for variant: Dictionary in variants:
+		roll -= variant.get("weight", 1.0 / variants.size())
+		if roll < 0.0:
+			return variant
+	return variants[-1]
 
 static func _is_column_cell(map_rows: Array, row: String, x: int, z: int) -> bool:
 	if row[x] != "." or x % 6 != 0 or z % 6 != 0:
@@ -780,25 +832,54 @@ static func _chunk_has_floor(map_rows: Array, rect: Rect2i) -> bool:
 
 # --- видима геометрія шматка ---
 
+## Плитка підлоги. Тема з набором плиток ("floor_tiles") — випадкова
+## плитка за частками, повернута на 0/90/180/270° (три малюнки дають
+## дванадцять), у власних кольорах; інакше — звичайна плита в кольорі рівня.
+static func _add_floor(batcher: MeshBatcher, x: int, z: int, position: Vector3, floor_color: Color, decor: Dictionary) -> void:
+	if not decor.has("floor_tiles"):
+		batcher.add(FLOOR_SCENE, Transform3D(Basis(), position), floor_color)
+		return
+	var tiles: Array = decor.floor_tiles
+	var tile: PackedScene = tiles[-1][0]
+	var roll := _hash01(x, z, 31)
+	for entry: Array in tiles:
+		roll -= entry[1]
+		if roll < 0.0:
+			tile = entry[0]
+			break
+	var turn := floorf(_hash01(x, z, 32) * 4.0) * PI * 0.5
+	batcher.add(tile, Transform3D(Basis(Vector3.UP, turn), position), Color.WHITE, true)
+
 static func _add_wall_visuals(batcher: MeshBatcher, map_rows: Array, x: int, z: int, position: Vector3, decor_density: float, stone: Color, decor: Dictionary) -> void:
 	var directions := _wall_directions()
+	var keep_colors: bool = decor.get("keep_colors", false)
+	# Лице стіни від межі клітинки: у звичайних стінах 0 (стіна на межі), у
+	# набору гравця — усередині клітинки. Факел і прикраси — перед лицем.
+	var inset: float = decor.get("wall_inset", 0.0)
 	for offset: Vector2i in directions:
 		if _is_walkable(map_rows, x + offset.x, z + offset.y):
 			continue
 		var wall_position := position + Vector3(offset.x, 0.0, offset.y) * CELL * 0.5
 		wall_position.y = WALL_HEIGHT * 0.5
-		batcher.add(WALL_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), wall_position), stone)
+		if decor.has("wall_tiles"):
+			# Стіна набору: центр — у клітинці, панель — уздовж краю, до
+			# якого її повернуто. Вісім малюнків упереміш, повтор не читається.
+			var tiles: Array = decor.wall_tiles
+			var tile: PackedScene = tiles[int(_hash01(x * 3 + offset.x, z * 3 + offset.y, 33) * tiles.size()) % tiles.size()]
+			batcher.add(tile, Transform3D(Basis(Vector3.UP, directions[offset]), position), Color.WHITE, true)
+		else:
+			batcher.add(WALL_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), wall_position), stone)
 
 		if (x + z) % TORCH_EVERY == 0 and offset.y != 0:
-			var torch_position := wall_position - Vector3(offset.x, 0.0, offset.y) * 0.35 + Vector3(0, 0.6, 0)
+			var torch_position := wall_position - Vector3(offset.x, 0.0, offset.y) * maxf(0.35, inset + 0.1) + Vector3(0, 0.6, 0)
 			batcher.add(TORCH_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), torch_position))
 
 		if _chance(3, x, z, offset) and _hash01(x, z, 11) < decor_density:
 			var decor_position := position + Vector3(0, 1.3, 0) \
-				+ Vector3(offset.x, 0.0, offset.y) * (CELL * 0.5 - 0.15)
+				+ Vector3(offset.x, 0.0, offset.y) * (CELL * 0.5 - maxf(0.15, inset + 0.03))
 			var wall_set: Array = decor.wall
 			var ornament: PackedScene = wall_set[(x * 7 + z * 13 + offset.x + offset.y) % wall_set.size()]
-			batcher.add(ornament, Transform3D(Basis(Vector3.UP, directions[offset]), decor_position))
+			batcher.add(ornament, Transform3D(Basis(Vector3.UP, directions[offset]), decor_position), Color.WHITE, keep_colors)
 
 ## Невелика хитрість: "випадковість" для стін рахується з координат, а
 ## не з генератора. Тоді шматок виглядає однаково, скільки б разів його
@@ -817,11 +898,12 @@ static func _hash01(x: int, z: int, salt: int) -> float:
 ## нетрях — гігантський гриб): та сама клітинка й та сама перешкода, лише
 ## інша модель, повернута по-різному й у власних кольорах.
 static func _add_column(batcher: MeshBatcher, x: int, z: int, position: Vector3, stone: Color, decor: Dictionary) -> void:
-	var column: PackedScene = decor.get("column", COLUMN_SCENE)
+	var variant := _column_variant(decor, x, z)
+	var column: PackedScene = variant.scene
 	if column == COLUMN_SCENE:
 		batcher.add(COLUMN_SCENE, Transform3D(Basis(), position), stone)
 		return
-	var size: float = decor.get("column_scale", 1.0) * lerpf(0.92, 1.08, _hash01(x, z, 12))
+	var size: float = variant.get("scale", 1.0) * lerpf(0.92, 1.08, _hash01(x, z, 12))
 	var basis := Basis(Vector3.UP, _hash01(x, z, 11) * TAU).scaled(Vector3.ONE * size)
 	batcher.add(column, Transform3D(basis, position), Color.WHITE, true)
 
@@ -856,23 +938,26 @@ static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int
 	if decor.has("cover") and open_sides <= 3 and small_decor and _hash01(x, z, 13) < COVER_CHANCE:
 		_add_cover(batcher, map_rows, x, z, position, decor)
 
-	if open_sides <= 3 and rng.randf() < 0.3 and small_decor:
+	var keep_colors: bool = decor.get("keep_colors", false)
+	if open_sides <= 3 and rng.randf() < decor.get("clutter_chance", 0.3) and small_decor:
 		_place(batcher, decor.clutter[rng.randi() % decor.clutter.size()],
 			position + Vector3(rng.randf_range(-0.25, 0.25), 0.0, rng.randf_range(-0.25, 0.25)),
-			rng.randf_range(0.0, TAU), rng.randf_range(0.8, 1.15))
+			rng.randf_range(0.0, TAU), rng.randf_range(0.8, 1.15), keep_colors)
 	elif open_sides == 4 and rng.randf() < 0.07:
 		_place(batcher, decor.furniture[rng.randi() % decor.furniture.size()],
-			position, rng.randf_range(0.0, TAU), 1.0)
+			position, rng.randf_range(0.0, TAU), 1.0, keep_colors)
 
 	if open_sides == 2 and rng.randf() < 0.26:
 		_place(batcher, decor.treasure[rng.randi() % decor.treasure.size()],
-			position, rng.randf_range(0.0, TAU), 1.0)
-	if rng.randf() < 0.08 and small_decor:
+			position, rng.randf_range(0.0, TAU), 1.0, keep_colors)
+	# Розкидана цегла — до звичайних плит; на плитках набору свій малюнок.
+	# Число з rng беремо й тут, щоб решта прикрас не зсунулась.
+	if rng.randf() < 0.08 and small_decor and not decor.has("floor_tiles"):
 		_place(batcher, FLOOR_BRICKS_SCENE, position + Vector3(0, 0.02, 0), 0.0, 1.0)
 
-static func _place(batcher: MeshBatcher, scene: PackedScene, position: Vector3, rotation_y: float, scale_factor: float) -> void:
+static func _place(batcher: MeshBatcher, scene: PackedScene, position: Vector3, rotation_y: float, scale_factor: float, keep_colors: bool = false) -> void:
 	var basis := Basis(Vector3.UP, rotation_y).scaled(Vector3.ONE * scale_factor)
-	batcher.add(scene, Transform3D(basis, position))
+	batcher.add(scene, Transform3D(basis, position), Color.WHITE, keep_colors)
 
 static func _count_open_sides(map_rows: Array, x: int, z: int) -> int:
 	var count := 0
