@@ -98,11 +98,9 @@ const ICE_KNIGHT_STATUE_SCENE := preload("res://assets/models/citadel/ice_knight
 ## Набір IceCitadel (гравця) для Крижаної цитаделі — уже під клітинку 2 м
 ## (process_dungeon_kit.py ice): плити з рунами, засніжені й з крижаним
 ## сяйвом; стіни з рунним поясом і бурульками, з інеєм, з рунною колоною.
-const ICE_FLOORS := [
-	[preload("res://assets/models/citadel/kit/floor_runes.glb"), 0.6],
-	[preload("res://assets/models/citadel/kit/floor_snow.glb"), 0.3],
-	[preload("res://assets/models/citadel/kit/floor_glow.glb"), 0.1],
-]
+const ICE_FLOOR_RUNES := preload("res://assets/models/citadel/kit/floor_runes.glb")
+const ICE_FLOOR_SNOW := preload("res://assets/models/citadel/kit/floor_snow.glb")
+const ICE_FLOOR_GLOW := preload("res://assets/models/citadel/kit/floor_glow.glb")
 ## Стіна з рунною колоною — рідше: вона розриває рунний пояс сусідніх.
 const ICE_WALLS := [
 	preload("res://assets/models/citadel/kit/wall_runes.glb"), preload("res://assets/models/citadel/kit/wall_frost.glb"),
@@ -113,6 +111,10 @@ const ICE_WALLS := [
 ## трикутники, optimize_model.py): рунна плита спереду (+Z), кріплення
 ## ззаду на глибині 0.269 м.
 const ICE_TORCH_SCENE := preload("res://assets/models/citadel/ice_torch.glb")
+## Рунна брила (каміння гравця: 58 частин і 8 матеріалів злито в дві сітки
+## з кольором у вершинах — звичайна й та, що світиться; 14.8 -> 3.9 тис.
+## трикутників, write_vertex_color_glb.py).
+const RUNE_ROCK_SCENE := preload("res://assets/models/citadel/rune_rock.glb")
 const FUNGAL_RUBBLE_SCENE := preload("res://assets/models/fungal/kit/rubble.glb")
 
 ## Дрібний непотріб попід стінами.
@@ -201,28 +203,31 @@ const DECOR_SETS := {
 		"furniture": [preload("res://assets/models/dungeon/Woodfire.fbx"), preload("res://assets/models/dungeon/Pedestal.fbx")],
 		"treasure": [preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Bag_Coins.fbx")],
 	},
-	## Крижана цитадель — уся на наборі гравця IceCitadel: плити й стіни з
-	## рунами, крижані факели, а в залах замість колон — галерея замерзлих
-	## лицарів (статуя гравця, обличчям до камери). Дрібниць мало й лише
-	## таких, що пасують кризі: дерев'яні бочки, стільці й вогнища, прапори й
-	## цегла на рунних стінах виглядали чужими.
+	## Крижана цитадель — уся на арті гравця. Підлога розкладена за змістом
+	## (floor_rules, див. _build_layout): сніг — контуром уздовж стін, плита з
+	## кристалом — під скринями, на входах у коридори, перед статуями й зрідка
+	## посеред зали, рунна — решта. Колон немає: статуя лицаря — не прикраса,
+	## а рідкісний орієнтир на почесному місці (landmark), а попід стінами —
+	## рунні брили й розсип камінців.
 	"citadel": {
-		"columns": [
-			{"scene": ICE_KNIGHT_STATUE_SCENE, "scale": 1.15, "obstacle": 1.1, "face_camera": true},
-		],
-		"floor_tiles": ICE_FLOORS,
+		"floor_rules": {"main": ICE_FLOOR_RUNES, "edge": ICE_FLOOR_SNOW, "accent": ICE_FLOOR_GLOW},
+		"no_columns": true,
 		"wall_tiles": ICE_WALLS,
 		"wall_inset": 0.25,
 		## Факел замість звичайного: модель, масштаб, глибина кріплення
 		## (м, до масштабу) і висота низу над підлогою.
 		"torch": {"scene": ICE_TORCH_SCENE, "scale": 1.2, "depth": 0.269, "height": 0.85},
+		## Статуя ~2.9 м (стіни — 2 м): парами обабіч входів у зали, не більше
+		## чотирьох на рівень.
+		"landmark": {"scene": ICE_KNIGHT_STATUE_SCENE, "scale": 1.55, "max": 4, "footprint": Vector2(1.5, 1.4)},
+		"rock": {"scene": RUNE_ROCK_SCENE, "scale": Vector2(0.36, 0.46), "chance": 0.08},
+		"chests": [preload("res://assets/models/dungeon/Chest_Gold.fbx"), preload("res://assets/models/dungeon/Chest.fbx")],
+		"chest_chance": 0.4,
 		"clutter": [preload("res://assets/models/dungeon/Vase.fbx"), preload("res://assets/models/dungeon/Skull.fbx")],
-		"clutter_chance": 0.12,
+		"clutter_chance": 0.08,
 		"wall": [],
-		## Посеред зал — нічого: там статуї; постаменти без них виглядали
-		## сірими брилами.
 		"furniture": [],
-		"treasure": [preload("res://assets/models/dungeon/Chest_Gold.fbx"), preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Chest.fbx")],
+		"treasure": [preload("res://assets/models/dungeon/Chest_Gold.fbx"), preload("res://assets/models/dungeon/Chest.fbx")],
 	},
 	## Нижче — п'ять нових тем (рівні 4-8): моделі з Halloween Bits (Kay
 	## Lousberg), Medieval Village Pack і Ultimate RPG Items Bundle
@@ -327,7 +332,8 @@ static func _scenes_in(value: Variant) -> Array:
 	if value is PackedScene:
 		return [value]
 	if value is Dictionary:
-		return _scenes_in((value as Dictionary).get("scene"))
+		var dict := value as Dictionary
+		return _scenes_in(dict.scene) if dict.has("scene") else _scenes_in(dict.values())
 	var found: Array = []
 	if value is Array:
 		for item: Variant in value:
@@ -380,7 +386,10 @@ static func build_base(map_rows: Array, parent: Node3D, theme: Dictionary = DEFA
 	_add_merged_walls(obstacles, wall_runs)
 	_add_floor_collision(obstacles, map_rows)
 	var decor: Dictionary = DECOR_SETS.get(theme.get("decor", "crypt"), DECOR_SETS.crypt)
-	_add_column_obstacles(obstacles, map_rows, decor)
+	if not decor.get("no_columns", false):
+		_add_column_obstacles(obstacles, map_rows, decor)
+	if decor.has("floor_rules"):
+		_add_layout_obstacles(obstacles, _build_layout(map_rows, decor), decor)
 	_create_chunks(parent, map_rows, result)
 	_add_rock_top(parent, map_rows, theme)
 	return result
@@ -405,6 +414,9 @@ static func place_props(map_rows: Array, markers: Dictionary, level_seed: int, s
 	rng.seed = level_seed
 	var result := {"barrels": [], "trap_lines": [], "shrines": [], "reserved": {}}
 	var reserved: Dictionary = result.reserved
+	# Статуї, брили й скрині з розкладки рівня (build_base уже порахував).
+	for cell: Vector2i in _layout_for(map_rows).get("occupied", {}):
+		reserved[cell] = true
 	var keep_clear: Array[Vector2i] = []
 	for key: String in ["start", "exit", "boss"]:
 		if markers[key] != Vector3.ZERO:
@@ -680,6 +692,7 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 	# данж виглядає однаково, з якого боку в нього не зайти.
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20260917 + rect.position.x * 73856093 + rect.position.y * 19349663
+	var layout: Dictionary = _build_layout(map_rows, decor) if decor.has("floor_rules") else {}
 
 	for z in range(rect.position.y, rect.end.y):
 		if z < 0 or z >= map_rows.size():
@@ -689,14 +702,17 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 			if x < 0 or x >= row.length() or not WALKABLE.has(row[x]):
 				continue
 			var position := Vector3(x * CELL, 0.0, z * CELL)
-			_add_floor(batcher, x, z, position, floor_color, decor)
-			if _is_column_cell(map_rows, row, x, z):
+			var cell := Vector2i(x, z)
+			_add_floor(batcher, x, z, position, floor_color, decor, layout)
+			if not decor.get("no_columns", false) and _is_column_cell(map_rows, row, x, z):
 				# На клітинці з колоною більше нічого не ставимо — інакше
 				# стіл чи скриня стирчали б просто з колони.
 				_add_column(batcher, x, z, position, stone, decor)
 				continue
 			_add_wall_visuals(batcher, map_rows, x, z, position, decor_density, stone, decor)
-			if not reserved.has(Vector2i(x, z)):
+			if not layout.is_empty() and _add_layout_items(batcher, layout, cell, position, decor):
+				continue
+			if not reserved.has(cell):
 				_decorate_cell(batcher, map_rows, x, z, position, rng, decor_density, decor)
 
 	batcher.flush(chunk.node)
@@ -833,6 +849,291 @@ static func _is_column_cell(map_rows: Array, row: String, x: int, z: int) -> boo
 			return false
 	return true
 
+# --- розкладка рівня за змістом (тема з "floor_rules") ---
+
+## Тема з "floor_rules" розкладає рівень не навмання, а за будовою карти:
+##   сніг ("edge")      — контур: кожна клітинка біля стіни, сніжним кутом
+##                        до стіни (уздовж стіни — смугою);
+##   кристал ("accent") — під скринями, на входах у коридори, під статуєю й
+##                        перед нею, зрідка посеред зали;
+##   руни ("main")      — решта, середина зал.
+## Там же — скрині (внутрішні кути зал), статуї-орієнтири (кілька на рівень:
+## посеред північної стіни найбільших зал, обличчям до гравця), рунні брили
+## попід прямими стінами й розсип камінців. Рахується раз на карту (кеш за
+## її вмістом) і однаково для вигляду (build_chunk), перешкод (build_base) і
+## предметів (place_props) — нічого ні на що не налазить.
+const CORRIDOR_WIDTH := 4
+const LANDMARK_MIN_RUN := 7
+const LANDMARK_DEPTH := 4
+const LANDMARK_SPACING := 4
+const LANDMARK_CLEAR := 4
+## Брила посеред зали — лише там, де всі вісім сусідів прохідні.
+const ROCK_INTERIOR_CHANCE := 0.025
+const ACCENT_CHANCE := 0.025
+const ROCK_PUSH := 0.15
+static var _layouts: Dictionary = {}
+
+static func _layout_for(map_rows: Array) -> Dictionary:
+	return _layouts.get(map_rows.hash(), {})
+
+static func _build_layout(map_rows: Array, decor: Dictionary) -> Dictionary:
+	var key := map_rows.hash()
+	if _layouts.has(key):
+		return _layouts[key]
+	var layout := {"floor": {}, "chests": {}, "landmarks": {}, "rocks": {}, "stones": {}, "occupied": {}}
+	var sides: Array[Vector2i] = [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]
+	var cells: Array[Vector2i] = []
+	var marks: Array[Vector2i] = []
+	for z in map_rows.size():
+		var row: String = map_rows[z]
+		for x in row.length():
+			if not _is_walkable(map_rows, x, z):
+				continue
+			cells.append(Vector2i(x, z))
+			if row[x] in ["S", "E", "B"]:
+				marks.append(Vector2i(x, z))
+
+	# Коридор — не ширше CORRIDOR_WIDTH поперек і довший уздовж; вхід —
+	# його клітинка, що межує із залою.
+	var corridor := {}
+	for cell in cells:
+		var rx := _run_length(map_rows, cell, Vector2i(1, 0))
+		var rz := _run_length(map_rows, cell, Vector2i(0, 1))
+		if (rx <= CORRIDOR_WIDTH and rz > CORRIDOR_WIDTH) or (rz <= CORRIDOR_WIDTH and rx > CORRIDOR_WIDTH):
+			corridor[cell] = true
+	var entrances: Array[Vector2i] = []
+	for cell: Vector2i in corridor:
+		for side in sides:
+			var next := cell + side
+			if _is_walkable(map_rows, next.x, next.y) and not corridor.has(next):
+				entrances.append(cell)
+				break
+
+	# Скрині — у внутрішніх кутах зал (дві стіни під прямим кутом).
+	var chest_chance: float = decor.get("chest_chance", 0.4)
+	for cell in cells:
+		if corridor.has(cell) or map_rows[cell.y][cell.x] != "." or _near_any(cell, marks, 4):
+			continue
+		var n := not _is_walkable(map_rows, cell.x, cell.y - 1)
+		var s := not _is_walkable(map_rows, cell.x, cell.y + 1)
+		var w := not _is_walkable(map_rows, cell.x - 1, cell.y)
+		var e := not _is_walkable(map_rows, cell.x + 1, cell.y)
+		if int(n) + int(s) + int(w) + int(e) == 2 and n != s and w != e \
+				and _hash01(cell.x, cell.y, 41) < chest_chance:
+			layout.chests[cell] = Vector2i(-1 if w else 1, -1 if n else 1)
+
+	# Статуї — почесна варта обабіч входів у зали: прохід у північній стіні
+	# зали (не ширший за коридор), по статуї з кожного боку через клітинку від
+	# проходу, обличчям до гравця. Далі — посеред найдовших глухих північних
+	# стін. Не біля виходу й боса, не більше landmark.max на рівень.
+	var landmark: Dictionary = decor.get("landmark", {})
+	var chosen: Array[Vector2i] = []
+	if not landmark.is_empty():
+		var keep_away: Array[Vector2i] = []
+		for cell in marks:
+			if map_rows[cell.y][cell.x] != "S":
+				keep_away.append(cell)
+		var groups: Array[Array] = []
+		var singles: Array[Dictionary] = []
+		for z in map_rows.size():
+			var row: String = map_rows[z]
+			var x := 0
+			while x < row.length():
+				if _wall_above_room(map_rows, corridor, Vector2i(x, z)):
+					var start := x
+					while x < row.length() and _wall_above_room(map_rows, corridor, Vector2i(x, z)):
+						x += 1
+					if x - start >= LANDMARK_MIN_RUN:
+						singles.append({"cell": Vector2i(start + int((x - start) / 2.0), z), "length": x - start})
+					continue
+				# Прохід: клітинки зали, над якими теж прохідно, між глухими стінами.
+				if _is_walkable(map_rows, x, z) and not corridor.has(Vector2i(x, z)) and _is_walkable(map_rows, x, z - 1) \
+						and _wall_above_room(map_rows, corridor, Vector2i(x - 1, z)):
+					var door_start := x
+					while x < row.length() and _is_walkable(map_rows, x, z) and _is_walkable(map_rows, x, z - 1):
+						x += 1
+					var left := Vector2i(door_start - 2, z)
+					var right := Vector2i(x + 1, z)
+					if x - door_start <= CORRIDOR_WIDTH and _wall_above_room(map_rows, corridor, left) \
+							and _wall_above_room(map_rows, corridor, right) and _wall_above_room(map_rows, corridor, Vector2i(x, z)):
+						groups.append([left, right])
+					continue
+				x += 1
+		singles.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.length > b.length)
+		for single in singles:
+			groups.append([single.cell])
+		var limit := int(landmark.get("max", 4))
+		for group in groups:
+			if chosen.size() + group.size() > limit:
+				continue
+			var fits := true
+			for cell: Vector2i in group:
+				if _near_any(cell, keep_away, LANDMARK_CLEAR) or _near_any(cell, chosen, LANDMARK_SPACING) \
+						or not _landmark_room(map_rows, cell):
+					fits = false
+			if not fits:
+				continue
+			for cell: Vector2i in group:
+				chosen.append(cell)
+				layout.landmarks[cell] = true
+				for dx in range(-1, 2):
+					layout.occupied[cell + Vector2i(dx, 0)] = true
+				layout.occupied[cell + Vector2i(0, 1)] = true
+
+	# Брили — попід прямою стіною зали (стіна рівно з одного боку), не
+	# біля входів, скринь, статуй і одна від одної.
+	var rock: Dictionary = decor.get("rock", {})
+	var rocks: Array[Vector2i] = []
+	if not rock.is_empty():
+		for cell in cells:
+			if corridor.has(cell) or layout.chests.has(cell) or map_rows[cell.y][cell.x] != ".":
+				continue
+			if _hash01(cell.x, cell.y, 51) >= float(rock.get("chance", 0.06)):
+				continue
+			if _near_any(cell, marks, 3) or _near_any(cell, chosen, 2) or _near_any(cell, entrances, 2) or _near_any(cell, rocks, 3):
+				continue
+			var wall_side := Vector2i.ZERO
+			var walls := 0
+			for side in sides:
+				if not _is_walkable(map_rows, cell.x + side.x, cell.y + side.y):
+					wall_side = side
+					walls += 1
+			if walls == 0:
+				# Посеред зали — рідше й лише у великій залі (вісім прохідних
+				# сусідів), щоб брила не перекрила прохід.
+				if _count_open_neighbours(map_rows, cell) != 8 or _near_any(cell, entrances, 3) \
+						or _hash01(cell.x, cell.y, 54) >= ROCK_INTERIOR_CHANCE / float(rock.get("chance", 0.06)):
+					continue
+			elif walls != 1:
+				continue
+			layout.rocks[cell] = wall_side
+			rocks.append(cell)
+
+	for cell: Vector2i in layout.chests:
+		layout.occupied[cell] = true
+	for cell: Vector2i in layout.rocks:
+		layout.occupied[cell] = true
+
+	# Камінці — будь-де, крім зайнятих клітинок і входів.
+	var stones: Dictionary = decor.get("stones", {})
+	if not stones.is_empty():
+		for cell in cells:
+			if not layout.occupied.has(cell) and not entrances.has(cell) \
+					and _hash01(cell.x, cell.y, 61) < float(stones.get("chance", 0.08)):
+				layout.stones[cell] = true
+
+	# Плити підлоги: [вид, поворот у чвертях оберту].
+	for cell in cells:
+		var kind := "main"
+		var turn := floori(_hash01(cell.x, cell.y, 32) * 4.0)
+		var edge := false
+		for side in sides:
+			if not _is_walkable(map_rows, cell.x + side.x, cell.y + side.y):
+				edge = true
+		if layout.chests.has(cell) or entrances.has(cell) or layout.landmarks.has(cell) \
+				or layout.landmarks.has(cell - Vector2i(0, 1)):
+			kind = "accent"
+		elif edge:
+			kind = "edge"
+			turn = _snow_turn(map_rows, cell)
+		elif _hash01(cell.x, cell.y, 33) < ACCENT_CHANCE:
+			kind = "accent"
+		layout.floor[cell] = [kind, turn]
+	_layouts[key] = layout
+	return layout
+
+## Клітинка зали (не коридор) з глухою стіною з півночі.
+static func _wall_above_room(map_rows: Array, corridor: Dictionary, cell: Vector2i) -> bool:
+	return _is_walkable(map_rows, cell.x, cell.y) and not corridor.has(cell) \
+		and not _is_walkable(map_rows, cell.x, cell.y - 1)
+
+## Чи гідне місце для статуї: перед нею прохідна зала на LANDMARK_DEPTH
+## клітинок углиб і по клітинці обабіч, а сама клітинка й та, що перед
+## нею, — порожні (не мітка ворога).
+static func _landmark_room(map_rows: Array, cell: Vector2i) -> bool:
+	for dz in LANDMARK_DEPTH:
+		for dx in range(-1, 2):
+			if not _is_walkable(map_rows, cell.x + dx, cell.y + dz):
+				return false
+	return map_rows[cell.y][cell.x] == "." and map_rows[cell.y + 1][cell.x] == "."
+
+## Поворот снігової плити (у чвертях оберту). На плиті сніг лежить у двох
+## протилежних кутах: при 0/2 — північно-східний і південно-західний, при
+## 1/3 — північно-західний і південно-східний. Обираємо пару, де більше
+## кутів упирається в стіну; порівну (пряма стіна, коридор) — чергуємо по
+## клітинках, і сніжні кути сусідніх плит сходяться в смугу вздовж стіни.
+static func _snow_turn(map_rows: Array, cell: Vector2i) -> int:
+	var a := int(_corner_walled(map_rows, cell, 1, -1)) + int(_corner_walled(map_rows, cell, -1, 1))
+	var b := int(_corner_walled(map_rows, cell, -1, -1)) + int(_corner_walled(map_rows, cell, 1, 1))
+	var pattern := 0 if a > b else (1 if b > a else (cell.x + cell.y) % 2)
+	return pattern + (2 if _hash01(cell.x, cell.y, 34) < 0.5 else 0)
+
+static func _corner_walled(map_rows: Array, cell: Vector2i, dx: int, dz: int) -> bool:
+	return not _is_walkable(map_rows, cell.x + dx, cell.y) or not _is_walkable(map_rows, cell.x, cell.y + dz) \
+		or not _is_walkable(map_rows, cell.x + dx, cell.y + dz)
+
+## Перешкоди статуй і брил — тим самим тілом, що й стіни.
+static func _add_layout_obstacles(obstacles: StaticBody3D, layout: Dictionary, decor: Dictionary) -> void:
+	var landmark: Dictionary = decor.get("landmark", {})
+	for cell: Vector2i in layout.landmarks:
+		var footprint: Vector2 = landmark.get("footprint", Vector2(1.4, 1.4))
+		_add_box_shape(obstacles, Vector3(cell.x * CELL, 1.5, cell.y * CELL), Vector3(footprint.x, 3.0, footprint.y))
+	for cell: Vector2i in layout.rocks:
+		var placement := _rock_placement(cell, layout.rocks[cell], decor)
+		var size: float = placement.scale
+		var wall_side: Vector2i = layout.rocks[cell]
+		var along := 3.4 * size
+		var across := 2.0 * size
+		var box := Vector3(across, 3.5 * size, along) if wall_side.x != 0 else Vector3(along, 3.5 * size, across)
+		_add_box_shape(obstacles, placement.position + Vector3(0, box.y * 0.5, 0), box)
+
+## Де й як стоїть брила: лицем (рунами) від стіни в залу, трохи впритул
+## до стіни, з невеликим розкидом повороту й розміру.
+static func _rock_placement(cell: Vector2i, wall_side: Vector2i, decor: Dictionary) -> Dictionary:
+	var rock: Dictionary = decor.rock
+	var sizes: Vector2 = rock.get("scale", Vector2(0.4, 0.4))
+	var size := lerpf(sizes.x, sizes.y, _hash01(cell.x, cell.y, 52))
+	var yaw := (_hash01(cell.x, cell.y, 53) - 0.5) * deg_to_rad(30.0)
+	if wall_side == Vector2i.ZERO:
+		# Посеред зали — менша й лицем до камери.
+		size *= 0.8
+		yaw *= 1.6
+	else:
+		yaw += _wall_directions()[wall_side]
+	var position := Vector3(cell.x * CELL, 0.0, cell.y * CELL) + Vector3(wall_side.x, 0.0, wall_side.y) * ROCK_PUSH
+	return {"position": position, "yaw": yaw, "scale": size}
+
+## Статуя, брила, скриня чи камінці на клітинці з розкладки. Повертає true,
+## якщо клітинку зайнято — тоді випадкових прикрас на ній не ставимо.
+static func _add_layout_items(batcher: MeshBatcher, layout: Dictionary, cell: Vector2i, position: Vector3, decor: Dictionary) -> bool:
+	if layout.landmarks.has(cell):
+		var landmark: Dictionary = decor.landmark
+		var size: float = landmark.get("scale", 1.0)
+		batcher.add(landmark.scene, Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), position), Color.WHITE, true)
+		return true
+	if layout.rocks.has(cell):
+		var placement := _rock_placement(cell, layout.rocks[cell], decor)
+		var size: float = placement.scale
+		var basis := Basis(Vector3.UP, placement.yaw).scaled(Vector3.ONE * size)
+		batcher.add(decor.rock.scene, Transform3D(basis, placement.position), Color.WHITE, true)
+		return true
+	if layout.chests.has(cell):
+		var corner: Vector2i = layout.chests[cell]
+		var chests: Array = decor.get("chests", decor.treasure)
+		var scene: PackedScene = chests[int(_hash01(cell.x, cell.y, 42) * chests.size()) % chests.size()]
+		# Скриня в куті, лицем по діагоналі в залу.
+		var yaw := atan2(-float(corner.x), -float(corner.y))
+		batcher.add(scene, Transform3D(Basis(Vector3.UP, yaw), position + Vector3(corner.x, 0.0, corner.y) * 0.3))
+		return true
+	if layout.stones.has(cell):
+		var stones: Dictionary = decor.stones
+		var sizes: Vector2 = stones.get("scale", Vector2(0.5, 0.5))
+		var size := lerpf(sizes.x, sizes.y, _hash01(cell.x, cell.y, 65))
+		var offset := Vector3(_hash01(cell.x, cell.y, 62) - 0.5, 0.0, _hash01(cell.x, cell.y, 63) - 0.5) * 0.9
+		var basis := Basis(Vector3.UP, _hash01(cell.x, cell.y, 64) * TAU).scaled(Vector3.ONE * size)
+		batcher.add(stones.scene, Transform3D(basis, position + offset), Color.WHITE, true)
+	return layout.occupied.has(cell)
+
 # --- шматки ---
 
 ## Ріже карту на квадрати й створює для кожного порожній вузол.
@@ -874,7 +1175,14 @@ static func _chunk_has_floor(map_rows: Array, rect: Rect2i) -> bool:
 ## Плитка підлоги. Тема з набором плиток ("floor_tiles") — випадкова
 ## плитка за частками, повернута на 0/90/180/270° (три малюнки дають
 ## дванадцять), у власних кольорах; інакше — звичайна плита в кольорі рівня.
-static func _add_floor(batcher: MeshBatcher, x: int, z: int, position: Vector3, floor_color: Color, decor: Dictionary) -> void:
+##
+## Тема з "floor_rules" — плита за розкладкою рівня (_build_layout).
+static func _add_floor(batcher: MeshBatcher, x: int, z: int, position: Vector3, floor_color: Color, decor: Dictionary, layout: Dictionary = {}) -> void:
+	if decor.has("floor_rules"):
+		var entry: Array = layout.get("floor", {}).get(Vector2i(x, z), ["main", 0])
+		var tile: PackedScene = decor.floor_rules[entry[0]]
+		batcher.add(tile, Transform3D(Basis(Vector3.UP, entry[1] * PI * 0.5), position), Color.WHITE, true)
+		return
 	if not decor.has("floor_tiles"):
 		batcher.add(FLOOR_SCENE, Transform3D(Basis(), position), floor_color)
 		return
@@ -909,7 +1217,8 @@ static func _add_wall_visuals(batcher: MeshBatcher, map_rows: Array, x: int, z: 
 		else:
 			batcher.add(WALL_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), wall_position), stone)
 
-		if (x + z) % TORCH_EVERY == 0 and offset.y != 0:
+		if (x + z) % TORCH_EVERY == 0 and offset.y != 0 \
+				and not _layout_for(map_rows).get("landmarks", {}).has(Vector2i(x, z)):
 			if decor.has("torch"):
 				# Свій факел теми: задником упритул до лиця стіни, у власних
 				# кольорах. Поворот — той самий, що в стіни.
@@ -1001,12 +1310,12 @@ static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int
 		_place(batcher, decor.furniture[rng.randi() % decor.furniture.size()],
 			position, rng.randf_range(0.0, TAU), 1.0, keep_colors)
 
-	if open_sides == 2 and rng.randf() < 0.26:
+	if open_sides == 2 and rng.randf() < 0.26 and not decor.has("floor_rules"):
 		_place(batcher, decor.treasure[rng.randi() % decor.treasure.size()],
 			position, rng.randf_range(0.0, TAU), 1.0, keep_colors)
 	# Розкидана цегла — до звичайних плит; на плитках набору свій малюнок.
 	# Число з rng беремо й тут, щоб решта прикрас не зсунулась.
-	if rng.randf() < 0.08 and small_decor and not decor.has("floor_tiles"):
+	if rng.randf() < 0.08 and small_decor and not decor.has("floor_tiles") and not decor.has("floor_rules"):
 		_place(batcher, FLOOR_BRICKS_SCENE, position + Vector3(0, 0.02, 0), 0.0, 1.0)
 
 static func _place(batcher: MeshBatcher, scene: PackedScene, position: Vector3, rotation_y: float, scale_factor: float, keep_colors: bool = false) -> void:
