@@ -206,6 +206,11 @@ CC0-пакети там же — про людське око.
     assets/models/citadel/ice_knight_statue.glb   крижаний лицар — орієнтир: парами обабіч
                                               входів у зали, до чотирьох на рівень
     assets/models/citadel/ice_torch.glb       настінний крижаний факел
+    assets/models/citadel/ice_weapon_rack.glb стійка зі зброєю — попід прямими стінами зал
+    assets/models/citadel/ice_supplies.glb    ящики з бочкою — у кутах зал без скринь
+                                              (матеріал з кольором вершин, як у брили)
+    assets/models/citadel/ice_banner.glb      прапор з руною — на північних стінах зал
+                                              (OBJ гравця -> obj_to_glb.py)
     assets/models/citadel/rune_rock.glb       рунна брила (каміння гравця) — попід стінами
                                               й зрідка посеред зал; матеріал з кольором
                                               вершин — vertex_color_rock.tres (у .import)
