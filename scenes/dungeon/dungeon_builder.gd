@@ -99,7 +99,6 @@ const ICE_KNIGHT_STATUE_SCENE := preload("res://assets/models/citadel/ice_knight
 ## (process_dungeon_kit.py ice): плити з рунами, засніжені й з крижаним
 ## сяйвом; стіни з рунним поясом і бурульками, з інеєм, з рунною колоною.
 const ICE_FLOOR_RUNES := preload("res://assets/models/citadel/kit/floor_runes.glb")
-const ICE_FLOOR_SNOW := preload("res://assets/models/citadel/kit/floor_snow.glb")
 const ICE_FLOOR_GLOW := preload("res://assets/models/citadel/kit/floor_glow.glb")
 ## Стіна з рунною колоною — рідше: вона розриває рунний пояс сусідніх.
 const ICE_WALLS := [
@@ -209,14 +208,14 @@ const DECOR_SETS := {
 		"furniture": [preload("res://assets/models/dungeon/Woodfire.fbx"), preload("res://assets/models/dungeon/Pedestal.fbx")],
 		"treasure": [preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Bag_Coins.fbx")],
 	},
-	## Крижана цитадель — уся на арті гравця. Підлога розкладена за змістом
-	## (floor_rules, див. _build_layout): сніг — контуром уздовж стін, плита з
-	## кристалом — під скринями, на входах у коридори, перед статуями й зрідка
-	## посеред зали, рунна — решта. Колон немає: статуя лицаря — не прикраса,
-	## а рідкісний орієнтир на почесному місці (landmark), а попід стінами —
-	## рунні брили й розсип камінців.
+	## Крижана цитадель — уся на арті гравця. Підлога — рунні плити, а плити з
+	## кристалом — під скринями, перед статуями й хаотично по рівню
+	## (floor_rules, див. _build_layout). Колон немає: статуя лицаря — не
+	## прикраса, а рідкісний орієнтир на почесному місці (landmark); попід
+	## стінами — рунні брили, стійки зі зброєю, у кутах — скрині й припаси,
+	## на північних стінах — прапори.
 	"citadel": {
-		"floor_rules": {"main": ICE_FLOOR_RUNES, "edge": ICE_FLOOR_SNOW, "accent": ICE_FLOOR_GLOW},
+		"floor_rules": {"main": ICE_FLOOR_RUNES, "accent": ICE_FLOOR_GLOW},
 		"no_columns": true,
 		"wall_tiles": ICE_WALLS,
 		"wall_inset": 0.25,
@@ -864,12 +863,12 @@ static func _is_column_cell(map_rows: Array, row: String, x: int, z: int) -> boo
 
 # --- розкладка рівня за змістом (тема з "floor_rules") ---
 
-## Тема з "floor_rules" розкладає рівень не навмання, а за будовою карти:
-##   сніг ("edge")      — контур: кожна клітинка біля стіни, сніжним кутом
-##                        до стіни (уздовж стіни — смугою);
-##   кристал ("accent") — під скринями, на входах у коридори, під статуєю й
-##                        перед нею, зрідка посеред зали;
-##   руни ("main")      — решта, середина зал.
+## Тема з "floor_rules" розкладає рівень за будовою карти:
+##   кристал ("accent") — під скринями, під статуєю й перед нею, а решта —
+##                        хаотично по всьому рівню (рядами на входах у
+##                        коридори виглядало однорідно), але не впритул одна
+##                        до одної;
+##   руни ("main")      — усе інше.
 ## Там же — скрині (внутрішні кути зал), статуї-орієнтири (кілька на рівень:
 ## посеред північної стіни найбільших зал, обличчям до гравця), рунні брили
 ## попід прямими стінами й розсип камінців. Рахується раз на карту (кеш за
@@ -882,7 +881,7 @@ const LANDMARK_SPACING := 4
 const LANDMARK_CLEAR := 4
 ## Брила посеред зали — лише там, де всі вісім сусідів прохідні.
 const ROCK_INTERIOR_CHANCE := 0.025
-const ACCENT_CHANCE := 0.025
+const ACCENT_CHANCE := 0.08
 const ROCK_PUSH := 0.15
 static var _layouts: Dictionary = {}
 
@@ -1054,21 +1053,17 @@ static func _build_layout(map_rows: Array, decor: Dictionary) -> Dictionary:
 					and _hash01(cell.x, cell.y, 61) < float(stones.get("chance", 0.08)):
 				layout.stones[cell] = true
 
-	# Плити підлоги: [вид, поворот у чвертях оберту].
+	# Плити підлоги: [вид, поворот у чвертях оберту]. Кристал навмання —
+	# лише якщо ні зліва, ні згори вже немає кристала (клітинки йдуть рядами
+	# зліва направо й згори вниз), щоб не злипались у плями.
 	for cell in cells:
 		var kind := "main"
 		var turn := floori(_hash01(cell.x, cell.y, 32) * 4.0)
-		var edge := false
-		for side in sides:
-			if not _is_walkable(map_rows, cell.x + side.x, cell.y + side.y):
-				edge = true
-		if layout.chests.has(cell) or entrances.has(cell) or layout.landmarks.has(cell) \
-				or layout.landmarks.has(cell - Vector2i(0, 1)):
+		if layout.chests.has(cell) or layout.landmarks.has(cell) or layout.landmarks.has(cell - Vector2i(0, 1)):
 			kind = "accent"
-		elif edge:
-			kind = "edge"
-			turn = _snow_turn(map_rows, cell)
-		elif _hash01(cell.x, cell.y, 33) < ACCENT_CHANCE:
+		elif _hash01(cell.x, cell.y, 33) < ACCENT_CHANCE \
+				and layout.floor.get(cell - Vector2i(1, 0), ["main"])[0] != "accent" \
+				and layout.floor.get(cell - Vector2i(0, 1), ["main"])[0] != "accent":
 			kind = "accent"
 		layout.floor[cell] = [kind, turn]
 	_layouts[key] = layout
@@ -1088,21 +1083,6 @@ static func _landmark_room(map_rows: Array, cell: Vector2i) -> bool:
 			if not _is_walkable(map_rows, cell.x + dx, cell.y + dz):
 				return false
 	return map_rows[cell.y][cell.x] == "." and map_rows[cell.y + 1][cell.x] == "."
-
-## Поворот снігової плити (у чвертях оберту). На плиті сніг лежить у двох
-## протилежних кутах: при 0/2 — північно-східний і південно-західний, при
-## 1/3 — північно-західний і південно-східний. Обираємо пару, де більше
-## кутів упирається в стіну; порівну (пряма стіна, коридор) — чергуємо по
-## клітинках, і сніжні кути сусідніх плит сходяться в смугу вздовж стіни.
-static func _snow_turn(map_rows: Array, cell: Vector2i) -> int:
-	var a := int(_corner_walled(map_rows, cell, 1, -1)) + int(_corner_walled(map_rows, cell, -1, 1))
-	var b := int(_corner_walled(map_rows, cell, -1, -1)) + int(_corner_walled(map_rows, cell, 1, 1))
-	var pattern := 0 if a > b else (1 if b > a else (cell.x + cell.y) % 2)
-	return pattern + (2 if _hash01(cell.x, cell.y, 34) < 0.5 else 0)
-
-static func _corner_walled(map_rows: Array, cell: Vector2i, dx: int, dz: int) -> bool:
-	return not _is_walkable(map_rows, cell.x + dx, cell.y) or not _is_walkable(map_rows, cell.x, cell.y + dz) \
-		or not _is_walkable(map_rows, cell.x + dx, cell.y + dz)
 
 ## Перешкоди статуй і брил — тим самим тілом, що й стіни.
 static func _add_layout_obstacles(obstacles: StaticBody3D, layout: Dictionary, decor: Dictionary) -> void:
