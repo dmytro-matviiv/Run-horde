@@ -201,6 +201,18 @@ CC0-пакети там же — про людське око.
                                               floor_plain/roots/glow, wall_* (8 малюнків),
                                               column, rubble
 
+    assets/models/citadel/kit/*.glb           IceCitadel гравця — Крижана цитадель (рівень 3):
+                                              floor_runes/snow/glow, wall_runes/frost/pillar
+    assets/models/citadel/ice_knight_statue.glb   крижаний лицар — у залах замість колон
+    assets/models/citadel/ice_torch.glb       настінний крижаний факел
+
+Статую й факел спрощено вбудованим у Godot meshoptimizer (статуя 8710 ->
+4354 трикутники, факел 7578 -> 1894; текстури 1024 і 512):
+`tools/simplify_mesh.gd` (у test_env) пише спрощену геометрію в .bin,
+`D:\RuneHorde_work\scripts\optimize_model.py` (загальний) чи
+`process_statue.py` (з картою світіння) збирають з неї GLB з текстурами
+джерела. Набір IceCitadel — тим самим `process_dungeon_kit.py ice`.
+
 DungeonKit приходить під сітку 4 м і з важкою геометрією (плита підлоги
 4226 трикутників, стіна ~6000). Скрипт
 `D:\RuneHorde_work\scripts\process_dungeon_kit.py` робить з нього легкі

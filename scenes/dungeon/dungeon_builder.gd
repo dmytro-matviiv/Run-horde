@@ -91,6 +91,28 @@ const FUNGAL_WALLS := [
 	preload("res://assets/models/fungal/kit/wall_shrooms.glb"), preload("res://assets/models/fungal/kit/wall_crack.glb"),
 ]
 const FUNGAL_COLUMN_SCENE := preload("res://assets/models/fungal/kit/column.glb")
+## Крижана статуя лицаря (модель гравця, 8.7 тис. трикутників, текстури
+## 1024, руни світяться власною картою) — Крижана цитадель, рівень 3.
+## Обличчям до +Z, тобто до камери гри (process_statue.py).
+const ICE_KNIGHT_STATUE_SCENE := preload("res://assets/models/citadel/ice_knight_statue.glb")
+## Набір IceCitadel (гравця) для Крижаної цитаделі — уже під клітинку 2 м
+## (process_dungeon_kit.py ice): плити з рунами, засніжені й з крижаним
+## сяйвом; стіни з рунним поясом і бурульками, з інеєм, з рунною колоною.
+const ICE_FLOORS := [
+	[preload("res://assets/models/citadel/kit/floor_runes.glb"), 0.6],
+	[preload("res://assets/models/citadel/kit/floor_snow.glb"), 0.3],
+	[preload("res://assets/models/citadel/kit/floor_glow.glb"), 0.1],
+]
+## Стіна з рунною колоною — рідше: вона розриває рунний пояс сусідніх.
+const ICE_WALLS := [
+	preload("res://assets/models/citadel/kit/wall_runes.glb"), preload("res://assets/models/citadel/kit/wall_frost.glb"),
+	preload("res://assets/models/citadel/kit/wall_runes.glb"), preload("res://assets/models/citadel/kit/wall_frost.glb"),
+	preload("res://assets/models/citadel/kit/wall_pillar.glb"),
+]
+## Настінний крижаний факел (набір гравця, спрощено 7578 -> 1894
+## трикутники, optimize_model.py): рунна плита спереду (+Z), кріплення
+## ззаду на глибині 0.269 м.
+const ICE_TORCH_SCENE := preload("res://assets/models/citadel/ice_torch.glb")
 const FUNGAL_RUBBLE_SCENE := preload("res://assets/models/fungal/kit/rubble.glb")
 
 ## Дрібний непотріб попід стінами.
@@ -179,13 +201,27 @@ const DECOR_SETS := {
 		"furniture": [preload("res://assets/models/dungeon/Woodfire.fbx"), preload("res://assets/models/dungeon/Pedestal.fbx")],
 		"treasure": [preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Bag_Coins.fbx")],
 	},
+	## Крижана цитадель — уся на наборі гравця IceCitadel: плити й стіни з
+	## рунами, крижані факели, а в залах замість колон — галерея замерзлих
+	## лицарів (статуя гравця, обличчям до камери). Дрібниць мало й лише
+	## таких, що пасують кризі: дерев'яні бочки, стільці й вогнища, прапори й
+	## цегла на рунних стінах виглядали чужими.
 	"citadel": {
-		"clutter": [preload("res://assets/models/dungeon/Crate.fbx"), preload("res://assets/models/dungeon/Barrel2.fbx"), preload("res://assets/models/dungeon/Chair.fbx")],
-		"wall": [
-			preload("res://assets/models/dungeon/Banner_wall.fbx"), preload("res://assets/models/dungeon/Sword_WallMount.fbx"),
-			preload("res://assets/models/dungeon/Decorative_Wall.fbx"), preload("res://assets/models/dungeon/Banner_wall.fbx"),
+		"columns": [
+			{"scene": ICE_KNIGHT_STATUE_SCENE, "scale": 1.15, "obstacle": 1.1, "face_camera": true},
 		],
-		"furniture": [preload("res://assets/models/dungeon/Table_Big.fbx"), preload("res://assets/models/dungeon/Pedestal2.fbx"), preload("res://assets/models/dungeon/Woodfire.fbx")],
+		"floor_tiles": ICE_FLOORS,
+		"wall_tiles": ICE_WALLS,
+		"wall_inset": 0.25,
+		## Факел замість звичайного: модель, масштаб, глибина кріплення
+		## (м, до масштабу) і висота низу над підлогою.
+		"torch": {"scene": ICE_TORCH_SCENE, "scale": 1.2, "depth": 0.269, "height": 0.85},
+		"clutter": [preload("res://assets/models/dungeon/Vase.fbx"), preload("res://assets/models/dungeon/Skull.fbx")],
+		"clutter_chance": 0.12,
+		"wall": [],
+		## Посеред зал — нічого: там статуї; постаменти без них виглядали
+		## сірими брилами.
+		"furniture": [],
 		"treasure": [preload("res://assets/models/dungeon/Chest_Gold.fbx"), preload("res://assets/models/dungeon/Coin_Pile.fbx"), preload("res://assets/models/dungeon/Chest.fbx")],
 	},
 	## Нижче — п'ять нових тем (рівні 4-8): моделі з Halloween Bits (Kay
@@ -779,6 +815,9 @@ static func _column_variant(decor: Dictionary, x: int, z: int) -> Dictionary:
 	var variants: Array = decor.get("columns", [])
 	if variants.is_empty():
 		return {"scene": COLUMN_SCENE, "obstacle": 1.1}
+	# Шахівниця: колонні клітинки стоять через 6, тож сусідні чергуються.
+	if decor.get("column_pattern", "") == "checker":
+		return variants[(floori(x / 6.0) + floori(z / 6.0)) % variants.size()]
 	var roll := _hash01(x, z, 21)
 	for variant: Dictionary in variants:
 		roll -= variant.get("weight", 1.0 / variants.size())
@@ -871,10 +910,23 @@ static func _add_wall_visuals(batcher: MeshBatcher, map_rows: Array, x: int, z: 
 			batcher.add(WALL_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), wall_position), stone)
 
 		if (x + z) % TORCH_EVERY == 0 and offset.y != 0:
-			var torch_position := wall_position - Vector3(offset.x, 0.0, offset.y) * maxf(0.35, inset + 0.1) + Vector3(0, 0.6, 0)
-			batcher.add(TORCH_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), torch_position))
+			if decor.has("torch"):
+				# Свій факел теми: задником упритул до лиця стіни, у власних
+				# кольорах. Поворот — той самий, що в стіни.
+				var torch: Dictionary = decor.torch
+				var size: float = torch.get("scale", 1.0)
+				var depth: float = torch.get("depth", 0.0)
+				var height: float = torch.get("height", 1.0)
+				var toward_wall := Vector3(offset.x, 0.0, offset.y)
+				var spot: Vector3 = position + toward_wall * (CELL * 0.5 - inset - depth * size) + Vector3(0, height, 0)
+				var basis := Basis(Vector3.UP, directions[offset]).scaled(Vector3.ONE * size)
+				batcher.add(torch.scene, Transform3D(basis, spot), Color.WHITE, true)
+			else:
+				var torch_position := wall_position - Vector3(offset.x, 0.0, offset.y) * maxf(0.35, inset + 0.1) + Vector3(0, 0.6, 0)
+				batcher.add(TORCH_SCENE, Transform3D(Basis(Vector3.UP, directions[offset]), torch_position))
 
-		if _chance(3, x, z, offset) and _hash01(x, z, 11) < decor_density:
+		# Прикраси на стінах — якщо тема їх має (на рунних стінах — ні).
+		if not decor.wall.is_empty() and _chance(3, x, z, offset) and _hash01(x, z, 11) < decor_density:
 			var decor_position := position + Vector3(0, 1.3, 0) \
 				+ Vector3(offset.x, 0.0, offset.y) * (CELL * 0.5 - maxf(0.15, inset + 0.03))
 			var wall_set: Array = decor.wall
@@ -904,7 +956,9 @@ static func _add_column(batcher: MeshBatcher, x: int, z: int, position: Vector3,
 		batcher.add(COLUMN_SCENE, Transform3D(Basis(), position), stone)
 		return
 	var size: float = variant.get("scale", 1.0) * lerpf(0.92, 1.08, _hash01(x, z, 12))
-	var basis := Basis(Vector3.UP, _hash01(x, z, 11) * TAU).scaled(Vector3.ONE * size)
+	# Статуя має обличчя — дивиться на камеру (±12°), решта — як завгодно.
+	var yaw := (_hash01(x, z, 11) - 0.5) * deg_to_rad(24.0) if variant.get("face_camera", false) 		else _hash01(x, z, 11) * TAU
+	var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * size)
 	batcher.add(column, Transform3D(basis, position), Color.WHITE, true)
 
 ## Грибочки попід стіною: зменшені копії гриба-колони, по одному-два,
@@ -943,7 +997,7 @@ static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int
 		_place(batcher, decor.clutter[rng.randi() % decor.clutter.size()],
 			position + Vector3(rng.randf_range(-0.25, 0.25), 0.0, rng.randf_range(-0.25, 0.25)),
 			rng.randf_range(0.0, TAU), rng.randf_range(0.8, 1.15), keep_colors)
-	elif open_sides == 4 and rng.randf() < 0.07:
+	elif open_sides == 4 and rng.randf() < 0.07 and not decor.furniture.is_empty():
 		_place(batcher, decor.furniture[rng.randi() % decor.furniture.size()],
 			position, rng.randf_range(0.0, TAU), 1.0, keep_colors)
 
