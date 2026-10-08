@@ -8,6 +8,8 @@ class_name HazardRift
 ## тягнення не скасовує — саме тому тікати треба заздалегідь.
 
 const TICK := 0.4
+## Найсильніша тяга, м/с — 60% бігу героя (Player3D.RUN_SPEED 5.4).
+const MAX_PULL := 3.2
 
 var _center := Vector3.ZERO
 var _radius := 5.0
@@ -74,7 +76,11 @@ func _physics_process(delta: float) -> void:
 	# apply_pull додається до velocity (м/с), а не до позиції напряму —
 	# сам delta тут зайвий: Player3D.move_and_slide() застосує його сам,
 	# як і зі звичайним рухом.
-	var pull := offset.normalized() * _pull_speed * (0.5 + 0.5 * (1.0 - distance / _radius))
+	# У самому центрі тяга гасне (останні 0.8 м) — інакше героя на місці
+	# смикало б туди-сюди через центр. І ніколи не сильніша за ~60% бігу:
+	# вирватись можна завжди, якщо тікати, а не стояти.
+	var strength := _pull_speed * (0.5 + 0.5 * (1.0 - distance / _radius)) * clampf(distance / 0.8, 0.0, 1.0)
+	var pull := offset.normalized() * minf(strength, MAX_PULL)
 	_player.apply_pull(pull)
 	_tick_left -= delta
 	if _tick_left <= 0.0:

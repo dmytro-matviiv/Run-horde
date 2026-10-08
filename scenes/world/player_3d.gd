@@ -45,6 +45,8 @@ const WALK_SPEED := 2.6
 const RUN_SPEED := 5.4
 const ACCELERATION := 14.0      # як швидко набирає швидкість
 const DECELERATION := 18.0      # як швидко спиняється
+## Найсильніше тягнення вирів разом — 60% бігу: тікаючи, герой вибирається.
+const MAX_PULL_SPEED := 3.2
 const ROTATION_SPEED := 12.0    # як швидко довертається в бік руху
 const COMBAT_TURN_SPEED := 22.0 # як швидко довертається до цілі в бою
 const GRAVITY := 22.0
@@ -304,6 +306,11 @@ var _slow_marker: MeshInstance3D
 ## але його зносить до центру, поки він не вийде з зони. Задає сама
 ## небезпека щокадру (0 — не тягне).
 var _pull_velocity := Vector3.ZERO
+## Тягнення, додане до velocity минулого кадру. Перед кермуванням його
+## віднімаємо: інакше velocity щокадру росла б на швидкість вихору
+## (прискорення героя — лише ~0.23 м/с за кадр), героя розганяло в центр,
+## там трясло на місці, а коли вир зникав — жбурляло геть.
+var _pull_applied := Vector3.ZERO
 
 var _skills: Array[HeroSkill3D] = []
 var _spin_left := 0.0
@@ -1106,6 +1113,13 @@ func _tick_timers(delta: float) -> void:
 		_combo_expire = maxf(_combo_expire - delta, 0.0)
 
 func _update_velocity(direction: Vector3, delta: float) -> void:
+	velocity.x -= _pull_applied.x
+	velocity.z -= _pull_applied.z
+	_pull_applied = Vector3.ZERO
+	# Кілька вирів разом тягнуть не сильніше за MAX_PULL_SPEED — вирватись
+	# можна завжди.
+	var pull := _pull_velocity.limit_length(MAX_PULL_SPEED)
+	_pull_velocity = Vector3.ZERO
 	if _roll_left > 0.0:
 		# Ривок швидкий на початку й гасне під кінець.
 		var speed := DODGE_SPEED * (0.45 + 0.55 * _roll_left / DODGE_TIME)
@@ -1140,14 +1154,15 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 	var rate := ACCELERATION if direction.length() > 0.05 else DECELERATION
 	velocity.x = move_toward(velocity.x, target_velocity.x, rate * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, rate * delta)
-	# Тягнення вихору додається зверху: герой і далі сам керує рухом, але
-	# його зносить, якщо не тікати. Перекат (return вище) від нього вільний.
-	velocity.x += _pull_velocity.x
-	velocity.z += _pull_velocity.z
-	_pull_velocity = Vector3.ZERO
+	# Тягнення вихору додається зверху лише на цей кадр: герой і далі сам
+	# керує рухом, але його зносить, якщо не тікати. Перекат і ривок (return
+	# вище) від нього вільні — і тягнення за цей час не накопичується.
+	velocity.x += pull.x
+	velocity.z += pull.z
+	_pull_applied = Vector3(pull.x, 0.0, pull.z)
 
-## Вир Безодні (мега-боса) зносить героя до центру. sec_strength — метрів
-## за секунду, вже помножено на delta небезпекою, що викликає щокадру.
+## Вир Безодні (мега-боса) зносить героя до центру: step — швидкість (м/с)
+## цього кадру; небезпека викликає щокадру, кілька вирів додаються.
 func apply_pull(step: Vector3) -> void:
 	_pull_velocity += step
 
