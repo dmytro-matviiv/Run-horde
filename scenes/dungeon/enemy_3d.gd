@@ -192,6 +192,9 @@ var _player: Node3D
 var _agent: NavigationAgent3D
 var _model: Node3D
 var _animation: AnimationPlayer
+## Модель помітно довертається (більше TURN_ANIM_ANGLE) — грає "Turn".
+var _turning := false
+const TURN_ANIM_ANGLE := 0.35
 var _attack_left := 0.0
 var _aggro := false
 var _dying := false
@@ -308,10 +311,15 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	var players := _model.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		_animation = players[0]
-		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying"])
+		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying", "Turn"])
 		# Анімацію крутимо самі (див. _process): так її можна оновлювати
 		# рідше або ставити на паузу, коли ворога не видно.
 		_animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		# Після удару чи чарів — назад у стійку, а не завмерти в останньому
+		# кадрі (смерть лишається лежати).
+		_animation.animation_finished.connect(func(_name: StringName) -> void:
+			if not _dying:
+				_play("Idle"))
 	_add_health_bar()
 	_add_screen_notifier()
 	if elite != null:
@@ -1067,7 +1075,8 @@ func _begin_special(special: String, windup: float, color: Color, radius: float)
 	velocity.x = 0.0
 	velocity.z = 0.0
 	_face_player(20.0)
-	_play_once(["Weapon", "Punch", "Headbutt", "Wave"])
+	# Свій жест для прийомів (напр. "Cast" — чари в Темного лицаря), інакше удар.
+	_play_once(definition.get("special_anim", []) + ["Weapon", "Punch", "Headbutt", "Wave"])
 	_show_telegraph(radius, PI, color)
 
 ## Замах збито: сильний удар героя перериває ворога.
@@ -1291,6 +1300,8 @@ func _face(direction: Vector3, speed: float) -> void:
 	if _model == null:
 		return
 	var wanted := atan2(direction.x, direction.z)
+	# Помітно довертається на місці — для моделей з анімацією "Turn" (див. _play).
+	_turning = absf(angle_difference(_model.rotation.y, wanted)) > TURN_ANIM_ANGLE
 	_model.rotation.y = rotate_toward(_model.rotation.y, wanted, speed * get_physics_process_delta_time())
 
 ## Анімації в різних моделей звуться по-різному, тож шукаємо за
@@ -1300,6 +1311,9 @@ func _play(wanted: String) -> void:
 		return
 	# Летючі не ходять, а ширяють: шукаємо і їхні назви анімацій.
 	var candidates: Array = [wanted]
+	# Стоїть, але повертається до героя — переступає на місці, якщо вміє.
+	if wanted == "Idle" and _turning:
+		candidates = ["Turn", "Idle"]
 	if wanted == "Walk":
 		candidates.append_array(["Fast_Flying", "Run"])
 	candidates.append_array(["Idle", "Flying_Idle"])

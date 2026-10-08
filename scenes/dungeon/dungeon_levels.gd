@@ -824,11 +824,15 @@ const LEVELS := [
 			"decor": "vault",
 		},
 		"enemies": {},
-		"boss": {"name": "Володар Крижаної Безодні", "model": "res://assets/models/monsters/Yeti.glb", "style": "abyssal",
+		# Темний лицар — модель гравця, скелет і анімації зроблено в Blender
+		# (D:\RuneHorde_work\scriptslenderig_knight.py): Idle, Walk, Turn,
+		# Weapon (удар мечем), Cast (чари — для розлому), Jump (стрибок), HitReact,
+		# Death. Свої кольори лишаємо; фази лише підсвічують обладунок.
+		"boss": {"name": "Володар Крижаної Безодні", "model": "res://assets/models/monsters/dark_knight.glb", "style": "abyssal",
 			"hp": 1280.0, "damage": 35.0, "speed": 3.1, "height": 4.6, "xp": 320,
-			"tint": Color(0.55, 0.35, 0.95), "glow": Color(0.4, 0.1, 0.75),
-			"transform_tints": [Color(0.4, 0.2, 0.9), Color(0.2, 0.05, 0.7)],
-			"transform_glows": [Color(0.55, 0.15, 0.95), Color(0.75, 0.2, 1.0)],
+			"special_anim": ["Cast"],
+			"transform_tints": [Color(0.85, 0.85, 1.0), Color(0.7, 0.7, 0.95)],
+			"transform_glows": [Color(0.1, 0.35, 0.8), Color(0.25, 0.55, 1.0)],
 			"abilities": [
 				{"id": "void_rift", "cooldown": 12.0, "first": 5.0, "radius": 4.5, "pull_speed": 3.4, "lifetime": 6.5},
 				{"id": "leap", "cooldown": 8.0, "first": 6.0},
