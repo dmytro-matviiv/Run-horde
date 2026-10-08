@@ -113,7 +113,7 @@ func _rain_hazards() -> void:
 		_hazard(parent, spot, style.color, damage, HAZARD_DELAY + 0.12 * i)
 
 func _hazard(parent: Node, spot: Vector3, color: Color, damage: float, delay: float) -> void:
-	var marker := CombatVfx.make_ground_marker(Color(color, 0.85), HAZARD_RADIUS)
+	var marker := CombatVfx.make_telegraph(Color(color, 0.9), HAZARD_RADIUS, PI, true)
 	parent.add_child(marker)
 	marker.global_position = Vector3(spot.x, DungeonBuilder.FLOOR_TOP + 0.05, spot.z)
 	var player := _player
@@ -125,6 +125,7 @@ func _hazard(parent: Node, spot: Vector3, color: Color, damage: float, delay: fl
 		var center := marker.global_position
 		marker.queue_free()
 		CombatVfx.shockwave(parent, center, HAZARD_RADIUS, color, 0.3)
+		CombatVfx.impact_decal(parent, center, HAZARD_RADIUS * 0.8, color, 0.3)
 		CombatVfx.impact(parent, center + Vector3.UP * 0.5, color, false)
 		# Бос уже впав — кола догорають, але не ранять: перемога є перемога.
 		if is_instance_valid(player) and is_instance_valid(boss) and boss.is_alive():

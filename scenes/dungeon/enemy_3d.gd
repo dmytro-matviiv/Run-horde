@@ -822,7 +822,7 @@ func _begin_windup() -> void:
 		return
 
 	if _windup_slam:
-		_show_telegraph(SLAM_RADIUS, PI, SLAM_COLOR)
+		_show_telegraph(SLAM_RADIUS, PI, SLAM_COLOR, true)
 	else:
 		_show_telegraph(_melee_reach(), deg_to_rad(55.0), TELEGRAPH_COLOR)
 
@@ -867,6 +867,7 @@ func _resolve_attack() -> void:
 	offset.y = 0.0
 	if _windup_slam:
 		CombatVfx.shockwave(get_parent(), global_position, SLAM_RADIUS, SLAM_COLOR, 0.35)
+		CombatVfx.impact_decal(get_parent(), global_position, SLAM_RADIUS * 0.8, SLAM_COLOR)
 		var rig := get_tree().get_first_node_in_group(&"camera_rig")
 		if rig != null:
 			rig.shake(0.12)
@@ -945,7 +946,7 @@ func _light_fuse() -> void:
 	_fuse_left = FUSE_TIME
 	velocity.x = 0.0
 	velocity.z = 0.0
-	_show_telegraph(EXPLODE_RADIUS, PI, EXPLODE_COLOR)
+	_show_telegraph(EXPLODE_RADIUS, PI, EXPLODE_COLOR, true)
 	_play_once(["Jump", "Headbutt", "Punch", "Bite_Front"])
 
 func _process_fuse(delta: float) -> void:
@@ -967,6 +968,7 @@ func _explode() -> void:
 	_hide_telegraph()
 	var parent := get_parent()
 	CombatVfx.shockwave(parent, global_position, EXPLODE_RADIUS, EXPLODE_COLOR, 0.35)
+	CombatVfx.impact_decal(parent, global_position, EXPLODE_RADIUS * 0.8, EXPLODE_COLOR)
 	CombatVfx.impact(parent, global_position + Vector3.UP * 0.8, EXPLODE_COLOR, true)
 	var rig := get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
@@ -1009,7 +1011,7 @@ func _begin_charge() -> void:
 	_model.rotation.y = atan2(_charge_dir.x, _charge_dir.z)
 	_hide_telegraph()
 	var length := CHARGE_SPEED * CHARGE_TIME
-	_telegraph = CombatVfx.make_line_marker(CHARGE_COLOR, length, 1.8)
+	_telegraph = CombatVfx.make_line_telegraph(CHARGE_COLOR, length, 1.8, "chevrons", true)
 	add_child(_telegraph)
 	_telegraph.position = Vector3(0, 0.05, 0) + _charge_dir * length * 0.5
 	_telegraph.rotation.y = atan2(_charge_dir.x, _charge_dir.z)
@@ -1099,7 +1101,7 @@ func _begin_special(special: String, windup: float, color: Color, radius: float)
 	# всіх (лицар: Cast); нема — звичайний удар.
 	var gesture: Array = definition.get("special_anims", {}).get(special, definition.get("special_anim", []))
 	_play_once(gesture + ["Weapon", "Punch", "Headbutt", "Wave"])
-	_show_telegraph(radius, PI, color)
+	_show_telegraph(radius, PI, color, true)
 
 ## Замах збито: сильний удар героя перериває ворога.
 func _cancel_windup() -> void:
@@ -1113,9 +1115,15 @@ func _cancel_windup() -> void:
 func _melee_reach() -> float:
 	return attack_range * 1.15 + 0.3
 
-func _show_telegraph(radius: float, half_arc: float, color: Color) -> void:
+## Попередження удару на підлозі (арт гравця, див. CombatVfx.make_telegraph).
+## embers — іскри з краю: лише для важких ударів, звичайних в орді багато.
+func _show_telegraph(radius: float, half_arc: float, color: Color, embers: bool = false) -> void:
 	_hide_telegraph()
-	_telegraph = CombatVfx.make_ground_marker(color, radius, half_arc)
+	# Свій колір звичайних ударів ("telegraph_color"): у фінального боса й
+	# двійників — фіолетові руни замість вогню.
+	if definition.has("telegraph_color") and color in [TELEGRAPH_COLOR, SLAM_COLOR, EXPLODE_COLOR]:
+		color = definition.telegraph_color
+	_telegraph = CombatVfx.make_telegraph(color, radius, half_arc, embers)
 	add_child(_telegraph)
 	_telegraph.position = Vector3(0, 0.05, 0)
 	_telegraph.rotation.y = _model.rotation.y

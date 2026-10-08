@@ -44,7 +44,7 @@ func try_use(distance: float) -> bool:
 
 func _warn() -> void:
 	_target = player().global_position
-	_marker = CombatVfx.make_ground_marker(Color(DUST, 0.9), RADIUS)
+	_marker = CombatVfx.make_telegraph(Color(DUST, 0.9), RADIUS, PI, true)
 	world().add_child(_marker)
 	_marker.global_position = Vector3(_target.x, DungeonBuilder.FLOOR_TOP + 0.05, _target.z)
 	enemy.teleport_to(_target)
@@ -60,6 +60,7 @@ func _burst() -> void:
 	enemy.set_hidden(false)
 	enemy.emerge(0.25)
 	CombatVfx.shockwave(world(), _target, RADIUS, DUST, 0.35)
+	CombatVfx.impact_decal(world(), _target, RADIUS * 0.8, DUST)
 	CombatVfx.impact(world(), _target + Vector3.UP * 0.5, DUST, true)
 	var offset := player().global_position - _target
 	offset.y = 0.0

@@ -1092,6 +1092,13 @@ func _warm_up_rendering() -> void:
 	var line := CombatVfx.make_line_marker(Color(1.0, 0.3, 0.2, 0.85), 2.0, 1.0)
 	holder.add_child(line)
 	line.global_position = center - Vector3(0, 0.9, 0)
+	var telegraph := CombatVfx.make_telegraph(Color(1.0, 0.22, 0.15, 0.85), 1.2, PI, true)
+	holder.add_child(telegraph)
+	telegraph.global_position = center - Vector3(0, 0.9, 0)
+	var strip := CombatVfx.make_line_telegraph(Color(1.0, 0.3, 0.2, 0.85), 2.0, 1.0)
+	holder.add_child(strip)
+	strip.global_position = center - Vector3(0, 0.9, 0)
+	CombatVfx.impact_decal(holder, center - Vector3(0, 0.9, 0), 1.0, Color(1.0, 0.45, 0.1))
 	var shot := EnemyProjectile.create(0.0)
 	holder.add_child(shot)
 	shot.global_position = center

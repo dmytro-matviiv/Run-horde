@@ -39,7 +39,7 @@ static func launch(world: Node, from: Vector3, to: Vector3, player: Node3D, radi
 	return lob
 
 func _ready() -> void:
-	_marker = CombatVfx.make_ground_marker(Color(_color, 0.85), _radius)
+	_marker = CombatVfx.make_telegraph(Color(_color, 0.9), _radius, PI, true)
 	add_child(_marker)
 	_marker.global_position = _to + Vector3(0, 0.05, 0)
 	if _shell == null:
@@ -70,6 +70,7 @@ func _fly(t: float) -> void:
 func _explode() -> void:
 	var world := get_parent()
 	CombatVfx.shockwave(world, _to, _radius, _color, 0.35)
+	CombatVfx.impact_decal(world, _to, _radius * 0.8, _color, 0.3)
 	CombatVfx.impact(world, _to + Vector3.UP * 0.5, _color, true)
 	AudioManager.play(&"explosion", 0.15)
 	# Кинуте до смерті долітає й вибухає — видовищно, але кривдника вже

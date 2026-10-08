@@ -22,6 +22,7 @@ var _age := 0.0
 var _angle := 0.0
 var _hit_left := 0.0
 var _beams: Array[MeshInstance3D] = []
+var _strips: Array[MeshInstance3D] = []
 
 static func spawn(owner: Node3D, player: Node3D, count: int, length: float, active_time: float,
 		turn_speed: float, damage: float, color: Color) -> HazardBeams:
@@ -48,6 +49,9 @@ func _ready() -> void:
 		beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(beam)
 		_beams.append(beam)
+		var strip := CombatVfx.make_line_telegraph(_color, _length, _width * 2.2, "flames")
+		add_child(strip)
+		_strips.append(strip)
 	_place()
 
 func _physics_process(delta: float) -> void:
@@ -79,10 +83,16 @@ func _beam_angle(index: int) -> float:
 	return _angle + TAU * index / _count
 
 ## Промені йдуть від боса на висоті грудей; поки попередження — тонкі.
+## Під кожним на підлозі — вогняна смуга: під час попередження вона
+## заливається від боса до кінця, далі горить, поки б'є промінь.
 func _place() -> void:
 	global_position = _owner.global_position + Vector3(0, 1.0, 0)
 	var thickness := _width if _age >= WARN else 0.12
 	for i in _count:
+		var strip := _strips[i]
+		strip.rotation.y = _beam_angle(i) + PI
+		strip.position = Vector3.FORWARD.rotated(Vector3.UP, _beam_angle(i)) * _length * 0.5 + Vector3(0, -0.94, 0)
+		strip.set_instance_shader_parameter(&"progress", minf(_age / WARN, 1.0))
 		var direction := Vector3.FORWARD.rotated(Vector3.UP, _beam_angle(i))
 		var beam := _beams[i]
 		beam.basis = Basis(Vector3.UP, _beam_angle(i)).scaled(Vector3(thickness, thickness * 0.5, _length))

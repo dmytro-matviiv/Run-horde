@@ -32,7 +32,7 @@ func try_use(distance: float) -> bool:
 	_target = player().global_position
 	_target.y = _from.y
 	var radius := RADIUS * float(config.get("radius_mult", 1.0))
-	_marker = CombatVfx.make_ground_marker(COLOR, radius)
+	_marker = CombatVfx.make_telegraph(COLOR, radius, PI, true)
 	world().add_child(_marker)
 	_marker.global_position = Vector3(_target.x, DungeonBuilder.FLOOR_TOP + 0.05, _target.z)
 	enemy.face_player(100.0)
@@ -55,6 +55,7 @@ func _land(radius: float) -> void:
 		_marker.queue_free()
 	enemy.global_position = _target
 	CombatVfx.shockwave(world(), _target, radius, COLOR, 0.35)
+	CombatVfx.impact_decal(world(), _target, radius * 0.8, COLOR)
 	CombatVfx.impact(world(), _target + Vector3.UP * 0.4, COLOR, true)
 	var rig := enemy.get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:

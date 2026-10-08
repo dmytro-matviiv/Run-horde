@@ -150,7 +150,7 @@ func on_death() -> void:
 	var center := _enemy.global_position
 	var damage := _enemy.damage * BLAST_DAMAGE_MULT
 	var color: Color = INFO[Affix.VOLATILE].color
-	var marker := CombatVfx.make_ground_marker(color, BLAST_RADIUS)
+	var marker := CombatVfx.make_telegraph(color, BLAST_RADIUS, PI, true)
 	parent.add_child(marker)
 	marker.global_position = center + Vector3(0, 0.07, 0)
 	var player := _player
@@ -160,6 +160,7 @@ func on_death() -> void:
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		CombatVfx.shockwave(parent, center, BLAST_RADIUS, color, 0.35)
+		CombatVfx.impact_decal(parent, center, BLAST_RADIUS * 0.8, color)
 		CombatVfx.impact(parent, center + Vector3.UP * 0.8, color, true)
 		AudioManager.play(&"explosion")
 		if is_instance_valid(player):

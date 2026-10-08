@@ -4,7 +4,9 @@ class_name CombatVfx
 ## Ефекти бою: слід меча, іскри влучання, цифри шкоди, кола-попередження
 ## на підлозі, "заморожування" кадру при сильному ударі.
 ##
-## Усе зроблено кодом і шейдерами, без текстур: так ефекти однаково
+## Попередження ворожих ударів і тріщини після них — з арту гравця
+## (assets/textures/vfx), див. make_telegraph. Решта — кодом і шейдерами,
+## без текстур: так ефекти однаково
 ## добре виглядають з будь-якого боку камери (плаский спрайт при повороті
 ## камери перетворився б на смужку) і майже нічого не коштують телефону —
 ## кілька трикутників і простий шейдер без світла.
@@ -89,6 +91,98 @@ void fragment() {
 }
 """
 
+## Попередження ворога з арту (коло, віяло, смуга) і тріщини після удару.
+## Арт — статична текстура, "живим" його робить шейдер:
+##   - уся зона видна одразу (тьмяно), щоб гравець встиг вийти;
+##   - від ворога до краю біжить заливка з яскравою кромкою (progress 0..1);
+##   - заливка пульсує, і що ближче удар — то частіше.
+## Арт намальований теплим (червоно-помаранчевим). Якщо попередження
+## іншого кольору (зелене, крижане), recolor = 1 перефарбовує арт у color,
+## лишаючи білим лише розпечене серце.
+const TELEGRAPH_SHADER := """
+shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
+
+uniform sampler2D art : source_color, filter_linear_mipmap, repeat_disable;
+uniform vec4 color : source_color = vec4(1.0, 0.3, 0.2, 1.0);
+// 0 — коло, 1 — віяло (арт розкладено довкола вершини), 2 — смуга
+uniform int shape = 0;
+uniform float recolor = 0.0;
+instance uniform float progress = 0.0;
+instance uniform float half_arc = 3.1416;
+instance uniform float fade = 1.0;
+// 0 — без підкладки кольором (тріщини після удару), 1 — з нею.
+uniform float base = 1.0;
+
+// Віяло в арті: вершина й радіус (у долях текстури) і половина кута, яку
+// розтягуємо на справжній кут удару (трохи ширше за рамку — разом із рунами).
+const vec2 CONE_APEX = vec2(0.4995, 0.8725);
+const float CONE_RADIUS = 0.752;
+const float CONE_HALF = 0.56;
+
+void fragment() {
+	vec2 d = UV - vec2(0.5);
+	float dist = length(d) * 2.0;
+	vec2 tex_uv = UV;
+	float reach = dist;
+	float inside = 1.0 - smoothstep(0.96, 1.0, dist);
+	if (shape == 1) {
+		float angle = atan(d.x, d.y);
+		inside *= 1.0 - step(half_arc, abs(angle));
+		float a = angle / half_arc * CONE_HALF;
+		tex_uv = CONE_APEX + vec2(sin(a), -cos(a)) * dist * CONE_RADIUS;
+	} else if (shape == 2) {
+		// Смуга: від ворога (UV.y = 0) уперед; стрілки арту — туди ж.
+		reach = UV.y;
+		inside = 1.0;
+		tex_uv = vec2(UV.x, 1.0 - UV.y);
+	}
+	vec4 t = texture(art, tex_uv);
+	float hot = smoothstep(0.55, 1.0, min(min(t.r, t.g), t.b));
+	// Перефарбований арт зберігає світлотінь: темне — темніше, жилки світліші.
+	float lum = dot(t.rgb, vec3(0.299, 0.587, 0.114));
+	vec3 tinted = mix(color.rgb * (0.3 + 0.9 * lum), vec3(1.0), hot);
+	vec3 art_rgb = mix(t.rgb, tinted, recolor);
+
+	float fill = smoothstep(progress + 0.04, progress - 0.04, reach);
+	float pulse = 0.8 + 0.2 * sin(TIME * (7.0 + progress * 22.0));
+	float a_art = min(t.a * 1.3, 1.0) * (0.6 + 0.4 * fill * pulse);
+	// Підкладка — притемнений колір зони: на темній підлозі зону видно
+	// за кольором, на світлій (крига) вона темнішає, і арт на ній світиться.
+	float a_base = inside * base * (0.42 + 0.25 * fill * pulse);
+	float a = a_art + a_base * (1.0 - a_art);
+	vec3 rgb = (art_rgb * a_art + color.rgb * 0.35 * a_base * (1.0 - a_art)) / max(a, 0.001);
+
+	// Кромка заливки — біжить до краю, на самому ударі зникає.
+	float front = (1.0 - smoothstep(0.0, 0.06, abs(reach - progress)))
+		* step(0.02, progress) * (1.0 - step(0.995, progress)) * inside * base;
+	rgb = mix(rgb, mix(color.rgb, vec3(1.0), 0.6), front);
+	a = max(a, front * 0.8);
+
+	ALBEDO = rgb;
+	ALPHA = clamp(a * fade * color.a, 0.0, 1.0);
+}
+"""
+
+const TELEGRAPH_ART := {
+	"lava": preload("res://assets/textures/vfx/telegraph_circle_lava.png"),
+	"rune": preload("res://assets/textures/vfx/telegraph_circle_rune.png"),
+	"cone": preload("res://assets/textures/vfx/telegraph_cone.png"),
+	"chevrons": preload("res://assets/textures/vfx/telegraph_line_chevrons.png"),
+	"flames": preload("res://assets/textures/vfx/telegraph_line_flames.png"),
+	"cracks": preload("res://assets/textures/vfx/impact_cracks.png"),
+}
+## Відтінок, яким намальований арт: теплий (червоно-помаранчевий) і рунне
+## коло (фіолетове). Колір попередження, близький до нього, арт не
+## перефарбовує.
+const WARM_HUE := 0.04
+const RUNE_HUE := 0.77
+const PARTICLE_ART := {
+	"glow": preload("res://assets/textures/vfx/particle_glow.png"),
+	"rock": preload("res://assets/textures/vfx/particle_rock.png"),
+	"dust": preload("res://assets/textures/vfx/particle_dust.png"),
+}
+
 ## Спалах поверх моделі, коли в неї влучили.
 const FLASH_SHADER := """
 shader_type spatial;
@@ -137,6 +231,9 @@ static var _thrust_mesh: BoxMesh
 static var _bolt_mesh: BoxMesh
 static var _beam_mesh: CylinderMesh
 static var _glow_materials: Dictionary = {}
+static var _telegraph_materials: Dictionary = {}
+static var _particle_materials: Dictionary = {}
+static var _particle_meshes: Dictionary = {}
 static var _shaders: Dictionary = {}
 static var _hitstop_until := 0
 static var _hitstop_token := 0
@@ -487,6 +584,212 @@ static func make_line_marker(color: Color, length: float, width: float) -> MeshI
 	instance.scale = Vector3(width, 1.0, length)
 	instance.set_instance_shader_parameter(&"progress", 0.0)
 	return instance
+
+## Попередження ворожого удару з арту: коло (half_arc = PI) або віяло.
+## Тепле — розпечене кільце з каменю, інших кольорів — рунне коло. embers —
+## іскри, що здіймаються з краю (для великих ударів; звичайним ударам
+## орди не треба — їх буває багато одночасно).
+## Керується так само, як make_ground_marker: progress 0..1.
+static func make_telegraph(color: Color, radius: float, half_arc: float = PI, embers: bool = false) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.mesh = _get_ring_mesh()
+	var shape := 0 if half_arc >= PI - 0.01 else 1
+	var art := "cone"
+	if shape == 0:
+		art = "lava" if _hue_close(color, WARM_HUE) else "rune"
+	instance.material_override = _get_telegraph_material(art, shape, color)
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	instance.scale = Vector3(radius * 2.0, 1.0, radius * 2.0)
+	instance.set_instance_shader_parameter(&"half_arc", half_arc)
+	instance.set_instance_shader_parameter(&"progress", 0.0)
+	if embers and radius >= 1.0 and color.a > 0.05:
+		var points := PackedVector3Array()
+		var steps := clampi(int(radius * 6.0), 10, 28)
+		for i in steps:
+			var angle := lerpf(-half_arc, half_arc, (i + 0.5) / steps)
+			points.append(Vector3(sin(angle), 0.0, cos(angle)) * radius)
+		if shape == 1:
+			for i in 4:
+				var along := radius * (i + 0.5) / 4.0
+				points.append(Vector3(sin(half_arc), 0.0, cos(half_arc)) * along)
+				points.append(Vector3(-sin(half_arc), 0.0, cos(half_arc)) * along)
+		_attach_embers(instance, points, color, clampi(int(radius * 4.0), 6, 16))
+	return instance
+
+## Смуга-попередження з арту: "chevrons" — ривок тарана (стрілки вперед),
+## "flames" — промінь боса. Смуга лежить від ворога вперед по +Z.
+static func make_line_telegraph(color: Color, length: float, width: float, art: String = "chevrons",
+		embers: bool = false) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.mesh = _get_ring_mesh()
+	instance.material_override = _get_telegraph_material(art, 2, color)
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	instance.scale = Vector3(width, 1.0, length)
+	instance.set_instance_shader_parameter(&"progress", 0.0)
+	if embers and color.a > 0.05:
+		var points := PackedVector3Array()
+		var steps := clampi(int(length), 4, 14)
+		for i in steps:
+			var z := lerpf(-0.5, 0.5, (i + 0.5) / steps) * length
+			points.append(Vector3(width * 0.45, 0.0, z))
+			points.append(Vector3(-width * 0.45, 0.0, z))
+		_attach_embers(instance, points, color, clampi(int(length * 1.2), 6, 14))
+	return instance
+
+## Тріщини на підлозі там, де вдарило, — з камінцями й пилом. Тріщини
+## гаснуть за мить, тож не захаращують залу.
+static func impact_decal(parent: Node, position: Vector3, radius: float, color: Color, linger: float = 0.5) -> void:
+	var decal := MeshInstance3D.new()
+	decal.mesh = _get_ring_mesh()
+	decal.material_override = _get_telegraph_material("cracks", 0, Color(color, 1.0))
+	decal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	decal.set_instance_shader_parameter(&"progress", 1.0)
+	parent.add_child(decal)
+	decal.global_position = position + Vector3(0, 0.07, 0)
+	decal.rotation.y = randf() * TAU
+	var size := radius * 2.3
+	decal.scale = Vector3(size * 0.6, 1.0, size * 0.6)
+	var tween := decal.create_tween()
+	tween.tween_property(decal, "scale", Vector3(size, 1.0, size), 0.09).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(linger)
+	tween.tween_method(func(value: float) -> void:
+		decal.set_instance_shader_parameter(&"fade", value), 1.0, 0.0, 0.7)
+	tween.tween_callback(decal.queue_free)
+
+	# Камінці злітають і падають; пил повільно розповзається.
+	var rocks := _make_burst("rock", Color.WHITE if _hue_close(color, WARM_HUE) else color.lerp(Color.WHITE, 0.5),
+		clampi(int(radius * 3.0), 5, 12), 0.75, 0.22)
+	rocks.direction = Vector3.UP
+	rocks.spread = 55.0
+	rocks.initial_velocity_min = 3.0
+	rocks.initial_velocity_max = 6.5
+	rocks.gravity = Vector3(0, -14.0, 0)
+	rocks.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	rocks.emission_sphere_radius = radius * 0.35
+	parent.add_child(rocks)
+	rocks.global_position = position + Vector3(0, 0.2, 0)
+	rocks.emitting = true
+	_free_after(rocks, 1.0)
+	var dust := _make_burst("dust", Color(color.lerp(Color(0.8, 0.75, 0.7), 0.6), 0.55), 5, 0.9, radius * 0.7)
+	dust.direction = Vector3.UP
+	dust.spread = 80.0
+	dust.initial_velocity_min = 0.6
+	dust.initial_velocity_max = 1.6
+	dust.gravity = Vector3.ZERO
+	dust.damping_min = 1.0
+	dust.damping_max = 2.0
+	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	dust.emission_sphere_radius = radius * 0.4
+	parent.add_child(dust)
+	dust.global_position = position + Vector3(0, 0.3, 0)
+	dust.emitting = true
+	_free_after(dust, 1.1)
+
+## Іскри з країв попередження. Вузол — дочірній до зони, тож рухається й
+## повертається разом із нею; масштаб зони (розмір кола) йому знімаємо,
+## щоб точки задавались у метрах, а іскри не роздувались.
+static func _attach_embers(marker: MeshInstance3D, points: PackedVector3Array, color: Color, amount: int) -> void:
+	var embers := CPUParticles3D.new()
+	embers.amount = amount
+	embers.lifetime = 0.9
+	embers.emission_shape = CPUParticles3D.EMISSION_SHAPE_POINTS
+	embers.emission_points = points
+	embers.direction = Vector3.UP
+	embers.spread = 12.0
+	embers.gravity = Vector3(0, 0.6, 0)
+	embers.initial_velocity_min = 0.7
+	embers.initial_velocity_max = 1.6
+	embers.scale_amount_min = 0.7
+	embers.scale_amount_max = 1.3
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.3))
+	curve.add_point(Vector2(0.25, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	embers.scale_amount_curve = curve
+	var hot := Color(1.0, 0.62, 0.25) if _hue_close(color, WARM_HUE) else color.lerp(Color.WHITE, 0.35)
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(hot.lerp(Color.WHITE, 0.4), 1.0))
+	gradient.set_color(1, Color(hot, 0.0))
+	embers.color_ramp = gradient
+	embers.mesh = _get_particle_mesh(0.2)
+	embers.material_override = _get_particle_material("glow", true)
+	marker.add_child(embers)
+	embers.scale = Vector3(1.0 / marker.scale.x, 1.0, 1.0 / marker.scale.z)
+
+## Разовий викид частинок з арту (камінці, пил).
+static func _make_burst(art: String, color: Color, amount: int, lifetime: float, size: float) -> CPUParticles3D:
+	var particles := CPUParticles3D.new()
+	particles.one_shot = true
+	particles.explosiveness = 0.95
+	particles.amount = amount
+	particles.lifetime = lifetime
+	particles.mesh = _get_particle_mesh(size)
+	particles.material_override = _get_particle_material(art, art != "rock")
+	particles.scale_amount_min = 0.6
+	particles.scale_amount_max = 1.4
+	particles.angle_min = 0.0
+	particles.angle_max = 360.0
+	particles.color = color
+	var curve := Curve.new()
+	if art == "dust":
+		curve.add_point(Vector2(0.0, 0.5))
+		curve.add_point(Vector2(1.0, 1.4))
+		var gradient := Gradient.new()
+		gradient.set_color(0, color)
+		gradient.set_color(1, Color(color, 0.0))
+		particles.color_ramp = gradient
+	else:
+		curve.add_point(Vector2(0.0, 1.0))
+		curve.add_point(Vector2(0.8, 1.0))
+		curve.add_point(Vector2(1.0, 0.0))
+	particles.scale_amount_curve = curve
+	return particles
+
+## Колір близький до відтінку арту (або майже сірий — тоді теж не
+## перефарбовуємо в "колір", лишаємо арт).
+static func _hue_close(color: Color, hue: float) -> bool:
+	return absf(wrapf(color.h - hue, -0.5, 0.5)) < 0.075
+
+static func _get_telegraph_material(art: String, shape: int, color: Color) -> ShaderMaterial:
+	var key := "%s|%d|%s" % [art, shape, color.to_html()]
+	if _telegraph_materials.has(key):
+		return _telegraph_materials[key]
+	var material := ShaderMaterial.new()
+	material.shader = _shared_shader(TELEGRAPH_SHADER)
+	material.set_shader_parameter(&"art", TELEGRAPH_ART[art])
+	material.set_shader_parameter(&"color", color)
+	material.set_shader_parameter(&"shape", shape)
+	var native := RUNE_HUE if art == "rune" else WARM_HUE
+	material.set_shader_parameter(&"recolor", 0.0 if _hue_close(color, native) else 1.0)
+	material.set_shader_parameter(&"base", 0.0 if art == "cracks" else 1.0)
+	_telegraph_materials[key] = material
+	return material
+
+## Матеріал частинки з арту. tinted — арт білий, колір дає сама частинка;
+## інакше (камінь) арт кольоровий і лише трохи підфарбовується.
+static func _get_particle_material(art: String, additive: bool) -> StandardMaterial3D:
+	var key := "%s|%s" % [art, additive]
+	if _particle_materials.has(key):
+		return _particle_materials[key]
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	if additive:
+		material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	material.vertex_color_use_as_albedo = true
+	material.albedo_texture = PARTICLE_ART[art]
+	material.disable_receive_shadows = true
+	_particle_materials[key] = material
+	return material
+
+static func _get_particle_mesh(size: float) -> QuadMesh:
+	var key := snappedf(size, 0.01)
+	if not _particle_meshes.has(key):
+		var mesh := QuadMesh.new()
+		mesh.size = Vector2(key, key)
+		_particle_meshes[key] = mesh
+	return _particle_meshes[key]
 
 ## Хвиля, що розбігається від центру (вихор героя, удар боса об землю).
 static func shockwave(parent: Node, position: Vector3, radius: float, color: Color, duration: float = 0.35) -> void:

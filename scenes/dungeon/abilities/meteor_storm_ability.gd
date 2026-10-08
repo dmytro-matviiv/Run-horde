@@ -51,7 +51,7 @@ func resolve() -> void:
 		_meteor(spot, radius)
 
 func _meteor(spot: Vector3, radius: float) -> void:
-	var marker := CombatVfx.make_ground_marker(Color(COLOR, 0.85), radius)
+	var marker := CombatVfx.make_telegraph(Color(COLOR, 0.9), radius, PI, true)
 	world().add_child(marker)
 	marker.global_position = Vector3(spot.x, DungeonBuilder.FLOOR_TOP + 0.05, spot.z)
 	var hero := player()
@@ -62,6 +62,7 @@ func _meteor(spot: Vector3, radius: float) -> void:
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		CombatVfx.shockwave(world(), spot, radius, COLOR, 0.3)
+		CombatVfx.impact_decal(world(), spot, radius * 0.75, COLOR, 0.3)
 		CombatVfx.impact(world(), spot + Vector3.UP * 0.6, COLOR, true)
 		if is_instance_valid(hero):
 			var offset := hero.global_position - spot
