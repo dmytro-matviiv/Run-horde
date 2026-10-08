@@ -1075,8 +1075,11 @@ func _begin_special(special: String, windup: float, color: Color, radius: float)
 	velocity.x = 0.0
 	velocity.z = 0.0
 	_face_player(20.0)
-	# Свій жест для прийомів (напр. "Cast" — чари в Темного лицаря), інакше удар.
-	_play_once(definition.get("special_anim", []) + ["Weapon", "Punch", "Headbutt", "Wave"])
+	# Свій жест для прийому: "special_anims" — окремо для кожного прийому
+	# (голем: метеори — Cast, ударна хвиля — Weapon), "special_anim" — для
+	# всіх (лицар: Cast); нема — звичайний удар.
+	var gesture: Array = definition.get("special_anims", {}).get(special, definition.get("special_anim", []))
+	_play_once(gesture + ["Weapon", "Punch", "Headbutt", "Wave"])
 	_show_telegraph(radius, PI, color)
 
 ## Замах збито: сильний удар героя перериває ворога.

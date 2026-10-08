@@ -382,13 +382,16 @@ const LEVELS := [
 			"decor": "forge",
 		},
 		"enemies": {},
-		"boss": {"name": "Провісник Загибелі", "model": "res://assets/models/monsters/Hywirl.glb", "style": "doom",
-			"hp": 820.0, "damage": 41.0, "speed": 3.4, "height": 4.2, "hover": 0.6, "xp": 160,
-			"tint": Color(1.0, 0.55, 0.2), "glow": Color(0.8, 0.2, 0.02),
-			# Фаза 2/3 фарбує назавжди дедалі палючіше — своєї анімації
-			# немає, тож "переродження" продає колір і світіння (BossPhases).
-			"transform_tints": [Color(1.0, 0.25, 0.05), Color(1.0, 0.05, 0.02)],
-			"transform_glows": [Color(1.0, 0.4, 0.0), Color(1.0, 0.7, 0.1)],
+		# Лавовий голем — модель гравця, скелет і анімації зроблено в Blender
+		# (D:/RuneHorde_work/scripts/blender/rig_golem.py): Idle, Walk, Turn,
+		# Weapon (удар двома кулаками в землю — ударна хвиля), Cast (руки до
+		# неба — метеори), Jump, HitReact, Death. Лава світиться своєю картою;
+		# фази 2/3 розпікають її дедалі дужче (BossPhases).
+		"boss": {"name": "Провісник Загибелі", "model": "res://assets/models/monsters/lava_golem.glb", "style": "doom",
+			"hp": 820.0, "damage": 41.0, "speed": 3.4, "height": 4.2, "xp": 160,
+			"special_anims": {"meteor_storm": ["Cast"], "ring_slam": ["Weapon"]},
+			"transform_tints": [Color(1.0, 0.85, 0.75), Color(1.0, 0.7, 0.6)],
+			"transform_glows": [Color(0.6, 0.15, 0.0), Color(1.0, 0.35, 0.05)],
 			"abilities": [
 				{"id": "meteor_storm", "cooldown": 13.0, "first": 4.5, "count": 12, "radius": 2.0, "span": 8.0, "safe": 3},
 				{"id": "ring_slam", "cooldown": 7.5, "first": 8.0, "radius": 11.0, "speed": 8.0, "color": Color(1.0, 0.4, 0.1)},
@@ -825,7 +828,7 @@ const LEVELS := [
 		},
 		"enemies": {},
 		# Темний лицар — модель гравця, скелет і анімації зроблено в Blender
-		# (D:\RuneHorde_work\scriptslenderig_knight.py): Idle, Walk, Turn,
+		# (D:/RuneHorde_work/scripts/blender/rig_knight.py): Idle, Walk, Turn,
 		# Weapon (удар мечем), Cast (чари — для розлому), Jump (стрибок), HitReact,
 		# Death. Свої кольори лишаємо; фази лише підсвічують обладунок.
 		"boss": {"name": "Володар Крижаної Безодні", "model": "res://assets/models/monsters/dark_knight.glb", "style": "abyssal",
