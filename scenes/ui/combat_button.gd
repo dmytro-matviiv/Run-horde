@@ -38,6 +38,9 @@ const PACK_ICONS := {
 const PACK_ICON_TURN := {"dodge": PI * 0.5}
 
 var radius := 60.0
+## У скільки разів зона натиску ширша за намальоване коло. Перекату —
+## найбільша: у бою по ньому б'ють наосліп, і промах коштує життя.
+var hit_scale := 1.12
 ## Яку фігуру малювати: attack, dodge, whirl, dash, nova, fire, smoke.
 var icon_kind := "attack"
 ## Готова картинка (якщо художник уже дав) — малюється замість фігури.
@@ -80,7 +83,7 @@ func _ready() -> void:
 
 ## Кнопка кругла — і натискається лише в колі, а не в кутах квадрата.
 func _has_point(point: Vector2) -> bool:
-	return point.distance_to(size * 0.5) <= radius * 1.12
+	return point.distance_to(size * 0.5) <= radius * hit_scale
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:

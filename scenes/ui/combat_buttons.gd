@@ -14,6 +14,10 @@ extends Control
 
 const ATTACK_RADIUS := 64.0
 const SMALL_RADIUS := 42.0
+## Перекат більший за кнопки здібностей і ловить дотик ще ширше
+## (hit_scale): у бою по ньому тиснуть наосліп.
+const DODGE_RADIUS := 52.0
+const DODGE_HIT_SCALE := 1.35
 const MARGIN := 34.0
 
 var _player: Node
@@ -37,7 +41,8 @@ func setup(player: Node) -> void:
 	if _player.is_caster():
 		icon = {"rune": "book", "cards": "cards"}.get(_player.weapon_def.spell, "staff")
 	_attack = _make_button(icon, ATTACK_RADIUS, "", Color(0.98, 0.72, 0.25))
-	_dodge = _make_button("dodge", SMALL_RADIUS, "Перекат", Color(0.6, 0.9, 1.0))
+	_dodge = _make_button("dodge", DODGE_RADIUS, "Перекат", Color(0.6, 0.9, 1.0))
+	_dodge.hit_scale = DODGE_HIT_SCALE
 	_attack.pressed_down.connect(func() -> void: _player.set_attack_held(true))
 	_attack.released.connect(func() -> void: _player.set_attack_held(false))
 	_dodge.pressed_down.connect(func() -> void: _player.dodge())
@@ -75,7 +80,7 @@ func _layout() -> void:
 	var area := get_viewport_rect().size
 	var attack_center := area - Vector2(MARGIN + ATTACK_RADIUS, MARGIN + ATTACK_RADIUS + 10.0)
 	_place(_attack, attack_center)
-	_place(_dodge, attack_center + Vector2(-ATTACK_RADIUS - SMALL_RADIUS - 26.0, 18.0))
+	_place(_dodge, attack_center + Vector2(-ATTACK_RADIUS - DODGE_RADIUS - 26.0, 18.0))
 	# Здібності лягають дугою над кнопкою удару — скільки б їх не було.
 	for index in _skill_buttons.size():
 		var angle := deg_to_rad(-118.0 + 46.0 * index)

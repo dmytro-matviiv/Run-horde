@@ -246,7 +246,6 @@ func _setup_hud(title: String) -> void:
 	$CameraRig.set_pitch_limits(CAMERA_MIN_PITCH, CAMERA_MAX_PITCH, CAMERA_PITCH)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
 	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
-	camera_touch.tap_attack.connect(player.attack)
 	camera_touch.attack_held_changed.connect(player.set_attack_held)
 
 	# Бойові кнопки — поверх зони камери: дотик по кнопці забирає кнопка.
