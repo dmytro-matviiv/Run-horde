@@ -149,6 +149,8 @@ var display_name := ""
 var elite: EliteAffixes
 ## Фази боса (лише в боса).
 var phases: BossPhases
+## Аура фінального боса (опис "aura") — див. BossAura.
+var aura: BossAura
 ## Опис ворога з рівня (здібності беруть із нього налаштування).
 var definition: Dictionary = {}
 ## Здібності (EnemyAbility): мерехтіння, кидки, павутина, тотем...
@@ -260,6 +262,12 @@ func configure(source: Dictionary, hp_scale: float, damage_scale: float) -> void
 			stationary = true
 			attack_range = 0.0
 			aggro_range = 30.0
+		"decoy":
+			# Двійник боса: бігає й б'є, як справжній (слабше), але падає з
+			# одного удару. Одразу бачить героя — в залі боса ховатись ніде.
+			kind = Kind.MELEE
+			attack_range = 2.6
+			aggro_range = 40.0
 		_:
 			kind = Kind.MELEE
 	max_hp = float(definition.get("hp", max_hp)) * hp_scale
@@ -301,6 +309,10 @@ func configure_boss(source: Dictionary, hp_scale: float, damage_scale: float) ->
 	aggro_range = 18.0
 	attack_range = 3.0
 	slam_every = 3
+	if definition.has("aura"):
+		aura = BossAura.new()
+		add_child(aura)
+		aura.configure(definition.aura, target_height)
 
 func setup(player: Node3D, model_scene: PackedScene) -> void:
 	_player = player
@@ -395,6 +407,8 @@ func strike_now(windup: float) -> void:
 func set_hidden(hidden: bool) -> void:
 	_hidden = hidden
 	_model.visible = not hidden
+	if aura != null:
+		aura.visible = not hidden
 	collision_layer = 0 if hidden else 4
 	if _health_bar != null:
 		_health_bar.visible = not hidden and (elite != null or kind == Kind.BOSS or current_hp < max_hp)
@@ -793,7 +807,12 @@ func _begin_windup() -> void:
 	_windup_left = _windup_total
 	velocity.x = 0.0
 	velocity.z = 0.0
-	_play_once(["Punch", "Bite_Front", "Headbutt", "Weapon"])
+	# Свої удари по черзі ("attack_anims": правою, лівою...), інакше — що є.
+	var attack_anims: Array = definition.get("attack_anims", [])
+	if not attack_anims.is_empty():
+		_play_once([attack_anims[_attack_counter % attack_anims.size()]] + ["Punch", "Weapon"])
+	else:
+		_play_once(["Punch", "Bite_Front", "Headbutt", "Weapon"])
 
 	if kind == Kind.RANGED:
 		# Снаряд "набухає" в руці — це і є попередження для гравця.
@@ -1260,6 +1279,9 @@ func _die() -> void:
 	_fuse_left = -1.0
 	_charge_state = 0
 	_dying = true
+	if aura != null:
+		aura.collapse()
+		aura = null
 	velocity = Vector3.ZERO
 	_knockback = Vector3.ZERO
 	_frozen_left = 0.0
@@ -1280,7 +1302,8 @@ func _die() -> void:
 	# Даємо дограти смерть, а тоді тіло провалюється під підлогу. Таймер
 	# стоїть на паузі разом із грою; якщо ворог зникне раніше (гравець
 	# вийшов з данжу), виклик просто не відбудеться.
-	get_tree().create_timer(DEATH_LINGER, false).timeout.connect(_sink)
+	# Фінальний бос падає довго й показово ("death_linger" в описі).
+	get_tree().create_timer(float(definition.get("death_linger", DEATH_LINGER)), false).timeout.connect(_sink)
 
 func _sink() -> void:
 	var tween := create_tween()
@@ -1317,6 +1340,11 @@ func _play(wanted: String) -> void:
 	# Стоїть, але повертається до героя — переступає на місці, якщо вміє.
 	if wanted == "Idle" and _turning:
 		candidates = ["Turn", "Idle"]
+	# Фінальний бос у фазах 2-3 стоїть у хижій стійці, а в нестямі — біжить.
+	elif wanted == "Idle" and phases != null and phases.phase >= 2:
+		candidates = ["Idle_Rage", "Idle"]
+	if wanted == "Walk" and phases != null and phases.phase >= 3:
+		candidates = ["Run", "Walk"]
 	if wanted == "Walk":
 		candidates.append_array(["Fast_Flying", "Run"])
 	candidates.append_array(["Idle", "Flying_Idle"])

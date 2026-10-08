@@ -869,6 +869,11 @@ func _on_spawn_requested(position: Vector3, definition: Dictionary, source: Enem
 		enemy.died.connect(func(_p: Vector3, _xp: int) -> void:
 			if is_instance_valid(source):
 				source.summons_alive -= 1)
+		# Двійники живуть, лише поки живий їхній господар.
+		if definition.get("kind", "") == "decoy":
+			source.died.connect(func(_p: Vector3, _xp: int) -> void:
+				if is_instance_valid(enemy) and enemy.is_alive():
+					enemy.take_damage(1.0e9))
 
 ## Пілони боса всі впали — він на кілька секунд відкритий для ударів.
 func _on_ward_broken(boss: Enemy3D) -> void:

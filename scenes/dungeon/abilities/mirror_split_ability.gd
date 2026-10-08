@@ -1,14 +1,17 @@
 extends EnemyAbility
 
 ## ДЗЕРКАЛЬНИЙ РОЗКОЛ (лише мега-боси). Бос розколюється на кілька
-## примар-двійників — той самий вигляд, та сама поза, розставлені по
-## залі. Двійники не б'ють і падають з одного удару (kind "totem":
-## не рухаються, attack_range 0) — і тьмяніші, без сяйва, тож зблизька
-## видно різницю, а на бігу від справжнього боса не відрізниш. У
-## нестямі (фаза 3) двійників троє замість двох — гадати важче.
+## примар-двійників, розставлених по залі. Якщо в описі боса є
+## "clone_model" (фінальний бос: справжній — білий, двійники — темні),
+## двійники ЖИВІ (kind "decoy"): біжать до героя й б'ють (слабше за боса),
+## але падають з одного удару. Без неї — як раніше: тьмяні нерухомі
+## примари, що не б'ють (kind "totem"). У нестямі (фаза 3) двійників
+## троє замість двох.
 
 const WINDUP := 0.5
 const DIM_TINT := Color(0.5, 0.5, 0.62)
+## Скільки шкоди від боса б'є живий двійник.
+const CLONE_DAMAGE_SHARE := 0.3
 
 func _init() -> void:
 	id = "mirror_split"
@@ -25,13 +28,24 @@ func resolve() -> void:
 	if rig != null:
 		rig.shake(0.15)
 	var decoy := enemy.definition.duplicate(true)
-	decoy.kind = "totem"
 	decoy.hp = 1.0
-	decoy.damage = 0.0
 	decoy.no_elite = true
 	decoy.xp = 0
-	decoy.tint = DIM_TINT
-	decoy.glow = Color.BLACK
+	if decoy.has("clone_model"):
+		decoy.model = decoy.clone_model
+		decoy.kind = "decoy"
+		decoy.damage = float(decoy.get("damage", 10.0)) * CLONE_DAMAGE_SHARE
+		decoy.speed = float(decoy.get("speed", 3.0)) * 0.9
+		decoy.tint = Color.WHITE
+		decoy.glow = Color.BLACK
+	else:
+		decoy.kind = "totem"
+		decoy.damage = 0.0
+		decoy.tint = DIM_TINT
+		decoy.glow = Color.BLACK
+	decoy.erase("aura")
+	decoy.erase("transform_tints")
+	decoy.erase("transform_glows")
 	decoy.erase("abilities")
 	decoy.erase("group")
 	decoy.erase("summon")

@@ -1250,7 +1250,7 @@ const LEVELS := [
 		"boss_title": "Тіньовий Володар",
 		"boss_flavor": "Скільки їх тут насправді? Є лише один спосіб дізнатись.",
 		"title": "Тіньовий Володар",
-		"subtitle": "Фінальний мега-бос. Двійники не б'ють, та відрізнити їх від справжнього можна лише зблизька.",
+		"subtitle": "Фінальний мега-бос. Його темні двійники нападають, та падають з одного удару.",
 		"difficulty": 15,
 		"stats": {"hp": 12.5, "damage": 7.2, "gold": 14.0},
 		"theme": {
@@ -1263,11 +1263,20 @@ const LEVELS := [
 			"decor": "abyss",
 		},
 		"enemies": {},
-		"boss": {"name": "Тіньовий Володар", "model": "res://assets/models/monsters/Ninja.glb", "style": "shadow",
+		# Тіньовий Володар — моделі гравця: біла (сам бос) і темна (двійники),
+		# скелет і анімації — D:/RuneHorde_work/scripts/blender/rig_final.py:
+		# Idle, Idle_Rage (фази 2-3), Walk, Run (фаза 3), Turn, Weapon/Weapon2
+		# (удари по черзі), Cast (промені), Summon (розкол), Roar (перехід
+		# фази), Jump, HitReact, Death. Аура (BossAura) — рунне коло й іскри.
+		"boss": {"name": "Тіньовий Володар", "model": "res://assets/models/monsters/shadow_lord.glb", "style": "shadow",
+			"clone_model": "res://assets/models/monsters/shadow_lord_clone.glb",
 			"hp": 1600.0, "damage": 32.0, "speed": 3.6, "height": 3.6, "xp": 600,
-			"tint": Color(0.3, 0.15, 0.45), "glow": Color(0.5, 0.1, 0.8),
-			"transform_tints": [Color(0.2, 0.08, 0.35), Color(0.08, 0.02, 0.2)],
-			"transform_glows": [Color(0.6, 0.15, 0.9), Color(0.85, 0.2, 1.0)],
+			"attack_anims": ["Weapon", "Weapon2"],
+			"death_linger": 3.0,
+			"special_anims": {"mirror_split": ["Summon"], "beams": ["Cast"]},
+			"aura": {"color": Color(0.75, 0.55, 1.0), "rage_color": Color(1.0, 0.25, 0.85), "radius": 2.0},
+			"transform_tints": [Color(0.95, 0.9, 1.0), Color(0.9, 0.82, 1.0)],
+			"transform_glows": [Color(0.35, 0.1, 0.6), Color(0.6, 0.15, 0.9)],
 			"abilities": [
 				{"id": "mirror_split", "cooldown": 16.0, "first": 6.0},
 				{"id": "blink", "cooldown": 7.0, "first": 3.0},

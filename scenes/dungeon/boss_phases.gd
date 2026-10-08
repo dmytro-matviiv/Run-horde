@@ -85,6 +85,14 @@ func _enter_phase(next: int) -> void:
 		var tint: Color = transform_tints[idx]
 		var glow: Color = transform_glows[idx] if idx < transform_glows.size() else style.color
 		Enemy3D.paint_model(_boss.get("_model"), tint, glow)
+	# Свій рев переходу фази (модель має "Roar"): бос завмирає й реве, аура
+	# густішає й набирає колір люті, з неба б'є стовп світла.
+	_boss.play_once(["Roar"])
+	if _boss.aura != null:
+		_boss.hold_still(1.5)
+		_boss.aura.set_phase(phase)
+		CombatVfx.sky_beam(parent, _boss.global_position, style.color)
+		CombatVfx.shockwave(parent, _boss.global_position, 11.0, style.color.lerp(Color.WHITE, 0.4), 0.9)
 	var rig := get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
 		rig.shake(0.3)
