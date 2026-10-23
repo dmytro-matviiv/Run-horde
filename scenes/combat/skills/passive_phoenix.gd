@@ -36,5 +36,5 @@ func on_lethal(player: Node) -> bool:
 	for enemy: Enemy3D in player.enemies_in_radius(BLAST_RADIUS, false):
 		var push: Vector3 = enemy.global_position - player.global_position
 		push.y = 0.0
-		player.deal_damage(enemy, BLAST_DAMAGE, push.normalized() * BLAST_KNOCKBACK, true)
+		player.deal_damage(enemy, BLAST_DAMAGE, push.normalized() * BLAST_KNOCKBACK, true, id)
 	return true

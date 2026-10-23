@@ -35,7 +35,7 @@ func on_kill(player: Node, enemy: Node) -> void:
 	CombatVfx.shockwave(player.get_parent(), center, BURST_RADIUS, MARK_COLOR, 0.4)
 	for other: Enemy3D in player.enemies_in_radius(BURST_RADIUS + center.distance_to(player.global_position), false):
 		if other.global_position.distance_to(center) <= BURST_RADIUS:
-			player.deal_damage(other, BURST_DAMAGE, Vector3.ZERO, false)
+			player.deal_damage(other, BURST_DAMAGE, Vector3.ZERO, false, id)
 
 func tick(_player: Node, _delta: float) -> void:
 	# Прибираємо згаслі мітки, щоб словник не ріс увесь похід.

@@ -44,5 +44,5 @@ func _update(player: Node, delta: float) -> void:
 	CombatVfx.sky_beam(player.get_parent(), spot, color)
 	for enemy: Enemy3D in player.enemies_near(spot, SPLASH_RADIUS):
 		var direct := enemy.global_position.distance_to(spot) < 0.3
-		player.deal_damage(enemy, DAMAGE if direct else DAMAGE * SPLASH, Vector3.ZERO, direct)
+		player.deal_damage(enemy, DAMAGE if direct else DAMAGE * SPLASH, Vector3.ZERO, direct, id)
 	player.shake_camera(0.05)

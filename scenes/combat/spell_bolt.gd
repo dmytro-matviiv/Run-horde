@@ -17,6 +17,8 @@ static var _meshes: Dictionary = {}
 static var _card_material: StandardMaterial3D
 
 var kind := "arcane"
+## Хто випустив: &"weapon" (посох) чи id здібності — для підсумків походу.
+var source: StringName = &"weapon"
 var damage_multiplier := 1.0
 var color := Color.WHITE
 ## Як швидко снаряд доводиться на ціль, рад/с (арканна стріла).
@@ -119,7 +121,7 @@ func _impact(position: Vector3, collider: Variant) -> void:
 		_hit_ids.append(enemy.get_instance_id())
 		var push := _velocity
 		push.y = 0.0
-		_player.deal_damage(enemy, damage_multiplier, push.normalized() * 0.6, false)
+		_player.deal_damage(enemy, damage_multiplier, push.normalized() * 0.6, false, source)
 		if on_hit.is_valid():
 			on_hit.call(enemy, position)
 		if pierce > 0:

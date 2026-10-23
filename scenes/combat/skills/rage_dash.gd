@@ -68,7 +68,7 @@ func _update(player: Node, delta: float) -> void:
 		push.y = 0.0
 		if push.length() < 0.1:
 			push = player.facing_vector()
-		player.deal_damage(enemy, DAMAGE * player.dash_power(), push.normalized() * KNOCKBACK, true)
+		player.deal_damage(enemy, DAMAGE * player.dash_power(), push.normalized() * KNOCKBACK, true, id)
 		CombatVfx.hitstop(player.get_tree(), 0.04)
 	if _dash_left <= 0.0:
 		_dash_left = -1.0

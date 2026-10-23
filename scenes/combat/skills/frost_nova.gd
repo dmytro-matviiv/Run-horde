@@ -23,7 +23,7 @@ func _use(player: Node) -> bool:
 	CombatVfx.shockwave(parent, center, RADIUS * 0.6, Color(1, 1, 1, 0.8), 0.3)
 	CombatVfx.impact(parent, center + Vector3.UP, color, true)
 	for enemy: Enemy3D in player.enemies_in_radius(RADIUS):
-		player.deal_damage(enemy, DAMAGE, Vector3.ZERO, true)
+		player.deal_damage(enemy, DAMAGE, Vector3.ZERO, true, id)
 		if enemy.is_alive():
 			enemy.freeze(FREEZE * player.spell_power())
 	player.shake_camera(0.08)

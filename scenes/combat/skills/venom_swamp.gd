@@ -23,6 +23,7 @@ func _use(player: Node) -> bool:
 	var target: Enemy3D = player.get("_target")
 	if target != null and is_instance_valid(target) and target.is_alive():
 		at = target.global_position
-	PoisonCloud.spawn(player.get_parent(), player, at, RADIUS * sqrt(player.spell_power()), DURATION,
+	var cloud := PoisonCloud.spawn(player.get_parent(), player, at, RADIUS * sqrt(player.spell_power()), DURATION,
 		TICK_DAMAGE, SLOW)
+	cloud.source = id
 	return true

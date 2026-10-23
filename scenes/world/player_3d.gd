@@ -227,6 +227,19 @@ const PERFECT_SLOWMO := 0.5
 const PERFECT_SLOWMO_SCALE := 0.35
 const PERFECT_CRIT_TIME := 2.0
 const PERFECT_COLOR := Color(0.5, 0.95, 1.0)
+## Щит після воскресіння за відео: золотава куля, світиться краями.
+const REVIVE_SHIELD_COLOR := Color(1.0, 0.82, 0.4)
+const REVIVE_SHIELD_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_back, depth_draw_never, shadows_disabled;
+uniform vec4 color : source_color = vec4(1.0, 0.82, 0.4, 1.0);
+uniform float strength = 1.0;
+void fragment() {
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.2);
+	float shimmer = 0.85 + 0.15 * sin(TIME * 6.0 + UV.y * 18.0);
+	ALBEDO = color.rgb * (0.12 + rim * 1.3) * shimmer * strength;
+}
+"""
 
 const HEALTH_BAR_SCRIPT := preload("res://scenes/dungeon/health_bar_3d.gd")
 
@@ -248,6 +261,8 @@ var combat_input_enabled := true
 
 ## Хто саме зараз у грі і з чим. Задається з GameState у _ready.
 var hero_def: HeroDef
+## Скільки шкоди завдало кожне джерело за похід: {&"weapon": ..., id здібності: ...}.
+var damage_by_source: Dictionary = {}
 var weapon_def: WeaponDef
 var passive: HeroPassive3D
 
@@ -1442,9 +1457,13 @@ func _tick_skills(delta: float) -> void:
 ## Єдине місце, де героєві рахується шкода: сюди приходять і звичайні
 ## удари, і здібності, і пасивки. Тут же діють мітка ворога, димова
 ## завіса й критичні удари.
-func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool) -> void:
+## source — хто вдарив: &"weapon" (зброя), id здібності чи пасивки. Для
+## екрана підсумків данжу (damage_by_source).
+func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool,
+		source: StringName = &"weapon") -> void:
 	if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive():
 		return
+	var hp_before := enemy.current_hp
 	var crit := randf() < _crit_chance or _perfect_crit_left > 0.0
 	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
 	if _bonus_damage_left > 0.0:
@@ -1456,6 +1475,10 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 	if passive != null:
 		amount = passive.modify_damage(self, enemy, amount)
 	enemy.take_damage(amount, knockback * _knockback_factor, crit, heavy)
+	# Скільки здоров'я ворог справді втратив (щит, тотем і добивання
+	# вже враховані).
+	var dealt := maxf(hp_before - enemy.current_hp, 0.0)
+	damage_by_source[source] = float(damage_by_source.get(source, 0.0)) + dealt
 	hit_landed.emit(amount, crit)
 	# Вампіризм: частина завданої шкоди повертається здоров'ям.
 	if _lifesteal > 0.0:
@@ -1616,6 +1639,60 @@ func _die() -> void:
 		_target_marker.visible = false
 	animation_tree.set("parameters/Dead/blend_amount", 1.0)
 	died.emit()
+
+## Воскресіння за відео (данж): частина здоров'я й щит на кілька секунд.
+## Перезарядка здібностей лишається, як була, — лише перекат готовий
+## одразу, щоб було чим вирватись з оточення.
+func revive(hp_fraction: float, shield_seconds: float) -> void:
+	if not _dead:
+		return
+	_dead = false
+	_attack_step = -1
+	_roll_left = 0.0
+	velocity = Vector3.ZERO
+	animation_tree.set("parameters/Dead/blend_amount", 0.0)
+	current_hp = max_hp * hp_fraction
+	_dodge_cooldown_left = 0.0
+	_invulnerable_left = maxf(_invulnerable_left, shield_seconds)
+	_update_health_bar()
+	health_changed.emit(current_hp, max_hp)
+	CombatVfx.shockwave(get_parent(), global_position, 4.0, REVIVE_SHIELD_COLOR, 0.6)
+	CombatVfx.impact(get_parent(), global_position + Vector3.UP * 1.0, REVIVE_SHIELD_COLOR, true)
+	_show_revive_shield(shield_seconds)
+
+## Щит воскресіння: світна куля довкола героя, що наприкінці блимає й
+## спадає — видно, скільки ще він захищає.
+func _show_revive_shield(seconds: float) -> void:
+	var shield := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.05
+	sphere.height = 2.1
+	sphere.radial_segments = 20
+	sphere.rings = 10
+	shield.mesh = sphere
+	var material := ShaderMaterial.new()
+	var shader := Shader.new()
+	shader.code = REVIVE_SHIELD_SHADER
+	material.shader = shader
+	material.set_shader_parameter(&"color", REVIVE_SHIELD_COLOR)
+	shield.material_override = material
+	shield.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(shield)
+	shield.position = Vector3(0, 0.95, 0)
+	shield.scale = Vector3.ONE * 0.2
+	var tween := shield.create_tween()
+	tween.tween_property(shield, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(maxf(seconds - 0.25 - 0.8, 0.0))
+	# Останні 0.8 с — блимає: щит от-от спаде.
+	for i in 4:
+		tween.tween_method(func(value: float) -> void:
+			material.set_shader_parameter(&"strength", value), 1.0, 0.25, 0.1)
+		tween.tween_method(func(value: float) -> void:
+			material.set_shader_parameter(&"strength", value), 0.25, 1.0, 0.1)
+	tween.tween_property(shield, "scale", Vector3.ONE * 1.3, 0.2)
+	tween.parallel().tween_method(func(value: float) -> void:
+		material.set_shader_parameter(&"strength", value), 1.0, 0.0, 0.2)
+	tween.tween_callback(shield.queue_free)
 
 ## Здібність, обрана в поході (див. RunUpgrades). Кожен випадок тут
 ## щось реально змінює в бою — саме тому список здібностей у кожного

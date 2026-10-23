@@ -23,5 +23,6 @@ func _use(player: Node) -> bool:
 	var target: Enemy3D = player.get("_target")
 	if target != null and is_instance_valid(target) and target.is_alive():
 		at = target.global_position
-	RuneSeal.spawn(player.get_parent(), player, at, RADIUS * sqrt(player.spell_power()), DELAY, DAMAGE, HOLD)
+	var seal := RuneSeal.spawn(player.get_parent(), player, at, RADIUS * sqrt(player.spell_power()), DELAY, DAMAGE, HOLD)
+	seal.source = id
 	return true

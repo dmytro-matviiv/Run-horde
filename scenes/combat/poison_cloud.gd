@@ -11,6 +11,8 @@ const TICK := 0.5
 const COLOR := Color(0.45, 0.95, 0.3, 0.85)
 
 var radius := 2.0
+## Хто лишив хмару: &"weapon" (посох отрути) чи id здібності.
+var source: StringName = &"weapon"
 var duration := 3.0
 var tick_damage := 0.3
 ## Частка швидкості ворога всередині (1 — не сповільнює).
@@ -55,7 +57,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_tick_left = TICK
 	for enemy: Enemy3D in _player.enemies_near(global_position, radius):
-		_player.deal_damage(enemy, tick_damage, Vector3.ZERO, false)
+		_player.deal_damage(enemy, tick_damage, Vector3.ZERO, false, source)
 		if slow < 1.0 and enemy.is_alive():
 			enemy.apply_slow(slow, TICK + 0.3)
 

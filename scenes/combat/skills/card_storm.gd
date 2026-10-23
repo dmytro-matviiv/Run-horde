@@ -24,6 +24,7 @@ func _use(player: Node) -> bool:
 	for i in CARDS:
 		var angle := TAU * float(i) / CARDS
 		var card := SpellBolt.create(player, "card", DAMAGE * player.spell_power(), color)
+		card.source = id
 		card.spin = SPIN
 		card.boomerang = true
 		card.pierce = 99

@@ -25,6 +25,7 @@ func _use(player: Node) -> bool:
 	for i in BOLTS:
 		var angle := TAU * float(i) / BOLTS
 		var bolt := SpellBolt.create(player, "arcane", DAMAGE, color)
+		bolt.source = id
 		bolt.homing = HOMING
 		if not enemies.is_empty():
 			bolt.target = enemies[i % enemies.size()]

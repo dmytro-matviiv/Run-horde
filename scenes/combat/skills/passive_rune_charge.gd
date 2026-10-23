@@ -42,5 +42,5 @@ func on_hit(player: Node, _enemy: Node, _amount: float, _heavy: bool) -> void:
 	for enemy: Enemy3D in player.enemies_in_radius(RADIUS):
 		var push: Vector3 = enemy.global_position - player.global_position
 		push.y = 0.0
-		player.deal_damage(enemy, DAMAGE, push.normalized() * KNOCKBACK, false)
+		player.deal_damage(enemy, DAMAGE, push.normalized() * KNOCKBACK, false, id)
 	_bursting = false

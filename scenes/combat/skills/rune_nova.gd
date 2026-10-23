@@ -41,7 +41,7 @@ func _update(player: Node, delta: float) -> void:
 	for enemy: Enemy3D in player.enemies_in_radius(radius):
 		var push: Vector3 = enemy.global_position - player.global_position
 		push.y = 0.0
-		player.deal_damage(enemy, DAMAGE * power, push.normalized() * KNOCKBACK, true)
+		player.deal_damage(enemy, DAMAGE * power, push.normalized() * KNOCKBACK, true, id)
 		hits += 1
 	CombatVfx.shockwave(player.get_parent(), player.global_position, radius, Color(1, 1, 1, 0.7), 0.3)
 	player.shake_camera(0.14 if hits > 0 else 0.06)

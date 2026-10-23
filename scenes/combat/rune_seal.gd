@@ -14,6 +14,8 @@ const RUNES := 6
 static var _rune_mesh: BoxMesh
 
 var radius := 1.7
+## Хто поставив печать: &"weapon" (книга рун) чи id здібності.
+var source: StringName = &"weapon"
 var delay := 0.45
 var damage := 1.0
 var hold := 0.0
@@ -76,7 +78,7 @@ func _explode() -> void:
 	for enemy: Enemy3D in _player.enemies_near(global_position, radius):
 		var push := enemy.global_position - global_position
 		push.y = 0.0
-		_player.deal_damage(enemy, damage, push.normalized() * (2.5 if big else 1.2), big)
+		_player.deal_damage(enemy, damage, push.normalized() * (2.5 if big else 1.2), big, source)
 	if big:
 		_player.shake_camera(0.1)
 

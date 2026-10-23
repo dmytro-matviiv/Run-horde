@@ -51,7 +51,7 @@ func _update(player: Node, delta: float) -> void:
 	for enemy: Enemy3D in player.enemies_in_radius(radius):
 		var push: Vector3 = enemy.global_position - player.global_position
 		push.y = 0.0
-		player.deal_damage(enemy, damage, push.normalized() * KNOCKBACK, true)
+		player.deal_damage(enemy, damage, push.normalized() * KNOCKBACK, true, id)
 		hits += 1
 	CombatVfx.hitstop(player.get_tree(), 0.05 if hits > 0 else 0.0)
 	player.shake_camera(0.1 if hits > 0 else 0.05)

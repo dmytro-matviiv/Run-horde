@@ -42,7 +42,7 @@ func _update(player: Node, delta: float) -> void:
 	CombatVfx.shockwave(player.get_parent(), player.global_position, radius, color, TICK)
 	var damage := TICK_DAMAGE * (1.0 + 0.15 * talent_level(player)) * _ring_power(player)
 	for enemy: Enemy3D in player.enemies_in_radius(radius):
-		player.deal_damage(enemy, damage, Vector3.ZERO, false)
+		player.deal_damage(enemy, damage, Vector3.ZERO, false, id)
 
 func _radius(player: Node) -> float:
 	return (RADIUS + 0.2 * talent_level(player)) * (1.0 + (_ring_power(player) - 1.0) * 0.5)
