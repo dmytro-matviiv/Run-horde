@@ -1,14 +1,15 @@
 extends EnemyAbility
 
 ## ВИР БЕЗОДНІ (лише мега-боси). Бос розкриває під героєм (а не під собою)
-## розлом, що затягує (Player3D.apply_pull) і пече, поки той стоїть у
-## радіусі. На відміну від кілець чи метеоритів це не миттєвий удар —
-## вир лишається на кілька секунд, і сама втеча з нього забирає час,
-## протягом якого бос б'є далі. У нестямі (фаза 3) розкриваються два
+## розлом, що затягує (Player3D.apply_pull). Сам вир майже не ранить —
+## слабко пече лише в ядрі (HazardRift.CORE_RADIUS); його небезпека в
+## іншому: втеча забирає час, протягом якого бос б'є далі. У нестямі (фаза 3) розкриваються два
 ## вири одразу в різних місцях — тікати нема куди безпечно.
 
 const WINDUP := 0.8
 const COLOR := Color(0.55, 0.2, 0.85)
+## Скільки шкоди боса за кожен дотик ядра (раз на HazardRift.TICK).
+const TICK_DAMAGE_SHARE := 0.08
 
 func _init() -> void:
 	id = "void_rift"
@@ -26,7 +27,7 @@ func resolve() -> void:
 	var rifts := 2 if enemy.phases != null and enemy.phases.phase >= 3 else 1
 	var radius := float(config.get("radius", 4.5))
 	var pull_speed := float(config.get("pull_speed", 3.2))
-	var tick_damage := damage() * 0.35
+	var tick_damage := damage() * TICK_DAMAGE_SHARE
 	var lifetime := float(config.get("lifetime", 6.0))
 	var rig := enemy.get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:

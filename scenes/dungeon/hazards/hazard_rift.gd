@@ -2,12 +2,19 @@ extends Node3D
 class_name HazardRift
 
 ## ВИР БЕЗОДНІ: фіолетова вирва на підлозі, що затягує героя до центру
-## (Player3D.apply_pull) і пече, поки той у радіусі дії. Вирватись можна
-## — швидкості вистачає, якщо бігти від центру, а не стояти чи бити
-## боса впритул до неї. Перекатом гравець на мить став невразливим, але
-## тягнення не скасовує — саме тому тікати треба заздалегідь.
+## (Player3D.apply_pull). Вирватись можна завжди — швидкості вистачає,
+## якщо бігти від центру, а не стояти чи бити боса впритул до неї.
+##
+## Пече лише саме ядро (CORE_RADIUS) і слабко: хто тікає — не отримує
+## нічого, хто дав себе затягнути — трохи. Перші OPENING секунд вир
+## лише розкривається (коло заливається, тяга наростає від нуля) — є час
+## рушити, перш ніж потягне на повну.
 
-const TICK := 0.4
+const TICK := 0.5
+## Скільки секунд вир розкривається: тяга наростає, ще не пече.
+const OPENING := 0.8
+## Пече лише в самому центрі (м).
+const CORE_RADIUS := 1.2
 ## Найсильніша тяга, м/с — 60% бігу героя (Player3D.RUN_SPEED 5.4).
 const MAX_PULL := 3.2
 
@@ -17,7 +24,8 @@ var _pull_speed := 3.0
 var _tick_damage := 6.0
 var _lifetime := 6.0
 var _player: Node3D
-var _tick_left := 0.15
+var _tick_left := 0.0
+var _age := 0.0
 var _marker: MeshInstance3D
 var _core: MeshInstance3D
 
@@ -36,7 +44,7 @@ static func spawn(world: Node, center: Vector3, player: Node3D, radius: float, p
 func _ready() -> void:
 	var color := Color(0.55, 0.2, 0.85)
 	_marker = CombatVfx.make_ground_marker(Color(color, 0.55), _radius)
-	_marker.set_instance_shader_parameter(&"progress", 1.0)
+	_marker.set_instance_shader_parameter(&"progress", 0.0)
 	add_child(_marker)
 	_marker.global_position = _center
 	_core = MeshInstance3D.new()
@@ -58,9 +66,14 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_lifetime -= delta
+	_age += delta
+	var opening := clampf(_age / OPENING, 0.0, 1.0)
+	_marker.set_instance_shader_parameter(&"progress", opening)
 	if _lifetime <= 0.0:
 		var fade := create_tween()
-		fade.tween_property(_marker, "modulate:a", 0.0, 0.4)
+		var marker := _marker
+		fade.tween_method(func(value: float) -> void:
+			marker.set_instance_shader_parameter(&"fade", value), 1.0, 0.0, 0.4)
 		fade.parallel().tween_property(_core, "scale", Vector3.ZERO, 0.4)
 		fade.tween_callback(queue_free)
 		set_physics_process(false)
@@ -80,8 +93,10 @@ func _physics_process(delta: float) -> void:
 	# смикало б туди-сюди через центр. І ніколи не сильніша за ~60% бігу:
 	# вирватись можна завжди, якщо тікати, а не стояти.
 	var strength := _pull_speed * (0.5 + 0.5 * (1.0 - distance / _radius)) * clampf(distance / 0.8, 0.0, 1.0)
-	var pull := offset.normalized() * minf(strength, MAX_PULL)
+	var pull := offset.normalized() * minf(strength, MAX_PULL) * opening
 	_player.apply_pull(pull)
+	if opening < 1.0 or distance > CORE_RADIUS:
+		return
 	_tick_left -= delta
 	if _tick_left <= 0.0:
 		_tick_left = TICK
