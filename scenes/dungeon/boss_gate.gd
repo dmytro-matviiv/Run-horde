@@ -10,7 +10,7 @@ class_name BossGate
 signal sealed
 
 const BARS_SCENE := ArenaAmbush.BARS_SCENE
-const BARRIER_COLOR := Color(0.85, 0.16, 0.2)
+const BARRIER_COLOR := ArenaAmbush.BARRIER_GLOW
 const BARRIER_HEIGHT := 2.4
 const BARRIER_HIDDEN_Y := -2.5
 const BARRIER_MOVE_TIME := 0.35

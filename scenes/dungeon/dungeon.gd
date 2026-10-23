@@ -23,7 +23,16 @@ const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
 const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
 const COMBAT_BUTTONS_SCRIPT := preload("res://scenes/ui/combat_buttons.gd")
 const ENEMY_SCRIPT := preload("res://scenes/dungeon/enemy_3d.gd")
-const EXIT_SCENE := preload("res://assets/models/dungeon/Arch_Door.fbx")
+## Портал виходу — та сама арка з вихровою пеленою, що й прохід у данж у
+## місті (base_island: Town/DungeonGate/Arch + Effects/Portal).
+const EXIT_ARCH_SCENE := preload("res://assets/models/dungeon/Arch.fbx")
+const PORTAL_SHADER := preload("res://scenes/world/portal.gdshader")
+## Арка в данжі менша, ніж у місті (там 1.75): стіни тут по 2 м.
+const EXIT_ARCH_SCALE := 0.9
+## Пелена в арці міста — 4.4 x 5.9 м при масштабі арки 1.75.
+const PORTAL_SIZE := Vector2(4.4, 5.9) / 1.75 * EXIT_ARCH_SCALE
+## Підійшов ближче — з'являється кнопка виходу.
+const EXIT_REACH := 3.0
 
 ## Скільки підмоги Грибного Короля може бути живою одночасно —
 ## і складність, і запобіжник для слабкого телефона.
@@ -127,6 +136,8 @@ var _alive_enemies := 0
 var _boss_defeated := false
 var _exit_position := Vector3.ZERO
 var _exit_open := false
+var _boss_spot := Vector3.ZERO
+var _exit_guide: ExitGuide
 var _map_rows: Array = []
 var _chunks: Array = []
 var _lights: Array = []
@@ -195,6 +206,7 @@ func _ready() -> void:
 
 	player.global_position = markers.start + Vector3(0, 0.2, 0)
 	_exit_position = markers.exit
+	_boss_spot = markers.boss
 	_setup_hud(level.title)
 	player.died.connect(_on_player_died)
 	player.health_changed.connect(_on_player_health_changed)
@@ -526,12 +538,17 @@ func _shut_out_around(arena: ArenaAmbush) -> void:
 		var enemy := node as Enemy3D
 		if enemy != null and enemy.is_alive():
 			enemy.shut_out = not arena.contains(enemy.global_position)
+			# Ті, хто вже в залі, б'ються з хвилями — і теж ідуть на героя.
+			if not enemy.shut_out:
+				enemy.hunting = true
+				enemy.alert()
 
 func _release_shut_out() -> void:
 	for node in enemies_root.get_children():
 		var enemy := node as Enemy3D
 		if enemy != null:
 			enemy.shut_out = false
+			enemy.hunting = false
 
 ## ХВИЛІ ЗАСІДКИ: 1) половина тих, хто жив у залі; 2) решта разом з
 ## ордою дрібноти; 3) у великій залі чи в останній засідці рівня — ще
@@ -973,20 +990,59 @@ func _show_ability_choice() -> void:
 	player.apply_run_upgrade(picked)
 	_update_status()
 
-## Вихід відчиняється лише після боса.
+## Вихід відчиняється лише після боса: у стіні кімнати боса розкривається
+## портал (як прохід у данж у місті), а довкола героя з'являється
+## стрілка, що веде до нього (ExitGuide).
 func _open_exit() -> void:
 	_exit_open = true
-	var door: Node3D = EXIT_SCENE.instantiate()
-	door.position = _exit_position + Vector3(0, 0, 0)
-	level_root.add_child(door)
+	var face := _exit_position
+	var inward := Vector3.BACK
+	var spot := _boss_spot if _boss_spot != Vector3.ZERO else _exit_position
+	var wall := DungeonBuilder.portal_wall(_map_rows, DungeonBuilder.cell_of(spot))
+	if not wall.is_empty():
+		face = wall.face
+		inward = wall.inward
+	var gate := _make_exit_portal()
+	level_root.add_child(gate)
+	gate.position = Vector3(face.x, 0.0, face.z)
+	gate.rotation.y = atan2(inward.x, inward.z)
+	# Кнопка виходу — коли герой стоїть перед порталом.
+	_exit_position = Vector3(face.x, 0.0, face.z) + inward * 1.3
+	# Портал розкривається: виростає з нуля.
+	gate.scale = Vector3(1.0, 0.05, 1.0)
+	var tween := gate.create_tween()
+	tween.tween_property(gate, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	CombatVfx.shockwave(self, _exit_position, 2.4, Color(0.66, 0.45, 1.0), 0.6)
 
-	var glow := OmniLight3D.new()
-	glow.light_color = Color(0.6, 1.0, 0.7)
-	glow.light_energy = 5.0
-	glow.omni_range = 10.0
-	glow.position = _exit_position + Vector3(0, 1.5, 0)
-	level_root.add_child(glow)
+	_exit_guide = ExitGuide.new()
+	add_child(_exit_guide)
+	_exit_guide.setup(player, _exit_position)
 	_update_status()
+
+## Арка з вихровою пеленою й фіолетовим сяйвом — дивиться вздовж +Z.
+func _make_exit_portal() -> Node3D:
+	var gate := Node3D.new()
+	gate.name = "ExitPortal"
+	var arch: Node3D = EXIT_ARCH_SCENE.instantiate()
+	arch.scale = Vector3.ONE * EXIT_ARCH_SCALE
+	gate.add_child(arch)
+	var veil := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = PORTAL_SIZE
+	veil.mesh = quad
+	var material := ShaderMaterial.new()
+	material.shader = PORTAL_SHADER
+	veil.material_override = material
+	veil.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	veil.position = Vector3(0.0, PORTAL_SIZE.y * 0.5 + 0.06, 0.12)
+	gate.add_child(veil)
+	var glow := OmniLight3D.new()
+	glow.light_color = Color(0.66, 0.45, 1.0)
+	glow.light_energy = 3.0
+	glow.omni_range = 9.0
+	glow.position = Vector3(0.0, 1.8, 1.6)
+	gate.add_child(glow)
+	return gate
 
 func _process(delta: float) -> void:
 	_update_shrine_label()
@@ -1000,7 +1056,9 @@ func _process(delta: float) -> void:
 		return
 	# Підійшов до відчиненого виходу — можна йти далі. Коли вже обирає,
 	# куди йти, кнопка не потрібна.
-	exit_button.visible = _exit_choice == null and player.global_position.distance_to(_exit_position) < 3.0
+	var offset := player.global_position - _exit_position
+	offset.y = 0.0
+	exit_button.visible = _exit_choice == null and offset.length() < EXIT_REACH
 
 func _update_shrine_label() -> void:
 	var buff: Dictionary = player.get_shrine_buff()
@@ -1057,7 +1115,7 @@ func _warm_up_rendering() -> void:
 	var holder := Node3D.new()
 	add_child(holder)
 	var center := player.global_position + Vector3(0, 1.0, 0)
-	var models: Array = [EXIT_SCENE, ExplosiveBarrel.BARREL_SCENE, SpikeTrap.PLATE_SCENE,
+	var models: Array = [EXIT_ARCH_SCENE, ExplosiveBarrel.BARREL_SCENE, SpikeTrap.PLATE_SCENE,
 		SpikeTrap.SPIKES_SCENE, Shrine.PEDESTAL_SCENE, ArenaAmbush.BARS_SCENE, RewardChest.CHEST_SCENE]
 	for symbol: String in _level.enemies:
 		for definition: Dictionary in _level.enemies[symbol]:
@@ -1099,6 +1157,13 @@ func _warm_up_rendering() -> void:
 	holder.add_child(strip)
 	strip.global_position = center - Vector3(0, 0.9, 0)
 	CombatVfx.impact_decal(holder, center - Vector3(0, 0.9, 0), 1.0, Color(1.0, 0.45, 0.1))
+	var portal := _make_exit_portal()
+	holder.add_child(portal)
+	portal.global_position = center - Vector3(0, 0.9, 0)
+	portal.scale = Vector3.ONE * 0.2
+	var guide := ExitGuide.new()
+	holder.add_child(guide)
+	guide.setup(player, center + Vector3(0, 0, 20))
 	var shot := EnemyProjectile.create(0.0)
 	holder.add_child(shot)
 	shot.global_position = center
@@ -1137,7 +1202,9 @@ func _update_enemies(origin: Vector3) -> void:
 		if not enemy is Enemy3D:
 			continue
 		var distance := origin.distance_to((enemy as Node3D).global_position)
-		(enemy as Enemy3D).set_sleeping(distance > awake_distance)
+		# Ворог засідки не спить, хоч би як далеко був у великій залі: інакше
+		# частина хвилі завмирала б, і героя змушувало б її шукати.
+		(enemy as Enemy3D).set_sleeping(distance > awake_distance and not (enemy as Enemy3D).hunting)
 		(enemy as Enemy3D).set_animation_step(1 if distance < ENEMY_FULL_DETAIL_DISTANCE else 2)
 
 ## Якість змінилась (гравець у меню або автоматика) — одразу

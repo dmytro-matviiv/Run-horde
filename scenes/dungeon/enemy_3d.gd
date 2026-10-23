@@ -460,6 +460,11 @@ func heal(amount: float) -> void:
 	if _health_bar != null:
 		_health_bar.set_ratio(current_hp / max_hp)
 
+## Засідка: ворог іде на героя, хоч би як далеко той був у залі, і не
+## кидає погоню (leash_range не діє) — інакше у великій залі частина хвилі
+## стояла б на місці, і героя змушувало б оббігати залу.
+var hunting := false
+
 ## Помітити героя одразу, хоч би де він був (засідка).
 func alert() -> void:
 	_aggro = true
@@ -700,10 +705,10 @@ func _update_aggro(distance: float) -> void:
 			_aggro = false
 			_cancel_windup()
 		return
-	if not _aggro and distance <= aggro_range:
+	if not _aggro and (hunting or distance <= aggro_range):
 		_aggro = true
 		_repath_left = 0.0   # помітив — одразу прокладає маршрут
-	elif _aggro and distance > leash_range:
+	elif _aggro and distance > leash_range and not hunting:
 		_aggro = false
 
 func _process_melee(distance: float, delta: float) -> void:

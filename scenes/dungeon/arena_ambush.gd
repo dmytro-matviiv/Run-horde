@@ -18,7 +18,9 @@ signal cleared(center: Vector3)
 
 const BARS_SCENE := preload("res://assets/models/dungeon/Arch_bars.fbx")
 const PORTAL_COLOR := Color(0.78, 0.38, 1.0, 0.9)
-const BARRIER_GLOW := Color(0.4, 0.14, 0.56)
+## Колір рунної пелени в ґратках — той самий червоний, що й у воротах до
+## боса (BossGate): ґрати в данжі всі однакові.
+const BARRIER_GLOW := Color(0.85, 0.16, 0.2)
 const BARRIER_HEIGHT := 2.2
 ## Ґратки ховаються під підлогою й виринають за мить.
 const BARRIER_HIDDEN_Y := -2.5
@@ -179,6 +181,7 @@ func _emerge(position: Vector3, definition: Dictionary) -> void:
 	CombatVfx.shockwave(self, position, 1.4, PORTAL_COLOR, 0.35)
 	CombatVfx.impact(self, position + Vector3.UP * 0.4, PORTAL_COLOR, false)
 	var enemy: Enemy3D = _spawn.call(position, definition)
+	enemy.hunting = true
 	enemy.emerge(EMERGE_TIME)
 	_alive += 1
 	enemy.died.connect(func(_position: Vector3, _xp: int) -> void: _alive -= 1)

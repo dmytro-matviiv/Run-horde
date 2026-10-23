@@ -1389,6 +1389,48 @@ static func _count_open_sides(map_rows: Array, x: int, z: int) -> int:
 	return count
 
 ## Чи можна ходити клітинкою (x, z). За межами карти — ні.
+## Де в кімнаті боса вбудувати портал виходу: рівна ділянка стіни на три
+## клітинки, перед якою вільно. Шукаємо від клітинки боса прямо в кожен
+## бік; найкраще — північна стіна (до неї дивиться камера, портал видно
+## одразу), найгірше — південна (стоїть до камери спиною).
+## Повертає {"face": точка на лиці стіни біля підлоги, "inward": куди
+## дивиться портал (у кімнату)} або {}, якщо такої стіни немає.
+static func portal_wall(map_rows: Array, start: Vector2i) -> Dictionary:
+	const MAX_STEPS := 14
+	var best := {}
+	var best_score := INF
+	var directions := {Vector2i(0, -1): 0.0, Vector2i(-1, 0): 3.0, Vector2i(1, 0): 3.0, Vector2i(0, 1): 8.0}
+	for dir: Vector2i in directions:
+		var side := Vector2i(-dir.y, dir.x)
+		for off in [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5]:
+			var cell: Vector2i = start + side * off
+			if not _is_walkable(map_rows, cell.x, cell.y):
+				continue
+			var steps := 0
+			while steps < MAX_STEPS and _is_walkable(map_rows, cell.x + dir.x, cell.y + dir.y):
+				cell += dir
+				steps += 1
+			if steps >= MAX_STEPS:
+				continue
+			var wall := cell + dir
+			var straight := _is_walkable(map_rows, cell.x - dir.x, cell.y - dir.y)
+			for k in [-1, 1]:
+				var wall_side: Vector2i = wall + side * k
+				var floor_side: Vector2i = cell + side * k
+				if _is_walkable(map_rows, wall_side.x, wall_side.y) \
+						or not _is_walkable(map_rows, floor_side.x, floor_side.y):
+					straight = false
+			if not straight:
+				continue
+			var score: float = directions[dir] + absf(off) + steps * 0.15
+			if score < best_score:
+				best_score = score
+				best = {
+					"face": cell_center(cell) + Vector3(dir.x, 0.0, dir.y) * CELL * 0.5,
+					"inward": Vector3(-dir.x, 0.0, -dir.y),
+				}
+	return best
+
 static func is_walkable(map_rows: Array, x: int, z: int) -> bool:
 	return _is_walkable(map_rows, x, z)
 
