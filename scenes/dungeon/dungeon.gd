@@ -33,6 +33,10 @@ const EXIT_ARCH_SCALE := 0.9
 const PORTAL_SIZE := Vector2(4.4, 5.9) / 1.75 * EXIT_ARCH_SCALE
 ## Підійшов ближче — з'являється кнопка виходу.
 const EXIT_REACH := 3.0
+## Наскільки арка відступає від межі клітинок у кімнату: стіни данжу
+## стоять на межі й виступають у кімнату до ~0.35 м, арка завглибшки
+## ~0.9 м — так її спина впирається в лице стіни, а пелена вся перед нею.
+const PORTAL_WALL_OFFSET := 0.8
 
 ## Скільки підмоги Грибного Короля може бути живою одночасно —
 ## і складність, і запобіжник для слабкого телефона.
@@ -1011,10 +1015,10 @@ func _open_exit() -> void:
 		inward = wall.inward
 	var gate := _make_exit_portal()
 	level_root.add_child(gate)
-	gate.position = Vector3(face.x, 0.0, face.z)
+	gate.position = Vector3(face.x, 0.0, face.z) + inward * PORTAL_WALL_OFFSET
 	gate.rotation.y = atan2(inward.x, inward.z)
 	# Кнопка виходу — коли герой стоїть перед порталом.
-	_exit_position = Vector3(face.x, 0.0, face.z) + inward * 1.3
+	_exit_position = gate.position + inward * 1.2
 	# Портал розкривається: виростає з нуля.
 	gate.scale = Vector3(1.0, 0.05, 1.0)
 	var tween := gate.create_tween()
