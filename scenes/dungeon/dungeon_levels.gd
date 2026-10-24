@@ -46,7 +46,16 @@ const LEVELS := [
 		},
 		"enemies": {
 			"m": [
-				{"name": "Орк", "model": "res://assets/models/monsters/Orc Enemy.glb", "kind": "melee", "hp": 30.0, "damage": 8.0, "speed": 2.8, "height": 1.7, "xp": 3},
+				# Орк-рубака (модель гравця): швидкий, ходить парами. Ривок-замах
+				# (lunge) — з 4 м присідає, тесак червоніє, стрибок з ударом; зграя
+				# (pack) — поруч ще двоє рубак, і кожен б'є на 15% швидше.
+				# Скелет і анімації — D:/RuneHorde_work/scripts/blender/prep_rodin_mob.py.
+				{"name": "Орк-рубака", "model": "res://assets/models/monsters/orc_cleaver.glb", "kind": "melee",
+					"hp": 26.0, "damage": 7.0, "speed": 3.4, "height": 1.85, "xp": 3, "group": 2,
+					"attack_anims": ["Weapon"],
+					"special_anims": {"lunge": ["Windup"]},
+					"abilities": [{"id": "lunge", "cooldown": 4.0, "first": 1.0, "trigger": 4.0, "windup": 0.5, "hop": 0.55, "radius": 1.6, "damage": 1.4}],
+					"pack": {"radius": 7.0, "count": 2, "attack_speed": 1.15}},
 				{"name": "Шипастий слиз", "model": "res://assets/models/monsters/Green Spiky Blob.glb", "kind": "melee", "hp": 30.0, "damage": 8.0, "speed": 2.8, "height": 1.5, "xp": 3},
 				{"name": "Черепок", "model": "res://assets/models/monsters/Ghost Skull.glb", "kind": "melee", "hp": 26.0, "damage": 8.0, "speed": 3.1, "height": 1.5, "hover": 0.5, "xp": 3},
 			],

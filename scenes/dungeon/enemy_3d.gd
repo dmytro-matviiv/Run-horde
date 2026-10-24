@@ -153,6 +153,12 @@ var phases: BossPhases
 var aura: BossAura
 ## Опис ворога з рівня (здібності беруть із нього налаштування).
 var definition: Dictionary = {}
+## Зграя ("pack" в описі): поруч щонайменше count таких самих (та сама
+## назва) у радіусі radius — б'є швидше в attack_speed разів. Під
+## ногами тоді жевріє червоне коло: видно, що зграю краще розбити.
+var _pack_factor := 1.0
+var _pack_left := 0.0
+var _pack_marker: MeshInstance3D
 ## Здібності (EnemyAbility): мерехтіння, кидки, павутина, тотем...
 var abilities: Array[EnemyAbility] = []
 ## Тотем: стоїть на місці й сам не б'є.
@@ -606,6 +612,11 @@ func _physics_process(delta: float) -> void:
 	_sight_left -= delta
 	_stagger_left = maxf(_stagger_left - delta, 0.0)
 	_tick_status(delta)
+	if definition.has("pack"):
+		_pack_left -= delta
+		if _pack_left <= 0.0:
+			_pack_left = 0.5
+			_update_pack()
 
 	# Стоїть без діла на підлозі — рухати нічого, фізику не рахуємо.
 	if not _aggro and _grounded and velocity.is_zero_approx() and _knockback.is_zero_approx():
@@ -1188,7 +1199,34 @@ func _hold_still(seconds: float) -> void:
 func _pace() -> float:
 	if _frozen_left > 0.0:
 		return 0.0
-	return _slow_factor if _slow_left > 0.0 else 1.0
+	return (_slow_factor if _slow_left > 0.0 else 1.0) * _pack_factor
+
+## Скільки поруч таких самих ворогів — і чи діє бонус зграї.
+func _update_pack() -> void:
+	var pack: Dictionary = definition.pack
+	var radius := float(pack.get("radius", 7.0))
+	var needed := int(pack.get("count", 2))
+	var name := String(definition.get("name", ""))
+	var near := 0
+	for node in get_tree().get_nodes_in_group(&"enemies"):
+		var other := node as Enemy3D
+		if other == null or other == self or not other.is_alive():
+			continue
+		if String(other.definition.get("name", "")) != name:
+			continue
+		if other.global_position.distance_to(global_position) <= radius:
+			near += 1
+			if near >= needed:
+				break
+	var active := near >= needed
+	_pack_factor = float(pack.get("attack_speed", 1.15)) if active else 1.0
+	if active and _pack_marker == null:
+		_pack_marker = CombatVfx.make_ground_marker(Color(1.0, 0.15, 0.1, 0.45), 0.55 + target_height * 0.15)
+		_pack_marker.set_instance_shader_parameter(&"progress", 1.0)
+		add_child(_pack_marker)
+		_pack_marker.position = Vector3(0, 0.05, 0)
+	if _pack_marker != null:
+		_pack_marker.visible = active
 
 func _tick_status(delta: float) -> void:
 	if _slow_left > 0.0:
