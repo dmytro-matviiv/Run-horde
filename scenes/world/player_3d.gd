@@ -330,6 +330,9 @@ var _pull_velocity := Vector3.ZERO
 var _pull_applied := Vector3.ZERO
 ## Збили з ніг (таран щитоносця): відлітає, мить не керує рухом і не б'є.
 var _knock_left := 0.0
+## Схопили кістяні руки (чаклун): стоїть на місці, але може бити.
+var _rooted_left := 0.0
+var _root_marker: MeshInstance3D
 var _knock_velocity := Vector3.ZERO
 
 var _skills: Array[HeroSkill3D] = []
@@ -887,7 +890,7 @@ func set_attack_held(held: bool) -> void:
 		attack()
 
 func dodge() -> void:
-	if _dead or _knock_left > 0.0 or _dodge_cooldown_left > 0.0 or _roll_left > 0.0:
+	if _dead or _rooted_left > 0.0 or _knock_left > 0.0 or _dodge_cooldown_left > 0.0 or _roll_left > 0.0:
 		return
 	var direction := _get_world_direction()
 	if direction.length() < 0.1:
@@ -1136,6 +1139,13 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 	velocity.x -= _pull_applied.x
 	velocity.z -= _pull_applied.z
 	_pull_applied = Vector3.ZERO
+	if _rooted_left > 0.0:
+		_rooted_left -= delta
+		velocity.x = 0.0
+		velocity.z = 0.0
+		if _rooted_left <= 0.0 and _root_marker != null:
+			_root_marker.visible = false
+		return
 	if _knock_left > 0.0:
 		_knock_left -= delta
 		_knock_velocity = _knock_velocity.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
@@ -1662,6 +1672,23 @@ func knock_down(push: Vector3, seconds: float) -> void:
 	_abort_attacks()
 	_fire("HitShot")
 	CombatVfx.shockwave(get_parent(), global_position, 1.2, Color(0.9, 0.85, 0.7, 0.8), 0.3)
+
+## Схопили (кістяні руки чаклуна): seconds секунд на місці — ні кроку, ні
+## перекату, бити можна. Перекат, що вже йде, рятує. true — схопили.
+func root(seconds: float) -> bool:
+	if _dead or _roll_left > 0.0 or _invulnerable_left > 0.0 and _roll_guard_left > 0.0:
+		return false
+	_rooted_left = maxf(_rooted_left, seconds)
+	if _root_marker == null:
+		_root_marker = CombatVfx.make_ground_marker(Color(0.45, 1.0, 0.45, 0.6), 0.7)
+		_root_marker.set_instance_shader_parameter(&"progress", 1.0)
+		_root_marker.position.y = 0.05
+		add_child(_root_marker)
+	_root_marker.visible = true
+	return true
+
+func is_rooted() -> bool:
+	return _rooted_left > 0.0
 
 ## Воскресіння за відео (данж): частина здоров'я й щит на кілька секунд.
 ## Перезарядка здібностей лишається, як була, — лише перекат готовий

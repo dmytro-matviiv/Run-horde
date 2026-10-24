@@ -52,6 +52,10 @@ func resolve() -> void:
 func on_death() -> void:
 	pass
 
+## Ворога вдарили (і він ще живий).
+func on_damaged() -> void:
+	pass
+
 ## Здібність зараз сама веде ворога (під землею, у стрибку, у тумані) —
 ## звичайний рух і удари чекають.
 func is_busy() -> bool:

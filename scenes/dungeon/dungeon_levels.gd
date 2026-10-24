@@ -76,8 +76,28 @@ const LEVELS := [
 						{"id": "slime_trail", "radius": 0.8, "slow": 0.7, "time": 3.0, "spacing": 1.6, "max": 4}]},
 			],
 			"r": [
-				{"name": "Чаклун", "model": "res://assets/models/monsters/Wizard.glb", "kind": "ranged", "hp": 22.0, "damage": 6.0, "speed": 2.2, "height": 1.7, "xp": 4,
-					"projectile": {"color": Color(0.75, 0.35, 1.0), "speed": 10.0, "volley": 1}},
+				# Орк-палій (модель гравця): тримається на відстані й кидає глечики
+				# з олією — коло на місці падіння видно ще під час замаху, там 4 с
+				# горить калюжа. Підійшов близько — тікає бігом. Глечик поки
+				# заглушка (fire_jug.tscn) — чекає 3D-модель гравця.
+				{"name": "Орк-палій", "model": "res://assets/models/monsters/orc_pyro.glb", "kind": "ranged",
+					"hp": 22.0, "damage": 8.0, "speed": 2.6, "height": 1.8, "xp": 4, "no_shot": true,
+					"attack_range": 9.0, "flee": {"distance": 4.5, "speed": 1.3},
+					"special_anims": {"lob": ["Weapon"]},
+					"abilities": [{"id": "lob", "cooldown": 3.5, "first": 1.0, "min": 4.5, "radius": 1.6, "pool": 4.0,
+						"aim_first": true, "color": Color(1.0, 0.45, 0.1), "shell": "res://scenes/dungeon/hazards/fire_jug.tscn"}]},
+				# Склепний чаклун (модель гравця) — підтримка, пріоритетна ціль:
+				# піднімає кістяні руки, що тримають героя 1 с (відкотись), кладе
+				# зелений щит на найближчого орка, вдарений — телепортується
+				# (раз на 10 с). Скелет і анімації — scripts/blender/rig_warlock.py.
+				{"name": "Склепний чаклун", "model": "res://assets/models/monsters/crypt_warlock.glb", "kind": "ranged",
+					"hp": 24.0, "damage": 6.0, "speed": 2.0, "height": 1.85, "xp": 6, "no_elite": true,
+					"projectile": {"color": Color(0.45, 1.0, 0.5), "speed": 9.0, "volley": 1},
+					"special_anims": {"grasp": ["Cast"], "dark_shield": ["Support"]},
+					"abilities": [
+						{"id": "grasp", "cooldown": 8.0, "first": 3.0, "count": 2, "radius": 1.0, "tell": 1.0, "hold": 1.0, "damage": 0.5},
+						{"id": "dark_shield", "cooldown": 7.0, "first": 1.5, "range": 10.0, "amount": 0.6, "seconds": 12.0, "target": "Орк"},
+						{"id": "phase_step", "cooldown": 10.0, "first": 0.0, "min": 5.0, "max": 8.0}]},
 			],
 		},
 		"boss": {"name": "Демон Склепів", "model": "res://assets/models/monsters/Demon-LnfIziKv4o.glb", "style": "demon",

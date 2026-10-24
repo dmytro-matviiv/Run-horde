@@ -196,6 +196,10 @@ var _charge_hit := false
 var _charge_cooldown_left := 0.0
 var _wall_stunned := false
 var _stun_stars: Node3D
+## Темний щит від чаклуна: скільки шкоди ще поглине і скільки секунд діє.
+var _absorb := 0.0
+var _absorb_left := 0.0
+var _absorb_bubble: MeshInstance3D
 var _summon_left := 4.0
 var _volley_left := 3.0
 var _dragon_charge_left := 5.0
@@ -392,6 +396,48 @@ func begin_special(special: String, windup: float, color: Color, radius: float) 
 
 func face_player(speed: float) -> void:
 	_face_player(speed)
+
+func face_point(point: Vector3) -> void:
+	var direction := point - global_position
+	direction.y = 0.0
+	if direction.length() > 0.05:
+		_face(direction, 100.0)
+
+## Темний щит (DarkShieldAbility): зелена сфера поглинає amount шкоди.
+func add_absorb(amount: float, seconds: float, color: Color) -> void:
+	_absorb = amount
+	_absorb_left = seconds
+	if _absorb_bubble == null:
+		_absorb_bubble = MeshInstance3D.new()
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.5
+		sphere.height = 1.0
+		sphere.radial_segments = 16
+		sphere.rings = 8
+		_absorb_bubble.mesh = sphere
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		material.albedo_color = Color(color, 0.28)
+		material.cull_mode = BaseMaterial3D.CULL_BACK
+		_absorb_bubble.material_override = material
+		_absorb_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_absorb_bubble)
+	var size := maxf(target_height * 1.25, 1.4)
+	_absorb_bubble.scale = Vector3.ONE * size
+	_absorb_bubble.position = Vector3(0, target_height * 0.5, 0)
+	_absorb_bubble.visible = true
+	CombatVfx.shockwave(get_parent(), global_position, 1.5, color, 0.35)
+
+func has_absorb() -> bool:
+	return _absorb > 0.0
+
+func _drop_absorb() -> void:
+	_absorb = 0.0
+	_absorb_left = 0.0
+	if _absorb_bubble != null:
+		_absorb_bubble.visible = false
 
 func play_once(candidates: Array) -> void:
 	_play_once(candidates)
@@ -621,6 +667,10 @@ func _physics_process(delta: float) -> void:
 	_stagger_left = maxf(_stagger_left - delta, 0.0)
 	_tick_status(delta)
 	_charge_cooldown_left -= delta
+	if _absorb_left > 0.0:
+		_absorb_left -= delta
+		if _absorb_left <= 0.0:
+			_drop_absorb()
 	if definition.has("pack"):
 		_pack_left -= delta
 		if _pack_left <= 0.0:
@@ -744,6 +794,18 @@ func _process_melee(distance: float, delta: float) -> void:
 ## Стрілець тримає дистанцію: не бачить — підходить, задалеко —
 ## підходить, упритул — відступає. Стріляє лише тоді, коли бачить.
 func _process_ranged(distance: float, delta: float) -> void:
+	# Втеча ("flee"): герой підійшов близько — розвертається й тікає бігом.
+	var flee: Dictionary = definition.get("flee", {})
+	if not flee.is_empty() and distance < float(flee.get("distance", 4.5)):
+		var away := global_position - _player.global_position
+		away.y = 0.0
+		away = away.normalized()
+		var speed := move_speed * float(flee.get("speed", 1.3))
+		velocity.x = move_toward(velocity.x, away.x * speed, 20.0 * delta)
+		velocity.z = move_toward(velocity.z, away.z * speed, 20.0 * delta)
+		_face(away, 14.0)
+		_play("Run")
+		return
 	if not _sees_player() or distance > attack_range:
 		_move_along_path(delta)
 		return
@@ -758,7 +820,9 @@ func _process_ranged(distance: float, delta: float) -> void:
 		velocity.x = 0.0
 		velocity.z = 0.0
 	_face_player(10.0)
-	_try_begin_windup()
+	# "no_shot": звичайних пострілів немає — лише прийоми (палій кидає глечики).
+	if not definition.get("no_shot", false):
+		_try_begin_windup()
 
 ## Іде до героя МАРШРУТОМ по карті прохідності.
 func _move_along_path(delta: float) -> void:
@@ -1315,6 +1379,13 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 		knockback = Vector3.ZERO
 	if stationary:
 		knockback = Vector3.ZERO
+	if _absorb > 0.0:
+		var soaked := minf(_absorb, amount)
+		_absorb -= soaked
+		amount -= soaked
+		if _absorb <= 0.0:
+			_drop_absorb()
+			CombatVfx.impact(get_parent(), global_position + Vector3.UP * target_height * 0.5, Color(0.45, 1.0, 0.5), true)
 	var blocked := _shield_blocks()
 	if blocked:
 		amount *= float(definition.stone_shield.get("factor", 0.2))
@@ -1350,6 +1421,9 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 		_play_once(["Block", "HitReact"] if blocked else ["HitReact", "HitRecieve"])
 	if current_hp <= 0.0:
 		_die()
+		return
+	for ability in abilities:
+		ability.on_damaged()
 
 ## Кам'яний щит ("stone_shield" в описі): удар спереду (герой у секторі
 ## arc перед ворогом) проходить лише частково. Оглушений об стіну —
