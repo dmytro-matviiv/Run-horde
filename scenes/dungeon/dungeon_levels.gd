@@ -56,7 +56,16 @@ const LEVELS := [
 					"special_anims": {"lunge": ["Windup"]},
 					"abilities": [{"id": "lunge", "cooldown": 4.0, "first": 1.0, "trigger": 4.0, "windup": 0.5, "hop": 0.55, "radius": 1.6, "damage": 1.4}],
 					"pack": {"radius": 7.0, "count": 2, "attack_speed": 1.15}},
-				{"name": "Шипастий слиз", "model": "res://assets/models/monsters/Green Spiky Blob.glb", "kind": "melee", "hp": 30.0, "damage": 8.0, "speed": 2.8, "height": 1.5, "xp": 3},
+				# Орк-щитоносець (модель гравця) — "танк": кам'яний щит спереду
+				# пропускає 20% шкоди (обходь збоку чи ззаду, він повільно
+				# обертається), раз на 6 с таран зі щитом — збиває з ніг, а об
+				# стіну оглушується на 2 с і тоді відкритий з усіх боків.
+				# Скелет і анімації — D:/RuneHorde_work/scripts/blender/rig_shield_orc.py.
+				{"name": "Орк-щитоносець", "model": "res://assets/models/monsters/orc_shield.glb", "kind": "charger",
+					"hp": 60.0, "damage": 9.0, "speed": 2.2, "height": 1.85, "xp": 6, "tank": true, "no_elite": true,
+					"turn_factor": 0.3, "attack_anims": ["Weapon", "Weapon2"],
+					"stone_shield": {"factor": 0.2, "arc": 70.0},
+					"charge": {"cooldown": 6.0, "wall_stun": 2.0, "knockdown": 0.6, "push": 7.0, "anim": "Charge", "windup_anim": "Block"}},
 				{"name": "Черепок", "model": "res://assets/models/monsters/Ghost Skull.glb", "kind": "melee", "hp": 26.0, "damage": 8.0, "speed": 3.1, "height": 1.5, "hover": 0.5, "xp": 3},
 			],
 			"r": [

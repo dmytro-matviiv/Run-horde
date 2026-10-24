@@ -229,6 +229,8 @@ const PERFECT_CRIT_TIME := 2.0
 const PERFECT_COLOR := Color(0.5, 0.95, 1.0)
 ## Щит після воскресіння за відео: золотава куля, світиться краями.
 const REVIVE_SHIELD_COLOR := Color(1.0, 0.82, 0.4)
+## Як швидко гасне відкидання, коли героя збили з ніг (м/с за секунду).
+const KNOCK_DECAY := 14.0
 const REVIVE_SHIELD_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_add, cull_back, depth_draw_never, shadows_disabled;
@@ -326,6 +328,9 @@ var _pull_velocity := Vector3.ZERO
 ## (прискорення героя — лише ~0.23 м/с за кадр), героя розганяло в центр,
 ## там трясло на місці, а коли вир зникав — жбурляло геть.
 var _pull_applied := Vector3.ZERO
+## Збили з ніг (таран щитоносця): відлітає, мить не керує рухом і не б'є.
+var _knock_left := 0.0
+var _knock_velocity := Vector3.ZERO
 
 var _skills: Array[HeroSkill3D] = []
 var _spin_left := 0.0
@@ -703,7 +708,7 @@ func is_caster() -> bool:
 	return weapon_def != null and weapon_def.spell != "none"
 
 func attack() -> void:
-	if _dead:
+	if _dead or _knock_left > 0.0:
 		return
 	if is_ranged():
 		_try_shoot()
@@ -882,7 +887,7 @@ func set_attack_held(held: bool) -> void:
 		attack()
 
 func dodge() -> void:
-	if _dead or _dodge_cooldown_left > 0.0 or _roll_left > 0.0:
+	if _dead or _knock_left > 0.0 or _dodge_cooldown_left > 0.0 or _roll_left > 0.0:
 		return
 	var direction := _get_world_direction()
 	if direction.length() < 0.1:
@@ -911,7 +916,7 @@ func get_skills() -> Array[HeroSkill3D]:
 
 ## Натиснули кнопку здібності (0 — перша, 1 — друга).
 func use_skill(index: int = 0) -> void:
-	if _dead or _roll_left > 0.0 or index < 0 or index >= _skills.size():
+	if _dead or _knock_left > 0.0 or _roll_left > 0.0 or index < 0 or index >= _skills.size():
 		return
 	# Спершу скидаємо удар, який герой робив, і лише потім застосовуємо
 	# здібність: вона сама може задати рух (ривок люті), і зачищати його
@@ -1131,6 +1136,12 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 	velocity.x -= _pull_applied.x
 	velocity.z -= _pull_applied.z
 	_pull_applied = Vector3.ZERO
+	if _knock_left > 0.0:
+		_knock_left -= delta
+		_knock_velocity = _knock_velocity.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
+		velocity.x = _knock_velocity.x
+		velocity.z = _knock_velocity.z
+		return
 	# Кілька вирів разом тягнуть не сильніше за MAX_PULL_SPEED — вирватись
 	# можна завжди.
 	var pull := _pull_velocity.limit_length(MAX_PULL_SPEED)
@@ -1639,6 +1650,18 @@ func _die() -> void:
 		_target_marker.visible = false
 	animation_tree.set("parameters/Dead/blend_amount", 1.0)
 	died.emit()
+
+## Збили з ніг: відкидає (push, м/с, гасне) і seconds секунд герой не
+## керує рухом, не б'є й не котиться. Перекат, що вже йде, рятує.
+func knock_down(push: Vector3, seconds: float) -> void:
+	if _dead or _roll_left > 0.0:
+		return
+	_knock_left = seconds
+	_knock_velocity = Vector3(push.x, 0.0, push.z)
+	_attack_step = -1
+	_abort_attacks()
+	_fire("HitShot")
+	CombatVfx.shockwave(get_parent(), global_position, 1.2, Color(0.9, 0.85, 0.7, 0.8), 0.3)
 
 ## Воскресіння за відео (данж): частина здоров'я й щит на кілька секунд.
 ## Перезарядка здібностей лишається, як була, — лише перекат готовий
