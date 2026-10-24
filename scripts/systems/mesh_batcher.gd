@@ -31,11 +31,20 @@ static var _tinted_meshes: Dictionary = {}
 ## Зібрані розміщення: ключ (меш + матеріал) -> {mesh, material, transforms}
 var _batches: Dictionary = {}
 
+## Лише записувати, що й де стоїть (placements: [[scene, transform]]), без
+## малювання — так данж заздалегідь ставить перешкоди під прикраси.
+var record := false
+var placements: Array = []
+static var _bounds: Dictionary = {}
+
 ## Додає одну модель у заданому місці. color — відтінок саме цієї
 ## моделі (стіни й підлога в кожного рівня свого кольору); білий — без
 ## зміни, тоді діє загальний tint. keep_colors — не фарбувати зовсім:
 ## власний арт рівня (гігантський гриб) має лишитись своїх кольорів.
 func add(scene: PackedScene, transform: Transform3D, color: Color = Color.WHITE, keep_colors: bool = false) -> void:
+	if record:
+		placements.append([scene, transform])
+		return
 	var paint := Color.WHITE if keep_colors else (color if color != Color.WHITE else tint)
 	for part: Dictionary in _get_parts(scene):
 		var key := "%s|%s|%s" % [part.mesh.get_rid(), part.material.get_rid() if part.material else "-", paint.to_html()]
@@ -128,6 +137,19 @@ func _get_parts(scene: PackedScene) -> Array:
 	root.free()
 	_scene_parts[scene] = parts
 	return parts
+
+## Межі моделі в її власних координатах (усі меші разом).
+func scene_bounds(scene: PackedScene) -> AABB:
+	if _bounds.has(scene):
+		return _bounds[scene]
+	var box := AABB()
+	var first := true
+	for part: Dictionary in _get_parts(scene):
+		var part_box: AABB = (part.transform as Transform3D) * (part.mesh as Mesh).get_aabb()
+		box = part_box if first else box.merge(part_box)
+		first = false
+	_bounds[scene] = box
+	return box
 
 ## Положення меша відносно кореня сцени: перемножуємо локальні
 ## перетворення вгору по дереву.

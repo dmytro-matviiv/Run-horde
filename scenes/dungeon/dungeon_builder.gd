@@ -700,10 +700,7 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 	# бути ледь інеєва, а не синя.
 	batcher.tint = Color.WHITE.lerp(stone, 0.5)
 	var rect: Rect2i = chunk.rect
-	# Насіння прив'язане до координат шматка, а не до порядку побудови:
-	# данж виглядає однаково, з якого боку в нього не зайти.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 20260917 + rect.position.x * 73856093 + rect.position.y * 19349663
+	var rng := _chunk_rng(rect)
 	var layout: Dictionary = _build_layout(map_rows, decor) if decor.has("floor_rules") else {}
 
 	for z in range(rect.position.y, rect.end.y):
@@ -725,9 +722,134 @@ static func build_chunk(map_rows: Array, chunk: Dictionary, decor_density: float
 			if not layout.is_empty() and _add_layout_items(batcher, layout, cell, position, decor):
 				continue
 			if not reserved.has(cell):
-				_decorate_cell(batcher, map_rows, x, z, position, rng, decor_density, decor)
+				_decorate_cell(_decor_target(batcher, map_rows, x, z), map_rows, x, z, position, rng, decor_density, decor)
 
 	batcher.flush(chunk.node)
+
+## Насіння прив'язане до координат шматка, а не до порядку побудови:
+## данж виглядає однаково, з якого боку в нього не зайти. Те саме насіння
+## бере й add_decor_obstacles — перешкоди стоять рівно там, де прикраси.
+static func _chunk_rng(rect: Rect2i) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260917 + rect.position.x * 73856093 + rect.position.y * 19349663
+	return rng
+
+static var _discard := MeshBatcher.new()
+
+## Куди класти прикраси клітинки. Прикраси тепер тверді, тож не ставимо їх:
+##   - на клітинках-мітках (вороги, бос, вихід) — ворог з'являвся б у столі;
+##   - у коридорах, вужчих за NARROW_SPAN клітинок, — скриня перекрила б
+##     прохід і героєві, і ворогам.
+## Випадкові числа однаково витрачаються (у кошик-заглушку), тож решта
+## рівня розкладена так само, як і раніше.
+##   - біля старту, біля боса й там, де після боса розкриється портал
+##     виходу (portal_wall), — щоб не з'явитись перед столом і щоб ящик не
+##     стирчав з арки.
+const NARROW_SPAN := 3
+const CLEAR_RADIUS := 2
+static var _clear_cache: Dictionary = {}
+
+static func _decor_target(batcher: MeshBatcher, map_rows: Array, x: int, z: int) -> MeshBatcher:
+	var row: String = map_rows[z]
+	var cell := Vector2i(x, z)
+	if row[x] == "." and not _clear_cells(map_rows).has(cell) and _run_length(map_rows, cell, Vector2i(1, 0)) >= NARROW_SPAN \
+			and _run_length(map_rows, cell, Vector2i(0, 1)) >= NARROW_SPAN:
+		return batcher
+	_discard.record = true
+	_discard.placements.clear()
+	return _discard
+
+## Клітинки, де прикрас не ставимо (див. _decor_target): довкола старту й
+## боса та смуга біля стіни з порталом виходу. Рахується раз на карту.
+static func _clear_cells(map_rows: Array) -> Dictionary:
+	var key := hash(map_rows)
+	if _clear_cache.has(key):
+		return _clear_cache[key]
+	var clear := {}
+	var boss := Vector2i(-1, -1)
+	for z in map_rows.size():
+		var row: String = map_rows[z]
+		for x in row.length():
+			if row[x] == "S" or row[x] == "B":
+				if row[x] == "B":
+					boss = Vector2i(x, z)
+				for dz in range(-CLEAR_RADIUS, CLEAR_RADIUS + 1):
+					for dx in range(-CLEAR_RADIUS, CLEAR_RADIUS + 1):
+						clear[Vector2i(x + dx, z + dz)] = true
+	if boss.x >= 0:
+		var wall := portal_wall(map_rows, boss)
+		if not wall.is_empty():
+			var face: Vector3 = wall.face
+			var inward: Vector3 = wall.inward
+			var front := cell_of(face + inward * CELL * 0.5)
+			var side := Vector2i(roundi(-inward.z), roundi(inward.x))
+			var deep := Vector2i(roundi(inward.x), roundi(inward.z))
+			for along in range(-2, 3):
+				for depth in 3:
+					clear[front + side * along + deep * depth] = true
+	_clear_cache[key] = clear
+	return clear
+
+## Найменша прикраса, крізь яку вже не можна пройти (м): стоп завширшки й
+## заввишки. Черепи, монети, свічки, кістки — нижчі, через них ступаємо.
+const SOLID_MIN_FOOTPRINT := 0.55
+const SOLID_MIN_HEIGHT := 0.35
+## Коробка трохи менша за модель: обриси моделей нерівні, а повна
+## коробка чіплялась би за героя вже на підході.
+const SOLID_SHRINK := 0.78
+
+## ТВЕРДІ ПРИКРАСИ: меблі посеред зал, скрині, ящики й бочки під стінами,
+## гриби — під кожну коробка-перешкода (і для героя, і для ворогів). Самі
+## прикраси малюються пізніше, шматками (build_chunk), а перешкоди мають
+## бути до того, як печеться карта прохідності. Тому тут той самий
+## розклад проходить "насухо": те саме насіння, ті самі клітинки й умови,
+## лише замість малювання — запис, що й де стоїть.
+## Статуї, брили, стійки, припаси й прапори розкладки мають свої перешкоди
+## (_add_layout_obstacles) — їх тут пропускаємо.
+static func add_decor_obstacles(obstacles: StaticBody3D, map_rows: Array, chunks: Array, decor_density: float,
+		theme: Dictionary = DEFAULT_THEME, reserved: Dictionary = {}) -> int:
+	var decor: Dictionary = DECOR_SETS.get(theme.get("decor", "crypt"), DECOR_SETS.crypt)
+	var layout: Dictionary = _build_layout(map_rows, decor) if decor.has("floor_rules") else {}
+	var skip := {}
+	for key in ["landmark", "rock", "rack", "supplies", "banner"]:
+		if decor.has(key):
+			skip[decor[key].scene] = true
+	var batcher := MeshBatcher.new()
+	batcher.record = true
+	for chunk: Dictionary in chunks:
+		var rect: Rect2i = chunk.rect
+		var rng := _chunk_rng(rect)
+		for z in range(rect.position.y, rect.end.y):
+			if z < 0 or z >= map_rows.size():
+				continue
+			var row: String = map_rows[z]
+			for x in range(rect.position.x, rect.end.x):
+				if x < 0 or x >= row.length() or not WALKABLE.has(row[x]):
+					continue
+				var position := Vector3(x * CELL, 0.0, z * CELL)
+				var cell := Vector2i(x, z)
+				if not decor.get("no_columns", false) and _is_column_cell(map_rows, row, x, z):
+					continue
+				if not layout.is_empty() and _add_layout_items(batcher, layout, cell, position, decor):
+					continue
+				if not reserved.has(cell):
+					_decorate_cell(_decor_target(batcher, map_rows, x, z), map_rows, x, z, position, rng, decor_density, decor)
+	var count := 0
+	for placement: Array in batcher.placements:
+		var scene: PackedScene = placement[0]
+		if skip.has(scene):
+			continue
+		var transform: Transform3D = placement[1]
+		var box: AABB = transform * batcher.scene_bounds(scene)
+		var footprint := maxf(box.size.x, box.size.z)
+		if footprint < SOLID_MIN_FOOTPRINT or box.size.y < SOLID_MIN_HEIGHT:
+			continue
+		var size := Vector3(box.size.x * SOLID_SHRINK, minf(box.size.y, 2.5), box.size.z * SOLID_SHRINK)
+		var center := box.get_center()
+		_add_box_shape(obstacles, Vector3(center.x, size.y * 0.5, center.z), size)
+		obstacles.get_child(-1).name = "Decor%d" % count
+		count += 1
+	return count
 
 # --- мітки й перешкоди ---
 
