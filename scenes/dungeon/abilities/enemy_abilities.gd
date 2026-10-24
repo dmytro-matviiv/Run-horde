@@ -29,6 +29,7 @@ const SCRIPTS := {
 	"ward": preload("res://scenes/dungeon/abilities/ward_ability.gd"),
 	"leap": preload("res://scenes/dungeon/abilities/leap_ability.gd"),
 	"lunge": preload("res://scenes/dungeon/abilities/lunge_ability.gd"),
+	"slime_trail": preload("res://scenes/dungeon/abilities/slime_trail_ability.gd"),
 	"ring_slam": preload("res://scenes/dungeon/abilities/ring_slam_ability.gd"),
 	"radial_volley": preload("res://scenes/dungeon/abilities/radial_volley_ability.gd"),
 	"beams": preload("res://scenes/dungeon/abilities/beams_ability.gd"),

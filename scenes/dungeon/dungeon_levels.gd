@@ -66,7 +66,14 @@ const LEVELS := [
 					"turn_factor": 0.3, "attack_anims": ["Weapon", "Weapon2"],
 					"stone_shield": {"factor": 0.2, "arc": 70.0},
 					"charge": {"cooldown": 6.0, "wall_stun": 2.0, "knockdown": 0.6, "push": 7.0, "anim": "Charge", "windup_anim": "Block"}},
-				{"name": "Черепок", "model": "res://assets/models/monsters/Ghost Skull.glb", "kind": "melee", "hp": 26.0, "damage": 8.0, "speed": 3.1, "height": 1.5, "hover": 0.5, "xp": 3},
+				# Склепний слиз (модель гравця): гине — розпадається на 2 малих
+				# (ті вже не діляться; найкраще — шкода по площі, Рунна Нова);
+				# лишає липкі калюжі — герой у них на 3 с повільніший на 30%.
+				# Скелет і анімації — D:/RuneHorde_work/scripts/blender/rig_slime.py.
+				{"name": "Склепний слиз", "model": "res://assets/models/monsters/crypt_slime.glb", "kind": "melee",
+					"hp": 28.0, "damage": 7.0, "speed": 2.4, "height": 1.0, "xp": 3, "attack_range": 1.9,
+					"abilities": [{"id": "split", "hp": 0.45},
+						{"id": "slime_trail", "radius": 0.8, "slow": 0.7, "time": 3.0, "spacing": 1.6, "max": 4}]},
 			],
 			"r": [
 				{"name": "Чаклун", "model": "res://assets/models/monsters/Wizard.glb", "kind": "ranged", "hp": 22.0, "damage": 6.0, "speed": 2.2, "height": 1.7, "xp": 4,
