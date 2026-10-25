@@ -11,7 +11,9 @@ extends EnemyAbility
 const PUDDLE_SCRIPT := preload("res://scenes/dungeon/hazards/slime_puddle.gd")
 
 var _last := Vector3.INF
-var _puddles: Array[Node3D] = []
+## Без типу: висохлі калюжі тут уже звільнені, а типізований масив
+## на них сварився б.
+var _puddles: Array = []
 
 func _init() -> void:
 	id = "slime_trail"
@@ -28,7 +30,7 @@ func tick(delta: float) -> void:
 	if moved.length() < float(config.get("spacing", 1.6)):
 		return
 	_last = here
-	_puddles = _puddles.filter(func(p: Node3D) -> bool: return is_instance_valid(p))
+	_puddles = _puddles.filter(func(p) -> bool: return is_instance_valid(p))
 	if _puddles.size() >= int(config.get("max", 4)):
 		return
 	var puddle := PUDDLE_SCRIPT.spawn(world(), here, player(), float(config.get("radius", 0.8)),
