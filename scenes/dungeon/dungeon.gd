@@ -484,12 +484,26 @@ func _spawn_enemies(markers: Dictionary) -> void:
 				var angle := TAU * i / group
 				offset = Vector3(cos(angle), 0.0, sin(angle)) * 1.1
 			_spawn_enemy(spawn.position + offset, definition, false)
+	_spawn_sentinels()
 	if markers.boss != Vector3.ZERO:
 		if _level.get("boss_gate", false):
 			# Мега-бос не виходить одразу: чекає за воротами (_spawn_boss_gate).
 			_pending_boss_position = markers.boss
 		else:
 			_spawn_enemy(markers.boss, _level.boss, true)
+
+## Ожилі вартові на місці частини статуй (DungeonBuilder.sentinel_spots):
+## стоять кам'яні, доки герой не підійде.
+func _spawn_sentinels() -> void:
+	var definition: Dictionary = {}
+	for group: Array in _level.enemies.values():
+		for candidate: Dictionary in group:
+			if candidate.has("dormant"):
+				definition = candidate
+	if definition.is_empty():
+		return
+	for spot in DungeonBuilder.sentinel_spots(_map_rows):
+		_spawn_enemy(spot, definition, false)
 
 func _arena_at(cell: Vector2i) -> int:
 	var arenas: Array = _level.get("arenas", [])

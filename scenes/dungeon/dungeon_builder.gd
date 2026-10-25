@@ -225,6 +225,7 @@ const DECOR_SETS := {
 		## Статуя ~2.9 м (стіни — 2 м): парами обабіч входів у зали, не більше
 		## чотирьох на рівень.
 		"landmark": {"scene": ICE_KNIGHT_STATUE_SCENE, "scale": 1.55, "max": 4, "footprint": Vector2(1.5, 1.4)},
+		"sentinels": true,
 		## Попід прямими стінами: брила або (share) стійка зі зброєю.
 		"rock": {"scene": RUNE_ROCK_SCENE, "scale": Vector2(0.36, 0.46), "chance": 0.11},
 		"rack": {"scene": ICE_WEAPON_RACK_SCENE, "scale": 0.9, "share": 0.4, "depth": 0.41, "footprint": Vector2(1.9, 0.8)},
@@ -1009,6 +1010,13 @@ const ACCENT_CHANCE := 0.08
 const ROCK_PUSH := 0.15
 static var _layouts: Dictionary = {}
 
+## Де замість статуй стоять Ожилі вартові (див. "sentinels" у темі).
+static func sentinel_spots(map_rows: Array) -> Array[Vector3]:
+	var spots: Array[Vector3] = []
+	for cell: Vector2i in _layout_for(map_rows).get("sentinels", {}):
+		spots.append(cell_center(cell))
+	return spots
+
 static func _layout_for(map_rows: Array) -> Dictionary:
 	return _layouts.get(map_rows.hash(), {})
 
@@ -1017,7 +1025,7 @@ static func _build_layout(map_rows: Array, decor: Dictionary) -> Dictionary:
 	if _layouts.has(key):
 		return _layouts[key]
 	var layout := {"floor": {}, "chests": {}, "landmarks": {}, "rocks": {}, "racks": {}, "supplies": {},
-		"banners": {}, "stones": {}, "occupied": {}}
+		"banners": {}, "stones": {}, "occupied": {}, "sentinels": {}}
 	var sides: Array[Vector2i] = [Vector2i(0, -1), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(1, 0)]
 	var cells: Array[Vector2i] = []
 	var marks: Array[Vector2i] = []
@@ -1120,6 +1128,16 @@ static func _build_layout(map_rows: Array, decor: Dictionary) -> Dictionary:
 				for dx in range(-1, 2):
 					layout.occupied[cell + Vector2i(dx, 0)] = true
 				layout.occupied[cell + Vector2i(0, 1)] = true
+
+	# Кожна друга статуя — Ожилий вартовий ("sentinels" у темі): на її місці
+	# стоїть ворог, що прикидається статуєю (Dungeon._spawn_sentinels).
+	if decor.get("sentinels", false):
+		var statues: Array = layout.landmarks.keys()
+		statues.sort()
+		for i in statues.size():
+			if i % 2 == 1:
+				layout.landmarks.erase(statues[i])
+				layout.sentinels[statues[i]] = true
 
 	# Брили — попід прямою стіною зали (стіна рівно з одного боку), не
 	# біля входів, скринь, статуй і одна від одної.

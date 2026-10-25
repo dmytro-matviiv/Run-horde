@@ -14,7 +14,7 @@ func try_use(distance: float) -> bool:
 	if distance > 14.0:
 		return false
 	start_cooldown()
-	enemy.begin_special(id, WINDUP, Color(_color(), 0.85), 3.0)
+	enemy.begin_special(id, float(config.get("windup", WINDUP)), Color(_color(), 0.85), 3.0)
 	return true
 
 func resolve() -> void:
@@ -31,8 +31,9 @@ func resolve() -> void:
 func _spawn_ring() -> void:
 	if not is_instance_valid(enemy) or not enemy.is_alive():
 		return
-	HazardRing.spawn(world(), enemy.global_position, player(), float(config.get("radius", 12.0)),
+	var ring := HazardRing.spawn(world(), enemy.global_position, player(), float(config.get("radius", 12.0)),
 		float(config.get("speed", 8.0)), damage() * 1.2, _color(), enemy)
+	ring.freeze = float(config.get("freeze", 0.0))
 
 func _color() -> Color:
 	return config.get("color", COLOR)

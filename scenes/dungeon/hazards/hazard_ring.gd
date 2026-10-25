@@ -22,6 +22,9 @@ var _age := 0.0
 var _hit := false
 var _marker: MeshInstance3D
 
+## Скільки секунд кільце тримає героя вмерзлим на місці (0 — не тримає).
+var freeze := 0.0
+
 static func spawn(world: Node, center: Vector3, player: Node3D, max_radius: float, speed: float, damage: float,
 		color: Color, owner: Enemy3D = null) -> HazardRing:
 	var ring := HazardRing.new()
@@ -57,4 +60,5 @@ func _physics_process(delta: float) -> void:
 	offset.y = 0.0
 	if absf(offset.length() - radius) <= WIDTH:
 		_hit = true
-		_player.take_damage(_damage)
+		if _player.take_damage(_damage) and freeze > 0.0 and _player.has_method("root"):
+			_player.root(freeze)

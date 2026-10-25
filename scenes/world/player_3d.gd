@@ -1499,6 +1499,7 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 		amount *= SHRINE_FURY_DAMAGE
 	if passive != null:
 		amount = passive.modify_damage(self, enemy, amount)
+	enemy.last_hit_source = source
 	enemy.take_damage(amount, knockback * _knockback_factor, crit, heavy)
 	# Скільки здоров'я ворог справді втратив (щит, тотем і добивання
 	# вже враховані).

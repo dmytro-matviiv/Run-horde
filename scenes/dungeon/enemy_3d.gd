@@ -198,6 +198,24 @@ var _wall_stunned := false
 var _stun_stars: Node3D
 ## Темний щит від чаклуна: скільки шкоди ще поглине і скільки секунд діє.
 var _absorb := 0.0
+## Хто вдарив останнім (Player3D.deal_damage: &"weapon" чи id здібності).
+var last_hit_source: StringName = &""
+## Крижаний щит голема ("ice_shield"): спершу б'ють щит (жовта смуга), поки
+## він цілий — здоров'я не міняється; вогонь розтоплює його одразу, і далі
+## голем отримує більше ("melt_vuln").
+var _shield_hp := 0.0
+var _shield_max := 0.0
+var _damage_taken := 1.0
+## Морозна аура ("frost_aura"): поруч — герой повільніший.
+var _aura_left := 0.0
+var _aura_marker: MeshInstance3D
+## Прикидається статуєю ("dormant"): стоїть кам'яний, доки герой не підійде.
+var _dormant := false
+var _visor: MeshInstance3D
+## Скільки ще живе (стіна льоду: "lifetime").
+var _life_left := -1.0
+## Невразливий (дракон у небі).
+var invulnerable := false
 var _absorb_left := 0.0
 var _absorb_bubble: MeshInstance3D
 var _summon_left := 4.0
@@ -356,7 +374,7 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	var players := _model.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		_animation = players[0]
-		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying", "Turn"])
+		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying", "Turn", "Fly", "Spin", "Unlock", "Charge", "Stunned", "Idle_Rage"])
 		# Анімацію крутимо самі (див. _process): так її можна оновлювати
 		# рідше або ставити на паузу, коли ворога не видно.
 		_animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
@@ -367,6 +385,35 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 				_play("Idle"))
 	_add_health_bar()
 	_add_screen_notifier()
+	if definition.has("ice_shield"):
+		_shield_max = max_hp * float(definition.ice_shield.get("ratio", 0.6))
+		_shield_hp = _shield_max
+		if _health_bar != null:
+			_health_bar.set_color(Color(1.0, 0.82, 0.25))
+	if definition.has("face_yaw"):
+		_model.rotation.y = float(definition.face_yaw)
+	if definition.has("dormant"):
+		_make_dormant()
+	if definition.has("lifetime"):
+		_life_left = float(definition.lifetime)
+	# Тверда перешкода (стіна льоду): героя й ворогів не пропускає.
+	if definition.has("blocker"):
+		var size: Vector3 = definition.blocker
+		var body := StaticBody3D.new()
+		body.collision_layer = 1
+		body.collision_mask = 0
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = size
+		shape.shape = box
+		shape.position = Vector3(0, size.y * 0.5, 0)
+		body.add_child(shape)
+		body.rotation.y = float(definition.get("face_yaw", 0.0))
+		add_child(body)
+		# Виростає з підлоги.
+		_model.scale.y *= 0.05
+		var grown := _model.scale * Vector3(1.0, 20.0, 1.0)
+		create_tween().tween_property(_model, "scale", grown, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if elite != null:
 		add_child(elite)
 		elite.attach(self, _player)
@@ -419,9 +466,11 @@ func face_point(point: Vector3) -> void:
 		_face(direction, 100.0)
 
 ## Темний щит (DarkShieldAbility): зелена сфера поглинає amount шкоди.
-func add_absorb(amount: float, seconds: float, color: Color) -> void:
+func add_absorb(amount: float, seconds: float, color: Color, ice: bool = false) -> void:
 	_absorb = amount
 	_absorb_left = seconds
+	if ice:
+		_ice_armor(seconds)
 	if _absorb_bubble == null:
 		_absorb_bubble = MeshInstance3D.new()
 		var sphere := SphereMesh.new()
@@ -459,6 +508,52 @@ void fragment() {
 }
 """
 	return _absorb_shader_cache
+
+## Крижаний панцир (Інейна чаклунка): довкола ворога виростають кристали
+## й сиплеться іній, поки діє невразливість.
+func _ice_armor(seconds: float) -> void:
+	var holder := Node3D.new()
+	add_child(holder)
+	var material := CombatVfx.get_glow_material(Color(0.45, 0.8, 1.0))
+	for i in 6:
+		var crystal := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.02
+		mesh.bottom_radius = 0.16
+		mesh.height = target_height * 0.55
+		mesh.radial_segments = 5
+		mesh.rings = 1
+		crystal.mesh = mesh
+		crystal.material_override = material
+		crystal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		holder.add_child(crystal)
+		var angle := TAU * i / 6.0
+		crystal.position = Vector3(cos(angle), 0.0, sin(angle)) * body_radius() * 1.3 + Vector3.UP * mesh.height * 0.45
+		crystal.rotation = Vector3(-sin(angle) * 0.35, 0.0, cos(angle) * 0.35)
+	var frost := CombatVfx.make_trail(Color(0.75, 0.95, 1.0), 0.8)
+	frost.local_coords = true
+	frost.amount = 16
+	frost.emission_sphere_radius = body_radius() * 1.4
+	frost.gravity = Vector3(0, -0.6, 0)
+	holder.add_child(frost)
+	frost.position = Vector3.UP * target_height * 0.6
+	holder.scale = Vector3(1.0, 0.05, 1.0)
+	var tween := holder.create_tween()
+	tween.tween_property(holder, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(maxf(seconds - 0.6, 0.1))
+	tween.tween_property(holder, "scale", Vector3(1.0, 0.05, 1.0), 0.3)
+	tween.tween_callback(holder.queue_free)
+
+## Оглушений на seconds секунд: стоїть, не б'є, над головою зірочки.
+func stun_for(seconds: float) -> void:
+	_hold_still(seconds)
+	var stars := _make_stun_stars()
+	add_child(stars)
+	stars.position = Vector3(0, target_height + 0.3, 0)
+	stars.scale = Vector3.ONE * clampf(target_height / 1.8, 1.0, 2.5)
+	var spin := stars.create_tween().set_loops(int(ceil(seconds / 0.9)))
+	spin.tween_property(stars, "rotation:y", TAU, 0.9).from(0.0)
+	get_tree().create_timer(seconds, false).timeout.connect(stars.queue_free)
 
 func has_absorb() -> bool:
 	return _absorb > 0.0
@@ -596,6 +691,8 @@ var hunting := false
 
 ## Помітити героя одразу, хоч би де він був (засідка).
 func alert() -> void:
+	if _dormant:
+		_wake()
 	_aggro = true
 	_repath_left = 0.0
 
@@ -727,11 +824,23 @@ func _physics_process(delta: float) -> void:
 	for ability in abilities:
 		if ability.is_busy():
 			return
+	if _life_left > 0.0:
+		_life_left -= delta
+		if _life_left <= 0.0:
+			take_damage(1.0e9)
+			return
 	if stationary:
 		_process_stationary(delta)
 		return
 
 	var distance := global_position.distance_to(_player.global_position)
+	if _dormant:
+		velocity = Vector3.ZERO
+		if distance <= float(definition.dormant.get("wake", 3.5)):
+			_wake()
+		return
+	if definition.has("frost_aura"):
+		_tick_frost_aura(delta, distance)
 	_update_aggro(distance)
 	_attack_left -= delta * _pace()
 	_repath_left -= delta
@@ -865,6 +974,10 @@ func _separate(delta: float) -> void:
 	if _separation.is_zero_approx() or not _grounded:
 		return
 	move_and_collide(_separation.limit_length(1.0) * SEPARATION_SPEED * delta)
+
+## Прицілювання тарана ("windup" у "charge").
+func _charge_windup() -> float:
+	return float(definition.get("charge", {}).get("windup", CHARGE_WINDUP))
 
 ## Радіус тіла (як у капсули, яку ставить данж).
 func body_radius() -> float:
@@ -1029,6 +1142,7 @@ func _begin_windup() -> void:
 	if kind == Kind.RANGED:
 		# Снаряд "набухає" в руці — це і є попередження для гравця.
 		_charging_shot = EnemyProjectile.create(damage, projectile_color, projectile_speed)
+		_charging_shot.shape = String(definition.get("projectile", {}).get("shape", ""))
 		add_child(_charging_shot)
 		_charging_shot.position = Vector3(0, target_height * 0.7, 0) + _model_forward() * 0.6
 		return
@@ -1036,7 +1150,7 @@ func _begin_windup() -> void:
 	if _windup_slam:
 		_show_telegraph(SLAM_RADIUS, PI, SLAM_COLOR, true)
 	else:
-		_show_telegraph(_melee_reach(), deg_to_rad(55.0), TELEGRAPH_COLOR)
+		_show_telegraph(_melee_reach(), deg_to_rad(float(definition.get("attack_arc", 55.0))), TELEGRAPH_COLOR)
 
 func _process_windup(delta: float) -> void:
 	velocity.x = 0.0
@@ -1103,7 +1217,7 @@ func _zone_covers(point: Vector3, slam: bool) -> bool:
 	if slam:
 		return offset.length() <= SLAM_RADIUS + 0.3
 	var in_reach := offset.length() <= _melee_reach() + 0.35
-	var in_front := offset.length() < 0.5 or _model_forward().angle_to(offset.normalized()) <= deg_to_rad(65.0)
+	var in_front := offset.length() < 0.5 or _model_forward().angle_to(offset.normalized()) <= deg_to_rad(float(definition.get("attack_arc", 55.0)) + 10.0)
 	return in_reach and in_front
 
 ## Герой вискочив перекатом із зони в останню мить — ідеальний перекат.
@@ -1131,6 +1245,7 @@ func _release_shot() -> void:
 
 func _spawn_shot(origin: Vector3, direction: Vector3) -> void:
 	var extra := EnemyProjectile.create(damage, projectile_color, projectile_speed)
+	extra.shape = String(definition.get("projectile", {}).get("shape", ""))
 	get_parent().add_child(extra)
 	extra.global_position = origin
 	extra.set_charge(1.0)
@@ -1218,14 +1333,14 @@ func _begin_charge() -> void:
 		return
 	_charge_dir = direction.normalized()
 	_charge_state = 1
-	_charge_left = CHARGE_WINDUP
+	_charge_left = _charge_windup()
 	_charge_hit = false
 	velocity.x = 0.0
 	velocity.z = 0.0
 	_model.rotation.y = atan2(_charge_dir.x, _charge_dir.z)
 	_hide_telegraph()
 	var length := CHARGE_SPEED * CHARGE_TIME
-	_telegraph = CombatVfx.make_line_telegraph(CHARGE_COLOR, length, 1.8, "chevrons", true)
+	_telegraph = CombatVfx.make_line_telegraph(definition.get("charge", {}).get("color", CHARGE_COLOR), length, 1.8, "chevrons", true)
 	add_child(_telegraph)
 	_telegraph.position = Vector3(0, 0.05, 0) + _charge_dir * length * 0.5
 	_telegraph.rotation.y = atan2(_charge_dir.x, _charge_dir.z)
@@ -1254,7 +1369,7 @@ func _process_charge(delta: float) -> void:
 						_telegraph.position = Vector3(0, 0.05, 0) + _charge_dir * length * 0.5
 						_telegraph.rotation.y = angle
 			if _telegraph != null:
-				_telegraph.set_instance_shader_parameter(&"progress", 1.0 - _charge_left / CHARGE_WINDUP)
+				_telegraph.set_instance_shader_parameter(&"progress", 1.0 - _charge_left / _charge_windup())
 			if _charge_left <= 0.0:
 				_hide_telegraph()
 				_charge_state = 2
@@ -1507,7 +1622,27 @@ static func _get_ice_material() -> StandardMaterial3D:
 ## Удар героя. knockback — напрямок і сила відкидання, heavy — сильний
 ## удар, що збиває замах.
 func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = false, heavy: bool = false) -> void:
-	if _dying or _hidden:
+	if _dying or _hidden or invulnerable:
+		return
+	if _dormant:
+		_wake()
+	# Вогонь розтоплює крижаний щит одразу, і далі голем вразливіший.
+	if _shield_max > 0.0 and String(last_hit_source) in ["fire_ring", "phoenix"] and _damage_taken == 1.0:
+		_damage_taken = float(definition.ice_shield.get("melt_vuln", 1.3))
+		if _shield_hp > 0.0:
+			_break_shield(true)
+	amount *= _damage_taken
+	# Протаранив стіну — подвійна шкода ("stun_damage" у "charge").
+	if _wall_stunned:
+		amount *= float(definition.get("charge", {}).get("stun_damage", 1.0))
+	if _shield_hp > 0.0:
+		_shield_hp = maxf(_shield_hp - amount, 0.0)
+		if _health_bar != null:
+			_health_bar.set_ratio(_shield_hp / _shield_max)
+			_health_bar.flash()
+		CombatVfx.impact(get_parent(), global_position + Vector3.UP * target_height * 0.55, Color(1.0, 0.85, 0.35), false)
+		if _shield_hp <= 0.0:
+			_break_shield(false)
 		return
 	# Щит еліти спереду пропускає лише частину шкоди, тотем — ще менше.
 	if elite != null:
@@ -1608,6 +1743,22 @@ static func is_spot_clear(world: World3D, spot: Vector3, radius: float = 0.65) -
 	query.collision_mask = 1
 	return world.direct_space_state.intersect_shape(query, 1).is_empty()
 
+## Морозна аура: герой поруч — повільніший; під ворогом інеєве коло.
+func _tick_frost_aura(delta: float, distance: float) -> void:
+	var aura_cfg: Dictionary = definition.frost_aura
+	var radius := float(aura_cfg.get("radius", 3.0))
+	if _aura_marker == null:
+		_aura_marker = CombatVfx.make_ground_marker(Color(0.6, 0.85, 1.0, 0.3), radius)
+		_aura_marker.set_instance_shader_parameter(&"progress", 1.0)
+		add_child(_aura_marker)
+		_aura_marker.position = Vector3(0, 0.05, 0)
+	_aura_left -= delta
+	if _aura_left > 0.0:
+		return
+	_aura_left = 0.25
+	if distance <= radius and _player.has_method("apply_slow"):
+		_player.apply_slow(float(aura_cfg.get("slow", 0.75)), 0.4)
+
 ## Ворог опинився НА чомусь (стіл, саркофаг) — зводимо на найближче
 ## вільне місце на підлозі. Перевірка рідко: раз на пів секунди.
 func _check_stranded(delta: float) -> void:
@@ -1646,6 +1797,73 @@ static func _make_stun_stars() -> Node3D:
 		star.position = Vector3(cos(angle), 0.0, sin(angle)) * 0.35
 		holder.add_child(star)
 	return holder
+
+## Щит голема розбито (або розтоплено вогнем): смужка стає червоною.
+func _break_shield(melted: bool) -> void:
+	_shield_hp = 0.0
+	if _health_bar != null:
+		_health_bar.set_color(ENEMY_BAR_COLOR)
+		_health_bar.set_ratio(current_hp / max_hp)
+	var color := Color(1.0, 0.55, 0.2) if melted else Color(0.7, 0.9, 1.0)
+	CombatVfx.impact(get_parent(), global_position + Vector3.UP * target_height * 0.6, color, true)
+	CombatVfx.shockwave(get_parent(), global_position, 2.4, color, 0.4)
+
+## Вартовий оживає: руни спалахують, кам'яна шкіра сходить, і він б'є з
+## розвороту по колу.
+func _wake() -> void:
+	if not _dormant:
+		return
+	_dormant = false
+	_aggro = true
+	_repath_left = 0.0
+	for node in _model.find_children("*", "GeometryInstance3D", true, false):
+		(node as GeometryInstance3D).material_overlay = null
+	if _visor != null:
+		_visor.queue_free()
+		_visor = null
+	var color := Color(0.45, 0.9, 1.0)
+	CombatVfx.shockwave(get_parent(), global_position, 3.0, color, 0.4)
+	CombatVfx.impact(get_parent(), global_position + Vector3.UP * target_height * 0.8, color, true)
+	_play_once(["Wake", "Weapon"])
+	_hold_still(0.8)
+	var dormant: Dictionary = definition.get("dormant", {})
+	get_tree().create_timer(0.35, false).timeout.connect(func() -> void:
+		if _dying or _player == null or not is_instance_valid(_player):
+			return
+		var offset := _player.global_position - global_position
+		offset.y = 0.0
+		if offset.length() <= float(dormant.get("spin_radius", 2.8)):
+			_player.take_damage(damage * float(dormant.get("spin_damage", 1.2))))
+
+## Кам'яна "шкіра" статуї й ледь яскравіший візор — єдина підказка.
+func _make_dormant() -> void:
+	# Засідка вже покликала його в бій (alert) — статуєю не прикидається.
+	if _aggro or hunting:
+		return
+	_dormant = true
+	var stone := StandardMaterial3D.new()
+	stone.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	stone.albedo_color = Color(0.72, 0.8, 0.88, 0.78)
+	stone.roughness = 1.0
+	for node in _model.find_children("*", "GeometryInstance3D", true, false):
+		(node as GeometryInstance3D).material_overlay = stone
+	var dormant: Dictionary = definition.dormant
+	_visor = MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.06
+	sphere.height = 0.12
+	sphere.radial_segments = 8
+	sphere.rings = 4
+	_visor.mesh = sphere
+	_visor.material_override = CombatVfx.get_glow_material(Color(0.35, 0.8, 1.0))
+	_visor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_visor)
+	_visor.position = Vector3(0, target_height * float(dormant.get("visor_height", 0.88)), 0) + _model_forward() * float(dormant.get("visor_forward", 0.12)) * target_height
+	if _animation != null:
+		_animation.stop()
+
+func is_dormant() -> bool:
+	return _dormant
 
 func _die() -> void:
 	if elite != null:

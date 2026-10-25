@@ -92,6 +92,14 @@ func setup(color: Color, height: float, always_visible: bool = false, width_scal
 	_push()
 	set_process(false)
 
+## Інший колір смужки (щит голема — жовтий, далі здоров'я — червоне).
+func set_color(color: Color) -> void:
+	if _bar != null:
+		_bar.set_instance_shader_parameter(&"fill_color", color)
+	_ratio = 1.0
+	_trail = 1.0
+	_push()
+
 func set_ratio(ratio: float) -> void:
 	var new_ratio := clampf(ratio, 0.0, 1.0)
 	if new_ratio < _ratio:

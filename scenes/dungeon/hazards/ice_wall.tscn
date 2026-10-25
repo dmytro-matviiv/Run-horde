@@ -1,0 +1,65 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Ice"]
+transparency = 1
+albedo_color = Color(0.62, 0.86, 1, 0.82)
+roughness = 0.15
+metallic_specular = 0.9
+emission_enabled = true
+emission = Color(0.25, 0.55, 0.85, 1)
+emission_energy_multiplier = 0.6
+rim_enabled = true
+rim = 0.8
+
+[sub_resource type="CylinderMesh" id="Tall"]
+top_radius = 0.06
+bottom_radius = 0.42
+height = 2.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mid"]
+top_radius = 0.05
+bottom_radius = 0.36
+height = 1.7
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Low"]
+top_radius = 0.04
+bottom_radius = 0.3
+height = 1.25
+radial_segments = 5
+rings = 1
+
+[node name="IceWall" type="Node3D"]
+
+[node name="C0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0.08, 0, 1, 0, -0.08, 0, 1, -1.35, 0.62, 0.05)
+mesh = SubResource("Low")
+surface_material_override/0 = SubResource("Ice")
+
+[node name="C1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.99, 0.12, 0, -0.12, 0.99, 0, 0, 0, 1, -0.85, 0.85, -0.08)
+mesh = SubResource("Mid")
+surface_material_override/0 = SubResource("Ice")
+
+[node name="C2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 1.1, 0.06)
+mesh = SubResource("Tall")
+surface_material_override/0 = SubResource("Ice")
+
+[node name="C3" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.99, -0.1, 0, 0.1, 0.99, 0, 0, 0, 1, 0.25, 1.0, -0.06)
+mesh = SubResource("Tall")
+surface_material_override/0 = SubResource("Ice")
+
+[node name="C4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, -0.1, 0, 1, 0, 0.1, 0, 1, 0.8, 0.85, 0.07)
+mesh = SubResource("Mid")
+surface_material_override/0 = SubResource("Ice")
+
+[node name="C5" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.99, -0.14, 0, 0.14, 0.99, 0, 0, 0, 1, 1.32, 0.62, -0.04)
+mesh = SubResource("Low")
+surface_material_override/0 = SubResource("Ice")

@@ -28,6 +28,8 @@ var _target: Node3D
 var _core: MeshInstance3D
 ## Що ще зробити з героєм, коли влучив (павутина сповільнює).
 var on_hit: Callable
+## "spear" — крижаний спис: довгий кристал, летить вістрям уперед.
+var shape := ""
 
 ## Колір і швидкість — свої в кожного стрільця: отруйні плювки в
 ## печерах повільні й зелені, крижані стріли в цитаделі швидкі й сині.
@@ -40,11 +42,26 @@ static func create(shot_damage: float, shot_color: Color = COLOR, shot_speed: fl
 
 func _ready() -> void:
 	_core = MeshInstance3D.new()
-	_core.mesh = _get_core_mesh()
+	_core.mesh = _get_spear_mesh() if shape == "spear" else _get_core_mesh()
+	if shape == "spear":
+		# Кристал уздовж Y — кладемо вістрям уперед (-Z вузла).
+		_core.rotation.x = -PI * 0.5
 	_core.material_override = _get_core_material(color)
 	_core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_core)
 	set_charge(0.0)
+
+static var _spear_mesh: CylinderMesh
+
+static func _get_spear_mesh() -> CylinderMesh:
+	if _spear_mesh == null:
+		_spear_mesh = CylinderMesh.new()
+		_spear_mesh.top_radius = 0.0
+		_spear_mesh.bottom_radius = 0.09
+		_spear_mesh.height = 0.95
+		_spear_mesh.radial_segments = 5
+		_spear_mesh.rings = 1
+	return _spear_mesh
 
 ## Наскільки снаряд "набухнув" під час замаху (0..1).
 func set_charge(progress: float) -> void:
@@ -59,6 +76,8 @@ func launch(direction: Vector3, target: Node3D, world: Node) -> void:
 	reparent(world, true)
 	scale = Vector3.ONE
 	_launched = true
+	if shape == "spear" and _velocity.length() > 0.01:
+		look_at(global_position + _velocity, Vector3.UP)
 
 func _physics_process(delta: float) -> void:
 	if not _launched:
