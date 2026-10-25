@@ -415,12 +415,10 @@ func add_absorb(amount: float, seconds: float, color: Color) -> void:
 		sphere.radial_segments = 16
 		sphere.rings = 8
 		_absorb_bubble.mesh = sphere
-		var material := StandardMaterial3D.new()
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-		material.albedo_color = Color(color, 0.28)
-		material.cull_mode = BaseMaterial3D.CULL_BACK
+		# Прозора сфера, що світиться лише краями: орка під нею видно.
+		var material := ShaderMaterial.new()
+		material.shader = _absorb_shader()
+		material.set_shader_parameter(&"color", color)
 		_absorb_bubble.material_override = material
 		_absorb_bubble.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_absorb_bubble)
@@ -429,6 +427,23 @@ func add_absorb(amount: float, seconds: float, color: Color) -> void:
 	_absorb_bubble.position = Vector3(0, target_height * 0.5, 0)
 	_absorb_bubble.visible = true
 	CombatVfx.shockwave(get_parent(), global_position, 1.5, color, 0.35)
+
+static var _absorb_shader_cache: Shader
+
+static func _absorb_shader() -> Shader:
+	if _absorb_shader_cache == null:
+		_absorb_shader_cache = Shader.new()
+		_absorb_shader_cache.code = """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_back, depth_draw_never, shadows_disabled;
+uniform vec4 color : source_color = vec4(0.4, 1.0, 0.5, 1.0);
+void fragment() {
+	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.5);
+	float shimmer = 0.85 + 0.15 * sin(TIME * 5.0 + UV.y * 20.0);
+	ALBEDO = color.rgb * (0.05 + rim * 1.1) * shimmer;
+}
+"""
+	return _absorb_shader_cache
 
 func has_absorb() -> bool:
 	return _absorb > 0.0
