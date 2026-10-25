@@ -27,6 +27,12 @@ var _target := Vector3.ZERO
 var _inward := Vector3.BACK
 var _time_left := 0.0
 var _coffins: Array[Vector3] = []
+var _wall_face := Vector3.ZERO
+var _placed := false
+## Де бос з'явився (середина його зали) — від нього шукаємо стіну.
+var _home := Vector3.INF
+## Хода до стіни не довше за це — далі відмикає, де стоїть (не застрягає).
+const WALK_LIMIT := 4.0
 
 func _init() -> void:
 	id = "sarcophagi"
@@ -36,10 +42,11 @@ func is_busy() -> bool:
 	return _step != Step.IDLE
 
 func try_use(_distance: float) -> bool:
-	if _coffins.is_empty() and not _place_coffins():
+	if _wall_face == Vector3.ZERO and not _find_wall():
 		return false
 	start_cooldown()
 	_step = Step.WALK
+	_time_left = WALK_LIMIT
 	var hero := player()
 	if hero != null and hero.has_method("stun"):
 		hero.stun(STUN_LIMIT)
@@ -47,20 +54,29 @@ func try_use(_distance: float) -> bool:
 	CombatVfx.shockwave(world(), enemy.global_position, 9.0, COLOR, 0.6)
 	return true
 
-## Саркофаги — біля стіни зали, найближчої до боса, але не тієї, де
-## відкриється портал виходу.
-func _place_coffins() -> bool:
+## Стіна для саркофагів — у самій залі боса (не в коридорі) і не та, де
+## після бою відкриється портал. Шукаємо від місця, де бос з'явився.
+func _find_wall() -> bool:
 	var map_rows: Array = DungeonLevels.get_level(GameState.dungeon_level).map
-	var cell := DungeonBuilder.cell_of(enemy.global_position)
+	var cell := DungeonBuilder.cell_of(_home if _home != Vector3.INF else enemy.global_position)
 	var portal := DungeonBuilder.portal_wall(map_rows, cell)
-	var wall := DungeonBuilder.portal_wall(map_rows, cell, portal.get("inward", Vector3.ZERO))
+	var wall := DungeonBuilder.portal_wall(map_rows, cell, portal.get("inward", Vector3.ZERO), true)
 	if wall.is_empty():
 		return false
 	_inward = wall.inward
-	var face: Vector3 = wall.face
-	var side := Vector3(-_inward.z, 0.0, _inward.x)
-	_target = face + _inward * (WALL_GAP + 2.0)
+	_wall_face = wall.face
+	_target = _wall_face + _inward * (WALL_GAP + 2.0)
 	_target.y = enemy.global_position.y
+	return true
+
+## Саркофаги виростають, коли бос уже дійшов, — не на його шляху.
+func _place_coffins() -> void:
+	if _placed:
+		return
+	_placed = true
+	var map_rows: Array = DungeonLevels.get_level(GameState.dungeon_level).map
+	var face := _wall_face
+	var side := Vector3(-_inward.z, 0.0, _inward.x)
 	var body := StaticBody3D.new()
 	body.collision_layer = 1
 	body.collision_mask = 0
@@ -88,21 +104,27 @@ func _place_coffins() -> bool:
 		body.add_child(shape)
 		shape.global_position = Vector3(spot.x, DungeonBuilder.FLOOR_TOP + BOX.y * 0.5, spot.z)
 		shape.global_rotation.y = coffin.rotation.y
-	return not _coffins.is_empty()
 
 func tick(delta: float) -> void:
 	super.tick(delta)
+	if _home == Vector3.INF:
+		_home = enemy.global_position
 	match _step:
 		Step.WALK:
+			_time_left -= delta
 			var offset := _target - enemy.global_position
 			offset.y = 0.0
-			if offset.length() < 0.25:
+			if offset.length() < 0.35 or _time_left <= 0.0:
 				_step = Step.UNLOCK
 				_time_left = float(config.get("unlock", 3.0))
+				enemy.velocity = Vector3.ZERO
 				enemy.face_point(enemy.global_position - _inward)
+				_place_coffins()
 				return
-			var step := offset.normalized() * float(config.get("speed", 4.0)) * delta
-			enemy.global_position += step if step.length() < offset.length() else offset
+			# Іде з фізикою: стіни й меблі не проходить наскрізь.
+			var speed := float(config.get("speed", 4.0))
+			enemy.velocity = Vector3(offset.normalized().x * speed, -2.0, offset.normalized().z * speed)
+			enemy.move_and_slide()
 			enemy.face_point(_target)
 			enemy.play_loop("Run")
 		Step.UNLOCK:
@@ -122,7 +144,7 @@ func _release() -> void:
 		definition = definition.duplicate(true)
 		definition.erase("group")
 		definition["no_elite"] = true
-		var spot: Vector3 = _coffins[i % _coffins.size()] + _inward * 1.4
+		var spot: Vector3 = _coffins[i % _coffins.size()] + _inward * 1.4 if not _coffins.is_empty() else enemy.global_position + _inward * 2.0
 		CombatVfx.impact(world(), spot + Vector3.UP * 0.6, COLOR, true)
 		CombatVfx.shockwave(world(), spot, 1.6, COLOR, 0.4)
 		enemy.spawn_requested.emit(spot, definition, enemy)

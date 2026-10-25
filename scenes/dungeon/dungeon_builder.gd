@@ -1519,7 +1519,9 @@ static func _count_open_sides(map_rows: Array, x: int, z: int) -> int:
 ## дивиться портал (у кімнату)} або {}, якщо такої стіни немає.
 ## skip — "inward" стіни, яку брати не можна (саркофаги боса не стають на
 ## стіну, де потім відкриється портал).
-static func portal_wall(map_rows: Array, start: Vector2i, skip: Vector3 = Vector3.ZERO) -> Dictionary:
+## room_only — лише стіна самої зали: клітинка перед стіною не в
+## коридорі (уздовж і впоперек щонайменше 3 прохідні клітинки).
+static func portal_wall(map_rows: Array, start: Vector2i, skip: Vector3 = Vector3.ZERO, room_only: bool = false) -> Dictionary:
 	const MAX_STEPS := 14
 	var best := {}
 	var best_score := INF
@@ -1537,6 +1539,8 @@ static func portal_wall(map_rows: Array, start: Vector2i, skip: Vector3 = Vector
 				cell += dir
 				steps += 1
 			if steps >= MAX_STEPS:
+				continue
+			if room_only and (_run_length(map_rows, cell, Vector2i(1, 0)) < 3 or _run_length(map_rows, cell, Vector2i(0, 1)) < 3):
 				continue
 			var wall := cell + dir
 			var straight := _is_walkable(map_rows, cell.x - dir.x, cell.y - dir.y)

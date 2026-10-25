@@ -602,6 +602,9 @@ func is_aim_target() -> bool:
 
 ## Смужка висить трохи вище за голову й ширшає разом із розміром ворога.
 func _add_health_bar() -> void:
+	# У боса смуга внизу екрана (Dungeon._build_boss_bar) — над головою зайва.
+	if kind == Kind.BOSS:
+		return
 	_health_bar = HEALTH_BAR_SCRIPT.new()
 	add_child(_health_bar)
 	var is_boss := kind == Kind.BOSS
@@ -1512,6 +1515,17 @@ func _set_wall_stunned(stunned: bool) -> void:
 		_stun_stars.visible = stunned
 	if stunned:
 		_cancel_windup()
+
+## Чи вільне місце під ворога: немає стін, колон, меблів, саркофагів
+## (шар 1) у колі radius на висоті пояса.
+static func is_spot_clear(world: World3D, spot: Vector3, radius: float = 0.45) -> bool:
+	var query := PhysicsShapeQueryParameters3D.new()
+	var sphere := SphereShape3D.new()
+	sphere.radius = radius
+	query.shape = sphere
+	query.transform = Transform3D(Basis(), Vector3(spot.x, DungeonBuilder.FLOOR_TOP + 0.7, spot.z))
+	query.collision_mask = 1
+	return world.direct_space_state.intersect_shape(query, 1).is_empty()
 
 static func make_stun_stars() -> Node3D:
 	return _make_stun_stars()

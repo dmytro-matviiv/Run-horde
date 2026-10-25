@@ -659,6 +659,21 @@ func _on_chest_opened(position: Vector3) -> void:
 	_loot.burst(position, LootSwarm.Kind.XP, ARENA_CHEST_XP, 4)
 	_offer_ability()
 
+## Вільне місце для ворога поруч із бажаним: стіл, саркофаг чи колона на
+## місці появи — шукаємо найближче вільне по колах довкола.
+func _clear_spot(position: Vector3) -> Vector3:
+	var world := get_world_3d()
+	if Enemy3D.is_spot_clear(world, position):
+		return position
+	for ring in [0.9, 1.6, 2.4, 3.2]:
+		for i in 8:
+			var angle := TAU * i / 8.0
+			var spot: Vector3 = position + Vector3(cos(angle), 0.0, sin(angle)) * ring
+			var cell := DungeonBuilder.cell_of(spot)
+			if DungeonBuilder.is_walkable(_map_rows, cell.x, cell.y) and Enemy3D.is_spot_clear(world, spot):
+				return spot
+	return position
+
 ## Бос перейшов у нову фазу — великий напис.
 func _on_boss_phase(phase: int, title: String) -> void:
 	_show_banner(title, "швидший і небезпечніший" if phase == 2 else "останній ривок!")
@@ -891,7 +906,7 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	enemy.add_child(shape)
 
 	enemies_root.add_child(enemy)
-	enemy.global_position = position + Vector3(0, 0.2, 0)
+	enemy.global_position = _clear_spot(position) + Vector3(0, 0.2, 0)
 	enemy.setup(player, _model(definition.model))
 	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null))
 	enemy.spawn_requested.connect(_on_spawn_requested)

@@ -56,5 +56,8 @@ func _pick_spot() -> Vector3:
 		var query := PhysicsRayQueryParameters3D.create(from + Vector3.UP, spot + Vector3.UP, 1)
 		if not space.intersect_ray(query).is_empty():
 			continue
+		# Не на стіл і не в колону — там чаклун застряг би.
+		if not Enemy3D.is_spot_clear(enemy.get_world_3d(), spot):
+			continue
 		return Vector3(spot.x, from.y, spot.z)
 	return Vector3.INF

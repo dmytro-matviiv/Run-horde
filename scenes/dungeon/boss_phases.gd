@@ -58,7 +58,9 @@ func _physics_process(delta: float) -> void:
 	var ratio := _boss.current_hp / maxf(_boss.max_hp, 1.0)
 	# Свої пороги фаз ("phase_thresholds"), інакше — половина й чверть.
 	var thresholds: Array = _boss.definition.get("phase_thresholds", THRESHOLDS)
-	while phase - 1 < thresholds.size() and ratio <= thresholds[phase - 1]:
+	# Запас на округлення: здоров'я, зупинене рівно на порозі ("phase_lock"),
+	# мусить відкрити фазу, інакше бос лишався б невразливим назавжди.
+	while phase - 1 < thresholds.size() and ratio <= float(thresholds[phase - 1]) + 0.001:
 		_enter_phase(phase + 1)
 	# "no_hazard_rain": у боса свої механіки фаз замість дощу кіл.
 	if phase >= 2 and _boss.is_aggro() and not _boss.definition.get("no_hazard_rain", false):
