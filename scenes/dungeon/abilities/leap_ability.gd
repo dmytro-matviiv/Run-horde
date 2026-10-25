@@ -63,7 +63,8 @@ func _land(radius: float) -> void:
 	var offset := player().global_position - _target
 	offset.y = 0.0
 	if offset.length() <= radius:
-		player().take_damage(damage() * 1.4)
+		if player().take_damage(damage() * 1.4) and player().has_method("stun"):
+			player().stun(float(config.get("stun", 0.5)))
 	_busy = false
 	enemy.hold_still(0.5)
 

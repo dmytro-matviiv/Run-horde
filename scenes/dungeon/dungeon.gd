@@ -158,6 +158,8 @@ var _run_gold := 0
 var _level: Dictionary = {}
 var _theme: Dictionary = {}
 var _hp_scale := 1.0
+## Звичайні вороги (не боси) міцніші: з 1-2 ударів падати не мають.
+const MOB_HP_FACTOR := 1.7
 var _damage_scale := 1.0
 var _gold_scale := 1.0
 var _models: Dictionary = {}
@@ -880,7 +882,7 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	if is_boss:
 		enemy.configure_boss(definition, _hp_scale, _damage_scale)
 	else:
-		enemy.configure(definition, _hp_scale, _damage_scale)
+		enemy.configure(definition, _hp_scale * MOB_HP_FACTOR, _damage_scale)
 		# Еліта: риси задані в описі ("affixes"), або їх кількість ("elite"),
 		# або випадок (ELITE_CHANCE). "no_elite" — ніколи (дрібнота орди).
 		var affixes: Array = definition.get("affixes", [])

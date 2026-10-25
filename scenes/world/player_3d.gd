@@ -42,7 +42,7 @@ signal hit_landed(amount: float, crit: bool)
 signal perfect_dodge
 
 const WALK_SPEED := 2.6
-const RUN_SPEED := 5.4
+const RUN_SPEED := 4.6
 const ACCELERATION := 14.0      # як швидко набирає швидкість
 const DECELERATION := 18.0      # як швидко спиняється
 ## Найсильніше тягнення вирів разом — 60% бігу: тікаючи, герой вибирається.

@@ -34,12 +34,16 @@ func try_use(distance: float) -> bool:
 		var marker := _aim_marker
 		var tween := marker.create_tween()
 		tween.tween_method(func(value: float) -> void:
-			marker.set_instance_shader_parameter(&"progress", value), 0.0, 0.4, WINDUP)
-		enemy.get_tree().create_timer(WINDUP + 0.4, false).timeout.connect(_clear_aim)
-		enemy.begin_special(id, WINDUP, Color(_color(), 0.0), 0.1)
+			marker.set_instance_shader_parameter(&"progress", value), 0.0, 0.4, _windup())
+		enemy.get_tree().create_timer(_windup() + 0.4, false).timeout.connect(_clear_aim)
+		enemy.begin_special(id, _windup(), Color(_color(), 0.0), 0.1)
 	else:
-		enemy.begin_special(id, WINDUP, Color(_color(), 0.85), 1.2)
+		enemy.begin_special(id, _windup(), Color(_color(), 0.85), 1.2)
 	return true
+
+## Замах кидка ("windup" в описі, інакше WINDUP).
+func _windup() -> float:
+	return float(config.get("windup", WINDUP))
 
 func _clear_aim() -> void:
 	if _aim_marker != null and is_instance_valid(_aim_marker):

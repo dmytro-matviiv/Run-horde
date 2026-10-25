@@ -54,7 +54,7 @@ const LEVELS := [
 					"hp": 26.0, "damage": 7.0, "speed": 3.4, "height": 1.85, "xp": 3, "group": 2,
 					"attack_anims": ["Weapon"],
 					"special_anims": {"lunge": ["Windup"]},
-					"abilities": [{"id": "lunge", "cooldown": 4.0, "first": 1.0, "trigger": 4.0, "windup": 0.5, "hop": 0.55, "radius": 1.6, "damage": 1.4}],
+					"abilities": [{"id": "lunge", "cooldown": 4.0, "first": 1.0, "trigger": 4.0, "windup": 0.35, "hop": 0.5, "radius": 1.6, "damage": 1.4, "stun": 0.5}],
 					"pack": {"radius": 7.0, "count": 2, "attack_speed": 1.15}},
 				# Орк-щитоносець (модель гравця) — "танк": кам'яний щит спереду
 				# пропускає 20% шкоди (обходь збоку чи ззаду, він повільно
@@ -85,7 +85,7 @@ const LEVELS := [
 					"attack_range": 9.0, "flee": {"distance": 4.5, "speed": 1.3},
 					"special_anims": {"lob": ["Weapon"]},
 					"abilities": [{"id": "lob", "cooldown": 3.5, "first": 1.0, "min": 4.5, "radius": 1.6, "pool": 4.0,
-						"aim_first": true, "arc": 1.4, "color": Color(1.0, 0.45, 0.1), "shell": "res://assets/models/props/fire_jug.glb"}]},
+						"aim_first": true, "arc": 1.4, "windup": 0.4, "color": Color(1.0, 0.45, 0.1), "shell": "res://assets/models/props/fire_jug.glb"}]},
 				# Склепний чаклун (модель гравця) — підтримка, пріоритетна ціль:
 				# піднімає кістяні руки, що тримають героя 1 с (відкотись), кладе
 				# зелений щит на найближчого орка, вдарений — телепортується
@@ -95,7 +95,7 @@ const LEVELS := [
 					"projectile": {"color": Color(0.45, 1.0, 0.5), "speed": 9.0, "volley": 1},
 					"special_anims": {"grasp": ["Cast"], "dark_shield": ["Support"]},
 					"abilities": [
-						{"id": "grasp", "cooldown": 8.0, "first": 3.0, "count": 2, "radius": 1.0, "tell": 1.0, "hold": 1.0, "damage": 0.5},
+						{"id": "grasp", "cooldown": 8.0, "first": 3.0, "count": 2, "radius": 1.0, "tell": 0.55, "hold": 1.0, "damage": 0.5},
 						{"id": "dark_shield", "cooldown": 7.0, "first": 1.5, "range": 10.0, "amount": 0.6, "seconds": 12.0, "target": "Орк"},
 						{"id": "phase_step", "cooldown": 10.0, "first": 0.0, "min": 5.0, "max": 8.0}]},
 			],

@@ -90,7 +90,8 @@ func _land() -> void:
 	var offset := hero.global_position - _target
 	offset.y = 0.0
 	if offset.length() <= radius:
-		hero.take_damage(damage())
+		if hero.take_damage(damage()) and config.has("stun") and hero.has_method("stun"):
+			hero.stun(float(config.stun))
 	enemy.hold_still(0.35)
 
 func on_death() -> void:
