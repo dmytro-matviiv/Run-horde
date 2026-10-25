@@ -78,14 +78,14 @@ const LEVELS := [
 			"r": [
 				# Орк-палій (модель гравця): тримається на відстані й кидає глечики
 				# з олією — коло на місці падіння видно ще під час замаху, там 4 с
-				# горить калюжа. Підійшов близько — тікає бігом. Глечик поки
-				# заглушка (fire_jug.tscn) — чекає 3D-модель гравця.
+				# горить калюжа. Підійшов близько — тікає бігом. Глечик — модель
+				# гравця (props/fire_jug.glb, 900 трикутників, scripts/blender/prep_prop.py).
 				{"name": "Орк-палій", "model": "res://assets/models/monsters/orc_pyro.glb", "kind": "ranged",
 					"hp": 22.0, "damage": 8.0, "speed": 2.6, "height": 1.8, "xp": 4, "no_shot": true,
 					"attack_range": 9.0, "flee": {"distance": 4.5, "speed": 1.3},
 					"special_anims": {"lob": ["Weapon"]},
 					"abilities": [{"id": "lob", "cooldown": 3.5, "first": 1.0, "min": 4.5, "radius": 1.6, "pool": 4.0,
-						"aim_first": true, "color": Color(1.0, 0.45, 0.1), "shell": "res://scenes/dungeon/hazards/fire_jug.tscn"}]},
+						"aim_first": true, "arc": 1.4, "color": Color(1.0, 0.45, 0.1), "shell": "res://assets/models/props/fire_jug.glb"}]},
 				# Склепний чаклун (модель гравця) — підтримка, пріоритетна ціль:
 				# піднімає кістяні руки, що тримають героя 1 с (відкотись), кладе
 				# зелений щит на найближчого орка, вдарений — телепортується

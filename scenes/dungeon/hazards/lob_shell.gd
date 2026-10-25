@@ -8,6 +8,9 @@ class_name LobShell
 const FLIGHT := 1.0
 const ARC_HEIGHT := 3.5
 
+## Висота дуги над прямою (м): нижча дуга лишається в кадрі ігрової
+## камери — видно, як летить глечик.
+var arc_height := ARC_HEIGHT
 var _from := Vector3.ZERO
 var _to := Vector3.ZERO
 var _radius := 1.6
@@ -62,7 +65,7 @@ func _ready() -> void:
 
 func _fly(t: float) -> void:
 	var position := _from.lerp(_to, t)
-	position.y += ARC_HEIGHT * 4.0 * t * (1.0 - t)
+	position.y += arc_height * 4.0 * t * (1.0 - t)
 	_shell.global_position = position
 	_shell.rotation.x = t * TAU
 	_marker.set_instance_shader_parameter(&"progress", t)
