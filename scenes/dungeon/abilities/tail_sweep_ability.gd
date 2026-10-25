@@ -14,6 +14,7 @@ var _marker: MeshInstance3D
 func _init() -> void:
 	id = "tail_sweep"
 	cooldown = 6.0
+	instant = true
 
 func try_use(distance: float) -> bool:
 	var radius := float(config.get("radius", 4.8))

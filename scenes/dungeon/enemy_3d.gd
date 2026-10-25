@@ -903,10 +903,10 @@ func _physics_process(delta: float) -> void:
 ## Здібність бере хід, коли ворог вільний, не на перезарядці удару й
 ## бачить героя (що саме потрібно — вирішує сама здібність).
 func _use_abilities(distance: float) -> bool:
-	if abilities.is_empty() or _attack_left > 0.0:
+	if abilities.is_empty():
 		return false
 	for ability in abilities:
-		if ability.ready_to_use() and ability.try_use(distance):
+		if (_attack_left <= 0.0 or ability.instant) and ability.ready_to_use() and ability.try_use(distance):
 			return true
 	return false
 

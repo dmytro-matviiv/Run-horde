@@ -19,6 +19,9 @@ var id := ""
 var enemy: Enemy3D
 var cooldown := 6.0
 var from_phase := 1
+## Реакція, що не чекає перерви між ударами (удар хвостом, щойно герой
+## зайшов за спину).
+var instant := false
 ## До якої фази боса включно діє ("until" в описі).
 var until_phase := 99
 var config: Dictionary = {}

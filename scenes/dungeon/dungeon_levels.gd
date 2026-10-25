@@ -330,7 +330,7 @@ const LEVELS := [
 		#     дихає частіше, б'є крилами (зносить до країв). Гине — колони
 		#     тріскаються, руни згасають одна за одною.
 		"boss": {"name": "Інейний Дракон", "model": "res://assets/models/monsters/frost_dragon.glb", "style": "frost_dragon",
-			"hp": 700.0, "damage": 18.0, "speed": 3.0, "height": 3.4, "xp": 60, "turn_factor": 0.35,
+			"hp": 700.0, "damage": 18.0, "speed": 3.0, "height": 3.4, "xp": 60, "turn_factor": 0.22,
 			"no_hazard_rain": true, "phase_thresholds": [0.65, 0.3], "phase_lock": true, "frenzy_cooldown": 0.7,
 			"attack_anims": ["Weapon"],
 			"special_anims": {"frost_breath": ["Breath"], "tail_sweep": ["Tail"], "wing_gust": ["Wing"]},

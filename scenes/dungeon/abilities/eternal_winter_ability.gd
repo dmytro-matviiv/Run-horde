@@ -41,6 +41,10 @@ func tick(delta: float) -> void:
 	super.tick(delta)
 	if _home == Vector3.INF and enemy.is_inside_tree():
 		_home = enemy.global_position
+	# Зима настає одразу з фазою — навіть якщо дракон саме оглушений чи
+	# замахується (звичайна черга прийомів чекала б, доки він звільниться).
+	if not _active and ready_to_use() and enemy.phases != null:
+		try_use(0.0)
 	if not _active:
 		return
 	_switch_left -= delta
