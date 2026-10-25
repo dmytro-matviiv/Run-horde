@@ -1442,6 +1442,13 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 		if _absorb <= 0.0:
 			_drop_absorb()
 			CombatVfx.impact(get_parent(), global_position + Vector3.UP * target_height * 0.5, Color(0.45, 1.0, 0.5), true)
+	# Бос із "phase_lock": удар не перескакує фазу — здоров'я зупиняється на
+	# порозі наступної фази, решта шкоди згорає.
+	if phases != null and definition.get("phase_lock", false):
+		var thresholds: Array = definition.get("phase_thresholds", BossPhases.THRESHOLDS)
+		if phases.phase - 1 < thresholds.size():
+			var floor_hp := max_hp * float(thresholds[phases.phase - 1])
+			amount = clampf(current_hp - floor_hp, 0.0, amount)
 	var blocked := _shield_blocks()
 	if blocked:
 		amount *= float(definition.stone_shield.get("factor", 0.2))
@@ -1505,6 +1512,9 @@ func _set_wall_stunned(stunned: bool) -> void:
 		_stun_stars.visible = stunned
 	if stunned:
 		_cancel_windup()
+
+static func make_stun_stars() -> Node3D:
+	return _make_stun_stars()
 
 static func _make_stun_stars() -> Node3D:
 	var holder := Node3D.new()

@@ -111,7 +111,7 @@ const LEVELS := [
 		#     вогняна пляма. Убив у темряві — факели спалахують знову.
 		"boss": {"name": "Хранитель Склепів", "model": "res://assets/models/monsters/crypt_keeper.glb", "style": "keeper",
 			"hp": 600.0, "damage": 16.0, "speed": 2.7, "height": 3.0, "xp": 30,
-			"no_hazard_rain": true, "phase_thresholds": [0.6, 0.3], "darkness": true, "frenzy_cooldown": 0.65,
+			"no_hazard_rain": true, "phase_thresholds": [0.6, 0.3], "phase_lock": true, "darkness": true, "frenzy_cooldown": 0.65,
 			"attack_anims": ["Weapon"], "candle_throw": {"radius": 1.0, "pool": 3.0, "damage": 0.4},
 			"special_anims": {"crack_lines": ["Slam"], "chain_spin": ["Spin"]},
 			"abilities": [

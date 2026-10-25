@@ -330,6 +330,8 @@ var _pull_velocity := Vector3.ZERO
 var _pull_applied := Vector3.ZERO
 ## Збили з ніг (таран щитоносця): відлітає, мить не керує рухом і не б'є.
 var _knock_left := 0.0
+## Оглушення (бос): зірочки над головою, ні кроку, ні удару, ні перекату.
+var _stun_stars: Node3D
 ## Схопили кістяні руки (чаклун): стоїть на місці, але може бити.
 var _rooted_left := 0.0
 var _root_marker: MeshInstance3D
@@ -1148,6 +1150,8 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 		return
 	if _knock_left > 0.0:
 		_knock_left -= delta
+		if _knock_left <= 0.0 and _stun_stars != null:
+			_stun_stars.visible = false
 		_knock_velocity = _knock_velocity.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
 		velocity.x = _knock_velocity.x
 		velocity.z = _knock_velocity.z
@@ -1689,6 +1693,29 @@ func root(seconds: float) -> bool:
 
 func is_rooted() -> bool:
 	return _rooted_left > 0.0
+
+## Оглушити на seconds секунд (або доки не зніме end_stun). Перекат не
+## рятує — це не удар, а сила боса.
+func stun(seconds: float) -> void:
+	if _dead:
+		return
+	_roll_left = 0.0
+	_knock_left = maxf(_knock_left, seconds)
+	_knock_velocity = Vector3.ZERO
+	_attack_step = -1
+	_abort_attacks()
+	if _stun_stars == null:
+		_stun_stars = Enemy3D.make_stun_stars()
+		add_child(_stun_stars)
+		_stun_stars.position = Vector3(0, 2.1, 0)
+		var spin := _stun_stars.create_tween().set_loops()
+		spin.tween_property(_stun_stars, "rotation:y", TAU, 0.9).from(0.0)
+	_stun_stars.visible = true
+
+func end_stun() -> void:
+	_knock_left = 0.0
+	if _stun_stars != null:
+		_stun_stars.visible = false
 
 ## Воскресіння за відео (данж): частина здоров'я й щит на кілька секунд.
 ## Перезарядка здібностей лишається, як була, — лише перекат готовий

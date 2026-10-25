@@ -1517,12 +1517,16 @@ static func _count_open_sides(map_rows: Array, x: int, z: int) -> int:
 ## одразу), найгірше — південна (стоїть до камери спиною).
 ## Повертає {"face": точка на лиці стіни біля підлоги, "inward": куди
 ## дивиться портал (у кімнату)} або {}, якщо такої стіни немає.
-static func portal_wall(map_rows: Array, start: Vector2i) -> Dictionary:
+## skip — "inward" стіни, яку брати не можна (саркофаги боса не стають на
+## стіну, де потім відкриється портал).
+static func portal_wall(map_rows: Array, start: Vector2i, skip: Vector3 = Vector3.ZERO) -> Dictionary:
 	const MAX_STEPS := 14
 	var best := {}
 	var best_score := INF
 	var directions := {Vector2i(0, -1): 0.0, Vector2i(-1, 0): 3.0, Vector2i(1, 0): 3.0, Vector2i(0, 1): 8.0}
 	for dir: Vector2i in directions:
+		if skip != Vector3.ZERO and Vector3(-dir.x, 0.0, -dir.y).is_equal_approx(skip):
+			continue
 		var side := Vector2i(-dir.y, dir.x)
 		for off in [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5]:
 			var cell: Vector2i = start + side * off

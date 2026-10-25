@@ -1,16 +1,24 @@
 extends EnemyAbility
 
-## ВІДКРИТІ САРКОФАГИ (Хранитель Склепів, фаза 2): бос відходить до стіни
-## своєї зали, де стоять саркофаги, і відмикає їх ключами (unlock секунд)
-## — тим часом не б'є, і його можна бити. Далі з саркофагів вилазять
-## вороги зі списку spawn (назви звичайних ворогів рівня).
+## ВІДКРИТІ САРКОФАГИ (Хранитель Склепів, фаза 2). Рев — і герой
+## оглушений (зірочки, ні кроку, ні перекату). Бос іде до стіни своєї
+## зали — не тієї, де після бою відкриється портал, — там із підлоги
+## виростають саркофаги; відмикає їх (unlock секунд), і з них вилазять
+## вороги зі списку spawn. Щойно вилізли — оглушення спадає, бій далі.
+## Саркофаги тверді й лишаються до кінця бою.
 ##
-## Налаштування: spawn, unlock (с), speed (м/с — хода до стіни).
+## Налаштування: spawn (назви звичайних ворогів рівня), unlock (с),
+## speed (м/с — хода до стіни).
 
-const COFFIN_SCENE := preload("res://assets/models/graveyard/coffin_open.glb")
+const SARCOPHAGUS_SCENE := preload("res://assets/models/props/sarcophagus.glb")
 const COLOR := Color(0.55, 1.0, 0.45)
-## Саркофаги стоять уздовж стіни на такій відстані один від одного.
-const SPACING := 2.4
+## Модель: 2.3 x 1.27 x 1.23 м, лицем (замок) уперед по +Z.
+const BOX := Vector3(2.1, 1.2, 1.15)
+## Відстань між саркофагами вздовж стіни й відступ від лиця стіни.
+const SPACING := 2.8
+const WALL_GAP := 1.0
+## Оглушення героя — доки вороги не вилізуть, але не довше за це.
+const STUN_LIMIT := 12.0
 
 enum Step {IDLE, WALK, UNLOCK}
 
@@ -32,31 +40,55 @@ func try_use(_distance: float) -> bool:
 		return false
 	start_cooldown()
 	_step = Step.WALK
+	var hero := player()
+	if hero != null and hero.has_method("stun"):
+		hero.stun(STUN_LIMIT)
+	enemy.play_once(["Roar"])
+	CombatVfx.shockwave(world(), enemy.global_position, 9.0, COLOR, 0.6)
 	return true
 
-## Саркофаги — біля стіни зали, найближчої до боса (там же, де після бою
-## відкриється портал: на тій стіні вільно).
+## Саркофаги — біля стіни зали, найближчої до боса, але не тієї, де
+## відкриється портал виходу.
 func _place_coffins() -> bool:
 	var map_rows: Array = DungeonLevels.get_level(GameState.dungeon_level).map
-	var wall := DungeonBuilder.portal_wall(map_rows, DungeonBuilder.cell_of(enemy.global_position))
+	var cell := DungeonBuilder.cell_of(enemy.global_position)
+	var portal := DungeonBuilder.portal_wall(map_rows, cell)
+	var wall := DungeonBuilder.portal_wall(map_rows, cell, portal.get("inward", Vector3.ZERO))
 	if wall.is_empty():
 		return false
 	_inward = wall.inward
 	var face: Vector3 = wall.face
 	var side := Vector3(-_inward.z, 0.0, _inward.x)
-	_target = face + _inward * 1.6
+	_target = face + _inward * (WALL_GAP + 2.0)
 	_target.y = enemy.global_position.y
-	for k in [-1, 1, 0]:
-		var spot: Vector3 = face + _inward * 0.75 + side * SPACING * k
-		if k == 0:
-			spot += side * SPACING * 2.0
+	var body := StaticBody3D.new()
+	body.collision_layer = 1
+	body.collision_mask = 0
+	world().add_child(body)
+	for k in [0, -1, 1, -2, 2]:
+		if _coffins.size() >= 3:
+			break
+		var spot: Vector3 = face + _inward * WALL_GAP + side * SPACING * k
+		var spot_cell := DungeonBuilder.cell_of(spot)
+		if not DungeonBuilder.is_walkable(map_rows, spot_cell.x, spot_cell.y):
+			continue
 		_coffins.append(spot)
-		var coffin: Node3D = COFFIN_SCENE.instantiate()
+		var coffin: Node3D = SARCOPHAGUS_SCENE.instantiate()
 		world().add_child(coffin)
 		coffin.global_position = Vector3(spot.x, DungeonBuilder.FLOOR_TOP, spot.z)
 		coffin.rotation.y = atan2(_inward.x, _inward.z)
-		coffin.scale = Vector3.ONE * 1.6
-	return true
+		# Виростає з-під підлоги.
+		coffin.scale = Vector3(1.0, 0.05, 1.0)
+		coffin.create_tween().tween_property(coffin, "scale", Vector3.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		CombatVfx.impact_decal(world(), spot, 1.4, Color(0.8, 0.75, 0.65), 0.5)
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = BOX
+		shape.shape = box
+		body.add_child(shape)
+		shape.global_position = Vector3(spot.x, DungeonBuilder.FLOOR_TOP + BOX.y * 0.5, spot.z)
+		shape.global_rotation.y = coffin.rotation.y
+	return not _coffins.is_empty()
 
 func tick(delta: float) -> void:
 	super.tick(delta)
@@ -90,11 +122,17 @@ func _release() -> void:
 		definition = definition.duplicate(true)
 		definition.erase("group")
 		definition["no_elite"] = true
-		var spot: Vector3 = _coffins[i % _coffins.size()] + _inward * 0.9
+		var spot: Vector3 = _coffins[i % _coffins.size()] + _inward * 1.4
 		CombatVfx.impact(world(), spot + Vector3.UP * 0.6, COLOR, true)
 		CombatVfx.shockwave(world(), spot, 1.6, COLOR, 0.4)
 		enemy.spawn_requested.emit(spot, definition, enemy)
 	AudioManager.play(&"explosion", 0.05)
+	_free_hero()
+
+func _free_hero() -> void:
+	var hero := player()
+	if hero != null and is_instance_valid(hero) and hero.has_method("end_stun"):
+		hero.end_stun()
 
 static func _find(level: Dictionary, name: String) -> Dictionary:
 	for group: Array in level.enemies.values():
@@ -104,4 +142,6 @@ static func _find(level: Dictionary, name: String) -> Dictionary:
 	return {}
 
 func on_death() -> void:
+	if _step != Step.IDLE:
+		_free_hero()
 	_step = Step.IDLE
