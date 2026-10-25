@@ -457,6 +457,45 @@ func _drop_absorb() -> void:
 func play_once(candidates: Array) -> void:
 	_play_once(candidates)
 
+## Зациклена анімація (хода, обертання) — для прийомів, що самі ведуть ворога.
+func play_loop(wanted: String) -> void:
+	_play(wanted)
+
+## Свічки на плечі боса (Хранитель Склепів у темряві): тепле світло й
+## іскри — у темній залі боса видно лише за цим вогником.
+func light_candles() -> void:
+	if _model == null or _model.has_node("Candles"):
+		return
+	var holder := Node3D.new()
+	holder.name = "Candles"
+	_model.add_child(holder)
+	var spot: Vector3 = definition.get("candle_spot", Vector3(0.45, 1.65, 0.0))
+	holder.position = spot
+	var light := OmniLight3D.new()
+	light.light_color = Color(1.0, 0.7, 0.35)
+	light.light_energy = 2.2
+	light.omni_range = 5.0
+	light.shadow_enabled = false
+	holder.add_child(light)
+	var flames := CombatVfx.make_trail(Color(1.0, 0.65, 0.25), 0.45)
+	flames.local_coords = true
+	flames.amount = 12
+	flames.direction = Vector3.UP
+	flames.gravity = Vector3(0, 1.2, 0)
+	flames.emission_sphere_radius = 0.12
+	holder.add_child(flames)
+	var flicker := light.create_tween().set_loops()
+	flicker.tween_property(light, "light_energy", 1.7, 0.18)
+	flicker.tween_property(light, "light_energy", 2.4, 0.22)
+
+## Кидок свічки (Хранитель у темряві): на місці падіння — вогняна пляма.
+func _throw_candle() -> void:
+	var candle: Dictionary = definition.candle_throw
+	var lob := LobShell.launch(get_parent(), global_position + Vector3.UP * target_height * 0.85,
+		_player.global_position, _player, float(candle.get("radius", 1.0)), damage * float(candle.get("damage", 0.4)),
+		Color(1.0, 0.55, 0.15), float(candle.get("pool", 3.0)), load("res://assets/models/graveyard/candle_melted.glb"), self)
+	lob.arc_height = 1.6
+
 func hold_still(seconds: float) -> void:
 	_hold_still(seconds)
 
@@ -955,6 +994,8 @@ func _resolve_attack() -> void:
 			_special = ""
 			ability.resolve()
 			return
+	if definition.has("candle_throw") and phases != null and phases.phase >= 3 and _player != null:
+		_throw_candle()
 	if kind == Kind.RANGED:
 		_release_shot()
 		return

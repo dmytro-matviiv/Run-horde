@@ -100,8 +100,26 @@ const LEVELS := [
 						{"id": "phase_step", "cooldown": 10.0, "first": 0.0, "min": 5.0, "max": 8.0}]},
 			],
 		},
-		"boss": {"name": "Демон Склепів", "model": "res://assets/models/monsters/Demon-LnfIziKv4o.glb", "style": "demon",
-			"hp": 220.0, "damage": 16.0, "speed": 3.2, "height": 3.4, "xp": 25},
+		# Хранитель Склепів (модель гравця, скелет і анімації —
+		# D:/RuneHorde_work/scripts/blender/rig_keeper.py). Три фази:
+		#   1 (100-60%): удар надгробком — три смуги тріщин віялом (перекотись
+		#     крізь смугу); обертання ланцюгом — не підходь близько;
+		#   2 (60-30%): відходить до стіни й відмикає саркофаги — 2 слизи й
+		#     рубака; поки відмикає, не б'є;
+		#   3 (<30%): ревом гасить факели (темно, видно лише ліхтар героя й
+		#     свічки на плечі боса), б'є частіше й щоразу кидає свічку —
+		#     вогняна пляма. Убив у темряві — факели спалахують знову.
+		"boss": {"name": "Хранитель Склепів", "model": "res://assets/models/monsters/crypt_keeper.glb", "style": "keeper",
+			"hp": 600.0, "damage": 16.0, "speed": 2.7, "height": 3.0, "xp": 30,
+			"no_hazard_rain": true, "phase_thresholds": [0.6, 0.3], "darkness": true, "frenzy_cooldown": 0.65,
+			"attack_anims": ["Weapon"], "candle_throw": {"radius": 1.0, "pool": 3.0, "damage": 0.4},
+			"special_anims": {"crack_lines": ["Slam"], "chain_spin": ["Spin"]},
+			"abilities": [
+				{"id": "crack_lines", "cooldown": 7.0, "first": 3.0, "count": 3, "spread": 32.0, "length": 10.0, "width": 1.3, "windup": 1.1, "damage": 1.3},
+				{"id": "chain_spin", "cooldown": 9.0, "first": 5.0, "trigger": 3.5, "radius": 3.2, "spin": 2.2, "damage": 0.5},
+				{"id": "sarcophagi", "phase": 2, "until": 2, "cooldown": 18.0, "first": 0.6, "unlock": 3.0,
+					"spawn": ["Склепний слиз", "Склепний слиз", "Орк-рубака"]},
+			]},
 		"map": [
 			"########################################",
 			"########################################",

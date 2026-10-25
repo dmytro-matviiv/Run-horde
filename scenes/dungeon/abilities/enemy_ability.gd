@@ -19,6 +19,8 @@ var id := ""
 var enemy: Enemy3D
 var cooldown := 6.0
 var from_phase := 1
+## До якої фази боса включно діє ("until" в описі).
+var until_phase := 99
 var config: Dictionary = {}
 
 var _left := 2.0
@@ -28,11 +30,13 @@ func setup(owner: Enemy3D, settings: Dictionary) -> void:
 	config = settings
 	cooldown = float(settings.get("cooldown", cooldown))
 	from_phase = int(settings.get("phase", 1))
+	until_phase = int(settings.get("until", 99))
 	_left = float(settings.get("first", cooldown * 0.5))
 
 ## Перезарядка минула й фаза боса дозволяє.
 func ready_to_use() -> bool:
-	return _left <= 0.0 and (enemy.phases == null or enemy.phases.phase >= from_phase)
+	return _left <= 0.0 and (enemy.phases == null
+		or (enemy.phases.phase >= from_phase and enemy.phases.phase <= until_phase))
 
 func start_cooldown() -> void:
 	_left = cooldown

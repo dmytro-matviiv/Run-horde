@@ -34,6 +34,7 @@ const STYLES := {
 	"doom": {"color": Color(1.0, 0.4, 0.1), "rage": "кличе метеори", "frenzy": "рве небо навпіл"},
 	"abyssal": {"color": Color(0.55, 0.2, 0.85), "rage": "розкриває Безодню", "frenzy": "тоне в Безодні"},
 	"shadow": {"color": Color(0.35, 0.1, 0.5), "rage": "розколюється", "frenzy": "губиться у тінях"},
+	"keeper": {"color": Color(1.0, 0.7, 0.3), "rage": "відмикає саркофаги", "frenzy": "гасить факели"},
 }
 
 var phase := 1
@@ -55,9 +56,12 @@ func _physics_process(delta: float) -> void:
 	if _boss == null or not _boss.is_alive():
 		return
 	var ratio := _boss.current_hp / maxf(_boss.max_hp, 1.0)
-	while phase - 1 < THRESHOLDS.size() and ratio <= THRESHOLDS[phase - 1]:
+	# Свої пороги фаз ("phase_thresholds"), інакше — половина й чверть.
+	var thresholds: Array = _boss.definition.get("phase_thresholds", THRESHOLDS)
+	while phase - 1 < thresholds.size() and ratio <= thresholds[phase - 1]:
 		_enter_phase(phase + 1)
-	if phase >= 2 and _boss.is_aggro():
+	# "no_hazard_rain": у боса свої механіки фаз замість дощу кіл.
+	if phase >= 2 and _boss.is_aggro() and not _boss.definition.get("no_hazard_rain", false):
 		_hazard_left -= delta
 		if _hazard_left <= 0.0:
 			_hazard_left = HAZARD_INTERVAL[phase - 1]
@@ -67,6 +71,9 @@ func _enter_phase(next: int) -> void:
 	phase = next
 	_boss.move_speed *= SPEED_UP
 	_boss.attack_cooldown *= COOLDOWN_DOWN
+	# Остання фаза — б'є ще частіше ("frenzy_cooldown").
+	if next == 3 and _boss.definition.has("frenzy_cooldown"):
+		_boss.attack_cooldown *= float(_boss.definition.frenzy_cooldown)
 	_hazard_left = 1.5
 	var style := _style()
 	var parent := _boss.get_parent()

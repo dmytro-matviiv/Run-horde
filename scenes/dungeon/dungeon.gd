@@ -180,6 +180,10 @@ var _last_hp := 0.0
 var _offering_ability := false
 ## Бос рівня і його велика смуга здоров'я внизу екрана.
 var _boss: Enemy3D
+## Темрява в залі боса ("darkness" в описі, остання фаза): факели згасли.
+var _darkness := false
+var _ambient_energy := 1.0
+const DARK_AMBIENT := 0.12
 var _boss_panel: Control
 var _boss_bar: ProgressBar
 ## Мега-бос (boss_gate у описі рівня): бос не стоїть від початку, а чекає,
@@ -658,6 +662,36 @@ func _on_chest_opened(position: Vector3) -> void:
 ## Бос перейшов у нову фазу — великий напис.
 func _on_boss_phase(phase: int, title: String) -> void:
 	_show_banner(title, "швидший і небезпечніший" if phase == 2 else "останній ривок!")
+	if phase == 3 and _boss != null and is_instance_valid(_boss) and _boss.definition.get("darkness", false):
+		_set_darkness()
+
+## Рев гасить факели: загальне світло й факели згасають, світиться лише
+## ліхтар героя та свічки на плечі боса.
+func _set_darkness() -> void:
+	_darkness = true
+	var environment: Environment = $WorldEnvironment.environment
+	_ambient_energy = environment.ambient_light_energy
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(environment, "ambient_light_energy", DARK_AMBIENT, 0.8)
+	for light: OmniLight3D in _lights:
+		if not light.has_meta("energy"):
+			light.set_meta("energy", light.light_energy)
+		tween.tween_property(light, "light_energy", 0.0, 0.5 + randf() * 0.4)
+	player.set_torch_enabled(true)
+	_boss.light_candles()
+
+## Бос упав у темряві — факели спалахують знову, один за одним.
+func _relight(center: Vector3) -> void:
+	_darkness = false
+	var environment: Environment = $WorldEnvironment.environment
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(environment, "ambient_light_energy", _ambient_energy, 1.6).set_delay(0.3)
+	for light: OmniLight3D in _lights:
+		var delay := 0.3 + light.global_position.distance_to(center) * 0.04
+		var energy: float = light.get_meta("energy", 1.0)
+		tween.tween_property(light, "light_energy", energy * 1.8, 0.25).set_delay(delay)
+		tween.chain().tween_property(light, "light_energy", energy, 0.6)
+	CombatVfx.shockwave(self, center, 12.0, Color(1.0, 0.75, 0.35), 1.2)
 
 ## Смуга здоров'я боса внизу посередині: видно, щойно бій почався.
 func _build_boss_bar() -> void:
@@ -927,6 +961,8 @@ func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_el
 		orb.global_position = position + Vector3(0, DungeonBuilder.FLOOR_TOP, 0)
 	if is_boss:
 		_boss_defeated = true
+		if _darkness:
+			_relight(position)
 		_celebrate_boss(position)
 		_open_exit()
 		if _boss_gate != null:
