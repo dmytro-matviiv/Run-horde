@@ -245,6 +245,7 @@ var _charging_shot: EnemyProjectile
 ## Стоїть на підлозі (після першого приземлення). Поки так, ворог, що
 ## йде маршрутом, рухається без фізики — див. _move().
 var _grounded := false
+var _stranded_left := 0.5
 var _path_step := false
 
 ## Налаштовує ворога за описом із DungeonLevels. Викликати ДО того, як
@@ -723,6 +724,7 @@ func _physics_process(delta: float) -> void:
 	_sight_left -= delta
 	_stagger_left = maxf(_stagger_left - delta, 0.0)
 	_tick_status(delta)
+	_check_stranded(delta)
 	_charge_cooldown_left -= delta
 	if _absorb_left > 0.0:
 		_absorb_left -= delta
@@ -1518,14 +1520,34 @@ func _set_wall_stunned(stunned: bool) -> void:
 
 ## Чи вільне місце під ворога: немає стін, колон, меблів, саркофагів
 ## (шар 1) у колі radius на висоті пояса.
-static func is_spot_clear(world: World3D, spot: Vector3, radius: float = 0.45) -> bool:
+static func is_spot_clear(world: World3D, spot: Vector3, radius: float = 0.65) -> bool:
 	var query := PhysicsShapeQueryParameters3D.new()
-	var sphere := SphereShape3D.new()
-	sphere.radius = radius
-	query.shape = sphere
-	query.transform = Transform3D(Basis(), Vector3(spot.x, DungeonBuilder.FLOOR_TOP + 0.7, spot.z))
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = radius
+	capsule.height = 1.8
+	query.shape = capsule
+	query.transform = Transform3D(Basis(), Vector3(spot.x, DungeonBuilder.FLOOR_TOP + 0.95, spot.z))
 	query.collision_mask = 1
 	return world.direct_space_state.intersect_shape(query, 1).is_empty()
+
+## Ворог опинився НА чомусь (стіл, саркофаг) — зводимо на найближче
+## вільне місце на підлозі. Перевірка рідко: раз на пів секунди.
+func _check_stranded(delta: float) -> void:
+	_stranded_left -= delta
+	if _stranded_left > 0.0:
+		return
+	_stranded_left = 0.5
+	if global_position.y < DungeonBuilder.FLOOR_TOP + 0.5:
+		return
+	var world := get_world_3d()
+	for ring in [1.0, 1.7, 2.5, 3.3]:
+		for i in 8:
+			var angle := TAU * i / 8.0
+			var spot: Vector3 = global_position + Vector3(cos(angle), 0.0, sin(angle)) * ring
+			spot.y = DungeonBuilder.FLOOR_TOP
+			if is_spot_clear(world, spot):
+				teleport_to(spot)
+				return
 
 static func make_stun_stars() -> Node3D:
 	return _make_stun_stars()

@@ -844,7 +844,9 @@ static func add_decor_obstacles(obstacles: StaticBody3D, map_rows: Array, chunks
 		var footprint := maxf(box.size.x, box.size.z)
 		if footprint < SOLID_MIN_FOOTPRINT or box.size.y < SOLID_MIN_HEIGHT:
 			continue
-		var size := Vector3(box.size.x * SOLID_SHRINK, minf(box.size.y, 2.5), box.size.z * SOLID_SHRINK)
+		# Коробка завжди висока (2.5 м), хоч стіл і низький: на ній не можна
+		# стояти — ворог не опиниться на столі.
+		var size := Vector3(box.size.x * SOLID_SHRINK, 2.5, box.size.z * SOLID_SHRINK)
 		var center := box.get_center()
 		_add_box_shape(obstacles, Vector3(center.x, size.y * 0.5, center.z), size)
 		obstacles.get_child(-1).name = "Decor%d" % count
