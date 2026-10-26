@@ -112,10 +112,10 @@ func _process(_delta: float) -> void:
 func apply_slow(_factor: float, _seconds: float) -> void:
 	pass
 
-func freeze(_seconds: float, _interrupt: bool = true) -> void:
+func freeze(_seconds: float) -> void:
 	pass
 
-func stun(_seconds: float, _interrupt: bool = true) -> void:
+func stun(_seconds: float) -> void:
 	pass
 
 func _physics_process(delta: float) -> void:

@@ -58,7 +58,7 @@ func _ready() -> void:
 		_runes.add_child(rune)
 	if hold > 0.0 and _player != null and is_instance_valid(_player):
 		for enemy: Enemy3D in _player.enemies_near(global_position, radius):
-			enemy.stun(delay + hold, source != &"weapon")
+			enemy.stun(delay + hold)
 
 func _physics_process(delta: float) -> void:
 	_left -= delta

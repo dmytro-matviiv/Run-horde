@@ -1528,24 +1528,23 @@ func is_slowed() -> bool:
 	return _slow_left > 0.0
 
 ## Заморозка: ворог застигає в крижаній брилі — не ходить і не б'є.
-## Боса й голема — ненадовго. Замах (каст) зриває лише суперздібність
-## (interrupt) і лише у звичайного ворога; інакше каст на час криги
-## застигає й доходить до кінця.
-func freeze(seconds: float, interrupt: bool = true) -> void:
+## Боса й голема — ненадовго. Замах (каст) звичайного ворога зривається;
+## у боса каст на час криги застигає й доходить до кінця.
+func freeze(seconds: float) -> void:
 	if _dying:
 		return
 	if kind == Kind.BOSS or tank:
 		seconds *= 0.35
 	_frozen_left = maxf(_frozen_left, seconds)
-	if _windup_left <= 0.0 or (interrupt and kind != Kind.BOSS):
+	if _windup_left <= 0.0 or kind != Kind.BOSS:
 		_hold_still(seconds)
 	_show_ice(true)
 
 ## Оглушення важким ударом: стоїть і не б'є. Каст — як у freeze().
-func stun(seconds: float, interrupt: bool = true) -> void:
+func stun(seconds: float) -> void:
 	if _dying:
 		return
-	if _windup_left > 0.0 and (not interrupt or kind == Kind.BOSS):
+	if _windup_left > 0.0 and kind == Kind.BOSS:
 		return
 	if kind == Kind.BOSS or tank:
 		seconds *= 0.4
@@ -1716,9 +1715,9 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 	_knockback = knockback * (0.25 if is_boss else 1.0)
 	if _charge_state == 2 or _fuse_left >= 0.0:
 		_knockback = Vector3.ZERO
-	# Замах (каст) збиває лише суперздібність героя (не зброя й не пасивки), і лише
-	# звичайного ворога: бос свій прийом доводить до кінця. Поки ворог
-	# замахується, удари його не спиняють і не "смикають".
+	# Замах (каст) збиває суперздібність героя, а від зброї — лише оглушення
+	# чи заморозка (stun/freeze), не сам удар; бос свій прийом доводить до
+	# кінця. Поки ворог замахується, удари його не спиняють і не "смикають".
 	var by_skill := not String(last_hit_source) in ["", "weapon", "death_mark", "phoenix", "rage", "rune_charge"]
 	if by_skill and kind != Kind.BOSS and _windup_left > 0.0:
 		_cancel_windup()

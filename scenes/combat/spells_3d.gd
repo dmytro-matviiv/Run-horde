@@ -171,7 +171,7 @@ static func frost_hit(enemy: Enemy3D, position: Vector3, player: Node) -> void:
 	var stacks := int(enemy.get_meta(&"frost_stacks", 0)) + 1
 	if stacks >= FROST_STACKS_TO_FREEZE:
 		stacks = 0
-		enemy.freeze(FROST_FREEZE_TIME * power, false)
+		enemy.freeze(FROST_FREEZE_TIME * power)
 		CombatVfx.shockwave(parent, enemy.global_position, 1.3, FROST_COLOR, 0.3)
 	enemy.set_meta(&"frost_stacks", stacks)
 

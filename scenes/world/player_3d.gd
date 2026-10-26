@@ -1446,7 +1446,7 @@ func _apply_hit(step: Dictionary) -> void:
 			continue
 		deal_damage(enemy, step.damage, offset.normalized() * knockback, step.heavy)
 		if step.has("stun"):
-			enemy.stun(float(step.stun), false)
+			enemy.stun(float(step.stun))
 		hit.append(enemy)
 	if hit.is_empty():
 		return
