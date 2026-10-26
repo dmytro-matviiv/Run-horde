@@ -33,6 +33,9 @@ const SHAKE_FREQUENCY := 38.0
 @onready var camera: Camera3D = $SpringArm3D/Camera3D
 
 var _target: Node3D
+## Межі, у яких ходить сама камера (данж): біля краю карти герой іде далі,
+## а камера стоїть — за краєм видно не порожнечу. Rect2 у метрах (x, z).
+var _bounds := Rect2()
 var _yaw := 0.0
 var _pitch := 0.0
 var _shake := 0.0
@@ -67,6 +70,10 @@ func set_pitch_limits(min_degrees: float, max_degrees: float, start_degrees: flo
 	_pitch = deg_to_rad(clampf(start_degrees, min_degrees, max_degrees))
 	spring_arm.rotation.x = _pitch
 
+## Межі камери на площині (x, z). Порожній Rect2 — без меж.
+func set_bounds(bounds: Rect2) -> void:
+	_bounds = bounds
+
 ## Нахил камери вгору-вниз тим самим пальцем.
 func pitch_by(amount: float) -> void:
 	_pitch = clampf(_pitch + amount, deg_to_rad(min_pitch_degrees), deg_to_rad(max_pitch_degrees))
@@ -82,11 +89,17 @@ func shake(strength: float) -> void:
 func snap_to_target() -> void:
 	if _target != null:
 		global_position = _target.global_position + Vector3.UP * HEIGHT_OFFSET
+		if _bounds.size != Vector2.ZERO:
+			global_position.x = clampf(global_position.x, _bounds.position.x, _bounds.end.x)
+			global_position.z = clampf(global_position.z, _bounds.position.y, _bounds.end.y)
 
 func _physics_process(delta: float) -> void:
 	if _target == null:
 		return
 	var wanted := _target.global_position + Vector3.UP * HEIGHT_OFFSET
+	if _bounds.size != Vector2.ZERO:
+		wanted.x = clampf(wanted.x, _bounds.position.x, _bounds.end.x)
+		wanted.z = clampf(wanted.z, _bounds.position.y, _bounds.end.y)
 	# lerp зі швидкістю, обмеженою кадром: рух камери лишається плавним
 	# і на 30, і на 120 кадрах за секунду.
 	global_position = global_position.lerp(wanted, clampf(FOLLOW_SPEED * delta, 0.0, 1.0))

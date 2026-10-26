@@ -1010,6 +1010,29 @@ const ACCENT_CHANCE := 0.08
 const ROCK_PUSH := 0.15
 static var _layouts: Dictionary = {}
 
+## Клітинки зали боса: від мітки "B" заливкою по залі — лише клітинки, де
+## уздовж і впоперек щонайменше 3 прохідні (коридори зупиняють заливку).
+static func boss_room(map_rows: Array) -> Dictionary:
+	var start := Vector2i(-1, -1)
+	for z in map_rows.size():
+		var x := String(map_rows[z]).find("B")
+		if x >= 0:
+			start = Vector2i(x, z)
+	var room := {}
+	if start.x < 0:
+		return room
+	var stack: Array[Vector2i] = [start]
+	while not stack.is_empty():
+		var cell: Vector2i = stack.pop_back()
+		if room.has(cell) or not _is_walkable(map_rows, cell.x, cell.y):
+			continue
+		if cell != start and (_run_length(map_rows, cell, Vector2i(1, 0)) < 3 or _run_length(map_rows, cell, Vector2i(0, 1)) < 3):
+			continue
+		room[cell] = true
+		for step in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			stack.append(cell + step)
+	return room
+
 ## Де замість статуй стоять Ожилі вартові (див. "sentinels" у темі).
 static func sentinel_spots(map_rows: Array) -> Array[Vector3]:
 	var spots: Array[Vector3] = []

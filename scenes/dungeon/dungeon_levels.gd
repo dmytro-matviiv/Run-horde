@@ -301,18 +301,26 @@ const LEVELS := [
 					"abilities": [{"id": "ring_slam", "cooldown": 7.0, "first": 3.0, "radius": 7.0, "speed": 6.0,
 						"freeze": 1.0, "windup": 0.8, "color": Color(0.6, 0.9, 1.0)}]},
 			],
-			# Інейна чаклунка — пріоритетна ціль: віяло з 3 крижаних списів
-			# (від них ховаються за колоною), крижана стіна між собою й героєм
-			# (обійти чи розбити), раз за бій — крижаний панцир на союзника (3 с
-			# без шкоди).
+			# Інейна чаклунка — пріоритетна ціль (набір Crystal Maiden): віяло з
+			# 3 крижаних списів; кришталевий вибух під героєм (шкода й
+			# сповільнення); обмороження (кільце — не вибіг, скуває ноги);
+			# аура — союзники поруч б'ють частіше; крижана стіна; крижаний
+			# панцир на союзника (3 с без шкоди); ульта — крижане поле: стоїть
+			# і 4.5 с сипле вибухи льоду довкола (збиває лише суперздібність).
 			"r": [
 				{"name": "Інейна чаклунка", "model": "res://assets/models/monsters/frost_witch.glb", "kind": "ranged",
 					"hp": 30.0, "damage": 8.0, "speed": 2.4, "height": 1.9, "xp": 7,
 					"projectile": {"color": Color(0.6, 0.92, 1.0), "speed": 12.0, "volley": 3, "shape": "spear"},
-					"special_anims": {"ice_wall": ["Cast"], "ice_armor": ["Support"]},
+					"special_anims": {"ice_wall": ["Cast"], "ice_armor": ["Support"], "crystal_nova": ["Cast"], "frostbite": ["Support"]},
 					"abilities": [
-						{"id": "ice_wall", "cooldown": 10.0, "first": 4.0, "hp": 14.0, "width": 3.2, "lifetime": 8.0},
-						{"id": "ice_armor", "first": 2.0, "range": 10.0, "seconds": 3.0}]},
+						{"id": "freezing_field", "cooldown": 16.0, "first": 6.0, "seconds": 4.5, "radius": 6.0, "every": 0.22,
+							"blast": 1.1, "warn": 0.55, "slow": 0.6, "damage": 0.6},
+						{"id": "frostbite", "cooldown": 8.0, "first": 3.0, "range": 9.0, "radius": 1.2, "windup": 0.7, "root": 1.6, "damage": 0.7},
+						{"id": "crystal_nova", "cooldown": 6.0, "first": 1.5, "range": 10.0, "radius": 2.4, "windup": 0.95,
+							"slow": 0.5, "slow_time": 3.0, "damage": 1.0},
+						{"id": "ice_wall", "cooldown": 12.0, "first": 5.0, "hp": 14.0, "width": 3.2, "lifetime": 8.0},
+						{"id": "ice_armor", "cooldown": 14.0, "first": 2.0, "range": 10.0, "seconds": 3.0},
+						{"id": "arcane_aura", "radius": 8.0, "bonus": 0.3}]},
 			],
 			"x": [
 				{"name": "Крижаний вихор", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "hp": 22.0, "damage": 28.0, "speed": 4.6, "height": 1.3, "hover": 0.6, "xp": 4},

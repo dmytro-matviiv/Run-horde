@@ -276,6 +276,7 @@ func _setup_hud(title: String) -> void:
 	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
 	hud.add_child(camera_touch)
 	$CameraRig.set_world_collision(false)
+	$CameraRig.set_bounds(_camera_bounds())
 	$CameraRig.set_pitch_limits(CAMERA_MIN_PITCH, CAMERA_MAX_PITCH, CAMERA_PITCH)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
 	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
@@ -467,7 +468,11 @@ func _spawn_enemies(markers: Dictionary) -> void:
 	_arena_spawns.clear()
 	for i in arenas.size():
 		_arena_spawns.append([])
+	var boss_room := DungeonBuilder.boss_room(_map_rows)
 	for spawn: Dictionary in markers.spawns:
+		# У залі боса — лише бос (і ті, кого він кличе сам).
+		if boss_room.has(DungeonBuilder.cell_of(spawn.position)):
+			continue
 		var arena_index := _arena_at(DungeonBuilder.cell_of(spawn.position))
 		if arena_index >= 0:
 			_arena_spawns[arena_index].append(spawn)
@@ -502,8 +507,10 @@ func _spawn_sentinels() -> void:
 				definition = candidate
 	if definition.is_empty():
 		return
+	var boss_room := DungeonBuilder.boss_room(_map_rows)
 	for spot in DungeonBuilder.sentinel_spots(_map_rows):
-		_spawn_enemy(spot, definition, false)
+		if not boss_room.has(DungeonBuilder.cell_of(spot)):
+			_spawn_enemy(spot, definition, false)
 
 func _arena_at(cell: Vector2i) -> int:
 	var arenas: Array = _level.get("arenas", [])
@@ -674,6 +681,28 @@ func _on_chest_opened(position: Vector3) -> void:
 	_loot.burst(position, LootSwarm.Kind.GOLD, int(round(ARENA_CHEST_GOLD * _gold_scale)), 10)
 	_loot.burst(position, LootSwarm.Kind.XP, ARENA_CHEST_XP, 4)
 	_offer_ability()
+
+## Межі камери: прохідна частина карти, звужена на CAMERA_EDGE з кожного
+## боку (ближче до краю камера не йде — за ним не видно порожнечі). Вузька
+## карта — камера стоїть посередині.
+const CAMERA_EDGE := 6.0
+
+func _camera_bounds() -> Rect2:
+	var low := Vector2(INF, INF)
+	var high := Vector2(-INF, -INF)
+	for z in _map_rows.size():
+		var row: String = _map_rows[z]
+		for x in row.length():
+			if DungeonBuilder.is_walkable(_map_rows, x, z):
+				var p := Vector2(x, z) * DungeonBuilder.CELL
+				low = Vector2(minf(low.x, p.x), minf(low.y, p.y))
+				high = Vector2(maxf(high.x, p.x), maxf(high.y, p.y))
+	if low.x == INF:
+		return Rect2()
+	var center := (low + high) * 0.5
+	var lo := Vector2(minf(low.x + CAMERA_EDGE, center.x), minf(low.y + CAMERA_EDGE, center.y))
+	var hi := Vector2(maxf(high.x - CAMERA_EDGE, center.x), maxf(high.y - CAMERA_EDGE, center.y))
+	return Rect2(lo, hi - lo + Vector2(0.01, 0.01))
 
 ## Вільне місце для ворога поруч із бажаним: стіл, саркофаг чи колона на
 ## місці появи — шукаємо найближче вільне по колах довкола.

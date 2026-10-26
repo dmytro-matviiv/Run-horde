@@ -374,7 +374,7 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	var players := _model.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		_animation = players[0]
-		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying", "Turn", "Fly", "Spin", "Unlock", "Charge", "Stunned", "Idle_Rage"])
+		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying", "Turn", "Fly", "Spin", "Unlock", "Charge", "Stunned", "Idle_Rage", "Channel"])
 		# Анімацію крутимо самі (див. _process): так її можна оновлювати
 		# рідше або ставити на паузу, коли ворога не видно.
 		_animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
@@ -608,6 +608,24 @@ func _throw_candle() -> void:
 
 func hold_still(seconds: float) -> void:
 	_hold_still(seconds)
+
+## Довгий каст на місці (Крижане поле): для решти коду ворог "замахується"
+## — звичайні удари його не збивають і не смикають, а суперздібність збиває
+## (_cancel_windup), і тоді channel_broken() стає true.
+const CHANNEL_HOLD := 1.0e6
+
+func begin_channel() -> void:
+	_windup_left = CHANNEL_HOLD
+	_windup_total = CHANNEL_HOLD
+	_special = ""
+	velocity = Vector3.ZERO
+
+func channel_broken() -> bool:
+	return _windup_left <= 0.0
+
+func end_channel() -> void:
+	_windup_left = 0.0
+	_attack_left = maxf(_attack_left, attack_cooldown)
 
 func sees_player() -> bool:
 	return _sees_player()
@@ -1509,20 +1527,25 @@ func apply_slow(factor: float, seconds: float) -> void:
 func is_slowed() -> bool:
 	return _slow_left > 0.0
 
-## Заморозка: ворог застигає в крижаній брилі — не ходить і не б'є,
-## замах зривається. Боса й голема — ненадовго.
-func freeze(seconds: float) -> void:
+## Заморозка: ворог застигає в крижаній брилі — не ходить і не б'є.
+## Боса й голема — ненадовго. Замах (каст) зриває лише суперздібність
+## (interrupt) і лише у звичайного ворога; інакше каст на час криги
+## застигає й доходить до кінця.
+func freeze(seconds: float, interrupt: bool = true) -> void:
 	if _dying:
 		return
 	if kind == Kind.BOSS or tank:
 		seconds *= 0.35
 	_frozen_left = maxf(_frozen_left, seconds)
-	_hold_still(seconds)
+	if _windup_left <= 0.0 or (interrupt and kind != Kind.BOSS):
+		_hold_still(seconds)
 	_show_ice(true)
 
-## Оглушення важким ударом: стоїть і не б'є.
-func stun(seconds: float) -> void:
+## Оглушення важким ударом: стоїть і не б'є. Каст — як у freeze().
+func stun(seconds: float, interrupt: bool = true) -> void:
 	if _dying:
+		return
+	if _windup_left > 0.0 and (not interrupt or kind == Kind.BOSS):
 		return
 	if kind == Kind.BOSS or tank:
 		seconds *= 0.4
@@ -1693,10 +1716,15 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 	_knockback = knockback * (0.25 if is_boss else 1.0)
 	if _charge_state == 2 or _fuse_left >= 0.0:
 		_knockback = Vector3.ZERO
-	if heavy or not is_boss:
-		if heavy:
-			_cancel_windup()
+	# Замах (каст) збиває лише суперздібність героя (не зброя й не пасивки), і лише
+	# звичайного ворога: бос свій прийом доводить до кінця. Поки ворог
+	# замахується, удари його не спиняють і не "смикають".
+	var by_skill := not String(last_hit_source) in ["", "weapon", "death_mark", "phoenix", "rage", "rune_charge"]
+	if by_skill and kind != Kind.BOSS and _windup_left > 0.0:
+		_cancel_windup()
+	if (heavy or not is_boss) and _windup_left <= 0.0:
 		_stagger_left = maxf(_stagger_left, (0.45 if heavy else 0.15) * (0.5 if is_boss else 1.0))
+	last_hit_source = &""
 
 	if _windup_left <= 0.0 and not _wall_stunned:
 		_play_once(["Block", "HitReact"] if blocked else ["HitReact", "HitRecieve"])
