@@ -1527,24 +1527,37 @@ func apply_slow(factor: float, seconds: float) -> void:
 func is_slowed() -> bool:
 	return _slow_left > 0.0
 
+## Чи можна збити поточний каст. Звичайного ворога — так. Боса — лише
+## суперздібністю (by_skill) і не прийом переходу фази (uninterruptible).
+func _can_interrupt(by_skill: bool) -> bool:
+	if kind != Kind.BOSS:
+		return true
+	if not by_skill:
+		return false
+	for ability in abilities:
+		if ability.id == _special and ability.uninterruptible:
+			return false
+	return true
+
 ## Заморозка: ворог застигає в крижаній брилі — не ходить і не б'є.
-## Боса й голема — ненадовго. Замах (каст) звичайного ворога зривається;
-## у боса каст на час криги застигає й доходить до кінця.
-func freeze(seconds: float) -> void:
+## Боса й голема — ненадовго. Замах (каст) зривається, якщо дозволяє
+## _can_interrupt; інакше каст на час криги застигає й доходить до кінця.
+## by_skill — заморозила суперздібність героя.
+func freeze(seconds: float, by_skill: bool = false) -> void:
 	if _dying:
 		return
 	if kind == Kind.BOSS or tank:
 		seconds *= 0.35
 	_frozen_left = maxf(_frozen_left, seconds)
-	if _windup_left <= 0.0 or kind != Kind.BOSS:
+	if _windup_left <= 0.0 or _can_interrupt(by_skill):
 		_hold_still(seconds)
 	_show_ice(true)
 
 ## Оглушення важким ударом: стоїть і не б'є. Каст — як у freeze().
-func stun(seconds: float) -> void:
+func stun(seconds: float, by_skill: bool = false) -> void:
 	if _dying:
 		return
-	if _windup_left > 0.0 and kind == Kind.BOSS:
+	if _windup_left > 0.0 and not _can_interrupt(by_skill):
 		return
 	if kind == Kind.BOSS or tank:
 		seconds *= 0.4
@@ -1716,10 +1729,11 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 	if _charge_state == 2 or _fuse_left >= 0.0:
 		_knockback = Vector3.ZERO
 	# Замах (каст) збиває суперздібність героя, а від зброї — лише оглушення
-	# чи заморозка (stun/freeze), не сам удар; бос свій прийом доводить до
-	# кінця. Поки ворог замахується, удари його не спиняють і не "смикають".
+	# чи заморозка (stun/freeze), не сам удар; у боса — лише суперздібність
+	# (див. _can_interrupt). Поки ворог замахується, удари його не спиняють
+	# і не "смикають".
 	var by_skill := not String(last_hit_source) in ["", "weapon", "death_mark", "phoenix", "rage", "rune_charge"]
-	if by_skill and kind != Kind.BOSS and _windup_left > 0.0:
+	if by_skill and _windup_left > 0.0 and _can_interrupt(true):
 		_cancel_windup()
 	if (heavy or not is_boss) and _windup_left <= 0.0:
 		_stagger_left = maxf(_stagger_left, (0.45 if heavy else 0.15) * (0.5 if is_boss else 1.0))

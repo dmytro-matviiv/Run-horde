@@ -24,6 +24,10 @@ var from_phase := 1
 var instant := false
 ## До якої фази боса включно діє ("until" в описі).
 var until_phase := 99
+## Каст, який не збиває навіть суперздібність ("uninterruptible" в описі).
+## Без ключа — прийом переходу фази боса: діє з фази 2+ і спрацьовує
+## одразу з її початком ("first" до 1 с).
+var uninterruptible := false
 var config: Dictionary = {}
 
 var _left := 2.0
@@ -35,6 +39,8 @@ func setup(owner: Enemy3D, settings: Dictionary) -> void:
 	from_phase = int(settings.get("phase", 1))
 	until_phase = int(settings.get("until", 99))
 	_left = float(settings.get("first", cooldown * 0.5))
+	uninterruptible = bool(settings.get("uninterruptible",
+		from_phase > 1 and float(settings.get("first", 99.0)) <= 1.0))
 
 ## Перезарядка минула й фаза боса дозволяє.
 func ready_to_use() -> bool:

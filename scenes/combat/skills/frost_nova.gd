@@ -25,6 +25,6 @@ func _use(player: Node) -> bool:
 	for enemy: Enemy3D in player.enemies_in_radius(RADIUS):
 		player.deal_damage(enemy, DAMAGE, Vector3.ZERO, true, id)
 		if enemy.is_alive():
-			enemy.freeze(FREEZE * player.spell_power())
+			enemy.freeze(FREEZE * player.spell_power(), true)
 	player.shake_camera(0.08)
 	return true
