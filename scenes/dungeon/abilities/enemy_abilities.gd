@@ -18,6 +18,14 @@ class_name EnemyAbilities
 ##   meteor_storm — (мега-бос) метеоритний дощ по всій залі одразу;
 ##   void_rift    — (мега-бос) вир, що затягує героя й пече, поки той у ньому;
 ##   mirror_split — (мега-бос) розколюється на тьмяних двійників-приманок.
+## Кістяний Погост (4-й данж):
+##   vanish       — привид зникає (видно лише ланцюг) і б'є з-за спини;
+##   grave_escape — чаклун тікає в могилу, коли герой надто близько;
+##   tunnel       — хробак повзе під землею й вистрибує під героєм;
+##   poison_cloud — отруйна хмара довкола; death_blast — гине з вибухом;
+##   empower      — тотем: союзники б'ють сильніше й лікуються;
+##   scythe_sweep, scythe_throw, army_of_dead, eternal_lord, bone_spikes —
+##                  прийоми Кістяного Володаря.
 
 const SCRIPTS := {
 	"blink": preload("res://scenes/dungeon/abilities/blink_ability.gd"),
@@ -56,6 +64,17 @@ const SCRIPTS := {
 	"meteor_storm": preload("res://scenes/dungeon/abilities/meteor_storm_ability.gd"),
 	"void_rift": preload("res://scenes/dungeon/abilities/void_rift_ability.gd"),
 	"mirror_split": preload("res://scenes/dungeon/abilities/mirror_split_ability.gd"),
+	"vanish": preload("res://scenes/dungeon/abilities/vanish_ability.gd"),
+	"grave_escape": preload("res://scenes/dungeon/abilities/grave_escape_ability.gd"),
+	"tunnel": preload("res://scenes/dungeon/abilities/tunnel_ability.gd"),
+	"poison_cloud": preload("res://scenes/dungeon/abilities/poison_cloud_ability.gd"),
+	"death_blast": preload("res://scenes/dungeon/abilities/death_blast_ability.gd"),
+	"empower": preload("res://scenes/dungeon/abilities/empower_ability.gd"),
+	"scythe_sweep": preload("res://scenes/dungeon/abilities/scythe_sweep_ability.gd"),
+	"scythe_throw": preload("res://scenes/dungeon/abilities/scythe_throw_ability.gd"),
+	"army_of_dead": preload("res://scenes/dungeon/abilities/army_of_dead_ability.gd"),
+	"eternal_lord": preload("res://scenes/dungeon/abilities/eternal_lord_ability.gd"),
+	"bone_spikes": preload("res://scenes/dungeon/abilities/bone_spikes_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

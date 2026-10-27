@@ -1236,6 +1236,15 @@ func _warm_up_rendering() -> void:
 	models.append(_model(_level.boss.model))
 	if _level.boss.has("summon"):
 		models.append(_model(_level.boss.summon.model))
+	# Кого кличуть здібності (мерці, тотеми, череп) і що вони кидають (коса):
+	# перша поява теж не має смикати кадр.
+	var extra: Array[String] = []
+	_collect_models(_level.enemies, extra)
+	_collect_models(_level.boss.get("abilities", []), extra)
+	for path in extra:
+		var scene := _model(path)
+		if not models.has(scene):
+			models.append(scene)
 	var step := 0
 	for scene: PackedScene in models:
 		var model: Node3D = scene.instantiate()
@@ -1288,6 +1297,20 @@ func _warm_up_rendering() -> void:
 	for i in 4:
 		await get_tree().process_frame
 	holder.queue_free()
+
+## Шляхи до моделей усередині описів здібностей ("model", "prop", "shell").
+func _collect_models(value: Variant, out: Array[String]) -> void:
+	if value is Dictionary:
+		for key: Variant in value:
+			var item: Variant = value[key]
+			if key in ["model", "prop", "shell"] and item is String and String(item).ends_with(".glb"):
+				if not out.has(item):
+					out.append(item)
+			else:
+				_collect_models(item, out)
+	elif value is Array:
+		for item: Variant in value:
+			_collect_models(item, out)
 
 ## Відстань від героя до найближчої точки шматка на площині.
 func _distance_to_chunk(origin: Vector3, chunk: Dictionary) -> float:

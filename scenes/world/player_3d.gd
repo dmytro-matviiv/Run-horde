@@ -345,6 +345,10 @@ var _spin_total := 0.45
 ## "невидимість" асасина.
 var _attack_speed_buff := 1.0
 var _attack_speed_left := 0.0
+## Холодний дотик (Кладовищенський привид): удари повільніші, доки не мине.
+var _chill_factor := 1.0
+var _chill_left := 0.0
+var _chill_marker: MeshInstance3D
 var _concealed_left := 0.0
 var _concealed_damage := 1.0
 var _concealed_speed := 0.0
@@ -684,7 +688,37 @@ func amp_attack_speed() -> float:
 	return attack_speed()
 
 func attack_speed() -> float:
-	return _attack_speed * (_attack_speed_buff if _attack_speed_left > 0.0 else 1.0)
+	return _attack_speed * (_attack_speed_buff if _attack_speed_left > 0.0 else 1.0) * _chill()
+
+func _chill() -> float:
+	return _chill_factor if _chill_left > 0.0 else 1.0
+
+## Холодний дотик: seconds секунд удари на (1 - factor) повільніші, під
+## героєм блідо-блакитне коло.
+func chill_attacks(factor: float, seconds: float) -> void:
+	if _dead:
+		return
+	_chill_factor = factor
+	_chill_left = maxf(_chill_left, seconds)
+	_apply_attack_speed()
+	CombatVfx.flash_model(model, Color(0.6, 0.85, 1.0), 0.2)
+	if _chill_marker == null:
+		_chill_marker = CombatVfx.make_ground_marker(Color(0.55, 0.8, 1.0, 0.6), 0.6)
+		_chill_marker.set_instance_shader_parameter(&"progress", 1.0)
+		_chill_marker.position.y = 0.06
+		add_child(_chill_marker)
+	_chill_marker.visible = true
+
+## Підкидає (хробак вистрибнув під героєм): збиває з ніг на seconds, а
+## модель злітає вгору й падає.
+func toss(seconds: float) -> void:
+	if _dead or _roll_left > 0.0:
+		return
+	knock_down(Vector3.ZERO, seconds)
+	var rest := model.position.y
+	var tween := model.create_tween()
+	tween.tween_property(model, "position:y", rest + 1.3, seconds * 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tween.tween_property(model, "position:y", rest, seconds * 0.4).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 
 func _fire(shot: String, upper_body_only: bool = false) -> void:
 	var node := (animation_tree.tree_root as AnimationNodeBlendTree).get_node(shot) as AnimationNodeOneShot
@@ -1119,6 +1153,12 @@ func _tick_timers(delta: float) -> void:
 	_roll_guard_left = maxf(_roll_guard_left - delta, 0.0)
 	_perfect_crit_left = maxf(_perfect_crit_left - delta, 0.0)
 	_bonus_damage_left = maxf(_bonus_damage_left - delta, 0.0)
+	if _chill_left > 0.0:
+		_chill_left -= delta
+		if _chill_left <= 0.0:
+			_apply_attack_speed()
+			if _chill_marker != null:
+				_chill_marker.visible = false
 	if _slow_left > 0.0:
 		_slow_left -= delta
 		if _slow_left <= 0.0:
@@ -1361,7 +1401,7 @@ func _start_attack() -> void:
 func _update_attack(delta: float) -> void:
 	if _attack_step < 0:
 		return
-	_attack_time += delta * _attack_speed
+	_attack_time += delta * _attack_speed * _chill()
 	var step: Dictionary = _combo()[_attack_step]
 	if not _attack_vfx_done and _attack_time >= step.hit_time - 0.07:
 		_attack_vfx_done = true
