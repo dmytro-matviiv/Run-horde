@@ -468,7 +468,7 @@ func _spawn_enemies(markers: Dictionary) -> void:
 	_arena_spawns.clear()
 	for i in arenas.size():
 		_arena_spawns.append([])
-	var boss_room := DungeonBuilder.boss_room(_map_rows)
+	var boss_room := _boss_hall()
 	for spawn: Dictionary in markers.spawns:
 		# У залі боса — лише бос (і ті, кого він кличе сам).
 		if boss_room.has(DungeonBuilder.cell_of(spawn.position)):
@@ -507,10 +507,25 @@ func _spawn_sentinels() -> void:
 				definition = candidate
 	if definition.is_empty():
 		return
-	var boss_room := DungeonBuilder.boss_room(_map_rows)
+	var boss_room := _boss_hall()
 	for spot in DungeonBuilder.sentinel_spots(_map_rows):
 		if not boss_room.has(DungeonBuilder.cell_of(spot)):
 			_spawn_enemy(spot, definition, false)
+
+## Клітинки зали боса, де не ставимо інших ворогів. Є ворота
+## ("boss_arena") — це саме їхній прямокутник: заливання
+## DungeonBuilder.boss_room у залах, відкритих у сусідні кімнати
+## (грибні нетрі, скарбниця, село), захоплювало й ті кімнати — і там
+## (разом із засідками) лишалось порожньо.
+func _boss_hall() -> Dictionary:
+	var rect: Rect2i = _level.get("boss_arena", Rect2i())
+	if not _level.get("boss_gate", false) or not rect.has_area():
+		return DungeonBuilder.boss_room(_map_rows)
+	var hall := {}
+	for z in range(rect.position.y, rect.end.y):
+		for x in range(rect.position.x, rect.end.x):
+			hall[Vector2i(x, z)] = true
+	return hall
 
 func _arena_at(cell: Vector2i) -> int:
 	var arenas: Array = _level.get("arenas", [])
