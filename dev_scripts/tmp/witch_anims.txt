@@ -1,0 +1,115 @@
+# Знаки: нахил уперед хребта — +x; рука/нога вперед — -x; права рука
+# вбік — +y, ліва вбік — -y. Посох на правій кисті: щоб він лишався
+# прямовисним, кисть повертаємо назад на суму кутів плеча й передпліччя.
+STAND = {}
+
+
+def pose(extra, base=None):
+    base = STAND if base is None else base
+    out = {k: dict(v) for k, v in base.items()}
+    for bone, spec in extra.items():
+        merged = dict(out.get(bone, {}))
+        for axis, value in spec.items():
+            merged[axis] = merged.get(axis, 0) + value if axis != "loc" else value
+        out[bone] = merged
+    return out
+
+
+def staff_up(upper, fore, side=0.0):
+    """Права рука піднята (кути вперед), посох прямовисний."""
+    return {"upperarm.R": {"x": -upper, "y": side}, "forearm.R": {"x": -fore},
+            "hand.R": {"x": upper + fore, "y": -side}}
+
+
+# Стійка: спокійно дихає, ліва долоня з морозом ледь поводить.
+make_action("Idle", 72, {
+    0: pose({"chest": {"x": 1}, "upperarm.L": {"x": -4, "y": -4}, "forearm.L": {"z": 4}}),
+    36: pose({"chest": {"x": -2}, "head": {"z": 5, "x": -2}, "upperarm.L": {"x": -10, "y": -8},
+              "forearm.L": {"z": -8}, "root": {"loc": (0, 0, -0.012)}}),
+}, loop=True)
+
+
+def walk_pose(phase, stride):
+    s = math.sin(phase)
+    c = math.cos(phase)
+    # Під мантією ноги ходять коротко — інакше поли тягнуться в смуги.
+    return pose({
+        "thigh.L": {"x": -stride * s}, "thigh.R": {"x": stride * s},
+        "shin.L": {"x": stride * 0.6 * max(0.0, -s)}, "shin.R": {"x": stride * 0.6 * max(0.0, s)},
+        "upperarm.L": {"x": 10 * s, "y": -4}, "upperarm.R": {"x": -4 * s}, "hand.R": {"x": 4 * s},
+        "spine": {"z": 3 * s, "x": 3}, "chest": {"z": -3 * s}, "head": {"z": 2 * s, "x": -2},
+        "root": {"loc": (0, 0, -0.015 * abs(c))},
+    })
+
+
+make_action("Walk", 36, {f: walk_pose(f / 36 * math.tau, 13) for f in range(0, 36, 4)}, loop=True)
+make_action("Run", 24, {f: walk_pose(f / 24 * math.tau, 18) for f in range(0, 24, 3)}, loop=True)
+
+# Віяло списів: ліва долоня назад до плеча — і різко вперед.
+make_action("Weapon", 24, {
+    0: pose({}),
+    8: pose({"upperarm.L": {"x": 20, "y": -25}, "forearm.L": {"x": -50, "z": 20}, "chest": {"z": 16},
+             "spine": {"z": 6}}),
+    12: pose({"upperarm.L": {"x": -78, "y": 6}, "forearm.L": {"x": 6}, "hand.L": {"x": -15},
+              "chest": {"z": -14, "x": 5}, "spine": {"z": -5}, "head": {"x": -3}}),
+    18: pose({"upperarm.L": {"x": -70, "y": 4}, "forearm.L": {"x": 4}, "chest": {"z": -9}}),
+    24: pose({}),
+})
+
+# Крижана стіна / Кришталевий вибух: посох угору — і з силою в підлогу.
+make_action("Cast", 36, {
+    0: pose({}),
+    12: pose({**staff_up(55, 25), "upperarm.L": {"x": -70, "y": -35}, "forearm.L": {"x": -20},
+              "chest": {"x": -10}, "spine": {"x": -4}, "head": {"x": -10}}),
+    18: pose({**staff_up(14, 8), "upperarm.L": {"x": -35, "y": -20}, "chest": {"x": 12}, "spine": {"x": 7},
+              "head": {"x": 6}, "root": {"loc": (0, 0, -0.05)}}),
+    28: pose({**staff_up(10, 5), "chest": {"x": 8}, "spine": {"x": 5}, "root": {"loc": (0, 0, -0.03)}}),
+    36: pose({}),
+})
+
+# Крижаний панцир / Обмороження: ліва рука простягнута вперед до цілі.
+make_action("Support", 36, {
+    0: pose({}),
+    9: pose({"upperarm.L": {"x": -85, "y": -10}, "forearm.L": {"x": -10}, "hand.L": {"x": -20},
+             "chest": {"z": -12, "x": -3}, "head": {"z": -8}, **staff_up(10, 5)}),
+    27: pose({"upperarm.L": {"x": -90, "y": -14}, "forearm.L": {"x": -12}, "hand.L": {"x": -25},
+              "chest": {"z": -14, "x": -5}, "head": {"z": -10}, **staff_up(12, 6)}),
+    36: pose({}),
+})
+
+
+# Крижане поле (ульта, петля): посох високо над головою, ліва рука вбік,
+# тіло ледь гойдається — стоїть і тримає чари.
+def channel_pose(phase):
+    s = math.sin(phase)
+    return pose({**staff_up(115, 15, 8), "upperarm.L": {"x": -25 + 5 * s, "y": -70},
+                 "forearm.L": {"x": -10, "z": 8 * s}, "hand.L": {"x": -20},
+                 "chest": {"x": -9, "z": 4 * s}, "spine": {"x": -4}, "head": {"x": -14, "z": -3 * s},
+                 "root": {"loc": (0, 0, 0.02 * s)}})
+
+
+make_action("Channel", 48, {f: channel_pose(f / 48 * math.tau) for f in range(0, 48, 6)}, loop=True)
+
+make_action("HitReact", 14, {
+    0: pose({}),
+    4: pose({"chest": {"x": -12, "z": -8}, "head": {"x": -10}, "spine": {"x": -5},
+             "upperarm.L": {"x": 18, "y": -12}}),
+    14: pose({}),
+})
+
+# Смерть: посох випадає з руки, вона осідає на коліна — і падає ниць.
+make_action("Death", 60, {
+    0: pose({}),
+    12: pose({"chest": {"x": 14}, "head": {"x": 16}, "upperarm.L": {"x": -30, "y": 20}, "forearm.L": {"x": -60},
+              "hand.R": {"y": 20}}),
+    28: pose({"thigh.L": {"x": -80}, "thigh.R": {"x": -80}, "shin.L": {"x": 140}, "shin.R": {"x": 140},
+              "foot.L": {"x": -40}, "foot.R": {"x": -40}, "chest": {"x": 20}, "head": {"x": 20},
+              "hand.R": {"y": 60}, "root": {"loc": (0, 0, -0.32)}}),
+    46: pose({"root": {"x": 60, "loc": (0, 0, -0.08)}, "thigh.L": {"x": -50}, "thigh.R": {"x": -50},
+              "shin.L": {"x": 90}, "shin.R": {"x": 90}, "upperarm.L": {"x": -60}, "head": {"x": -10},
+              "hand.R": {"y": 80}}),
+    60: pose({"root": {"x": 82, "loc": (0, 0, 0.0)}, "thigh.L": {"x": -20}, "thigh.R": {"x": -20},
+              "shin.L": {"x": 30}, "shin.R": {"x": 30}, "upperarm.L": {"x": -90}, "head": {"x": -15},
+              "hand.R": {"y": 85}}),
+})
+
