@@ -519,9 +519,9 @@ func _arena_at(cell: Vector2i) -> int:
 			return i
 	return -1
 
-## Мега-бос (рівень з "boss_gate"): ворота на всю залу з босом — герой
+## Ворота боса (рівень з "boss_gate"): ворота на всю залу з босом — герой
 ## заходить, виходи зачиняються, а сам бос виходить лише після вступного
-## кіно (_start_boss_encounter).
+## кіно (_start_boss_encounter; без кіно, якщо "boss_intro": false).
 func _spawn_boss_gate() -> void:
 	if not _level.get("boss_gate", false) or _pending_boss_position == Vector3.ZERO:
 		return
@@ -535,15 +535,19 @@ func _spawn_boss_gate() -> void:
 ## напис), і лише тоді бос виринає з підлоги в бій.
 func _start_boss_encounter() -> void:
 	var boss_def: Dictionary = _level.boss
-	get_tree().paused = true
-	var intro := BossIntro.new()
-	intro.process_mode = Node.PROCESS_MODE_ALWAYS
-	hud.add_child(intro)
-	intro.setup(_model(boss_def.model), boss_def.get("tint", Color.WHITE), boss_def.get("glow", Color.BLACK),
-		_level.get("boss_title", boss_def.get("name", "Бос")), _level.get("boss_flavor", ""))
-	await intro.finished
-	intro.queue_free()
-	get_tree().paused = false
+	if _level.get("boss_intro", true):
+		get_tree().paused = true
+		var intro := BossIntro.new()
+		intro.process_mode = Node.PROCESS_MODE_ALWAYS
+		hud.add_child(intro)
+		intro.setup(_model(boss_def.model), boss_def.get("tint", Color.WHITE), boss_def.get("glow", Color.BLACK),
+			_level.get("boss_title", boss_def.get("name", "Бос")), _level.get("boss_flavor", ""))
+		await intro.finished
+		intro.queue_free()
+		get_tree().paused = false
+	else:
+		# Звичайний бос ("boss_intro": false): без кіно, лише банер.
+		_show_banner(String(boss_def.get("name", "Бос")), "ворота зачинились")
 	var boss := _spawn_enemy(_pending_boss_position, boss_def, true)
 	var reveal_color: Color = boss_def.get("tint", Color(0.85, 0.16, 0.2))
 	if reveal_color == Color.WHITE:

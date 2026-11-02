@@ -30,7 +30,7 @@ const STYLES := {
 	"demon": {"color": Color(1.0, 0.45, 0.12), "rage": "лютує", "frenzy": "у нестямі"},
 	"summoner": {"color": Color(0.55, 1.0, 0.3), "rage": "лютує", "frenzy": "у нестямі"},
 	"dragon": {"color": Color(0.55, 0.85, 1.0), "rage": "лютує", "frenzy": "у нестямі"},
-	# Мега-боси (лише вони мають "boss_gate" на рівні):
+	# Мега-боси (з кіно BossIntro на рівні):
 	"doom": {"color": Color(1.0, 0.4, 0.1), "rage": "кличе метеори", "frenzy": "рве небо навпіл"},
 	"abyssal": {"color": Color(0.55, 0.2, 0.85), "rage": "розкриває Безодню", "frenzy": "тоне в Безодні"},
 	"shadow": {"color": Color(0.35, 0.1, 0.5), "rage": "розколюється", "frenzy": "губиться у тінях"},
