@@ -58,7 +58,7 @@ func _meteor(spot: Vector3, radius: float) -> void:
 	var hit_damage := damage() * 0.9
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, WARN)
+		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, WARN)
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		CombatVfx.shockwave(world(), spot, radius, COLOR, 0.3)

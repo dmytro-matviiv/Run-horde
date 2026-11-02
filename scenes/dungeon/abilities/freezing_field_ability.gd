@@ -44,7 +44,7 @@ func try_use(distance: float) -> bool:
 	var zone := _zone
 	zone.create_tween().tween_method(func(value: float) -> void:
 		if is_instance_valid(zone):
-			zone.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, 0.4)
+			CombatVfx.set_param(zone, &"progress", value), 0.0, 1.0, 0.4)
 	_snow = CombatVfx.make_trail(Color(0.85, 0.95, 1.0), 1.4)
 	_snow.amount = 36
 	_snow.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
@@ -111,7 +111,7 @@ func _blast(spot: Vector3) -> void:
 	var hero := player()
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, warn)
+		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, warn)
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		CombatVfx.impact(parent, spot + Vector3.UP * 0.3, COLOR, false)
@@ -132,7 +132,7 @@ func _stop() -> void:
 		var fade := zone.create_tween()
 		fade.tween_method(func(value: float) -> void:
 			if is_instance_valid(zone):
-				zone.set_instance_shader_parameter(&"progress", value), 1.0, 0.0, 0.4)
+				CombatVfx.set_param(zone, &"progress", value), 1.0, 0.0, 0.4)
 		fade.tween_callback(zone.queue_free)
 	_zone = null
 	if _snow != null and is_instance_valid(_snow):

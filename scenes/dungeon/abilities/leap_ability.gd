@@ -48,7 +48,7 @@ func _fly(t: float) -> void:
 	position.y += HEIGHT * 4.0 * t * (1.0 - t)
 	enemy.global_position = position
 	if is_instance_valid(_marker):
-		_marker.set_instance_shader_parameter(&"progress", t)
+		CombatVfx.set_param(_marker, &"progress", t)
 
 func _land(radius: float) -> void:
 	if is_instance_valid(_marker):

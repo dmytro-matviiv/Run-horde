@@ -45,7 +45,7 @@ func try_use(distance: float) -> bool:
 		var tween := line.create_tween()
 		tween.tween_method(func(value: float) -> void:
 			if is_instance_valid(line):
-				line.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, windup)
+				CombatVfx.set_param(line, &"progress", value), 0.0, 1.0, windup)
 		_lines.append(line)
 	# Замах можуть збити — тоді смуги зникнуть самі.
 	enemy.get_tree().create_timer(windup + 0.3, false).timeout.connect(_clear_lines)

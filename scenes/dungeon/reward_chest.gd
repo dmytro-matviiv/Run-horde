@@ -24,7 +24,7 @@ func _ready() -> void:
 	_chest = CHEST_SCENE.instantiate()
 	add_child(_chest)
 	_ring = CombatVfx.make_ground_marker(GLOW_COLOR, 1.4)
-	_ring.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_ring, &"progress", 1.0)
 	_ring.position.y = 0.04
 	add_child(_ring)
 	# Скриня "падає" з неба в промені світла — видно, куди йти.

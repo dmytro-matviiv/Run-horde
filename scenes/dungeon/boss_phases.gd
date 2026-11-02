@@ -131,7 +131,7 @@ func _hazard(parent: Node, spot: Vector3, color: Color, damage: float, delay: fl
 	var boss := _boss
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, delay)
+		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, delay)
 	tween.tween_callback(func() -> void:
 		var center := marker.global_position
 		marker.queue_free()

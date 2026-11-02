@@ -89,7 +89,7 @@ func _warn() -> void:
 	var marker := _marker
 	marker.create_tween().tween_method(func(value: float) -> void:
 		if is_instance_valid(marker):
-			marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, _time)
+			CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, _time)
 	CombatVfx.impact_decal(world(), _target, radius * 0.6, CRACK, _time)
 
 func _burst() -> void:

@@ -704,7 +704,7 @@ func chill_attacks(factor: float, seconds: float) -> void:
 	CombatVfx.flash_model(model, Color(0.6, 0.85, 1.0), 0.2)
 	if _chill_marker == null:
 		_chill_marker = CombatVfx.make_ground_marker(Color(0.55, 0.8, 1.0, 0.6), 0.6)
-		_chill_marker.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_chill_marker, &"progress", 1.0)
 		_chill_marker.position.y = 0.06
 		add_child(_chill_marker)
 	_chill_marker.visible = true
@@ -1684,7 +1684,7 @@ func apply_slow(factor: float, seconds: float) -> void:
 	CombatVfx.flash_model(model, Color(0.9, 0.95, 1.0), 0.15)
 	if _slow_marker == null:
 		_slow_marker = CombatVfx.make_ground_marker(Color(0.92, 0.92, 1.0, 0.7), 0.8)
-		_slow_marker.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_slow_marker, &"progress", 1.0)
 		_slow_marker.position.y = 0.05
 		add_child(_slow_marker)
 	_slow_marker.visible = true
@@ -1726,7 +1726,7 @@ func root(seconds: float) -> bool:
 	_rooted_left = maxf(_rooted_left, seconds)
 	if _root_marker == null:
 		_root_marker = CombatVfx.make_ground_marker(Color(0.45, 1.0, 0.45, 0.6), 0.7)
-		_root_marker.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_root_marker, &"progress", 1.0)
 		_root_marker.position.y = 0.05
 		add_child(_root_marker)
 	_root_marker.visible = true

@@ -92,7 +92,7 @@ func _place() -> void:
 		var strip := _strips[i]
 		strip.rotation.y = _beam_angle(i) + PI
 		strip.position = Vector3.FORWARD.rotated(Vector3.UP, _beam_angle(i)) * _length * 0.5 + Vector3(0, -0.94, 0)
-		strip.set_instance_shader_parameter(&"progress", minf(_age / WARN, 1.0))
+		CombatVfx.set_param(strip, &"progress", minf(_age / WARN, 1.0))
 		var direction := Vector3.FORWARD.rotated(Vector3.UP, _beam_angle(i))
 		var beam := _beams[i]
 		beam.basis = Basis(Vector3.UP, _beam_angle(i)).scaled(Vector3(thickness, thickness * 0.5, _length))

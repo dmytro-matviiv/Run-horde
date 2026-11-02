@@ -40,8 +40,8 @@ static func spawn(world: Node, center: Vector3, player: Node3D, max_radius: floa
 
 func _ready() -> void:
 	_marker = CombatVfx.make_ground_marker(_color, _max_radius)
-	_marker.set_instance_shader_parameter(&"wave", 1.0)
-	_marker.set_instance_shader_parameter(&"progress", 0.0)
+	CombatVfx.set_param(_marker, &"wave", 1.0)
+	CombatVfx.set_param(_marker, &"progress", 0.0)
 	add_child(_marker)
 	_marker.global_position = _center
 
@@ -51,7 +51,7 @@ func _physics_process(delta: float) -> void:
 	if radius >= _max_radius:
 		queue_free()
 		return
-	_marker.set_instance_shader_parameter(&"progress", radius / _max_radius)
+	CombatVfx.set_param(_marker, &"progress", radius / _max_radius)
 	if _hit or _player == null or not is_instance_valid(_player):
 		return
 	if _owner != null and (not is_instance_valid(_owner) or not _owner.is_alive()):

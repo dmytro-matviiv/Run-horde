@@ -62,7 +62,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_left -= delta
-	_marker.set_instance_shader_parameter(&"progress", clampf(1.0 - _left / delay, 0.0, 1.0))
+	CombatVfx.set_param(_marker, &"progress", clampf(1.0 - _left / delay, 0.0, 1.0))
 	_runes.rotation.y += delta * 2.5
 	if _left > 0.0:
 		return

@@ -34,7 +34,7 @@ func resolve() -> void:
 	_tick_left = 0.1
 	var radius := float(config.get("radius", 3.2))
 	_ring = CombatVfx.make_telegraph(COLOR, radius, PI, true)
-	_ring.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_ring, &"progress", 1.0)
 	enemy.add_child(_ring)
 	_ring.position = Vector3(0, 0.05, 0)
 	enemy.play_loop("Spin")

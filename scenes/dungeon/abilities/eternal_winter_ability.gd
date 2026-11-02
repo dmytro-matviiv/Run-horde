@@ -85,10 +85,10 @@ func _chill(step: float) -> void:
 func _show_frost(hero: Node3D) -> void:
 	if _frost_marker == null or not is_instance_valid(_frost_marker):
 		_frost_marker = CombatVfx.make_ground_marker(FROST_COLOR, 0.9)
-		_frost_marker.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_frost_marker, &"progress", 1.0)
 		hero.add_child(_frost_marker)
 		_frost_marker.position = Vector3(0, 0.06, 0)
-	_frost_marker.set_instance_shader_parameter(&"fade", clampf(_frost * 1.2, 0.0, 1.0))
+	CombatVfx.set_param(_frost_marker, &"fade", clampf(_frost * 1.2, 0.0, 1.0))
 	_frost_marker.visible = _frost > 0.03
 
 func _place_runes() -> void:
@@ -108,8 +108,8 @@ func _place_runes() -> void:
 		if spot == Vector3.INF:
 			continue
 		var rune := CombatVfx.make_telegraph(RUNE_COLOR, float(config.get("rune_radius", 1.8)), PI, false)
-		rune.set_instance_shader_parameter(&"progress", 1.0)
-		rune.set_instance_shader_parameter(&"fade", 0.25)
+		CombatVfx.set_param(rune, &"progress", 1.0)
+		CombatVfx.set_param(rune, &"fade", 0.25)
 		world().add_child(rune)
 		rune.global_position = Vector3(spot.x, DungeonBuilder.FLOOR_TOP + 0.04, spot.z)
 		_runes.append(rune)
@@ -132,7 +132,7 @@ func _light_rune(index: int) -> void:
 		var tween := rune.create_tween().set_parallel(true)
 		tween.tween_method(func(value: float) -> void:
 			if is_instance_valid(rune):
-				rune.set_instance_shader_parameter(&"fade", value), 1.0 if not on else 0.25, 1.0 if on else 0.25, 0.4)
+				CombatVfx.set_param(rune, &"fade", value), 1.0 if not on else 0.25, 1.0 if on else 0.25, 0.4)
 		tween.tween_property(light, "light_energy", 2.5 if on else 0.0, 0.4)
 	_current = index
 	CombatVfx.shockwave(world(), _runes[index].global_position, 2.0, RUNE_COLOR, 0.5)

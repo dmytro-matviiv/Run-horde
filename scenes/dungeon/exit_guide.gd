@@ -18,7 +18,7 @@ shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 
 uniform vec4 color : source_color = vec4(1.0, 0.74, 0.2, 1.0);
-instance uniform float fade = 1.0;
+uniform float fade = 1.0;
 
 // Відстань до шеврона "^", що дивиться вперед (+y).
 float chevron_distance(vec2 p, float offset) {
@@ -75,7 +75,7 @@ func setup(player: Node3D, target: Vector3) -> void:
 	_arrow.material_override = material
 	_arrow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_arrow)
-	_arrow.set_instance_shader_parameter(&"fade", 0.0)
+	CombatVfx.set_param(_arrow, &"fade", 0.0)
 	_update_direction()
 	_yaw = _wanted_yaw
 
@@ -105,7 +105,7 @@ func _process(delta: float) -> void:
 		+ direction * (ORBIT_RADIUS + 0.12 * beat)
 	_arrow.global_rotation = Vector3(0.0, _yaw, 0.0)
 	_arrow.scale = Vector3.ONE * (0.92 + 0.12 * beat)
-	_arrow.set_instance_shader_parameter(&"fade", _visible_amount * (0.75 + 0.25 * beat))
+	CombatVfx.set_param(_arrow, &"fade", _visible_amount * (0.75 + 0.25 * beat))
 
 ## Куди йти: наступний поворот маршруту по навігаційній карті данжу.
 ## Якщо маршрут не знайшовся — просто на портал.

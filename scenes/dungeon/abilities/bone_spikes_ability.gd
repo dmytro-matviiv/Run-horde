@@ -34,7 +34,7 @@ func on_strike() -> void:
 	line.rotation.y = atan2(direction.x, direction.z)
 	var tween := line.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		line.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, tell)
+		CombatVfx.set_param(line, &"progress", value), 0.0, 1.0, tell)
 	tween.tween_callback(func() -> void:
 		line.queue_free()
 		var steps := int(length / 1.1)

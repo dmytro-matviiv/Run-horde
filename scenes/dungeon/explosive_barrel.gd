@@ -123,7 +123,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_fuse -= delta
 	if _telegraph != null:
-		_telegraph.set_instance_shader_parameter(&"progress", 1.0 - maxf(_fuse, 0.0) / _fuse_total)
+		CombatVfx.set_param(_telegraph, &"progress", 1.0 - maxf(_fuse, 0.0) / _fuse_total)
 	if _fuse <= 0.0:
 		_blast()
 

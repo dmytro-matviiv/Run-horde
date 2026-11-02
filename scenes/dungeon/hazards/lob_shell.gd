@@ -68,7 +68,7 @@ func _fly(t: float) -> void:
 	position.y += arc_height * 4.0 * t * (1.0 - t)
 	_shell.global_position = position
 	_shell.rotation.x = t * TAU
-	_marker.set_instance_shader_parameter(&"progress", t)
+	CombatVfx.set_param(_marker, &"progress", t)
 
 func _explode() -> void:
 	var world := get_parent()

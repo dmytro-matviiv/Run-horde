@@ -65,15 +65,15 @@ func attach(enemy: Enemy3D, player: Node3D) -> void:
 	var color: Color = INFO[affixes[0]].color
 	# Світне кільце під ногами — еліту видно здалеку.
 	_aura = CombatVfx.make_ground_marker(color, 0.75 + enemy.target_height * 0.35)
-	_aura.set_instance_shader_parameter(&"wave", 1.0)
-	_aura.set_instance_shader_parameter(&"progress", 0.9)
+	CombatVfx.set_param(_aura, &"wave", 1.0)
+	CombatVfx.set_param(_aura, &"progress", 0.9)
 	_aura.position.y = 0.06
 	add_child(_aura)
 	var pulse := _aura.create_tween().set_loops()
 	pulse.tween_method(func(value: float) -> void:
-		_aura.set_instance_shader_parameter(&"progress", value), 0.72, 0.95, 0.8)
+		CombatVfx.set_param(_aura, &"progress", value), 0.72, 0.95, 0.8)
 	pulse.tween_method(func(value: float) -> void:
-		_aura.set_instance_shader_parameter(&"progress", value), 0.95, 0.72, 0.8)
+		CombatVfx.set_param(_aura, &"progress", value), 0.95, 0.72, 0.8)
 
 	var label := Label3D.new()
 	label.text = title_for(enemy.display_name)
@@ -90,7 +90,7 @@ func attach(enemy: Enemy3D, player: Node3D) -> void:
 
 	if has(Affix.SHIELDED):
 		_shield = CombatVfx.make_ground_marker(INFO[Affix.SHIELDED].color, 1.35, SHIELD_HALF_ARC)
-		_shield.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_shield, &"progress", 1.0)
 		_shield.position.y = 0.08
 		add_child(_shield)
 
@@ -156,7 +156,7 @@ func on_death() -> void:
 	var player := _player
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, BLAST_DELAY)
+		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, BLAST_DELAY)
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		CombatVfx.shockwave(parent, center, BLAST_RADIUS, color, 0.35)

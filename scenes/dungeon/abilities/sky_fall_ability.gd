@@ -85,7 +85,7 @@ func _drop_icicle() -> void:
 	icicle.visible = false
 	var tween := shadow.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		shadow.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, TELL)
+		CombatVfx.set_param(shadow, &"progress", value), 0.0, 1.0, TELL)
 	tween.tween_callback(func() -> void: icicle.visible = true)
 	tween.tween_property(icicle, "global_position:y", DungeonBuilder.FLOOR_TOP + PILLAR_HEIGHT * 0.5, FALL_TIME) \
 		.set_ease(Tween.EASE_IN)

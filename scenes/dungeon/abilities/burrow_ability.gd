@@ -51,7 +51,7 @@ func _warn() -> void:
 	var tween := enemy.create_tween()
 	tween.tween_method(func(value: float) -> void:
 		if is_instance_valid(_marker):
-			_marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, WARN_TIME)
+			CombatVfx.set_param(_marker, &"progress", value), 0.0, 1.0, WARN_TIME)
 	tween.tween_callback(_burst)
 
 func _burst() -> void:

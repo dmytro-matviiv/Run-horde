@@ -31,7 +31,7 @@ static func spawn(world: Node, position: Vector3, player: Node3D, puddle_radius:
 
 func _ready() -> void:
 	_marker = CombatVfx.make_ground_marker(COLOR, radius)
-	_marker.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_marker, &"progress", 1.0)
 	add_child(_marker)
 	# Розпливається з краплі.
 	_marker.scale = Vector3(radius * 0.6, 1.0, radius * 0.6)
@@ -44,7 +44,7 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	if _left < FADE_TIME:
-		_marker.set_instance_shader_parameter(&"fade", _left / FADE_TIME)
+		CombatVfx.set_param(_marker, &"fade", _left / FADE_TIME)
 		return
 	_check_left -= delta
 	if _check_left > 0.0 or _player == null or not is_instance_valid(_player):

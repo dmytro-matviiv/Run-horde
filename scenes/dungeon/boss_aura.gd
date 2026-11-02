@@ -32,11 +32,11 @@ func configure(settings: Dictionary, scale_height: float) -> void:
 	# тож аура рухається й обертається разом із ним.
 	# Ледь помітне коло: не затуляє ні героя, ні червоні кола-попередження.
 	_ring = CombatVfx.make_ground_marker(Color(_color, RING_ALPHA), _radius)
-	_ring.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_ring, &"progress", 1.0)
 	add_child(_ring)
 	_ring.position = Vector3(0, 0.04, 0)
 	_inner = CombatVfx.make_ground_marker(Color(_color.lerp(Color.WHITE, 0.4), RING_ALPHA * 0.8), _radius * 0.55)
-	_inner.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_inner, &"progress", 1.0)
 	add_child(_inner)
 	_inner.position = Vector3(0, 0.05, 0)
 
@@ -108,11 +108,13 @@ func _restart_pulse(strength: float) -> void:
 func set_phase(phase: int) -> void:
 	var t := clampf((phase - 1) / 2.0, 0.0, 1.0)
 	var color := _color.lerp(_rage_color, t)
-	# Колір кола — у спільному матеріалі (не в параметрі екземпляра):
-	# беремо матеріал нового кольору з того ж кешу CombatVfx.
+	# Колір кола — у спільному матеріалі: беремо матеріал нового кольору
+	# з того ж кешу CombatVfx, а set_param робить з нього власну копію й
+	# переносить уже задані параметри (progress).
 	var probe := CombatVfx.make_ground_marker(Color(color, RING_ALPHA + 0.1 * t), 1.0)
 	_ring.material_override = probe.material_override
 	probe.free()
+	CombatVfx.set_param(_ring, &"progress", 1.0)
 	_motes.amount = BASE_PARTICLES + 14 * (phase - 1)
 	_motes.initial_velocity_max *= 1.25
 	for particles in [_motes, _crown]:

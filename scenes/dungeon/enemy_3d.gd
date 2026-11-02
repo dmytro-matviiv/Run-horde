@@ -1276,7 +1276,7 @@ func _process_windup(delta: float) -> void:
 	var progress := 1.0 - _windup_left / _windup_total
 	if _telegraph != null:
 		_telegraph.rotation.y = _model.rotation.y
-		_telegraph.set_instance_shader_parameter(&"progress", progress)
+		CombatVfx.set_param(_telegraph, &"progress", progress)
 	if _charging_shot != null and is_instance_valid(_charging_shot):
 		_charging_shot.set_charge(progress)
 		_charging_shot.position = Vector3(0, target_height * 0.7, 0) + _model_forward() * 0.6
@@ -1404,7 +1404,7 @@ func _process_fuse(delta: float) -> void:
 	velocity.z = 0.0
 	_fuse_left -= delta
 	if _telegraph != null:
-		_telegraph.set_instance_shader_parameter(&"progress", 1.0 - _fuse_left / FUSE_TIME)
+		CombatVfx.set_param(_telegraph, &"progress", 1.0 - _fuse_left / FUSE_TIME)
 	# Блимає дедалі частіше — видно, що зараз рвоне.
 	_flash_left -= delta
 	if _flash_left <= 0.0:
@@ -1490,7 +1490,7 @@ func _process_charge(delta: float) -> void:
 						_telegraph.position = Vector3(0, 0.05, 0) + _charge_dir * length * 0.5
 						_telegraph.rotation.y = angle
 			if _telegraph != null:
-				_telegraph.set_instance_shader_parameter(&"progress", 1.0 - _charge_left / _charge_windup())
+				CombatVfx.set_param(_telegraph, &"progress", 1.0 - _charge_left / _charge_windup())
 			if _charge_left <= 0.0:
 				_hide_telegraph()
 				_charge_state = 2
@@ -1702,7 +1702,7 @@ func _update_pack() -> void:
 	_pack_factor = float(pack.get("attack_speed", 1.15)) if active else 1.0
 	if active and _pack_marker == null:
 		_pack_marker = CombatVfx.make_ground_marker(Color(1.0, 0.15, 0.1, 0.45), 0.55 + target_height * 0.15)
-		_pack_marker.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_pack_marker, &"progress", 1.0)
 		add_child(_pack_marker)
 		_pack_marker.position = Vector3(0, 0.05, 0)
 	if _pack_marker != null:
@@ -1723,7 +1723,7 @@ func _tick_status(delta: float) -> void:
 func _show_frost(shown: bool) -> void:
 	if shown and _frost_marker == null:
 		_frost_marker = CombatVfx.make_ground_marker(FROST_COLOR, 0.7 + target_height * 0.12)
-		_frost_marker.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_frost_marker, &"progress", 1.0)
 		add_child(_frost_marker)
 		_frost_marker.position = Vector3(0, 0.06, 0)
 	if _frost_marker != null:
@@ -1912,7 +1912,7 @@ func _tick_frost_aura(delta: float, distance: float) -> void:
 	var radius := float(aura_cfg.get("radius", 3.0))
 	if _aura_marker == null:
 		_aura_marker = CombatVfx.make_ground_marker(Color(0.6, 0.85, 1.0, 0.3), radius)
-		_aura_marker.set_instance_shader_parameter(&"progress", 1.0)
+		CombatVfx.set_param(_aura_marker, &"progress", 1.0)
 		add_child(_aura_marker)
 		_aura_marker.position = Vector3(0, 0.05, 0)
 	_aura_left -= delta

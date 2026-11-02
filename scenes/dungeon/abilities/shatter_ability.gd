@@ -23,7 +23,7 @@ func on_death() -> void:
 	marker.global_position = Vector3(center.x, DungeonBuilder.FLOOR_TOP + 0.05, center.z)
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, float(config.get("delay", 0.5)))
+		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, float(config.get("delay", 0.5)))
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		CombatVfx.shockwave(parent, center, radius, COLOR, 0.3)

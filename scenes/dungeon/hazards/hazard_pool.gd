@@ -29,7 +29,7 @@ static func spawn(world: Node, center: Vector3, player: Node3D, pool_radius: flo
 
 func _ready() -> void:
 	_marker = CombatVfx.make_ground_marker(Color(color, 0.7), radius)
-	_marker.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_marker, &"progress", 1.0)
 	add_child(_marker)
 	var pulse := _marker.create_tween().set_loops()
 	pulse.tween_property(_marker, "scale", Vector3(radius * 2.1, 1.0, radius * 2.1), 0.45)

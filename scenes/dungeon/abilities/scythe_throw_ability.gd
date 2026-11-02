@@ -52,7 +52,7 @@ func try_use(distance: float) -> bool:
 	var line := _line
 	line.create_tween().tween_method(func(value: float) -> void:
 		if is_instance_valid(line):
-			line.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, windup)
+			CombatVfx.set_param(line, &"progress", value), 0.0, 1.0, windup)
 	enemy.begin_special(id, windup, Color(COLOR, 0.0), 0.1)
 	return true
 

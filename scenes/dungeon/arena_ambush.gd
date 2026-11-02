@@ -171,7 +171,7 @@ func _open_portal(entry: Dictionary) -> void:
 	marker.global_position = position + Vector3(0, DungeonBuilder.FLOOR_TOP + 0.04, 0)
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, PORTAL_TIME)
+		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, PORTAL_TIME)
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		_portals -= 1

@@ -40,7 +40,7 @@ func try_use(distance: float) -> bool:
 	var tween := cone.create_tween()
 	tween.tween_method(func(value: float) -> void:
 		if is_instance_valid(cone):
-			cone.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, windup)
+			CombatVfx.set_param(cone, &"progress", value), 0.0, 1.0, windup)
 	_mouth_glow(windup)
 	enemy.get_tree().create_timer(windup + 0.3, false).timeout.connect(_clear)
 	enemy.begin_special(id, windup, Color(COLOR, 0.0), 0.1)

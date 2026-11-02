@@ -44,7 +44,7 @@ static func spawn(world: Node, center: Vector3, player: Node3D, radius: float, p
 func _ready() -> void:
 	var color := Color(0.55, 0.2, 0.85)
 	_marker = CombatVfx.make_ground_marker(Color(color, 0.55), _radius)
-	_marker.set_instance_shader_parameter(&"progress", 0.0)
+	CombatVfx.set_param(_marker, &"progress", 0.0)
 	add_child(_marker)
 	_marker.global_position = _center
 	_core = MeshInstance3D.new()
@@ -68,12 +68,12 @@ func _physics_process(delta: float) -> void:
 	_lifetime -= delta
 	_age += delta
 	var opening := clampf(_age / OPENING, 0.0, 1.0)
-	_marker.set_instance_shader_parameter(&"progress", opening)
+	CombatVfx.set_param(_marker, &"progress", opening)
 	if _lifetime <= 0.0:
 		var fade := create_tween()
 		var marker := _marker
 		fade.tween_method(func(value: float) -> void:
-			marker.set_instance_shader_parameter(&"fade", value), 1.0, 0.0, 0.4)
+			CombatVfx.set_param(marker, &"fade", value), 1.0, 0.0, 0.4)
 		fade.parallel().tween_property(_core, "scale", Vector3.ZERO, 0.4)
 		fade.tween_callback(queue_free)
 		set_physics_process(false)

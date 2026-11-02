@@ -34,7 +34,7 @@ func tick(delta: float) -> void:
 func _build() -> void:
 	var radius := float(config.get("radius", 2.4))
 	_marker = CombatVfx.make_ground_marker(Color(COLOR, 0.3), radius)
-	_marker.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_marker, &"progress", 1.0)
 	enemy.add_child(_marker)
 	_marker.position = Vector3(0, 0.05, 0)
 	_cloud = CombatVfx.make_trail(Color(COLOR, 0.75), 1.8)

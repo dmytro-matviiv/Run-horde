@@ -22,9 +22,9 @@ shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
 
 uniform vec4 color : source_color = vec4(0.75, 0.88, 1.0, 1.0);
-instance uniform float progress = 0.0;
-instance uniform float reverse_dir = 0.0;
-instance uniform float intensity = 1.0;
+uniform float progress = 0.0;
+uniform float reverse_dir = 0.0;
+uniform float intensity = 1.0;
 
 void fragment() {
 	float u = mix(UV.x, 1.0 - UV.x, reverse_dir);
@@ -48,10 +48,10 @@ shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 
 uniform vec4 color : source_color = vec4(1.0, 0.25, 0.2, 1.0);
-instance uniform float progress = 0.0;
-instance uniform float half_arc = 3.1416;
-instance uniform float wave = 0.0;
-instance uniform float fade = 1.0;
+uniform float progress = 0.0;
+uniform float half_arc = 3.1416;
+uniform float wave = 0.0;
+uniform float fade = 1.0;
 
 void fragment() {
 	vec2 d = UV - vec2(0.5);
@@ -80,7 +80,7 @@ shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 
 uniform vec4 color : source_color = vec4(1.0, 0.3, 0.2, 1.0);
-instance uniform float progress = 0.0;
+uniform float progress = 0.0;
 
 void fragment() {
 	float edge = min(min(UV.x, 1.0 - UV.x), min(UV.y, 1.0 - UV.y));
@@ -108,9 +108,9 @@ uniform vec4 color : source_color = vec4(1.0, 0.3, 0.2, 1.0);
 // 0 — коло, 1 — віяло (арт розкладено довкола вершини), 2 — смуга
 uniform int shape = 0;
 uniform float recolor = 0.0;
-instance uniform float progress = 0.0;
-instance uniform float half_arc = 3.1416;
-instance uniform float fade = 1.0;
+uniform float progress = 0.0;
+uniform float half_arc = 3.1416;
+uniform float fade = 1.0;
 // 0 — без підкладки кольором (тріщини після удару), 1 — з нею.
 uniform float base = 1.0;
 
@@ -251,11 +251,11 @@ static func slash(parent: Node, origin: Vector3, yaw: float, radius: float, arc_
 	parent.add_child(instance)
 	instance.global_position = origin
 	instance.global_rotation = Vector3(tilt, yaw, 0.0)
-	instance.set_instance_shader_parameter(&"reverse_dir", 1.0 if reverse else 0.0)
-	instance.set_instance_shader_parameter(&"progress", 0.0)
+	CombatVfx.set_param(instance, &"reverse_dir", 1.0 if reverse else 0.0)
+	CombatVfx.set_param(instance, &"progress", 0.0)
 	var tween := instance.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		instance.set_instance_shader_parameter(&"progress", value), 0.0, 1.4, duration)
+		CombatVfx.set_param(instance, &"progress", value), 0.0, 1.4, duration)
 	tween.tween_callback(instance.queue_free)
 
 ## Плаский сектор кільця в площині XZ, розвернутий на +Z (туди, куди
@@ -564,15 +564,15 @@ static func flash_model(model: Node, color: Color = Color.WHITE, duration: float
 
 ## Кільце-сектор на підлозі, яким керує той, хто його створив (ворог
 ## показує ним свій майбутній удар). Повертає вузол; progress задається
-## через set_instance_shader_parameter.
+## через CombatVfx.set_param.
 static func make_ground_marker(color: Color, radius: float, half_arc: float = PI) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = _get_ring_mesh()
 	instance.material_override = _get_material(_ring_materials, RING_SHADER, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(radius * 2.0, 1.0, radius * 2.0)
-	instance.set_instance_shader_parameter(&"half_arc", half_arc)
-	instance.set_instance_shader_parameter(&"progress", 0.0)
+	CombatVfx.set_param(instance, &"half_arc", half_arc)
+	CombatVfx.set_param(instance, &"progress", 0.0)
 	return instance
 
 ## Смуга-попередження для тарана. length — довжина ривку, width — ширина.
@@ -582,7 +582,7 @@ static func make_line_marker(color: Color, length: float, width: float) -> MeshI
 	instance.material_override = _get_material(_line_materials, LINE_SHADER, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(width, 1.0, length)
-	instance.set_instance_shader_parameter(&"progress", 0.0)
+	CombatVfx.set_param(instance, &"progress", 0.0)
 	return instance
 
 ## Попередження ворожого удару з арту: коло (half_arc = PI) або віяло.
@@ -600,8 +600,8 @@ static func make_telegraph(color: Color, radius: float, half_arc: float = PI, em
 	instance.material_override = _get_telegraph_material(art, shape, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(radius * 2.0, 1.0, radius * 2.0)
-	instance.set_instance_shader_parameter(&"half_arc", half_arc)
-	instance.set_instance_shader_parameter(&"progress", 0.0)
+	CombatVfx.set_param(instance, &"half_arc", half_arc)
+	CombatVfx.set_param(instance, &"progress", 0.0)
 	if embers and radius >= 1.0 and color.a > 0.05:
 		var points := PackedVector3Array()
 		var steps := clampi(int(radius * 6.0), 10, 28)
@@ -625,7 +625,7 @@ static func make_line_telegraph(color: Color, length: float, width: float, art: 
 	instance.material_override = _get_telegraph_material(art, 2, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(width, 1.0, length)
-	instance.set_instance_shader_parameter(&"progress", 0.0)
+	CombatVfx.set_param(instance, &"progress", 0.0)
 	if embers and color.a > 0.05:
 		var points := PackedVector3Array()
 		var steps := clampi(int(length), 4, 14)
@@ -643,7 +643,7 @@ static func impact_decal(parent: Node, position: Vector3, radius: float, color: 
 	decal.mesh = _get_ring_mesh()
 	decal.material_override = _get_telegraph_material("cracks", 0, Color(color, 1.0))
 	decal.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	decal.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(decal, &"progress", 1.0)
 	parent.add_child(decal)
 	decal.global_position = position + Vector3(0, 0.07, 0)
 	decal.rotation.y = randf() * TAU
@@ -653,7 +653,7 @@ static func impact_decal(parent: Node, position: Vector3, radius: float, color: 
 	tween.tween_property(decal, "scale", Vector3(size, 1.0, size), 0.09).set_ease(Tween.EASE_OUT)
 	tween.tween_interval(linger)
 	tween.tween_method(func(value: float) -> void:
-		decal.set_instance_shader_parameter(&"fade", value), 1.0, 0.0, 0.7)
+		CombatVfx.set_param(decal, &"fade", value), 1.0, 0.0, 0.7)
 	tween.tween_callback(decal.queue_free)
 
 	# Камінці злітають і падають; пил повільно розповзається.
@@ -796,10 +796,10 @@ static func shockwave(parent: Node, position: Vector3, radius: float, color: Col
 	var instance := make_ground_marker(color, radius)
 	parent.add_child(instance)
 	instance.global_position = position + Vector3(0, 0.06, 0)
-	instance.set_instance_shader_parameter(&"wave", 1.0)
+	CombatVfx.set_param(instance, &"wave", 1.0)
 	var tween := instance.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		instance.set_instance_shader_parameter(&"progress", value), 0.1, 1.0, duration)
+		CombatVfx.set_param(instance, &"progress", value), 0.1, 1.0, duration)
 	tween.tween_callback(instance.queue_free)
 
 # --- відчуття удару ---
@@ -827,6 +827,39 @@ static func hitstop(tree: SceneTree, duration: float, time_scale: float = 0.25) 
 	tree.create_timer(duration, true, false, true).timeout.connect(func() -> void:
 		if token == _hitstop_token:
 			Engine.time_scale = 1.0)
+
+# --- параметри ефекту ---
+
+## Параметр шейдера ОДНОГО ефекту (progress кола, fade, wave...).
+##
+## ЧОМУ НЕ "instance uniform". На телефоні (gl_compatibility) рушій
+## тримає параметри екземплярів у спільному буфері, де кожен такий
+## об'єкт займає 16 комірок, а буфер обмежений розміром UBO відеочипа —
+## лише кілька сотень об'єктів на весь рівень (кола під кожним ворогом,
+## смужки здоров'я, калюжі...). Хто не влазив — читав чужі числа:
+## попередження касту блимало й зникало, смужка здоров'я ставала
+## чорною. Тепер ефект при першому ж параметрі отримує власну копію
+## матеріалу (той самий Shader — нічого не перезбирається), і параметр
+## пишеться в неї. Матеріал підмінили (boss_aura міняє колір) — копія
+## робиться знову, і всі вже задані параметри переносяться.
+static func set_param(node: Node, name: StringName, value: Variant) -> void:
+	var geometry := node as GeometryInstance3D
+	if geometry == null or not is_instance_valid(geometry):
+		return
+	var params: Dictionary = geometry.get_meta(&"vfx_params", {})
+	params[name] = value
+	geometry.set_meta(&"vfx_params", params)
+	var material := geometry.material_override as ShaderMaterial
+	if material == null:
+		return
+	if geometry.get_meta(&"vfx_material", null) != material:
+		material = material.duplicate() as ShaderMaterial
+		geometry.material_override = material
+		geometry.set_meta(&"vfx_material", material)
+		for key: StringName in params:
+			material.set_shader_parameter(key, params[key])
+	else:
+		material.set_shader_parameter(name, value)
 
 # --- спільні ресурси ---
 

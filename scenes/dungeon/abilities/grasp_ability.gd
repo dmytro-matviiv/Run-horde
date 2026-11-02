@@ -43,7 +43,7 @@ func _raise(spot: Vector3) -> void:
 	var hero := player()
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
-		marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, tell)
+		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, tell)
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		var hand := _make_hand()

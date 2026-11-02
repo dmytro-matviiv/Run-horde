@@ -67,7 +67,7 @@ func _physics_process(delta: float) -> void:
 				_warn()
 		State.WARN:
 			if _marker != null:
-				_marker.set_instance_shader_parameter(&"progress", 1.0 - maxf(_left, 0.0) / WARN_TIME)
+				CombatVfx.set_param(_marker, &"progress", 1.0 - maxf(_left, 0.0) / WARN_TIME)
 			if _left <= 0.0:
 				_raise()
 		State.UP:

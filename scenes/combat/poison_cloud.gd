@@ -39,7 +39,7 @@ static func spawn(parent: Node, player: Node, position: Vector3, cloud_radius: f
 func _ready() -> void:
 	_left = duration
 	_marker = CombatVfx.make_ground_marker(COLOR, radius)
-	_marker.set_instance_shader_parameter(&"progress", 1.0)
+	CombatVfx.set_param(_marker, &"progress", 1.0)
 	add_child(_marker)
 	_marker.position = Vector3(0, 0.07, 0)
 	add_child(_make_bubbles())
@@ -51,7 +51,7 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	# Під кінець хмара блідне — видно, що скоро зникне.
-	_marker.set_instance_shader_parameter(&"fade", clampf(_left / 0.6, 0.0, 1.0))
+	CombatVfx.set_param(_marker, &"fade", clampf(_left / 0.6, 0.0, 1.0))
 	_tick_left -= delta
 	if _tick_left > 0.0:
 		return

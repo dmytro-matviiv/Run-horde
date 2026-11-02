@@ -38,7 +38,7 @@ func try_use(distance: float) -> bool:
 	var tween := marker.create_tween()
 	tween.tween_method(func(value: float) -> void:
 		if is_instance_valid(marker):
-			marker.set_instance_shader_parameter(&"progress", value), 0.0, 1.0, windup)
+			CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, windup)
 	enemy.get_tree().create_timer(windup + 0.3, false).timeout.connect(_clear)
 	enemy.begin_special(id, windup, Color(COLOR, 0.0), 0.1)
 	return true
