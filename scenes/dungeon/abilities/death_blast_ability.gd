@@ -34,7 +34,7 @@ func on_death() -> void:
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
 		CombatVfx.shockwave(parent, center, radius, COLOR, 0.4)
-		CombatVfx.impact(parent, center + Vector3.UP * 0.8, COLOR, true)
+		Fx.flipbook(parent, center + Vector3.UP * 1.0, "explosion", radius * 1.5, COLOR.lightened(0.15), 0.55, false, true)
 		CombatVfx.impact_decal(parent, center, radius * 0.8, COLOR, 0.6)
 		var rig := tree.get_first_node_in_group(&"camera_rig")
 		if rig != null:

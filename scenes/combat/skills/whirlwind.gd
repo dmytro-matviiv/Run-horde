@@ -32,9 +32,10 @@ func _use(player: Node) -> bool:
 	var parent := player.get_parent()
 	var chest: Vector3 = player.global_position + Vector3.UP
 	var radius := _radius(player, level)
-	CombatVfx.slash(parent, chest, player.facing_angle(), radius, 359.0, color, false, 0.0, SPIN_TIME)
-	CombatVfx.slash(parent, chest + Vector3.UP * 0.25, player.facing_angle() + PI, radius * 0.85, 359.0, color, true, 0.1, SPIN_TIME)
-	CombatVfx.shockwave(parent, player.global_position, radius, color, 0.4)
+	# Вихор клинків: завитки, що обертаються довкола героя на трьох рівнях,
+	# смуги вітру й пил (Fx.whirl), і один слід леза по колу.
+	Fx.whirl(player, radius, color, SPIN_TIME)
+	CombatVfx.slash(parent, chest, player.facing_angle(), radius, 359.0, color.lerp(Color.WHITE, 0.4), false, 0.0, SPIN_TIME)
 	return true
 
 func _update(player: Node, delta: float) -> void:

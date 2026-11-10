@@ -215,6 +215,7 @@ func _ready() -> void:
 	var level := DungeonLevels.get_level(_level_index)
 	_level = level
 	_theme = level.get("theme", DungeonBuilder.DEFAULT_THEME)
+	Enemy3D.danger_color = _theme.get("danger", Color(0, 0, 0, 0))
 	_hp_scale = float(level.stats.hp)
 	_damage_scale = float(level.stats.damage)
 	_gold_scale = float(level.stats.gold)

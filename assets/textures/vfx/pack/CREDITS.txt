@@ -1,0 +1,6 @@
+Ефекти в цій папці зібрано з безкоштовних наборів:
+- fb_*.png — Brackeys VFX Bundle (vfx-in-godot), CC0.
+- k_*.png — Kenney Particle Pack (kenney.nl), CC0.
+- telegraph_circle_hex.png — з Pixel Dreamer Studio "12 Free VFX Textures" (вільне використання).
+- telegraph_circle_frost.png — намальовано для гри.
+Текстури зменшено для телефона. Сирці — D:\Ефекти.

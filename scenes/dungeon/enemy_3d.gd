@@ -219,6 +219,9 @@ var invulnerable := false
 ## Приціл героя сюди не наводиться (бос розсипався купою кісток — бити
 ## треба череп поруч).
 var untargetable := false
+## Колір попередження звичайних ударів у цьому данжі (тема рівня "danger");
+## прозорий — звичайний червоний. Задає Dungeon на старті.
+static var danger_color := Color(0, 0, 0, 0)
 ## Яку анімацію грати, падаючи (бос, що вже лежить купою кісток, — "Down").
 var death_anims: Array = ["Death"]
 ## Висота моделі в стійці (після _normalize_size) — сюди вертається emerge().
@@ -1602,6 +1605,9 @@ func _show_telegraph(radius: float, half_arc: float, color: Color, embers: bool 
 	# двійників — фіолетові руни замість вогню.
 	if definition.has("telegraph_color") and color in [TELEGRAPH_COLOR, SLAM_COLOR, EXPLODE_COLOR]:
 		color = definition.telegraph_color
+	elif danger_color.a > 0.0 and color in [TELEGRAPH_COLOR, SLAM_COLOR]:
+		# Колір звичайних ударів — свій у кожного данжу (тема рівня "danger").
+		color = danger_color
 	_telegraph = CombatVfx.make_telegraph(color, radius, half_arc, embers)
 	add_child(_telegraph)
 	_telegraph.position = Vector3(0, 0.05, 0)

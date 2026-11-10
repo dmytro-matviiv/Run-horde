@@ -1543,7 +1543,6 @@ func _attack_vfx(step: Dictionary, reverse: bool) -> void:
 		"circle":
 			CombatVfx.slash(get_parent(), origin, _aim_angle(), _reach(step) + 0.2, 359.0, color,
 				reverse, 0.0, 0.3)
-			CombatVfx.shockwave(get_parent(), global_position, _reach(step), color, 0.3)
 		"line":
 			CombatVfx.thrust(get_parent(), origin, _aim_angle(), _reach(step) + 0.3, color)
 		_:
@@ -1631,8 +1630,7 @@ func _burst(step: Dictionary, hit: Array[Enemy3D]) -> void:
 		center_enemy = _target
 	var center := center_enemy.global_position
 	var radius: float = float(step.burst[0])
-	CombatVfx.shockwave(get_parent(), center, radius, BURST_COLOR, 0.25)
-	CombatVfx.impact(get_parent(), center + Vector3.UP * 0.8, BURST_COLOR, true)
+	Fx.flipbook(get_parent(), center + Vector3.UP * 0.9, "explosion", radius * 1.3, Color.WHITE, 0.4)
 	for enemy: Enemy3D in enemies_near(center, radius):
 		if hit.has(enemy):
 			continue

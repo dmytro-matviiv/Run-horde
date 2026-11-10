@@ -20,7 +20,7 @@ var _player: Node3D
 var _owner: Enemy3D
 var _age := 0.0
 var _hit := false
-var _marker: MeshInstance3D
+var _marker: Node3D
 
 ## Скільки секунд кільце тримає героя вмерзлим на місці (0 — не тримає).
 var freeze := 0.0
@@ -39,11 +39,12 @@ static func spawn(world: Node, center: Vector3, player: Node3D, max_radius: floa
 	return ring
 
 func _ready() -> void:
-	_marker = CombatVfx.make_ground_marker(_color, _max_radius)
-	CombatVfx.set_param(_marker, &"wave", 1.0)
-	CombatVfx.set_param(_marker, &"progress", 0.0)
+	# Вигляд кільця — за стихією кольору (Fx.make_ring): вогняне в лавового
+	# боса, крижано-електричне в голема, димове в решти.
+	_marker = Fx.make_ring(_color)
 	add_child(_marker)
 	_marker.global_position = _center
+	Fx.update_ring(_marker, 0.1, 0.0)
 
 func _physics_process(delta: float) -> void:
 	_age += delta
@@ -51,7 +52,7 @@ func _physics_process(delta: float) -> void:
 	if radius >= _max_radius:
 		queue_free()
 		return
-	CombatVfx.set_param(_marker, &"progress", radius / _max_radius)
+	Fx.update_ring(_marker, radius, _age, 1.0 - smoothstep(0.8, 1.0, radius / _max_radius))
 	if _hit or _player == null or not is_instance_valid(_player):
 		return
 	if _owner != null and (not is_instance_valid(_owner) or not _owner.is_alive()):

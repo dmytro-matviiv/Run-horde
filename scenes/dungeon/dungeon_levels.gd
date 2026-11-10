@@ -196,6 +196,8 @@ const LEVELS := [
 			"torch": Color(0.55, 1.0, 0.62),
 			"background": Color(0.02, 0.05, 0.04),
 			"decor": "fungal",
+			# Колір попередження звичайних ударів у цьому данжі.
+			"danger": Color(0.72, 1.0, 0.3, 0.85),
 		},
 		"enemies": {
 			"m": [
@@ -286,6 +288,8 @@ const LEVELS := [
 			"torch": Color(0.6, 0.85, 1.0),
 			"background": Color(0.04, 0.06, 0.1),
 			"decor": "citadel",
+			# Колір попередження звичайних ударів у цьому данжі.
+			"danger": Color(0.5, 0.86, 1.0, 0.9),
 		},
 		# Вороги крижаної цитаделі — моделі гравця (D:/Вороги, завдання в Tusk.txt).
 		# Скелети й анімації: scripts/blender/prep_rodin_mob.py (зброя жорстко на
@@ -439,6 +443,8 @@ const LEVELS := [
 			"torch": Color(0.55, 1.0, 0.55),
 			"background": Color(0.03, 0.04, 0.03),
 			"decor": "graveyard",
+			# Колір попередження звичайних ударів у цьому данжі.
+			"danger": Color(0.8, 0.6, 1.0, 0.88),
 		},
 		# Вороги кладовища — моделі гравця (D:/Вороги, завдання в Tusk.txt).
 		# Скелети й анімації (D:/RuneHorde_work/scripts/blender): чаклун —

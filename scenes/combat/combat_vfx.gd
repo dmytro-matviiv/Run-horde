@@ -543,9 +543,10 @@ static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind:
 	var ground := Vector3(position.x, DungeonBuilder.FLOOR_TOP, position.z)
 	match kind:
 		"spin":
-			shockwave(parent, ground, 1.0, color, 0.22)
+			Fx.bloom(parent, position, "twirl_03", 2.0 * boost, Color(color, 0.85), 0.25, true, true, 0.4, -2.5)
 		"finisher":
-			shockwave(parent, ground, 2.4, color, 0.35)
+			Fx.flipbook(parent, position + Vector3.UP * 0.2, "big_hit", 2.6 * boost, color.lerp(Color.WHITE, 0.3), 0.32,
+				false, true, true)
 			var dust := _make_burst("dust", Color(0.75, 0.68, 0.58, 0.8), 8, 0.6, 0.6)
 			dust.direction = Vector3.UP
 			dust.spread = 80.0
@@ -776,7 +777,17 @@ static func make_telegraph(color: Color, radius: float, half_arc: float = PI, em
 	var shape := 0 if half_arc >= PI - 0.01 else 1
 	var art := "cone"
 	if shape == 0:
-		art = "lava" if _hue_close(color, WARM_HUE) else "rune"
+		# Арт кола — за стихією: розпечене каміння, сніжинка, руни-печатка
+		# (отрута й некромантія), фіолетові руни для решти.
+		match Fx.theme_of(color):
+			"fire":
+				art = "lava" if _hue_close(color, WARM_HUE) else "rune"
+			"ice":
+				art = "frost"
+			"poison":
+				art = "hex"
+			_:
+				art = "rune"
 	instance.material_override = _get_telegraph_material(art, shape, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(radius * 2.0, 1.0, radius * 2.0)
@@ -936,7 +947,8 @@ static func _get_telegraph_material(art: String, shape: int, color: Color) -> Sh
 		return _telegraph_materials[key]
 	var material := ShaderMaterial.new()
 	material.shader = _shared_shader(TELEGRAPH_SHADER)
-	material.set_shader_parameter(&"art", TELEGRAPH_ART[art])
+	# Нові кола (frost, hex) — з набору ефектів (Fx), решта — арт гравця.
+	material.set_shader_parameter(&"art", TELEGRAPH_ART[art] if TELEGRAPH_ART.has(art) else Fx.tex("telegraph_circle_" + art))
 	material.set_shader_parameter(&"color", color)
 	material.set_shader_parameter(&"shape", shape)
 	var native := RUNE_HUE if art == "rune" else WARM_HUE
@@ -972,7 +984,13 @@ static func _get_particle_mesh(size: float) -> QuadMesh:
 	return _particle_meshes[key]
 
 ## Хвиля, що розбігається від центру (вихор героя, удар боса об землю).
+## Вигляд — за стихією кольору (Fx.wave): вогняне кільце, крижане, дим...
+## Мала хвиля (до 1.7 м) — лише клуб пилу, без кола.
 static func shockwave(parent: Node, position: Vector3, radius: float, color: Color, duration: float = 0.35) -> void:
+	Fx.wave(parent, position, radius, color, duration)
+
+## Старе пласке кільце (лишилось для порівняння й запасу).
+static func plain_ring(parent: Node, position: Vector3, radius: float, color: Color, duration: float = 0.35) -> void:
 	var instance := make_ground_marker(color, radius)
 	parent.add_child(instance)
 	instance.global_position = position + Vector3(0, 0.06, 0)

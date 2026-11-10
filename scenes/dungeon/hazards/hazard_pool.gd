@@ -3,7 +3,7 @@ class_name HazardPool
 
 ## КАЛЮЖА: вогонь, отрута чи кислота на підлозі після бомби. Кілька
 ## секунд пече того, хто стоїть усередині (раз на TICK), потім згасає.
-## Видно коло на підлозі, що ледь пульсує, — обходь.
+## Видно пляму на підлозі з полум'ям чи отруйним димом (Fx.make_pool) — обходь.
 
 const TICK := 0.5
 
@@ -14,7 +14,7 @@ var color := Color(1.0, 0.45, 0.1)
 
 var _player: Node3D
 var _tick_left := 0.2
-var _marker: MeshInstance3D
+var _marker: Node3D
 
 static func spawn(world: Node, center: Vector3, player: Node3D, pool_radius: float, damage_per_tick: float, seconds: float, pool_color: Color) -> HazardPool:
 	var pool := HazardPool.new()
@@ -28,12 +28,11 @@ static func spawn(world: Node, center: Vector3, player: Node3D, pool_radius: flo
 	return pool
 
 func _ready() -> void:
-	_marker = CombatVfx.make_ground_marker(Color(color, 0.7), radius)
-	CombatVfx.set_param(_marker, &"progress", 1.0)
+	_marker = Fx.make_pool(color, radius)
 	add_child(_marker)
-	var pulse := _marker.create_tween().set_loops()
-	pulse.tween_property(_marker, "scale", Vector3(radius * 2.1, 1.0, radius * 2.1), 0.45)
-	pulse.tween_property(_marker, "scale", Vector3(radius * 1.9, 1.0, radius * 1.9), 0.45)
+	# Розтікається з точки.
+	_marker.scale = Vector3(0.2, 1.0, 0.2)
+	_marker.create_tween().tween_property(_marker, "scale", Vector3.ONE, 0.3).set_ease(Tween.EASE_OUT)
 
 func _physics_process(delta: float) -> void:
 	lifetime -= delta
