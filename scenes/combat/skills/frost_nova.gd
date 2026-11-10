@@ -20,8 +20,7 @@ func _use(player: Node) -> bool:
 	var parent: Node = player.get_parent()
 	var center: Vector3 = player.global_position
 	CombatVfx.shockwave(parent, center, RADIUS, color, 0.45)
-	CombatVfx.shockwave(parent, center, RADIUS * 0.6, Color(1, 1, 1, 0.8), 0.3)
-	CombatVfx.impact(parent, center + Vector3.UP, color, true)
+	Fx.bloom(parent, center + Vector3.UP * 0.06, "smoke_10", RADIUS * 2.2, Color(0.75, 0.9, 1.0, 0.55), 0.7)
 	for enemy: Enemy3D in player.enemies_in_radius(RADIUS):
 		player.deal_damage(enemy, DAMAGE, Vector3.ZERO, true, id)
 		if enemy.is_alive():

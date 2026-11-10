@@ -460,19 +460,7 @@ static func impact(parent: Node, position: Vector3, color: Color, big: bool = fa
 	particles.global_position = position
 	particles.emitting = true
 	_free_after(particles, particles.lifetime + 0.1)
-
-	var flare := MeshInstance3D.new()
-	flare.mesh = _get_flare_mesh()
-	flare.material_override = _get_flare_material(color)
-	flare.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(flare)
-	flare.global_position = position
-	flare.scale = Vector3.ONE * (0.4 if big else 0.25)
-	var tween := flare.create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(flare, "scale", Vector3.ONE * (1.8 if big else 1.1), 0.14)
-	tween.tween_property(flare, "transparency", 1.0, 0.14)
-	tween.chain().tween_callback(flare.queue_free)
+	# Без спалаху-зірки (гравець не хоче спалахів): лише іскри.
 
 ## Іскри влучання клинка — свої для кожного удару серії (kind). Без
 ## спалаху: на ворогові лишається слід порізу (свій нахил для кожного

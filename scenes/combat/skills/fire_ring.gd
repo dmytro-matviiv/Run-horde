@@ -14,6 +14,8 @@ const FIRE_COLOR := Color(1.0, 0.5, 0.15)
 
 var _left := 0.0
 var _next_tick := 0.0
+var _ring: Node3D
+var _age := 0.0
 
 func _init() -> void:
 	id = &"fire_ring"
@@ -26,20 +28,38 @@ func _init() -> void:
 func _use(player: Node) -> bool:
 	_left = DURATION
 	_next_tick = 0.0
-	CombatVfx.shockwave(player.get_parent(), player.global_position, _radius(player), color, 0.5)
+	_age = 0.0
+	# Живе вогняне кільце довкола Чарівниці (Fx): розгоряється, іде за нею,
+	# по краю — язики полум'я; наприкінці гасне.
+	if _ring != null and is_instance_valid(_ring):
+		_ring.queue_free()
+	_ring = Fx.make_ring(color)
+	player.add_child(_ring)
+	_ring.position = Vector3(0, 0.06, 0)
+	(_ring.get_node("Trail") as CPUParticles3D).amount = 28
+	Fx.signature(player.get_parent(), "inferno_bloom", player.global_position + Vector3.UP * 3.0,
+		player.global_position, 0.35, 1.2)
 	return true
 
 func _update(player: Node, delta: float) -> void:
 	if _left <= 0.0:
 		return
 	_left -= delta
+	_age += delta
+	if _ring != null and is_instance_valid(_ring):
+		var grow := minf(_age / 0.25, 1.0)
+		var fade := clampf(_left / 0.4, 0.0, 1.0)
+		Fx.update_ring(_ring, _radius(player) * grow, _age, fade)
+		if _left <= 0.0:
+			var ring := _ring
+			(ring.get_node("Trail") as CPUParticles3D).emitting = false
+			ring.get_tree().create_timer(0.6, false).timeout.connect(ring.queue_free)
+			_ring = null
 	_next_tick -= delta
 	if _next_tick > 0.0:
 		return
 	_next_tick = TICK
 	var radius := _radius(player)
-	# Кільце йде за жрицею — воно горить навколо неї, а не на місці.
-	CombatVfx.shockwave(player.get_parent(), player.global_position, radius, color, TICK)
 	var damage := TICK_DAMAGE * (1.0 + 0.15 * talent_level(player)) * _ring_power(player)
 	for enemy: Enemy3D in player.enemies_in_radius(radius):
 		player.deal_damage(enemy, damage, Vector3.ZERO, false, id)
