@@ -29,13 +29,9 @@ func _use(player: Node) -> bool:
 	cooldown = maxf(6.0 - 0.4 * level, 3.0)
 	_hit_left = HIT_DELAY
 	player.spin_model(SPIN_TIME)
-	var parent := player.get_parent()
-	var chest: Vector3 = player.global_position + Vector3.UP
 	var radius := _radius(player, level)
-	# Вихор клинків: завитки, що обертаються довкола героя на трьох рівнях,
-	# смуги вітру й пил (Fx.whirl), і один слід леза по колу.
+	# Вихор — один ефект (Fx.whirl): без старого сліду леза по колу поверх.
 	Fx.whirl(player, radius, color, SPIN_TIME)
-	CombatVfx.slash(parent, chest, player.facing_angle(), radius, 359.0, color.lerp(Color.WHITE, 0.4), false, 0.0, SPIN_TIME)
 	return true
 
 func _update(player: Node, delta: float) -> void:

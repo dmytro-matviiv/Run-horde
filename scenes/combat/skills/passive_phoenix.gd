@@ -30,10 +30,9 @@ func on_lethal(player: Node) -> bool:
 	var bonus: float = player.phoenix_bonus() if player.has_method("phoenix_bonus") else 0.0
 	player.heal(player.max_hp * (HEAL_PART + bonus))
 	player.grant_invulnerable(INVULNERABLE)
-	# Вогняний цвіт довкола неї (набір Obssidian) і вогняна хвиля.
+	# Відродження — один вогняний цвіт довкола неї (набір Obssidian).
 	Fx.signature(player.get_parent(), "inferno_bloom", player.global_position + Vector3.UP * 3.0,
 		player.global_position, 0.2, 1.5)
-	CombatVfx.shockwave(player.get_parent(), player.global_position, BLAST_RADIUS, FIRE_COLOR, 0.6)
 	player.shake_camera(0.25)
 	for enemy: Enemy3D in player.enemies_in_radius(BLAST_RADIUS, false):
 		var push: Vector3 = enemy.global_position - player.global_position

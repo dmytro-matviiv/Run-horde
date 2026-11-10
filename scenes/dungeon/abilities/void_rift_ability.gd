@@ -44,6 +44,4 @@ func resolve() -> void:
 		_spawn_rift(hero.global_position + offset, radius, pull_speed, tick_damage, lifetime)
 
 func _spawn_rift(center: Vector3, radius: float, pull_speed: float, tick_damage: float, lifetime: float) -> void:
-	Fx.signature(world(), "abyssal_tether", enemy.global_position + Vector3.UP * enemy.target_height * 0.8, center,
-		0.5, 1.4, Color(0.6, 0.3, 1.0))
 	HazardRift.spawn(world(), center, player(), radius, pull_speed, tick_damage, lifetime)

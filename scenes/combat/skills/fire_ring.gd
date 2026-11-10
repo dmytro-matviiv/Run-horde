@@ -37,8 +37,6 @@ func _use(player: Node) -> bool:
 	player.add_child(_ring)
 	_ring.position = Vector3(0, 0.06, 0)
 	(_ring.get_node("Trail") as CPUParticles3D).amount = 28
-	Fx.signature(player.get_parent(), "inferno_bloom", player.global_position + Vector3.UP * 3.0,
-		player.global_position, 0.35, 1.2)
 	return true
 
 func _update(player: Node, delta: float) -> void:

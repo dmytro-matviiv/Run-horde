@@ -281,7 +281,12 @@ static func wave(parent: Node, position: Vector3, radius: float, color: Color, d
 	var a := 0.55 * color.a
 	match theme_of(color):
 		"fire":
-			flipbook(parent, ground, "fire_ring", radius * 2.1, Color(1, 1, 1, 0.7 * color.a), time, true, false, false, 0.3)
+			# Анімоване вогняне кільце — лише мале (вибух поруч): велике
+			# розсипається на пікселі. Велика хвиля — м'яке кільце диму й жару.
+			if radius <= 3.0:
+				flipbook(parent, ground, "fire_ring", radius * 2.1, Color(1, 1, 1, 0.7 * color.a), time, true, false, false, 0.3)
+			else:
+				bloom(parent, ground, "smoke_10", radius * 2.2, Color(color.lerp(Color(1.0, 0.8, 0.5), 0.3), a), time)
 		"ice":
 			bloom(parent, ground, "smoke_10", radius * 2.2, Color(color.lerp(Color.WHITE, 0.4), a), time)
 		"poison":
@@ -321,21 +326,15 @@ static func _ring_burst(parent: Node, position: Vector3, radius: float, name: St
 static func make_ring(color: Color) -> Node3D:
 	var holder := Node3D.new()
 	var theme := theme_of(color)
-	var band: MeshInstance3D
-	match theme:
-		"fire":
-			band = make_flipbook("fire_ring", Color(1, 1, 1, 1), true)
-			holder.set_meta(&"fit", 2.25)
-		"ice":
-			band = make_flipbook("electric_ring", Color(color.lerp(Color.WHITE, 0.6), 1.0), true, false, true)
-			holder.set_meta(&"fit", 2.5)
-		_:
-			band = make_sprite("smoke_10", Color(color.lerp(Color(0.8, 0.8, 0.8), 0.2), 0.85), true)
-			holder.set_meta(&"fit", 2.5)
+	# Мінімалізм: одне м'яке кільце (без анімованих "вирів" — розтягнуті
+	# на десятки метрів, вони розсипались на пікселі й мерехтіли).
+	var tint := color.lerp(Color.WHITE, 0.45) if theme == "ice" else color.lerp(Color(0.8, 0.8, 0.8), 0.2)
+	var band := make_sprite("smoke_10", Color(tint, 0.8), true)
+	holder.set_meta(&"fit", 2.5)
 	band.name = "Band"
 	holder.add_child(band)
 	var art := {"fire": "flame_05", "ice": "star_04", "poison": "smoke_04"}
-	var trail := make_particles(art.get(theme, "spark_04"), color.lerp(Color.WHITE, 0.35), 18, 0.45, 0.45, theme != "poison")
+	var trail := make_particles(art.get(theme, "spark_04"), color.lerp(Color.WHITE, 0.35), 10, 0.45, 0.4, theme != "poison")
 	trail.name = "Trail"
 	trail.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
 	trail.emission_ring_axis = Vector3.UP
@@ -429,7 +428,7 @@ static func whirl(host: Node3D, radius: float, color: Color, time: float) -> voi
 	var holder := Node3D.new()
 	host.add_child(holder)
 	holder.position = Vector3.ZERO
-	var layers := [["twirl_03", 0.8, 2.0, 0.0, 0.55]]
+	var layers := [["twirl_03", 0.8, 2.0, 0.0, 0.8]]
 	var total := time + 0.2
 	for layer: Array in layers:
 		var tint := color.lerp(Color.WHITE, 0.35)

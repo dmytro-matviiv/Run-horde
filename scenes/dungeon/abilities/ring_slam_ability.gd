@@ -15,17 +15,9 @@ func try_use(distance: float) -> bool:
 		return false
 	start_cooldown()
 	var windup := float(config.get("windup", WINDUP))
+	# Мінімалізм: попередження на підлозі й саме кільце — більше нічого
+	# (корона/цвіт поверх них робили "каст на касті").
 	enemy.begin_special(id, windup, Color(_color(), 0.85), 3.0)
-	# Свій прийом стихії (набір Obssidian): вогонь — з неба падає зерно й
-	# розквітає полум'ям довкола боса саме на удар; крига — крижана корона.
-	var feet := enemy.global_position
-	var size := clampf(enemy.target_height / 2.0, 1.0, 2.2)
-	match Fx.theme_of(_color()):
-		"fire":
-			Fx.signature(world(), "inferno_bloom", feet + Vector3.UP * enemy.target_height * 1.4, feet, windup, size)
-		"ice":
-			Fx.signature(world(), "tidal_crown", feet + Vector3.UP * enemy.target_height, feet, windup, size,
-				Color(0.6, 0.9, 1.0))
 	return true
 
 func resolve() -> void:
