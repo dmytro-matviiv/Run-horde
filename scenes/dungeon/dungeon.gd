@@ -720,7 +720,7 @@ func _plan_arena_waves(spawns: Array, rng: RandomNumberGenerator, final: bool) -
 ## Дрібнота орди: звичайний боєць рівня, але менший і слабкий — гине з
 ## одного-двох ударів. Косити натовп — у цьому й сенс орди.
 func _minion_definition(rng: RandomNumberGenerator) -> Dictionary:
-	var pool: Array = _level.enemies.get("m", [])
+	var pool := _horde_pool()
 	var base: Dictionary = pool[rng.randi() % pool.size()]
 	var minion := base.duplicate()
 	minion.hp = float(base.hp) * MINION_HP
@@ -732,15 +732,34 @@ func _minion_definition(rng: RandomNumberGenerator) -> Dictionary:
 	minion.erase("group")
 	return minion
 
+## З кого набирати орду: бійці "m" рівня. Якщо їх у рівні немає (крижана
+## цитадель — вартового прибрано), то наземні вороги будь-якої мітки, крім
+## тотемів і сплячих статуй.
+func _horde_pool() -> Array:
+	var pool: Array = _level.enemies.get("m", [])
+	if not pool.is_empty():
+		return pool
+	pool = []
+	for symbol: String in _level.enemies:
+		for definition: Dictionary in _level.enemies[symbol]:
+			var kind: String = definition.get("kind", "melee")
+			if kind in ["melee", "charger", "tank"] and not definition.has("dormant"):
+				pool.append(definition)
+	if pool.is_empty():
+		for symbol: String in _level.enemies:
+			pool.append_array(_level.enemies[symbol])
+	return pool
+
 ## Ватажок: найміцніший ближній боєць рівня, більший і вдвічі з гаком
 ## живучіший. Дає багато досвіду.
 func _champion_definition() -> Dictionary:
 	var best: Dictionary = {}
-	for definition: Dictionary in _level.enemies.get("m", []):
+	var pool := _horde_pool()
+	for definition: Dictionary in pool:
 		if definition.get("kind", "melee") == "melee" and (best.is_empty() or float(definition.hp) > float(best.hp)):
 			best = definition
 	if best.is_empty():
-		best = _level.enemies.m[0]
+		best = pool[0]
 	var champion := best.duplicate()
 	champion.name = "Ватажок"
 	champion.hp = float(best.hp) * CHAMPION_HP

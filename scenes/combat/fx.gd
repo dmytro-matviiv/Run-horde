@@ -236,9 +236,9 @@ static func make_particles(name: String, color: Color, amount: int, lifetime: fl
 	return particles
 
 static func _free_later(node: Node, seconds: float) -> void:
-	node.get_tree().create_timer(seconds, false).timeout.connect(func() -> void:
-		if is_instance_valid(node):
-			node.queue_free())
+	# Метод вузла, а не лямбда: якщо вузол зник раніше, Godot сам розірве
+	# зв'язок (лямбда зі знищеним вузлом сипала помилку в лог).
+	node.get_tree().create_timer(seconds, false).timeout.connect(node.queue_free)
 
 # --- готові ефекти ---
 
