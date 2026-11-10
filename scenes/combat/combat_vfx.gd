@@ -474,19 +474,26 @@ static func impact(parent: Node, position: Vector3, color: Color, big: bool = fa
 	tween.tween_property(flare, "transparency", 1.0, 0.14)
 	tween.chain().tween_callback(flare.queue_free)
 
-## Іскри влучання клинка — свої для кожного удару серії (kind):
-##   slash    — косий удар: холодні іскри навскіс уздовж удару;
-##   rising   — зворотний знизу вгору: золоті іскри злітають угору;
-##   sweep    — широкий мах: віяло помаранчевих іскор убік;
-##   spin     — оберт: кільце блакитних іскор і мала хвиля;
-##   finisher — фініш: вибух іскор, пил із-під ніг і хвиля.
+## Іскри влучання клинка — свої для кожного удару серії (kind). Без
+## спалаху: на ворогові лишається слід порізу (свій нахил для кожного
+## удару) і розлітаються світні іскри.
+##   slash    — косий удар: поріз навскіс, холодні іскри вздовж удару;
+##   rising   — зворотний знизу вгору: поріз навскіс в інший бік, золоті іскри вгору;
+##   sweep    — широкий мах: горизонтальний поріз, віяло помаранчевих іскор;
+##   spin     — оберт: кільце-поріз довкола ворога, блакитні іскри колом;
+##   finisher — фініш: поріз хрестом, вибух іскор, пил і хвиля.
 ## direction — куди йшов удар (від героя до ворога). Крит — яскравіше й більше.
 const SPARK_STYLES := {
-	"slash": {"color": Color(0.75, 0.9, 1.0), "amount": 12, "speed": [4.0, 9.0], "spread": 35.0, "up": 0.35, "flat": 0.0, "flare": 0.9},
-	"rising": {"color": Color(1.0, 0.82, 0.35), "amount": 12, "speed": [3.5, 8.0], "spread": 28.0, "up": 1.4, "flat": 0.0, "flare": 0.9},
-	"sweep": {"color": Color(1.0, 0.6, 0.3), "amount": 16, "speed": [5.0, 10.0], "spread": 70.0, "up": 0.15, "flat": 0.85, "flare": 1.0},
-	"spin": {"color": Color(0.5, 0.95, 1.0), "amount": 14, "speed": [4.0, 8.0], "spread": 180.0, "up": 0.1, "flat": 0.9, "flare": 1.1},
-	"finisher": {"color": Color(1.0, 0.55, 0.2), "amount": 26, "speed": [5.0, 12.0], "spread": 75.0, "up": 1.0, "flat": 0.0, "flare": 1.8},
+	"slash": {"color": Color(0.7, 0.88, 1.0), "amount": 10, "speed": [4.0, 8.0], "spread": 35.0, "up": 0.35,
+		"flat": 0.0, "size": 0.2, "cuts": [[0.65, false]]},
+	"rising": {"color": Color(1.0, 0.8, 0.3), "amount": 10, "speed": [3.5, 7.5], "spread": 28.0, "up": 1.4,
+		"flat": 0.0, "size": 0.2, "cuts": [[-0.65, true]]},
+	"sweep": {"color": Color(1.0, 0.55, 0.25), "amount": 14, "speed": [5.0, 9.0], "spread": 70.0, "up": 0.15,
+		"flat": 0.85, "size": 0.22, "cuts": [[0.0, false]]},
+	"spin": {"color": Color(0.45, 0.95, 1.0), "amount": 12, "speed": [4.0, 7.5], "spread": 180.0, "up": 0.1,
+		"flat": 0.9, "size": 0.2, "cuts": []},
+	"finisher": {"color": Color(1.0, 0.45, 0.15), "amount": 20, "speed": [5.0, 11.0], "spread": 75.0, "up": 1.0,
+		"flat": 0.0, "size": 0.3, "cuts": [[0.75, false], [-0.75, true]]},
 }
 
 static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind: String, crit: bool = false) -> void:
@@ -496,13 +503,23 @@ static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind:
 		color = color.lerp(Color(1.0, 1.0, 0.7), 0.45)
 	var flat := Vector3(direction.x, 0.0, direction.z)
 	flat = flat.normalized() if flat.length() > 0.01 else Vector3.FORWARD
+	var boost := 1.3 if crit else 1.0
+	# Слід порізу: дуга, що проходить крізь ворога (центр — ближче до героя).
+	var yaw := atan2(flat.x, flat.z)
+	var big := kind == "finisher"
+	for cut: Array in style.cuts:
+		slash(parent, position - flat * (0.75 if big else 0.6), yaw, (1.25 if big else 0.95) * boost,
+			110.0, color, bool(cut[1]), float(cut[0]), 0.2)
+	if kind == "spin":
+		slash(parent, position, yaw, 0.8 * boost, 359.0, color, false, 0.0, 0.22)
+	# Світні іскри.
 	var particles := CPUParticles3D.new()
 	particles.one_shot = true
 	particles.explosiveness = 1.0
-	particles.amount = int(int(style.amount) * (1.4 if crit else 1.0))
-	particles.lifetime = 0.42 if kind == "finisher" else 0.32
-	particles.mesh = _get_spark_mesh()
-	particles.material_override = _get_spark_material()
+	particles.amount = int(int(style.amount) * boost)
+	particles.lifetime = 0.45 if big else 0.35
+	particles.mesh = _get_particle_mesh(float(style.size) * boost)
+	particles.material_override = _get_particle_material("glow", true)
 	particles.direction = (flat + Vector3.UP * float(style.up)).normalized()
 	particles.spread = float(style.spread)
 	particles.flatness = float(style.flat)
@@ -512,8 +529,8 @@ static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind:
 	particles.gravity = Vector3(0, -12.0, 0)
 	particles.damping_min = 3.0
 	particles.damping_max = 5.0
-	particles.scale_amount_min = 0.8 * (1.3 if crit else 1.0)
-	particles.scale_amount_max = 1.8 * (1.3 if crit else 1.0)
+	particles.scale_amount_min = 0.6
+	particles.scale_amount_max = 1.2
 	particles.color = color
 	var curve := Curve.new()
 	curve.add_point(Vector2(0.0, 1.0))
@@ -523,19 +540,6 @@ static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind:
 	particles.global_position = position
 	particles.emitting = true
 	_free_after(particles, particles.lifetime + 0.1)
-	var flare := MeshInstance3D.new()
-	flare.mesh = _get_flare_mesh()
-	flare.material_override = _get_flare_material(color)
-	flare.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(flare)
-	flare.global_position = position
-	var size := float(style.flare) * (1.3 if crit else 1.0)
-	flare.scale = Vector3.ONE * size * 0.3
-	var tween := flare.create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(flare, "scale", Vector3.ONE * size, 0.12)
-	tween.tween_property(flare, "transparency", 1.0, 0.16)
-	tween.chain().tween_callback(flare.queue_free)
 	var ground := Vector3(position.x, DungeonBuilder.FLOOR_TOP, position.z)
 	match kind:
 		"spin":

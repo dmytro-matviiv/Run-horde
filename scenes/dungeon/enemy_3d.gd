@@ -1834,10 +1834,7 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 		_health_bar.flash()
 
 	var parent := get_parent()
-	var chest := global_position + Vector3.UP * target_height * 0.55
-	CombatVfx.impact(parent, chest, HEAVY_HIT_COLOR if heavy or crit else HIT_COLOR, heavy or crit)
 	CombatVfx.damage_number(parent, global_position + Vector3.UP * (target_height + 0.35), amount, crit)
-	CombatVfx.flash_model(_model, Color.WHITE, 0.09)
 
 	# Бос і голем важкі: їх майже не зрушити й лише сильним ударом збити
 	# замах. Таран, що мчить, не зупинити нічим.
