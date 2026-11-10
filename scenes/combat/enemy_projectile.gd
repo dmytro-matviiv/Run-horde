@@ -48,7 +48,11 @@ func _ready() -> void:
 		_core.rotation.x = -PI * 0.5
 	_core.material_override = _get_core_material(color)
 	_core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if shape != "spear":
+		_core.scale = Vector3.ONE * 0.6
 	add_child(_core)
+	# Ореол і слід за стихією (Fx): видно, звідки летить і що це.
+	add_child(Fx.make_projectile(color, 1.0 if shape != "spear" else 0.8))
 	set_charge(0.0)
 
 static var _spear_mesh: CylinderMesh
@@ -106,7 +110,7 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _burst(position: Vector3) -> void:
-	CombatVfx.impact(get_parent(), position, color, false)
+	Fx.projectile_hit(get_parent(), position, color)
 	queue_free()
 
 static func _get_core_mesh() -> SphereMesh:

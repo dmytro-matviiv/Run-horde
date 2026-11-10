@@ -65,6 +65,9 @@ func _ready() -> void:
 		_body.rotation_degrees.x = -90.0
 	add_child(_body)
 	add_child(CombatVfx.make_trail(color, 0.32 if kind == "venom" else 0.24))
+	# Ореол і слід за стихією чарів (картам — лише іскри).
+	if kind != "card":
+		add_child(Fx.make_projectile(color, 0.8))
 	if boomerang:
 		_life = LIFETIME + 0.6
 
@@ -134,6 +137,7 @@ func _impact(position: Vector3, collider: Variant) -> void:
 
 ## Кінець польоту: стіна або вичерпаний час.
 func _finish(position: Vector3) -> void:
+	Fx.projectile_hit(get_parent(), position, color)
 	if on_hit.is_valid() and _player != null and is_instance_valid(_player):
 		on_hit.call(null, position)
 	queue_free()

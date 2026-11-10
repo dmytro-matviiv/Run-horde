@@ -21,7 +21,7 @@ var _color := Color(1.0, 0.25, 0.3)
 var _age := 0.0
 var _angle := 0.0
 var _hit_left := 0.0
-var _beams: Array[MeshInstance3D] = []
+var _beams: Array[Node3D] = []
 var _strips: Array[MeshInstance3D] = []
 
 static func spawn(owner: Node3D, player: Node3D, count: int, length: float, active_time: float,
@@ -40,13 +40,9 @@ static func spawn(owner: Node3D, player: Node3D, count: int, length: float, acti
 	return beams
 
 func _ready() -> void:
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(1.0, 1.0, 1.0)
 	for i in _count:
-		var beam := MeshInstance3D.new()
-		beam.mesh = mesh
-		beam.material_override = CombatVfx.get_glow_material(_color)
-		beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# Енергетичний промінь (Fx.make_beam): світне серце, хвилі енергії, іскри.
+		var beam := Fx.make_beam(_color)
 		add_child(beam)
 		_beams.append(beam)
 		var strip := CombatVfx.make_line_telegraph(_color, _length, _width * 2.2, "flames")
@@ -95,6 +91,7 @@ func _place() -> void:
 		CombatVfx.set_param(strip, &"progress", minf(_age / WARN, 1.0))
 		var direction := Vector3.FORWARD.rotated(Vector3.UP, _beam_angle(i))
 		var beam := _beams[i]
-		beam.basis = Basis(Vector3.UP, _beam_angle(i)).scaled(Vector3(thickness, thickness * 0.5, _length))
-		beam.position = direction * _length * 0.5
-		beam.transparency = 0.0 if _age >= WARN else 0.6
+		# Вузол променя дивиться вздовж +Z; повертаємо, щоб ішов уздовж direction.
+		beam.basis = Basis(Vector3.UP, atan2(direction.x, direction.z))
+		beam.position = Vector3.ZERO
+		Fx.set_beam(beam, _length, thickness * 1.6, 1.0 if _age >= WARN else 0.35)

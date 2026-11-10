@@ -81,7 +81,7 @@ func _impact(position: Vector3, collider: Variant) -> void:
 		push.y = 0.0
 		_player.deal_damage(enemy, damage_multiplier, push.normalized() * knockback, false)
 		_explode(position)
-		CombatVfx.impact(get_parent(), position, color, false)
+		Fx.projectile_hit(get_parent(), position, color)
 		# "Пробивний набій": куля не зупиняється, поки не витратить
 		# пробиття. Вороги позаду отримують те саме влучання.
 		if pierce > 0:
@@ -92,7 +92,7 @@ func _impact(position: Vector3, collider: Variant) -> void:
 		return
 	# Об стіну — дрібні іскри, щоб було видно, куди пішла куля.
 	_explode(position)
-	CombatVfx.impact(get_parent(), position, color, false)
+	Fx.projectile_hit(get_parent(), position, color)
 	queue_free()
 
 ## Розривна куля зачіпає всіх поруч із точкою влучання.

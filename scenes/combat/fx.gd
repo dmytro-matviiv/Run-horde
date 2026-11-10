@@ -471,3 +471,135 @@ static func whirl(host: Node3D, radius: float, color: Color, time: float) -> voi
 	if world != null:
 		bloom(world, host.global_position + Vector3.UP * 0.06, "smoke_10", radius * 2.4,
 			Color(0.8, 0.78, 0.72, 0.45), total, true, false, 0.4, -1.4)
+
+
+# --- снаряди й промені ---
+
+const TRAIL_ART := {"fire": "flame_05", "ice": "star_04", "poison": "smoke_04", "arcane": "circle_05",
+	"gold": "spark_04", "neutral": "smoke_04"}
+
+## Вигляд снаряда (чіпляється до вузла снаряда): м'який ореол, що дихає, і
+## слід за стихією — язики полум'я, сніжинки-іскри, зелений дим, світні
+## цятки. Слід лишається в повітрі (не летить разом зі снарядом).
+static func make_projectile(color: Color, size: float = 1.0) -> Node3D:
+	var holder := Node3D.new()
+	holder.name = "ShotFx"
+	var theme := theme_of(color)
+	var halo := make_sprite("circle_05", Color(color.lerp(Color.WHITE, 0.2), 0.95), false, true)
+	halo.scale = Vector3.ONE * 0.9 * size
+	holder.add_child(halo)
+	var pulse := halo.create_tween().set_loops()
+	pulse.tween_property(halo, "scale", Vector3.ONE * 1.1 * size, 0.18)
+	pulse.tween_property(halo, "scale", Vector3.ONE * 0.85 * size, 0.18)
+	var additive := theme != "poison" and theme != "neutral"
+	var tint := color.lerp(Color.WHITE, 0.25) if additive else Color(color.lightened(0.1), 0.6)
+	var trail := make_particles(TRAIL_ART[theme], tint, 16, 0.4, 0.5 * size, additive)
+	trail.local_coords = false
+	trail.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	trail.emission_sphere_radius = 0.08 * size
+	trail.direction = Vector3.UP
+	trail.spread = 180.0
+	trail.initial_velocity_min = 0.05
+	trail.initial_velocity_max = 0.35
+	trail.gravity = Vector3(0, 0.8 if theme == "fire" else 0.0, 0)
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))
+	curve.add_point(Vector2(1.0, 0.1))
+	trail.scale_amount_curve = curve
+	holder.add_child(trail)
+	return holder
+
+## Снаряд розбився (об стіну чи героя): без спалаху — розліт частинок своєї
+## стихії й малий клуб диму, а вогонь — мальований вибух.
+static func projectile_hit(parent: Node, position: Vector3, color: Color, big: bool = false) -> void:
+	var theme := theme_of(color)
+	var size := 1.5 if big else 1.0
+	if theme == "fire":
+		flipbook(parent, position, "explosion", 1.3 * size, Color.WHITE, 0.3)
+		return
+	var additive := theme != "poison" and theme != "neutral"
+	var particles := make_particles(TRAIL_ART[theme], color.lerp(Color.WHITE, 0.3), int(9 * size), 0.35, 0.4 * size, additive)
+	particles.one_shot = true
+	particles.explosiveness = 1.0
+	particles.direction = Vector3.UP
+	particles.spread = 180.0
+	particles.initial_velocity_min = 1.5
+	particles.initial_velocity_max = 3.5 * size
+	particles.damping_min = 4.0
+	particles.damping_max = 6.0
+	particles.gravity = Vector3(0, -3.0, 0)
+	parent.add_child(particles)
+	particles.global_position = position
+	particles.emitting = true
+	_free_later(particles, 0.6)
+	if theme in ["poison", "neutral"]:
+		puff(parent, position, color, 0.7 * size)
+
+## Шейдер енергетичного променя: яскраве біле серце, кольорові краї й
+## хвилі енергії, що біжать від основи до кінця.
+const BEAM_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+uniform vec4 color : source_color = vec4(1.0, 0.4, 0.2, 1.0);
+uniform float power = 1.0;
+uniform float span = 10.0;
+void fragment() {
+	float across = abs(UV.x - 0.5) * 2.0;
+	float core = 1.0 - smoothstep(0.0, 0.35, across);
+	float edge = 1.0 - smoothstep(0.3, 1.0, across);
+	float flow = 0.65 + 0.35 * sin(UV.y * span * 3.0 - TIME * 18.0);
+	float flicker = 0.85 + 0.15 * sin(TIME * 41.0 + UV.y * 7.0);
+	float tip = smoothstep(0.0, 0.04, UV.y) * (1.0 - smoothstep(0.92, 1.0, UV.y));
+	vec3 rgb = mix(color.rgb, vec3(1.0), core * 0.85);
+	ALBEDO = rgb * (0.7 + 0.6 * flow);
+	ALPHA = clamp(edge * flow * flicker * tip * power, 0.0, 1.0);
+}
+"""
+static var _beam_shader: Shader
+
+## Енергетичний промінь уздовж +Z вузла: дві схрещені стрічки зі світним
+## серцем і хвилями енергії, по ньому сиплються іскри. Розмір — set_beam.
+static func make_beam(color: Color) -> Node3D:
+	if _beam_shader == null:
+		_beam_shader = Shader.new()
+		_beam_shader.code = BEAM_SHADER
+	var holder := Node3D.new()
+	var material := ShaderMaterial.new()
+	material.shader = _beam_shader
+	material.set_shader_parameter(&"color", color)
+	holder.set_meta(&"material", material)
+	for k in 2:
+		var strip := MeshInstance3D.new()
+		var quad := QuadMesh.new()
+		quad.size = Vector2.ONE
+		quad.center_offset = Vector3(0, 0.5, 0)
+		strip.mesh = quad
+		strip.material_override = material
+		strip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		strip.name = "Strip%d" % k
+		holder.add_child(strip)
+	var sparks := make_particles("spark_04", color.lerp(Color.WHITE, 0.4), 14, 0.35, 0.35, true)
+	sparks.name = "Sparks"
+	sparks.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	sparks.direction = Vector3.UP
+	sparks.spread = 180.0
+	sparks.initial_velocity_min = 0.5
+	sparks.initial_velocity_max = 2.0
+	sparks.gravity = Vector3.ZERO
+	holder.add_child(sparks)
+	return holder
+
+## Довжина й товщина променя (метри) уздовж +Z, power — яскравість (0..1).
+static func set_beam(holder: Node3D, length: float, width: float, power: float) -> void:
+	var material: ShaderMaterial = holder.get_meta(&"material")
+	material.set_shader_parameter(&"power", power)
+	material.set_shader_parameter(&"span", length)
+	for k in 2:
+		var strip := holder.get_node("Strip%d" % k) as MeshInstance3D
+		# Стрічка лежить уздовж +Z: перша пласко, друга — сторч.
+		strip.basis = Basis(Vector3.FORWARD, PI * 0.5 * k) * Basis(Vector3.RIGHT, PI * 0.5) \
+			* Basis.from_scale(Vector3(width * 1.8, length, 1.0))
+	var sparks := holder.get_node("Sparks") as CPUParticles3D
+	sparks.emission_box_extents = Vector3(width * 0.3, width * 0.3, length * 0.5)
+	sparks.position = Vector3(0, 0, length * 0.5)
+	sparks.emitting = power > 0.6
