@@ -28,7 +28,7 @@ func _use(player: Node) -> bool:
 	# Талант: сильніше й частіше.
 	cooldown = maxf(6.0 - 0.4 * level, 3.0)
 	_hit_left = HIT_DELAY
-	player.spin_model(SPIN_TIME)
+	player.play_whirl(SPIN_TIME)
 	var radius := _radius(player, level)
 	# Вихор — один ефект (Fx.whirl): без старого сліду леза по колу поверх.
 	Fx.whirl(player, radius, color, SPIN_TIME)

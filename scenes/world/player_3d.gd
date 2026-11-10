@@ -190,22 +190,20 @@ const STYLE_COMBOS := {
 ## трус). Стилі, яких тут немає, б'ють за STYLE_COMBOS.
 const HERO_COMBOS := {
 	&"blade_warden": {
-		# Меч: косий згори, зворотний знизу, широкий мах, оберт, стрибок-фініш.
+		# Меч (справжні анімації, WeaponAnims): назовні, назад, згори вниз і
+		# широкий мах-фініш. Однорукий меч не крутить героя.
 		"sword": [
-			{"shot": "SlashShot", "anim": "Combo_1", "anim_speed": 1.3, "damage": 0.9, "reach": 2.9, "arc": 150.0,
-				"hit_time": 0.16, "recover": 0.34, "pause": 0.05, "knockback": 0.6, "reverse": true, "tilt": 0.35,
+			{"shot": "SlashShot", "anim": "W_attack_1", "anim_speed": 1.8, "damage": 0.95, "reach": 2.9, "arc": 150.0,
+				"hit_time": 0.23, "recover": 0.42, "pause": 0.05, "knockback": 0.6, "reverse": true, "tilt": 0.25,
 				"heavy": false, "spark": "slash"},
-			{"shot": "SlashFastShot", "anim": "Combo_2", "anim_speed": 1.3, "damage": 1.0, "reach": 2.9, "arc": 150.0,
-				"hit_time": 0.15, "recover": 0.32, "pause": 0.05, "knockback": 0.6, "reverse": false, "tilt": -0.35,
+			{"shot": "SlashFastShot", "anim": "W_attack_2", "anim_speed": 1.8, "damage": 1.05, "reach": 2.9, "arc": 150.0,
+				"hit_time": 0.25, "recover": 0.44, "pause": 0.05, "knockback": 0.6, "reverse": false, "tilt": -0.25,
 				"heavy": false, "spark": "rising"},
-			{"shot": "KickShot", "anim": "Combo_3", "anim_speed": 1.2, "damage": 1.2, "reach": 3.1, "arc": 200.0,
-				"hit_time": 0.19, "recover": 0.38, "pause": 0.07, "knockback": 1.4, "reverse": true, "tilt": 0.0,
-				"heavy": false, "spark": "sweep"},
-			{"shot": "Combo4Shot", "anim": "Combo_4", "anim_speed": 1.0, "damage": 1.3, "reach": 3.0, "arc": 360.0,
-				"shape": "circle", "spin": 0.34, "hit_time": 0.24, "recover": 0.46, "pause": 0.1, "knockback": 2.0,
-				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "spin"},
-			{"shot": "Combo5Shot", "anim": "Combo_5", "anim_speed": 1.15, "damage": 2.4, "reach": 3.0, "arc": 360.0,
-				"shape": "circle", "hit_time": 0.39, "recover": 0.68, "pause": 0.45, "knockback": 4.0, "stun": 0.7,
+			{"shot": "KickShot", "anim": "W_attack_3", "anim_speed": 1.6, "damage": 1.3, "reach": 3.1, "arc": 100.0,
+				"hit_time": 0.27, "recover": 0.5, "pause": 0.08, "knockback": 1.4, "reverse": false, "tilt": 1.3,
+				"heavy": true, "spark": "sweep"},
+			{"shot": "Combo4Shot", "anim": "W_attack_4", "anim_speed": 1.5, "damage": 2.2, "reach": 3.1, "arc": 220.0,
+				"hit_time": 0.35, "recover": 0.66, "pause": 0.45, "knockback": 3.5, "stun": 0.6,
 				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
 		],
 		# Кинджали: ті самі рухи швидше, кожен удар вибухає довкола цілі.
@@ -408,6 +406,12 @@ var _knock_velocity := Vector3.ZERO
 var _skills: Array[HeroSkill3D] = []
 var _spin_left := 0.0
 var _spin_total := 0.45
+## Оберт робить код (крутить модель) — false, коли оберт є в самій
+## анімації (Вихор із справжнім кліпом).
+var _spin_turns := true
+## Справжні анімації під зброю (WeaponAnims): коротка назва -> повна.
+var _anim_overrides := {}
+var _dash_strike_at := DASH_STRIKE_AT
 
 ## Тимчасові підсилення: прискорення ударів після ривка люті та
 ## "невидимість" асасина.
@@ -594,6 +598,11 @@ static func _ensure_input_actions() -> void:
 func _build_animation_tree() -> void:
 	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
 	animation_tree.anim_player = animation_tree.get_path_to(player)
+	# Справжні анімації під зброю героя (стійка, біг, серія, ривок, вихор).
+	var style: String = weapon_def.style_3d if weapon_def != null else "sword"
+	var hero_id: StringName = hero_def.id if hero_def != null else &""
+	_anim_overrides = WeaponAnims.install(player, hero_id, style)
+	_dash_strike_at = float(WeaponAnims.get_set(hero_id, style).get("dash_strike_at", DASH_STRIKE_AT))
 	# Удари комбо й ривок Клинкової Вартової — зібрані кодом (WardenMoves).
 	if hero_def != null and HERO_COMBOS.has(hero_def.id):
 		ProceduralAnims.build(player, _anim("Idle_Sword"), WardenMoves.SPECS, _anim(""))
@@ -721,6 +730,8 @@ func _collect_upper_body_tracks(animation: Animation) -> Array[NodePath]:
 ## ("CharacterArmature|Run"), але в HeroDef.animation_names можна задати
 ## свої назви для моделі з іншого набору.
 func _anim(short_name: String) -> String:
+	if _anim_overrides.has(short_name):
+		return _anim_overrides[short_name]
 	if hero_def != null and hero_def.animation_names.has(short_name):
 		return hero_def.animation_names[short_name]
 	return "CharacterArmature|" + short_name
@@ -775,6 +786,9 @@ func _attack_slot_animations() -> Array:
 	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right", "Sword_Slash", "Sword_Slash"]
 	for step: Dictionary in _combo():
 		result[SLOTS.find(step.shot)] = String(step.get("anim", "Sword_Slash"))
+	# Вільний п'ятий слот (серія коротша) — під Вихор зі справжнім обертом.
+	if _anim_overrides.has("W_whirl") and _combo().size() < SLOTS.size():
+		result[SLOTS.size() - 1] = "W_whirl"
 	return result
 
 ## Швидкість ударів разом із тимчасовим прискоренням (ривок люті).
@@ -1100,6 +1114,25 @@ func enemies_near(position: Vector3, radius: float) -> Array[Enemy3D]:
 func spin_model(time: float) -> void:
 	_spin_left = time
 	_spin_total = maxf(time, 0.01)
+	_spin_turns = true
+
+## Вихор: якщо в зброї є справжня анімація оберту — граємо її (оберт у
+## самому кліпі, модель кодом не крутимо); інакше — старий оберт моделі.
+func play_whirl(time: float) -> void:
+	if not _anim_overrides.has("W_whirl"):
+		spin_model(time)
+		return
+	var player: AnimationPlayer = animation_tree.get_node(animation_tree.anim_player)
+	var length := player.get_animation(_anim_overrides["W_whirl"]).length
+	var duration := time + 0.35
+	_attack_step = -1
+	_attack_queued = false
+	_abort_attacks()
+	_spin_left = duration
+	_spin_total = maxf(duration, 0.01)
+	_spin_turns = false
+	animation_tree.set("parameters/Combo5Scale/scale", length / duration)
+	_fire("Combo5Shot")
 
 ## Ривок люті: анімація ривка з ударом у кінці; strike_in — за скільки
 ## секунд ривок долетить (анімацію підганяємо, щоб удар збігся).
@@ -1107,7 +1140,7 @@ func play_dash_strike(strike_in: float) -> void:
 	_attack_step = -1
 	_attack_queued = false
 	_abort_attacks()
-	animation_tree.set("parameters/DashScale/scale", clampf(DASH_STRIKE_AT / maxf(strike_in, 0.05), 0.6, 3.0))
+	animation_tree.set("parameters/DashScale/scale", clampf(_dash_strike_at / maxf(strike_in, 0.05), 0.6, 3.0))
 	_fire("DashShot")
 
 ## Одразу повернутись у бік direction (ривок у ціль).
@@ -1726,9 +1759,11 @@ func _shake_camera(strength: float) -> void:
 func _update_facing(direction: Vector3, delta: float) -> void:
 	if _roll_left > 0.0:
 		return   # напрямок перекату задано на старті
-	if _spin_left > 0.0:
+	if _spin_left > 0.0 and _spin_turns:
 		# Вихор — повний оберт навколо себе.
 		_facing_angle = wrapf(_facing_angle + TAU / _spin_total * delta, -PI, PI)
+	elif _spin_left > 0.0:
+		pass   # оберт є в самій анімації — напрямок тримаємо
 	elif _is_facing_target():
 		var offset := _target.global_position - global_position
 		if Vector2(offset.x, offset.z).length() > 0.05:
