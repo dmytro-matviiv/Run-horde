@@ -1156,7 +1156,7 @@ static func _get_ring_mesh() -> PlaneMesh:
 static func _get_spark_mesh() -> QuadMesh:
 	if _spark_mesh == null:
 		_spark_mesh = QuadMesh.new()
-		_spark_mesh.size = Vector2(0.15, 0.15)
+		_spark_mesh.size = Vector2(0.11, 0.11)
 	return _spark_mesh
 
 static func _get_spark_material() -> StandardMaterial3D:

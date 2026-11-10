@@ -39,11 +39,12 @@ func _build() -> void:
 	_marker.position = Vector3(0, 0.05, 0)
 	_cloud = CombatVfx.make_trail(Color(COLOR, 0.75), 1.8)
 	_cloud.local_coords = true
-	_cloud.amount = 18
-	_cloud.emission_sphere_radius = radius * 0.7
+	# Пара — тонка: невеликі клуби біля самої істоти, не хмара на пів зали.
+	_cloud.amount = 10
+	_cloud.emission_sphere_radius = radius * 0.45
 	_cloud.gravity = Vector3(0, 0.3, 0)
-	_cloud.scale_amount_min = 3.0
-	_cloud.scale_amount_max = 5.0
+	_cloud.scale_amount_min = 1.4
+	_cloud.scale_amount_max = 2.4
 	enemy.add_child(_cloud)
 	_cloud.position = Vector3.UP * 0.7
 

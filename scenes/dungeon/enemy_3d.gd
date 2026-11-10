@@ -158,7 +158,6 @@ var definition: Dictionary = {}
 ## ногами тоді жевріє червоне коло: видно, що зграю краще розбити.
 var _pack_factor := 1.0
 var _pack_left := 0.0
-var _pack_marker: MeshInstance3D
 ## Здібності (EnemyAbility): мерехтіння, кидки, павутина, тотем...
 var abilities: Array[EnemyAbility] = []
 ## Тотем: стоїть на місці й сам не б'є.
@@ -1707,13 +1706,8 @@ func _update_pack() -> void:
 				break
 	var active := near >= needed
 	_pack_factor = float(pack.get("attack_speed", 1.15)) if active else 1.0
-	if active and _pack_marker == null:
-		_pack_marker = CombatVfx.make_ground_marker(Color(1.0, 0.15, 0.1, 0.45), 0.55 + target_height * 0.15)
-		CombatVfx.set_param(_pack_marker, &"progress", 1.0)
-		add_child(_pack_marker)
-		_pack_marker.position = Vector3(0, 0.05, 0)
-	if _pack_marker != null:
-		_pack_marker.visible = active
+	# Зграя б'є частіше, але без червоного кільця під ногами: кільця при
+	# появі гурту гравець не хоче бачити.
 
 func _tick_status(delta: float) -> void:
 	if _slow_left > 0.0:
@@ -2058,7 +2052,7 @@ func _die() -> void:
 	collision_layer = 0
 	var parent := get_parent()
 	# Смерть — лише клуб пилу (без світних іскор: це не магія).
-	CombatVfx.shockwave(parent, global_position, 4.0 if kind == Kind.BOSS else 1.1, Color(0.75, 0.7, 0.62, 0.8), 0.3)
+	Fx.puff(parent, global_position + Vector3.UP * 0.3, Color(0.75, 0.7, 0.62), 2.2 if kind == Kind.BOSS else 1.0)
 	died.emit(global_position, xp_reward)
 	_play_once(death_anims)
 	# Даємо дограти смерть, а тоді тіло провалюється під підлогу. Таймер

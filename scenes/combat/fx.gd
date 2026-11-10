@@ -285,7 +285,7 @@ static func wave(parent: Node, position: Vector3, radius: float, color: Color, d
 		"ice":
 			bloom(parent, ground, "smoke_10", radius * 2.2, Color(color.lerp(Color.WHITE, 0.4), a), time)
 		"poison":
-			bloom(parent, ground, "smoke_10", radius * 2.2, Color(color.darkened(0.15), a), time + 0.1)
+			bloom(parent, ground, "smoke_10", radius * 1.6, Color(color.darkened(0.15), a * 0.8), time + 0.1)
 		"arcane":
 			bloom(parent, ground, "light_02", radius * 2.1, Color(color.lerp(Color.WHITE, 0.2), a), time, true, true)
 		"gold":
@@ -394,7 +394,7 @@ static func make_pool(color: Color, radius: float) -> Node3D:
 		rise.gravity = Vector3(0, 2.5, 0)
 		rise.angle_max = 0.0
 	else:
-		rise = make_particles("smoke_04", Color(color.lightened(0.15), 0.45), amount, 1.3, 1.1, false, true)
+		rise = make_particles("smoke_04", Color(color.lightened(0.15), 0.35), maxi(amount / 2, 4), 1.1, 0.7, false, true)
 		rise.initial_velocity_min = 0.2
 		rise.initial_velocity_max = 0.6
 		rise.gravity = Vector3(0, 0.5, 0)

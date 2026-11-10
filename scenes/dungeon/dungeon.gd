@@ -284,7 +284,6 @@ func _setup_hud(title: String) -> void:
 	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
 	hud.add_child(camera_touch)
 	$CameraRig.set_world_collision(false)
-	$CameraRig.set_bounds(_camera_bounds(), DungeonBuilder.FLOOR_TOP)
 	$CameraRig.set_pitch_limits(CAMERA_MIN_PITCH, CAMERA_MAX_PITCH, CAMERA_PITCH)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
 	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
@@ -796,28 +795,6 @@ func _on_chest_opened(position: Vector3) -> void:
 	_loot.burst(position, LootSwarm.Kind.XP, ARENA_CHEST_XP, 4)
 	_offer_ability()
 
-## Скільки метрів за краєм крайньої підлоги ще видно (зовнішня стіна).
-const CAMERA_EDGE := 1.0
-
-## Межі карти для камери: від краю крайньої підлоги ще CAMERA_EDGE метрів
-## (товщина зовнішньої стіни). Камера сама рахує, скільки підлоги видно
-## (CameraRig._clamp_view), і за ці межі екран не заходить: краю карти й
-## скелі за ним гравець не бачить.
-func _camera_bounds() -> Rect2:
-	var low := Vector2(INF, INF)
-	var high := Vector2(-INF, -INF)
-	for z in _map_rows.size():
-		var row: String = _map_rows[z]
-		for x in row.length():
-			if DungeonBuilder.is_walkable(_map_rows, x, z):
-				var p := Vector2(x, z) * DungeonBuilder.CELL
-				low = Vector2(minf(low.x, p.x), minf(low.y, p.y))
-				high = Vector2(maxf(high.x, p.x), maxf(high.y, p.y))
-	if low.x == INF:
-		return Rect2()
-	var edge := DungeonBuilder.CELL * 0.5 + CAMERA_EDGE
-	return Rect2(low - Vector2(edge, edge), high - low + Vector2(edge, edge) * 2.0)
-
 ## Вільне місце для ворога поруч із бажаним: стіл, саркофаг чи колона на
 ## місці появи — шукаємо найближче вільне по колах довкола.
 func _clear_spot(position: Vector3) -> Vector3:
@@ -1143,9 +1120,8 @@ func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_el
 		if _boss_gate != null:
 			_boss_gate.open()
 	elif is_elite:
-		# Упала еліта — довша зупинка кадру й золота хвиля.
+		# Упала еліта — довша зупинка кадру (без кільця на підлозі).
 		CombatVfx.hitstop(get_tree(), KILL_HITSTOP * 2.0)
-		CombatVfx.shockwave(self, position, 3.0, Enemy3D.ELITE_BAR_COLOR, 0.45)
 		player.shake_camera(0.12)
 	else:
 		CombatVfx.hitstop(get_tree(), KILL_HITSTOP)

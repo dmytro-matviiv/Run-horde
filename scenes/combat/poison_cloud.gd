@@ -73,8 +73,8 @@ func _make_bubbles() -> CPUParticles3D:
 	bubbles.gravity = Vector3.ZERO
 	bubbles.initial_velocity_min = 0.3
 	bubbles.initial_velocity_max = 0.8
-	bubbles.scale_amount_min = 1.2
-	bubbles.scale_amount_max = 2.4
+	bubbles.scale_amount_min = 0.8
+	bubbles.scale_amount_max = 1.5
 	var curve := Curve.new()
 	curve.add_point(Vector2(0.0, 0.4))
 	curve.add_point(Vector2(0.5, 1.0))
