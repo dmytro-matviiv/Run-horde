@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://addons/obssidian_free_vfx/effect.gd" id="1"]
+[node name="StormPiercer" type="Node3D"]
+script = ExtResource("1")
+skill = 2
+auto_play = true

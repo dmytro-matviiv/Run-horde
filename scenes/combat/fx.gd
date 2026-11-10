@@ -603,3 +603,39 @@ static func set_beam(holder: Node3D, length: float, width: float, power: float) 
 	sparks.emission_box_extents = Vector3(width * 0.3, width * 0.3, length * 0.5)
 	sparks.position = Vector3(0, 0, length * 0.5)
 	sparks.emitting = power > 0.6
+
+
+# --- прийоми бос (набір Obssidian Free Combat VFX) ---
+
+## Сцени набору: вогняний цвіт, водяна корона, темні стрічки, золотий серп,
+## блискавичний гарпун.
+const SIGNATURES := {
+	"inferno_bloom": ["res://addons/obssidian_free_vfx/scenes/inferno_bloom.tscn", 0.94],
+	"tidal_crown": ["res://addons/obssidian_free_vfx/scenes/tidal_crown.tscn", 0.91],
+	"abyssal_tether": ["res://addons/obssidian_free_vfx/scenes/abyssal_tether.tscn", 1.05],
+	"helios_recall": ["res://addons/obssidian_free_vfx/scenes/helios_recall.tscn", 0.88],
+	"storm_piercer": ["res://addons/obssidian_free_vfx/scenes/storm_piercer.tscn", 0.73],
+}
+
+## Прийом із набору: летить від from до target (світові точки), удар —
+## через contact_in секунд (під нього підганяється швидкість). size —
+## множник розміру (набір зроблений під героя ~2 м). tint — свій колір
+## (прозорий — рідний колір ефекту). Без спалаху й лампи. Сам зникає.
+static func signature(parent: Node, kind: String, from: Vector3, target: Vector3, contact_in: float,
+		size: float = 1.0, tint: Color = Color(0, 0, 0, 0)) -> Node3D:
+	var info: Array = SIGNATURES[kind]
+	var fx: Node3D = load(String(info[0])).instantiate()
+	fx.set("auto_play", false)
+	fx.set("contact_flash", false)
+	if tint.a > 0.0:
+		fx.set("use_custom_color", true)
+		fx.set("custom_color", tint)
+	parent.add_child(fx)
+	fx.global_position = target
+	fx.scale = Vector3.ONE * size
+	fx.set("source_position", fx.to_local(from))
+	fx.set("target_position", fx.to_local(target) + Vector3.UP * 0.05)
+	fx.set("playback_speed", clampf(float(info[1]) / maxf(contact_in, 0.05), 0.4, 2.0))
+	fx.call("play")
+	fx.connect("finished", fx.queue_free)
+	return fx

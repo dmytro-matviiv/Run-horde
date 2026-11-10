@@ -158,6 +158,9 @@ static func _make_icicle() -> Node3D:
 
 ## Приземлення з ударом по колу — і 3 секунди оглушений.
 func _land() -> void:
+	# Приземлення: довкола дракона виривається крижана корона (набір Obssidian).
+	Fx.signature(world(), "tidal_crown", enemy.global_position + Vector3.UP * 3.0, enemy.global_position, 0.25,
+		2.2, Color(0.6, 0.9, 1.0))
 	_step = Step.LAND
 	var ground := Vector3(enemy.global_position.x, _base_y, enemy.global_position.z)
 	var tween := enemy.create_tween()

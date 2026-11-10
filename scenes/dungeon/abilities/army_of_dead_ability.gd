@@ -16,6 +16,7 @@ const PLANT_HIT := 0.7
 var _time := -1.0
 var _raised := false
 var _home := Vector3.INF
+var _totem_spots: Array[Vector3] = []
 
 func _init() -> void:
 	id = "army_of_dead"
@@ -31,6 +32,14 @@ func try_use(_distance: float) -> bool:
 	enemy.velocity = Vector3.ZERO
 	enemy.play_once(["Plant"])
 	CombatVfx.shockwave(world(), enemy.global_position, 8.0, COLOR, 0.7)
+	# Від боса до місць тотемів тягнуться темні стрічки (набір Obssidian) —
+	# тотеми виростають саме тоді, коли стрічки досягають підлоги.
+	if _home == Vector3.INF:
+		_home = enemy.global_position
+	_totem_spots = _edge_spots(int(config.get("totems", 3)), 1.6)
+	var from := enemy.global_position + Vector3.UP * enemy.target_height * 0.8
+	for spot in _totem_spots:
+		Fx.signature(world(), "abyssal_tether", from, spot, PLANT_HIT, 1.3, Color(0.45, 1.0, 0.55))
 	return true
 
 func tick(delta: float) -> void:
@@ -56,7 +65,7 @@ func _raise() -> void:
 	AudioManager.play(&"explosion", 0.05)
 	var totem: Dictionary = config.get("totem", {})
 	if not totem.is_empty():
-		for spot in _edge_spots(int(config.get("totems", 3)), 1.6):
+		for spot in _totem_spots:
 			_summon(spot, totem)
 	var skeleton: Dictionary = config.get("skeleton", {})
 	if not skeleton.is_empty():

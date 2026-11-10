@@ -1,0 +1,25 @@
+OBSSIDIAN FREE COMBAT VFX — ASSET LICENSE
+Version 1.0.0
+Copyright (c) 2026 Obssidian Art. All rights reserved.
+
+Obssidian Art grants you a free, non-exclusive license to use, modify and
+incorporate the supplied code, shaders, geometry and scenes into any number
+of personal or commercial games, applications, films and other creative
+end products. No purchase of the paid collection or royalties are required.
+Attribution is appreciated but not required.
+
+You may privately share source assets with employees and contractors working
+on your projects. They may use them only for those projects. You may distribute
+the assets integrated into your finished end product.
+
+You may not sell, sublicense, publish, give away or redistribute these assets,
+including modified versions, as standalone assets, source libraries, templates
+or an asset pack. Do not publish their source in a public repository. Direct
+others to the creator's original itch.io download instead.
+
+The pack is provided as is, without warranties of merchantability, fitness
+for a particular purpose or universal engine/platform compatibility. To the
+extent permitted by applicable law, Obssidian Art is not liable for damages
+arising from use. Mandatory consumer rights are not excluded.
+
+Creator and original download location: https://obssidian-art.itch.io/
