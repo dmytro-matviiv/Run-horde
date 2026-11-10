@@ -167,7 +167,6 @@ var _models: Dictionary = {}
 var _alive_summons := 0
 ## Що герой уже взяв у цьому поході: id здібності -> рівень.
 var _run_upgrades: Dictionary = {}
-var _buff_bar: HFlowContainer
 var _loot: LootSwarm
 ## Розкладка бочок, пасток і святилищ (DungeonBuilder.place_props).
 var _props_plan: Dictionary = {}
@@ -181,6 +180,13 @@ var _callout: Control
 var _combo: ComboMeter
 var _last_hp := 0.0
 var _offering_ability := false
+## НАВИЧКИ ПОХОДУ: новий рівень не зупиняє бій — вибір чекає, поки гравець
+## сам натисне кнопку-зірку під панеллю здоров'я (на ній лічильник "+N").
+var _pending_picks := 0
+var _skills_button: Button
+var _skills_badge: Label
+var _skills_pulse: Tween
+var _skills_menu: OrnateDialog
 ## Бос рівня і його велика смуга здоров'я внизу екрана.
 var _boss: Enemy3D
 ## Темрява в залі боса ("darkness" в описі, остання фаза): факели згасли.
@@ -265,7 +271,7 @@ func _ready() -> void:
 	# здібність. Талант "Стартовий рівень" дає зайві вибори одразу.
 	var start_picks := 1 + GameState.get_meta_level(GameState.selected_hero_id, &"meta_start_level")
 	for i in start_picks:
-		await _offer_ability()
+		await _offer_ability(true)
 
 func _setup_hud(title: String) -> void:
 	_style_hud()
@@ -357,11 +363,20 @@ func _style_hud() -> void:
 	UiTheme.hud_text(status_label, 15, UiTheme.TEXT_DIM.lightened(0.25))
 
 	corner.add_child(_shrine_label)
-	_buff_bar = HFlowContainer.new()
-	_buff_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_buff_bar.add_theme_constant_override("h_separation", 6)
-	_buff_bar.add_theme_constant_override("v_separation", 4)
-	corner.add_child(_buff_bar)
+	# Кнопка навичок походу — замість плашок під панеллю (екран вільніший).
+	var skills_row := HBoxContainer.new()
+	skills_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	corner.add_child(skills_row)
+	_skills_button = UiTheme.make_icon_button("star", 52.0, "Навички походу")
+	_skills_button.focus_mode = Control.FOCUS_NONE
+	_skills_button.pressed.connect(_open_skills_menu)
+	skills_row.add_child(_skills_button)
+	_skills_badge = Label.new()
+	UiTheme.hud_text(_skills_badge, 20, UiTheme.GOLD)
+	_skills_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_skills_badge.position = Vector2(34, -8)
+	_skills_badge.visible = false
+	_skills_button.add_child(_skills_badge)
 
 ## Пауза — угорі праворуч, іконка з набору. На ПК те саме робить Esc, на
 ## телефоні — ще й системна кнопка "назад".
@@ -401,31 +416,89 @@ func _close_pause() -> void:
 		_pause_menu = null
 	get_tree().paused = false
 
-## Узяті в поході здібності — плашками під здоров'ям: видно, що вже
-## прокачано й на якому рівні. Особисті здібності героя — його кольором.
+## Кнопка навичок: "+N", поки є невибрані навички, — і легко пульсує.
 func _update_buffs() -> void:
-	for child in _buff_bar.get_children():
-		child.queue_free()
+	if _skills_badge == null:
+		return
+	_skills_badge.visible = _pending_picks > 0
+	_skills_badge.text = "+%d" % _pending_picks
+	if _pending_picks > 0 and _skills_pulse == null:
+		_skills_button.pivot_offset = _skills_button.size * 0.5
+		_skills_pulse = _skills_button.create_tween().set_loops()
+		_skills_pulse.tween_property(_skills_button, "scale", Vector2.ONE * 1.12, 0.45).set_trans(Tween.TRANS_SINE)
+		_skills_pulse.tween_property(_skills_button, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_SINE)
+	elif _pending_picks <= 0 and _skills_pulse != null:
+		_skills_pulse.kill()
+		_skills_pulse = null
+		_skills_button.scale = Vector2.ONE
+
+## МЕНЮ НАВИЧОК ПОХОДУ (кнопка-зірка): гра на паузі; якщо є невибрані —
+## кнопка "Обрати навичку"; нижче — усі взяті навички (дотик — що робить).
+func _open_skills_menu() -> void:
+	if _run_over or get_tree().paused or _skills_menu != null or _results != null or _pause_menu != null:
+		return
+	get_tree().paused = true
+	var dialog := OrnateDialog.new("Навички походу", UiTheme.control_icon("star"), UiTheme.GOLD, 620.0,
+		"рівень героя %d" % _hero_level)
+	dialog.process_mode = Node.PROCESS_MODE_ALWAYS
+	_skills_menu = dialog
+	dialog.closed.connect(func() -> void:
+		_skills_menu = null
+		if not _offering_ability:
+			get_tree().paused = false)
+	if _pending_picks > 0:
+		dialog.add_text("Можна обрати нову навичку: %d" % _pending_picks, 20, UiTheme.GOLD)
+	var owned: Array = []
 	for upgrade: Dictionary in RunUpgrades.UPGRADES:
-		var level := int(_run_upgrades.get(upgrade.id, 0))
-		if level <= 0:
-			continue
-		var personal: bool = not (upgrade.scope in ["any", "melee", "ranged", "spell"])
-		var box := UiTheme.make_box(Color(UiTheme.PANEL, 0.82), 3, 1,
-			player.hero_def.color if personal else Color(UiTheme.LINE, 0.45))
-		box.content_margin_left = 8
-		box.content_margin_right = 8
-		box.content_margin_top = 2
-		box.content_margin_bottom = 2
-		var chip := PanelContainer.new()
-		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		chip.add_theme_stylebox_override("panel", box)
-		var label := Label.new()
-		label.text = upgrade.title if level == 1 else "%s ×%d" % [upgrade.title, level]
-		label.add_theme_font_size_override("font_size", 14)
-		label.add_theme_color_override("font_color", UiTheme.TEXT)
-		chip.add_child(label)
-		_buff_bar.add_child(chip)
+		if int(_run_upgrades.get(upgrade.id, 0)) > 0:
+			owned.append(upgrade)
+	var details := Label.new()
+	if owned.is_empty():
+		dialog.add_text("Поки нічого не взято — навички дають рівні героя й скрині засідок.", 16,
+			Color(1, 1, 1, 0.7))
+	else:
+		var grid := HFlowContainer.new()
+		grid.alignment = FlowContainer.ALIGNMENT_CENTER
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		dialog.body.add_child(grid)
+		for upgrade: Dictionary in owned:
+			grid.add_child(_skill_chip(upgrade, details))
+		details = dialog.add_text("Торкнись навички — побачиш, що вона робить.", 16, Color(1, 1, 1, 0.7))
+	if _pending_picks > 0:
+		dialog.add_button("Обрати навичку", true, func() -> void:
+			_offering_ability = true
+			dialog.close()
+			_pending_picks -= 1
+			_offering_ability = false
+			await _offer_ability(true)
+			_update_buffs()
+			_open_skills_menu())
+	dialog.add_button("До бою", _pending_picks <= 0)
+	hud.add_child(dialog)
+
+## Плашка взятої навички в меню: назва й рівень; дотик — опис нижче.
+func _skill_chip(upgrade: Dictionary, details: Label) -> Button:
+	var level := int(_run_upgrades.get(upgrade.id, 0))
+	var personal: bool = not (upgrade.scope in ["any", "melee", "ranged", "spell"])
+	var accent: Color = player.hero_def.color if personal else UiTheme.GOLD
+	var chip := Button.new()
+	chip.focus_mode = Control.FOCUS_NONE
+	chip.text = upgrade.title if level == 1 else "%s  ×%d" % [upgrade.title, level]
+	chip.add_theme_font_size_override("font_size", 16)
+	for state: String in ["normal", "hover", "pressed"]:
+		var box := UiTheme.make_box(Color(UiTheme.PANEL, 0.9 if state == "normal" else 1.0), 6, 2,
+			Color(accent, 0.55 if state == "normal" else 1.0))
+		box.content_margin_left = 12
+		box.content_margin_right = 12
+		box.content_margin_top = 6
+		box.content_margin_bottom = 6
+		chip.add_theme_stylebox_override(state, box)
+	chip.pressed.connect(func() -> void:
+		if is_instance_valid(details):
+			details.text = "%s (рівень %d з %d): %s" % [upgrade.title, level, int(upgrade.max), upgrade.text]
+			details.add_theme_color_override("font_color", Color(1, 1, 1, 0.95)))
+	return chip
 
 ## Підказка для ПК: які клавіші що роблять.
 func _add_keyboard_hint() -> void:
@@ -1088,14 +1161,21 @@ func _add_xp(amount: int) -> void:
 	while _xp >= XP_PER_LEVEL * _hero_level:
 		_xp -= XP_PER_LEVEL * _hero_level
 		_hero_level += 1
-		await _offer_ability()
+		_offer_ability()
 	_update_status()
 
-## Вибір здібності зупиняє гру — як і в меню рівня 2D-частини.
-func _offer_ability() -> void:
-	# Вікна вибору йдуть по черзі: здібність зі скрині засідки й новий
-	# рівень від досвіду, що саме долетів, можуть збігтися. Два вікна
-	# одночасно зняли б паузу, поки друге ще відкрите.
+## Нова навичка. Посеред бою гру не зупиняємо: вибір чекає на кнопці
+## "Навички" (лічильник +N). now — показати вибір одразу (на старті походу
+## й коли гравець сам натиснув "Обрати навичку" в меню).
+func _offer_ability(now: bool = false) -> void:
+	if not now:
+		_pending_picks += 1
+		_update_buffs()
+		AudioManager.play(&"pickup")
+		_show_callout("Новий рівень!", "навичка чекає на кнопці ★", UiTheme.GOLD)
+		return
+	# Вікна вибору йдуть по черзі: два вікна одночасно зняли б паузу, поки
+	# друге ще відкрите.
 	while _offering_ability:
 		await get_tree().process_frame
 	_offering_ability = true

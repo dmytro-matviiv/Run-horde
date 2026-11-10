@@ -291,16 +291,6 @@ const LEVELS := [
 		# Скелети й анімації: scripts/blender/prep_rodin_mob.py (зброя жорстко на
 		# кисті) і rig_sentinel.py (вартовий — свій скелет, меч не розмазується).
 		"enemies": {
-			# Ожилий вартовий — пастка: стоїть кам'яною статуєю (і на місці
-			# частини справжніх статуй), оживає, коли герой поруч, — б'є з
-			# розвороту; широкий розмах мечем; гине — розлітається уламками.
-			"m": [
-				{"name": "Ожилий вартовий", "model": "res://assets/models/monsters/ice_sentinel.glb", "kind": "melee",
-					"hp": 40.0, "damage": 12.0, "speed": 2.6, "height": 2.3, "xp": 6,
-					"attack_range": 2.6, "attack_arc": 75.0, "attack_anims": ["Weapon"],
-					"dormant": {"wake": 3.5, "spin_radius": 3.0, "spin_damage": 1.2, "visor_height": 0.9, "visor_forward": 0.1},
-					"abilities": [{"id": "shatter", "radius": 2.6, "delay": 0.5, "damage": 1.0}]},
-			],
 			# Морозний таранник — таранний біг (1 с цілиться, світла смуга),
 			# відкидає далеко; об стіну чи статую — застрягає на 2 с і отримує
 			# подвійну шкоду; при першій зустрічі — підкат, що збиває з ніг на 2 с.
@@ -331,26 +321,22 @@ const LEVELS := [
 			# Інейна чаклунка — пріоритетна ціль (набір Crystal Maiden): віяло з
 			# 3 крижаних списів; кришталевий вибух під героєм (шкода й
 			# сповільнення); обмороження (кільце — не вибіг, скуває ноги);
-			# аура — союзники поруч б'ють частіше; крижана стіна; крижаний
+			# аура — союзники поруч б'ють частіше; крижаний
 			# панцир на союзника (3 с без шкоди); ульта — крижане поле: стоїть
 			# і 4.5 с сипле вибухи льоду довкола (збиває лише суперздібність).
 			"r": [
 				{"name": "Інейна чаклунка", "model": "res://assets/models/monsters/frost_witch.glb", "kind": "ranged",
 					"hp": 30.0, "damage": 8.0, "speed": 2.4, "height": 1.9, "xp": 7,
 					"projectile": {"color": Color(0.6, 0.92, 1.0), "speed": 12.0, "volley": 3, "shape": "spear"},
-					"special_anims": {"ice_wall": ["Cast"], "ice_armor": ["Support"], "crystal_nova": ["Cast"], "frostbite": ["Support"]},
+					"special_anims": {"ice_armor": ["Support"], "crystal_nova": ["Cast"], "frostbite": ["Support"]},
 					"abilities": [
 						{"id": "freezing_field", "cooldown": 16.0, "first": 6.0, "seconds": 4.5, "radius": 6.0, "every": 0.22,
 							"blast": 1.1, "warn": 0.55, "slow": 0.6, "damage": 0.6},
 						{"id": "frostbite", "cooldown": 8.0, "first": 3.0, "range": 9.0, "radius": 1.2, "windup": 0.7, "root": 1.6, "damage": 0.7},
 						{"id": "crystal_nova", "cooldown": 6.0, "first": 1.5, "range": 10.0, "radius": 2.4, "windup": 0.95,
 							"slow": 0.5, "slow_time": 3.0, "damage": 1.0},
-						{"id": "ice_wall", "cooldown": 12.0, "first": 5.0, "hp": 14.0, "width": 3.2, "lifetime": 8.0},
 						{"id": "ice_armor", "cooldown": 14.0, "first": 2.0, "range": 10.0, "seconds": 3.0},
 						{"id": "arcane_aura", "radius": 8.0, "bonus": 0.3}]},
-			],
-			"x": [
-				{"name": "Крижаний вихор", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "hp": 22.0, "damage": 28.0, "speed": 4.6, "height": 1.3, "hover": 0.6, "xp": 4},
 			],
 		},
 		# Інейний Дракон (модель гравця; зайвий "кіготь" біля правого ока

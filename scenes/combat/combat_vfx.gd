@@ -558,6 +558,102 @@ static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind:
 			dust.emitting = true
 			_free_after(dust, 0.8)
 
+## Іскри сили, що повільно здіймаються довкола (аура посилення, тотем):
+## м'які світні цятки, без кіл на підлозі. Повертає вузол — його чіпляють
+## до того, хто світиться (local_coords: іскри йдуть разом із ним).
+static func make_motes(color: Color, amount: int, radius: float, rise: float, size: float) -> CPUParticles3D:
+	var particles := CPUParticles3D.new()
+	particles.amount = amount
+	particles.lifetime = 1.4
+	particles.local_coords = true
+	particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	particles.emission_ring_axis = Vector3.UP
+	particles.emission_ring_radius = radius
+	particles.emission_ring_inner_radius = radius * 0.4
+	particles.emission_ring_height = 0.1
+	particles.direction = Vector3.UP
+	particles.spread = 12.0
+	particles.gravity = Vector3(0, rise * 0.5, 0)
+	particles.initial_velocity_min = rise * 0.35
+	particles.initial_velocity_max = rise * 0.7
+	particles.scale_amount_min = 0.6
+	particles.scale_amount_max = 1.2
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 0.2))
+	curve.add_point(Vector2(0.3, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	particles.scale_amount_curve = curve
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(color.lerp(Color.WHITE, 0.45), 0.9))
+	gradient.set_color(1, Color(color, 0.0))
+	particles.color_ramp = gradient
+	particles.mesh = _get_particle_mesh(size)
+	particles.material_override = _get_particle_material("glow", true)
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return particles
+
+## Згусток сили, що плавно летить дугою від from до цілі (target — вузол,
+## за яким він доганяє; бере його точку на висоті height). Лишає легкий
+## слід іскор; долетів — тихо розсіюється.
+static func glow_orb(parent: Node, from: Vector3, target: Node3D, height: float, color: Color, time: float) -> void:
+	var orb := Node3D.new()
+	parent.add_child(orb)
+	orb.global_position = from
+	var core := MeshInstance3D.new()
+	core.mesh = _get_particle_mesh(0.42)
+	core.material_override = _get_orb_material(color)
+	core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	orb.add_child(core)
+	var trail := CPUParticles3D.new()
+	trail.amount = 10
+	trail.lifetime = 0.35
+	trail.local_coords = false
+	trail.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	trail.emission_sphere_radius = 0.05
+	trail.spread = 180.0
+	trail.initial_velocity_min = 0.05
+	trail.initial_velocity_max = 0.2
+	trail.gravity = Vector3.ZERO
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	trail.scale_amount_curve = curve
+	trail.color = Color(color, 0.8)
+	trail.mesh = _get_particle_mesh(0.16)
+	trail.material_override = _get_particle_material("glow", true)
+	orb.add_child(trail)
+	var start := from
+	var tween := orb.create_tween()
+	tween.tween_method(func(t: float) -> void:
+		if not is_instance_valid(orb):
+			return
+		var goal := start
+		if is_instance_valid(target):
+			goal = target.global_position + Vector3.UP * height
+		var middle := start.lerp(goal, 0.5) + Vector3.UP * (0.6 + start.distance_to(goal) * 0.12)
+		var a := start.lerp(middle, t)
+		var b := middle.lerp(goal, t)
+		orb.global_position = a.lerp(b, t)
+		core.scale = Vector3.ONE * lerpf(0.7, 1.0, sin(t * PI)), 0.0, 1.0, time).set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	tween.tween_callback(func() -> void:
+		trail.emitting = false)
+	tween.tween_property(core, "scale", Vector3.ONE * 1.6, 0.18)
+	tween.parallel().tween_property(core, "transparency", 1.0, 0.18)
+	tween.tween_interval(0.3)
+	tween.tween_callback(orb.queue_free)
+
+static var _orb_materials := {}
+
+static func _get_orb_material(color: Color) -> StandardMaterial3D:
+	var key := color.to_html()
+	if not _orb_materials.has(key):
+		var material: StandardMaterial3D = _get_particle_material("glow", true).duplicate()
+		material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		material.vertex_color_use_as_albedo = false
+		material.albedo_color = color
+		_orb_materials[key] = material
+	return _orb_materials[key]
+
 ## Спалах пострілу біля ствола: коротка яскрава зірка й кілька іскор
 ## уздовж напрямку. Без справжнього світла — телефон його не потягне на
 ## кожному пострілі, а видно однаково добре.
