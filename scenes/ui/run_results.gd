@@ -12,7 +12,9 @@ class_name RunResults
 ##   три рядки справа     — дві здібності героя й зброя: іконка, назва,
 ##                          шкала й цифра шкоди;
 ##   кнопки внизу         — синя "додому" (головне меню), жовта з
-##                          відео "×2 золота", зелена "у місто".
+##                          відео "×2 золота", зелена "далі": після перемоги —
+##                          наступний данж, після поразки — цей самий ще раз
+##                          (на ній тоді кругова стрілка замість "далі").
 ##
 ## Дані — словник (див. Dungeon._show_results):
 ##   victory, level_title, seconds, gold, total_damage, hero_id,
@@ -20,7 +22,7 @@ class_name RunResults
 ##   can_double.
 
 signal home_pressed
-signal town_pressed
+signal next_pressed
 signal double_pressed
 
 const VICTORY_ART := preload("res://assets/ui/results/results_victory.png")
@@ -50,6 +52,10 @@ const TOWN_BUTTON := Rect2(1388, 1133, 244, 129)
 const INK := Color(0.32, 0.12, 0.04)
 const LIGHT := Color(1.0, 0.97, 0.9)
 const NUMBER_GOLD := Color(1.0, 0.86, 0.4)
+## Кругова стрілка "ще раз" на зеленій кнопці поразки.
+const RETRY_GREEN := Color(0.4, 0.74, 0.13)
+const RETRY_OUTLINE := Color(0.1, 0.28, 0.04)
+const RETRY_ARROW := Color(1.0, 1.0, 0.94)
 const COUNT_TIME := 1.0
 const BAR_TIME := 0.4
 
@@ -246,8 +252,10 @@ func _build_row(row: Dictionary, center_y: float) -> Array:
 func _build_buttons() -> void:
 	var home := _invisible_button(HOME_BUTTON)
 	home.pressed.connect(func() -> void: home_pressed.emit())
-	var town := _invisible_button(TOWN_BUTTON)
-	town.pressed.connect(func() -> void: town_pressed.emit())
+	if not _data.get("victory", false):
+		_build_retry_icon()
+	var next := _invisible_button(TOWN_BUTTON)
+	next.pressed.connect(func() -> void: next_pressed.emit())
 	_double_button = _invisible_button(DOUBLE_BUTTON)
 	_double_button.pressed.connect(func() -> void:
 		_double_button.disabled = true
@@ -257,6 +265,44 @@ func _build_buttons() -> void:
 	_place(_double_label, DOUBLE_TEXT)
 	if not _data.get("can_double", true):
 		set_double_done(false)
+
+## Поразка: на зеленій кнопці замість стрілки "далі" — кругова стрілка
+## "ще раз" (намальована поверх арту, на латці кольору кнопки).
+func _build_retry_icon() -> void:
+	var icon := Control.new()
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_place(icon, Rect2(TOWN_BUTTON.position + TOWN_BUTTON.size * Vector2(0.22, 0.17), TOWN_BUTTON.size * Vector2(0.56, 0.62)))
+	icon.draw.connect(func() -> void:
+		var area := icon.size
+		var patch := StyleBoxFlat.new()
+		patch.bg_color = RETRY_GREEN
+		patch.set_corner_radius_all(int(area.y * 0.3))
+		icon.draw_style_box(patch, Rect2(Vector2.ZERO, area))
+		var center := area * 0.5
+		var radius := area.y * 0.3
+		var width := area.y * 0.12
+		var start := deg_to_rad(-50.0)
+		var end := deg_to_rad(220.0)
+		var head := _retry_head(center, radius, end, width)
+		icon.draw_arc(center, radius, start, end, 24, RETRY_OUTLINE, width + area.y * 0.08, true)
+		icon.draw_colored_polygon(_grow(head, area.y * 0.05), RETRY_OUTLINE)
+		icon.draw_arc(center, radius, start, end, 24, RETRY_ARROW, width, true)
+		icon.draw_colored_polygon(head, RETRY_ARROW))
+
+## Вістря стрілки в кінці дуги (кут angle), дивиться вздовж руху.
+static func _retry_head(center: Vector2, radius: float, angle: float, width: float) -> PackedVector2Array:
+	var out := Vector2(cos(angle), sin(angle))
+	var along := Vector2(-sin(angle), cos(angle))
+	var base := center + out * radius
+	return PackedVector2Array([base + out * width * 1.6, base + along * width * 2.0, base - out * width * 1.6])
+
+## Трикутник трохи більший (обведення довкола вістря).
+static func _grow(points: PackedVector2Array, amount: float) -> PackedVector2Array:
+	var middle := (points[0] + points[1] + points[2]) / 3.0
+	var out := PackedVector2Array()
+	for point in points:
+		out.append(point + (point - middle).normalized() * amount)
+	return out
 
 ## Кнопка без власного вигляду поверх намальованої на арті: натиск —
 ## коротке "проваллення" всієї ділянки.

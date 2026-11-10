@@ -44,6 +44,7 @@ const MAX_SUMMONS := 6
 
 const BASE_SCENE_PATH := "res://scenes/world/base_island.tscn"
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
+const DUNGEON_SCENE_PATH := "res://scenes/dungeon/dungeon.tscn"
 ## Воскресіння за відео: частка здоров'я й щит (с). Раз за похід.
 const REVIVE_HP := 0.8
 const REVIVE_SHIELD := 3.0
@@ -1429,7 +1430,7 @@ func _show_results(victory: bool) -> void:
 	_results.process_mode = Node.PROCESS_MODE_ALWAYS
 	_results.setup(_results_data(victory))
 	_results.home_pressed.connect(_leave_to.bind(MAIN_MENU_PATH, "Меню"))
-	_results.town_pressed.connect(_leave_to.bind(BASE_SCENE_PATH, "Місто"))
+	_results.next_pressed.connect(_on_results_next.bind(victory))
 	_results.double_pressed.connect(_on_double_gold_pressed)
 	hud.add_child(_results)
 
@@ -1473,6 +1474,16 @@ func _on_double_gold_pressed() -> void:
 		func() -> void:
 			if _results != null:
 				_results.allow_double_again())
+
+## Зелена кнопка підсумків: після перемоги — наступний данж (після
+## останнього — місто), після поразки — цей самий данж ще раз.
+func _on_results_next(victory: bool) -> void:
+	var index := GameState.dungeon_level + (1 if victory else 0)
+	if index >= DungeonLevels.get_level_count():
+		_leave_to(BASE_SCENE_PATH, "Місто")
+		return
+	GameState.select_dungeon_level(index)
+	_leave_to(DUNGEON_SCENE_PATH, DungeonLevels.get_level(GameState.dungeon_level).title)
 
 func _leave_to(path: String, title: String) -> void:
 	get_tree().paused = false
