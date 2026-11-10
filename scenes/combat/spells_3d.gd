@@ -60,7 +60,7 @@ static func cast(player: Node, weapon: WeaponDef, origin: Vector3, direction: Ve
 		_:
 			_bolts(player, "arcane", ARCANE_COLOR, origin, direction, target, weapon.spell_speed,
 				ARCANE_HOMING * player.spell_power(), arcane_hit.bind(player))
-	CombatVfx.muzzle_flash(player.get_parent(), origin, direction, weapon.color)
+	CombatVfx.muzzle_flash(player.get_parent(), origin, direction, weapon.color, false)
 
 ## Один снаряд або кілька ("Подвійні чари").
 ##

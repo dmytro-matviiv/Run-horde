@@ -54,9 +54,8 @@ func _land(radius: float) -> void:
 	if is_instance_valid(_marker):
 		_marker.queue_free()
 	enemy.global_position = _target
-	CombatVfx.shockwave(world(), _target, radius, COLOR, 0.35)
-	CombatVfx.impact_decal(world(), _target, radius * 0.8, COLOR)
-	CombatVfx.impact(world(), _target + Vector3.UP * 0.4, COLOR, true)
+	# Приземлення — фізичне: тріщини й пил.
+	CombatVfx.ground_hit(world(), _target, radius * 0.8)
 	var rig := enemy.get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
 		rig.shake(0.14)

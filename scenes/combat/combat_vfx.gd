@@ -113,6 +113,8 @@ uniform float half_arc = 3.1416;
 uniform float fade = 1.0;
 // 0 — без підкладки кольором (тріщини після удару), 1 — з нею.
 uniform float base = 1.0;
+// 1 — розпечене серце арту лишається білим; 0 — теж фарбується (пил).
+uniform float keep_hot = 1.0;
 
 // Віяло в арті: вершина й радіус (у долях текстури) і половина кута, яку
 // розтягуємо на справжній кут удару (трохи ширше за рамку — разом із рунами).
@@ -141,7 +143,7 @@ void fragment() {
 	float hot = smoothstep(0.55, 1.0, min(min(t.r, t.g), t.b));
 	// Перефарбований арт зберігає світлотінь: темне — темніше, жилки світліші.
 	float lum = dot(t.rgb, vec3(0.299, 0.587, 0.114));
-	vec3 tinted = mix(color.rgb * (0.3 + 0.9 * lum), vec3(1.0), hot);
+	vec3 tinted = mix(color.rgb * (0.3 + 0.9 * lum), vec3(1.0), hot * keep_hot);
 	vec3 art_rgb = mix(t.rgb, tinted, recolor);
 
 	float fill = smoothstep(progress + 0.04, progress - 0.04, reach);
@@ -678,7 +680,30 @@ static func _get_orb_material(color: Color) -> StandardMaterial3D:
 ## Спалах пострілу біля ствола: коротка яскрава зірка й кілька іскор
 ## уздовж напрямку. Без справжнього світла — телефон його не потягне на
 ## кожному пострілі, а видно однаково добре.
-static func muzzle_flash(parent: Node, position: Vector3, direction: Vector3, color: Color) -> void:
+## flare — спалах біля дула: лише для вогнепальної зброї. Закляття
+## спалаху не має — лише кілька іскор кольору чар.
+static func muzzle_flash(parent: Node, position: Vector3, direction: Vector3, color: Color, flare_on: bool = true) -> void:
+	if flare_on:
+		_muzzle_flare(parent, position, color)
+	var sparks := CPUParticles3D.new()
+	sparks.one_shot = true
+	sparks.explosiveness = 1.0
+	sparks.amount = 5 if flare_on else 4
+	sparks.lifetime = 0.16
+	sparks.mesh = _get_particle_mesh(0.12)
+	sparks.material_override = _get_particle_material("glow", true)
+	sparks.direction = direction
+	sparks.spread = 14.0
+	sparks.initial_velocity_min = 4.0
+	sparks.initial_velocity_max = 9.0
+	sparks.gravity = Vector3(0, -4.0, 0)
+	sparks.color = color
+	parent.add_child(sparks)
+	sparks.global_position = position
+	sparks.emitting = true
+	_free_after(sparks, 0.3)
+
+static func _muzzle_flare(parent: Node, position: Vector3, color: Color) -> void:
 	var flare := MeshInstance3D.new()
 	flare.mesh = _get_flare_mesh()
 	flare.material_override = _get_flare_material(color)
@@ -691,24 +716,6 @@ static func muzzle_flash(parent: Node, position: Vector3, direction: Vector3, co
 	tween.tween_property(flare, "scale", Vector3.ONE * 0.9, 0.07)
 	tween.tween_property(flare, "transparency", 1.0, 0.07)
 	tween.chain().tween_callback(flare.queue_free)
-
-	var sparks := CPUParticles3D.new()
-	sparks.one_shot = true
-	sparks.explosiveness = 1.0
-	sparks.amount = 5
-	sparks.lifetime = 0.16
-	sparks.mesh = _get_spark_mesh()
-	sparks.material_override = _get_spark_material()
-	sparks.direction = direction
-	sparks.spread = 14.0
-	sparks.initial_velocity_min = 4.0
-	sparks.initial_velocity_max = 9.0
-	sparks.gravity = Vector3(0, -4.0, 0)
-	sparks.color = color
-	parent.add_child(sparks)
-	sparks.global_position = position
-	sparks.emitting = true
-	_free_after(sparks, 0.3)
 
 ## Цифра шкоди, що злітає над ворогом. Критичний удар — більша жовта.
 static func damage_number(parent: Node, position: Vector3, amount: float, crit: bool = false) -> void:
@@ -990,7 +997,11 @@ static func _get_telegraph_material(art: String, shape: int, color: Color) -> Sh
 	material.set_shader_parameter(&"color", color)
 	material.set_shader_parameter(&"shape", shape)
 	var native := RUNE_HUE if art == "rune" else WARM_HUE
-	var grey := art.ends_with("frost") or art.ends_with("hex")
+	# Сірий арт фарбуємо завжди; тріщини від фізичного удару (пиловий
+	# колір) — теж, інакше вони світились би розпеченою лавою.
+	var dust := art == "cracks" and Fx.theme_of(color) == "neutral"
+	var grey := art.ends_with("frost") or art.ends_with("hex") or dust
+	material.set_shader_parameter(&"keep_hot", 0.0 if dust else 1.0)
 	material.set_shader_parameter(&"recolor", 1.0 if grey or not _hue_close(color, native) else 0.0)
 	material.set_shader_parameter(&"base", 0.0 if art == "cracks" else 1.0)
 	_telegraph_materials[key] = material
@@ -1021,6 +1032,16 @@ static func _get_particle_mesh(size: float) -> QuadMesh:
 		mesh.size = Vector2(key, key)
 		_particle_meshes[key] = mesh
 	return _particle_meshes[key]
+
+## Удар об землю (фізичний: стрибок, гупання, ривок у землю): тріщини,
+## камінці й пил — без вогню й магічних кіл.
+static func ground_hit(parent: Node, position: Vector3, radius: float) -> void:
+	impact_decal(parent, position, radius, Color(0.42, 0.39, 0.34))
+
+## Клуб диму (телепорт, зникнення, поява): колір магії зберігається.
+static func smoke_puff(parent: Node, position: Vector3, color: Color, size: float = 1.4) -> void:
+	if claim(position):
+		Fx.puff(parent, position, color, size, 0.2)
 
 ## Хвиля, що розбігається від центру (вихор героя, удар боса об землю).
 ## Вигляд — за стихією кольору (Fx.wave): вогняне кільце, крижане, дим...
@@ -1135,7 +1156,7 @@ static func _get_ring_mesh() -> PlaneMesh:
 static func _get_spark_mesh() -> QuadMesh:
 	if _spark_mesh == null:
 		_spark_mesh = QuadMesh.new()
-		_spark_mesh.size = Vector2(0.09, 0.09)
+		_spark_mesh.size = Vector2(0.15, 0.15)
 	return _spark_mesh
 
 static func _get_spark_material() -> StandardMaterial3D:
@@ -1146,6 +1167,10 @@ static func _get_spark_material() -> StandardMaterial3D:
 		_spark_material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 		_spark_material.vertex_color_use_as_albedo = true
 		_spark_material.disable_receive_shadows = true
+		# М'яка світна цятка замість голого квадрата (сліди заклять, сніг,
+		# бульбашки отрути — усі частинки, що беруть цей матеріал).
+		_spark_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_spark_material.albedo_texture = PARTICLE_ART["glow"]
 	return _spark_material
 
 static func _get_flare_mesh() -> QuadMesh:

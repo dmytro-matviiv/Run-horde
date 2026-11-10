@@ -1312,8 +1312,7 @@ func _resolve_attack() -> void:
 	var offset := _player.global_position - global_position
 	offset.y = 0.0
 	if _windup_slam:
-		CombatVfx.shockwave(get_parent(), global_position, SLAM_RADIUS, SLAM_COLOR, 0.35)
-		CombatVfx.impact_decal(get_parent(), global_position, SLAM_RADIUS * 0.8, SLAM_COLOR)
+		CombatVfx.ground_hit(get_parent(), global_position, SLAM_RADIUS * 0.8)
 		var rig := get_tree().get_first_node_in_group(&"camera_rig")
 		if rig != null:
 			rig.shake(0.12)
@@ -1399,8 +1398,13 @@ func _light_fuse() -> void:
 	_fuse_left = FUSE_TIME
 	velocity.x = 0.0
 	velocity.z = 0.0
-	_show_telegraph(EXPLODE_RADIUS, PI, EXPLODE_COLOR, true)
+	_show_telegraph(EXPLODE_RADIUS, PI, _blast_color(), true)
 	_play_once(["Jump", "Headbutt", "Punch", "Bite_Front"])
+
+## Чим вибухає: токсичний слиз — отрутою, дух горна — вогнем, привид —
+## магією ("blast_color" в описі; без нього — вогонь).
+func _blast_color() -> Color:
+	return definition.get("blast_color", EXPLODE_COLOR)
 
 func _process_fuse(delta: float) -> void:
 	velocity.x = 0.0
@@ -1412,7 +1416,7 @@ func _process_fuse(delta: float) -> void:
 	_flash_left -= delta
 	if _flash_left <= 0.0:
 		_flash_left = lerpf(0.25, 0.08, 1.0 - _fuse_left / FUSE_TIME)
-		CombatVfx.flash_model(_model, Color(1.0, 0.6, 0.2), 0.05)
+		CombatVfx.flash_model(_model, _blast_color().lerp(Color.WHITE, 0.2), 0.05)
 	if _fuse_left <= 0.0:
 		_explode()
 
@@ -1420,9 +1424,7 @@ func _explode() -> void:
 	_fuse_left = -1.0
 	_hide_telegraph()
 	var parent := get_parent()
-	CombatVfx.shockwave(parent, global_position, EXPLODE_RADIUS, EXPLODE_COLOR, 0.35)
-	CombatVfx.impact_decal(parent, global_position, EXPLODE_RADIUS * 0.8, EXPLODE_COLOR)
-	CombatVfx.impact(parent, global_position + Vector3.UP * 0.8, EXPLODE_COLOR, true)
+	CombatVfx.shockwave(parent, global_position, EXPLODE_RADIUS, _blast_color(), 0.35)
 	var rig := get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
 		rig.shake(0.18)
@@ -1520,7 +1522,6 @@ func _process_charge(delta: float) -> void:
 				_charge_left = float(charge.get("wall_stun", CHARGE_WALL_STUN))
 				velocity.x = 0.0
 				velocity.z = 0.0
-				CombatVfx.impact(get_parent(), global_position + Vector3.UP + _charge_dir * 0.8, HIT_COLOR, true)
 				CombatVfx.shockwave(get_parent(), global_position + _charge_dir * 0.8, 1.6, Color(0.85, 0.8, 0.7, 0.8), 0.3)
 				var rig := get_tree().get_first_node_in_group(&"camera_rig")
 				if rig != null:
@@ -2056,8 +2057,8 @@ func _die() -> void:
 	# Мертвий ворог більше не заступає дорогу.
 	collision_layer = 0
 	var parent := get_parent()
-	CombatVfx.impact(parent, global_position + Vector3.UP * target_height * 0.5, DEATH_COLOR, true)
-	CombatVfx.shockwave(parent, global_position, 4.0 if kind == Kind.BOSS else 1.1, DEATH_COLOR, 0.3)
+	# Смерть — лише клуб пилу (без світних іскор: це не магія).
+	CombatVfx.shockwave(parent, global_position, 4.0 if kind == Kind.BOSS else 1.1, Color(0.75, 0.7, 0.62, 0.8), 0.3)
 	died.emit(global_position, xp_reward)
 	_play_once(death_anims)
 	# Даємо дограти смерть, а тоді тіло провалюється під підлогу. Таймер

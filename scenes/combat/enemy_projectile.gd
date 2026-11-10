@@ -29,6 +29,8 @@ var _core: MeshInstance3D
 ## Що ще зробити з героєм, коли влучив (павутина сповільнює).
 var on_hit: Callable
 ## "spear" — крижаний спис: довгий кристал, летить вістрям уперед.
+## "blade" — метальний ніж/кунай: звичайна сталь, без магічного ореолу
+## й сліду; влучання — іскри, а не вибух.
 var shape := ""
 
 ## Колір і швидкість — свої в кожного стрільця: отруйні плювки в
@@ -42,17 +44,21 @@ static func create(shot_damage: float, shot_color: Color = COLOR, shot_speed: fl
 
 func _ready() -> void:
 	_core = MeshInstance3D.new()
-	_core.mesh = _get_spear_mesh() if shape == "spear" else _get_core_mesh()
-	if shape == "spear":
+	var pointed := shape == "spear" or shape == "blade"
+	_core.mesh = _get_spear_mesh() if pointed else _get_core_mesh()
+	if pointed:
 		# Кристал уздовж Y — кладемо вістрям уперед (-Z вузла).
 		_core.rotation.x = -PI * 0.5
 	_core.material_override = _get_core_material(color)
 	_core.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	if shape != "spear":
+	if not pointed:
 		_core.scale = Vector3.ONE * 0.6
+	elif shape == "blade":
+		_core.scale = Vector3(0.8, 0.6, 0.8)
 	add_child(_core)
-	# Ореол і слід за стихією (Fx): видно, звідки летить і що це.
-	add_child(Fx.make_projectile(color, 1.0 if shape != "spear" else 0.8))
+	# Ореол і слід за стихією (Fx): видно, звідки летить і що це. Сталь — без.
+	if shape != "blade":
+		add_child(Fx.make_projectile(color, 1.0 if shape != "spear" else 0.8))
 	set_charge(0.0)
 
 static var _spear_mesh: CylinderMesh
@@ -80,7 +86,7 @@ func launch(direction: Vector3, target: Node3D, world: Node) -> void:
 	reparent(world, true)
 	scale = Vector3.ONE
 	_launched = true
-	if shape == "spear" and _velocity.length() > 0.01:
+	if (shape == "spear" or shape == "blade") and _velocity.length() > 0.01:
 		look_at(global_position + _velocity, Vector3.UP)
 
 func _physics_process(delta: float) -> void:
@@ -110,7 +116,10 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _burst(position: Vector3) -> void:
-	Fx.projectile_hit(get_parent(), position, color)
+	if shape == "blade":
+		CombatVfx.impact(get_parent(), position, Color(0.9, 0.9, 0.95), false)
+	else:
+		Fx.projectile_hit(get_parent(), position, color)
 	queue_free()
 
 static func _get_core_mesh() -> SphereMesh:

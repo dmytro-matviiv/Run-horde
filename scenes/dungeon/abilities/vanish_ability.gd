@@ -27,8 +27,7 @@ func try_use(distance: float) -> bool:
 	start_cooldown()
 	_busy = true
 	_fade_left = float(config.get("fade", 2.0))
-	CombatVfx.impact(world(), enemy.global_position + Vector3.UP, SMOKE, true)
-	CombatVfx.shockwave(world(), enemy.global_position, 1.4, SMOKE, 0.3)
+	CombatVfx.smoke_puff(world(), enemy.global_position + Vector3.UP * 0.6, SMOKE)
 	enemy.set_hidden(true, "Chain")
 	return true
 
@@ -54,8 +53,7 @@ func _reappear() -> void:
 	var spot := _free_spot(hero.global_position, -facing)
 	enemy.teleport_to(Vector3(spot.x, DungeonBuilder.FLOOR_TOP, spot.z))
 	enemy.set_hidden(false)
-	CombatVfx.impact(world(), spot + Vector3.UP, SMOKE, true)
-	CombatVfx.shockwave(world(), spot, 1.4, SMOKE, 0.3)
+	CombatVfx.smoke_puff(world(), spot + Vector3.UP * 0.6, SMOKE)
 	enemy.strike_now(STRIKE_WINDUP)
 
 ## За спиною героя, а якщо там стіна — збоку (привид пройшов би й крізь

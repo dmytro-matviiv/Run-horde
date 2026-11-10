@@ -284,7 +284,7 @@ func _setup_hud(title: String) -> void:
 	var camera_touch: Control = CAMERA_TOUCH_SCENE.instantiate()
 	hud.add_child(camera_touch)
 	$CameraRig.set_world_collision(false)
-	$CameraRig.set_bounds(_camera_bounds())
+	$CameraRig.set_bounds(_camera_bounds(), DungeonBuilder.FLOOR_TOP)
 	$CameraRig.set_pitch_limits(CAMERA_MIN_PITCH, CAMERA_MAX_PITCH, CAMERA_PITCH)
 	camera_touch.rotate_requested.connect($CameraRig.rotate_by)
 	camera_touch.pitch_requested.connect($CameraRig.pitch_by)
@@ -796,11 +796,13 @@ func _on_chest_opened(position: Vector3) -> void:
 	_loot.burst(position, LootSwarm.Kind.XP, ARENA_CHEST_XP, 4)
 	_offer_ability()
 
-## Межі камери: прохідна частина карти, звужена на CAMERA_EDGE з кожного
-## боку (ближче до краю камера не йде — за ним не видно порожнечі). Вузька
-## карта — камера стоїть посередині.
-const CAMERA_EDGE := 6.0
+## Скільки метрів за краєм крайньої підлоги ще видно (зовнішня стіна).
+const CAMERA_EDGE := 1.0
 
+## Межі карти для камери: від краю крайньої підлоги ще CAMERA_EDGE метрів
+## (товщина зовнішньої стіни). Камера сама рахує, скільки підлоги видно
+## (CameraRig._clamp_view), і за ці межі екран не заходить: краю карти й
+## скелі за ним гравець не бачить.
 func _camera_bounds() -> Rect2:
 	var low := Vector2(INF, INF)
 	var high := Vector2(-INF, -INF)
@@ -813,10 +815,8 @@ func _camera_bounds() -> Rect2:
 				high = Vector2(maxf(high.x, p.x), maxf(high.y, p.y))
 	if low.x == INF:
 		return Rect2()
-	var center := (low + high) * 0.5
-	var lo := Vector2(minf(low.x + CAMERA_EDGE, center.x), minf(low.y + CAMERA_EDGE, center.y))
-	var hi := Vector2(maxf(high.x - CAMERA_EDGE, center.x), maxf(high.y - CAMERA_EDGE, center.y))
-	return Rect2(lo, hi - lo + Vector2(0.01, 0.01))
+	var edge := DungeonBuilder.CELL * 0.5 + CAMERA_EDGE
+	return Rect2(low - Vector2(edge, edge), high - low + Vector2(edge, edge) * 2.0)
 
 ## Вільне місце для ворога поруч із бажаним: стіл, саркофаг чи колона на
 ## місці появи — шукаємо найближче вільне по колах довкола.
@@ -1097,7 +1097,8 @@ func _on_summon_requested(position: Vector3, count: int) -> void:
 		var enemy := _spawn_enemy(spot, definition, false)
 		enemy.died.connect(func(_p: Vector3, _xp: int) -> void: _alive_summons -= 1)
 		_alive_summons += 1
-		CombatVfx.impact(level_root, spot + Vector3.UP * 0.5, Color(0.5, 1.0, 0.4), false)
+		# Покликаний виривається з-під землі.
+		CombatVfx.ground_hit(level_root, spot, 0.9)
 
 ## Здібність кличе істоту (RaiseDead — мерців, Split — половинки слизу,
 ## Pylons — пілони довкола боса). source рахує своїх живих (summons_alive)

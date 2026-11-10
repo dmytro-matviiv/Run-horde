@@ -1622,15 +1622,21 @@ func _spark_kind(step: Dictionary) -> String:
 		return "spin"
 	return "sweep" if step.heavy else "slash"
 
-## Вибух довкола цілі (кинджали, завершальний удар тесака): зачіпає
-## сусідів тієї, в кого влучили, — невеликою часткою шкоди.
+## Удар зачіпає сусідів цілі (кинджали, завершальний удар тесака) —
+## невеликою часткою шкоди. Це зброя, не магія: кинджали — віхола коротких
+## порізів довкола цілі, тесак — гупає об землю (тріщини й пил).
 func _burst(step: Dictionary, hit: Array[Enemy3D]) -> void:
 	var center_enemy: Enemy3D = hit[0]
 	if _target != null and is_instance_valid(_target) and hit.has(_target):
 		center_enemy = _target
 	var center := center_enemy.global_position
 	var radius: float = float(step.burst[0])
-	Fx.flipbook(get_parent(), center + Vector3.UP * 0.9, "explosion", radius * 1.3, Color.WHITE, 0.4)
+	var style: String = weapon_def.style_3d if weapon_def != null else "sword"
+	if style == "cleaver":
+		CombatVfx.ground_hit(get_parent(), center, radius * 0.7)
+	else:
+		CombatVfx.slash(get_parent(), center + Vector3.UP * 0.9, randf() * TAU, radius * 0.75, 359.0,
+			SLASH_COLOR, randf() < 0.5, 0.0, 0.16)
 	for enemy: Enemy3D in enemies_near(center, radius):
 		if hit.has(enemy):
 			continue

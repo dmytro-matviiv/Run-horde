@@ -26,16 +26,14 @@ func on_damaged() -> void:
 		return
 	start_cooldown()
 	_busy = true
-	CombatVfx.impact(world(), enemy.global_position + Vector3.UP, SMOKE, true)
-	CombatVfx.shockwave(world(), enemy.global_position, 1.4, SMOKE, 0.3)
+	CombatVfx.smoke_puff(world(), enemy.global_position + Vector3.UP * 0.6, SMOKE)
 	enemy.set_hidden(true)
 	var tween := enemy.create_tween()
 	tween.tween_interval(FADE)
 	tween.tween_callback(func() -> void:
 		enemy.teleport_to(spot)
 		enemy.set_hidden(false)
-		CombatVfx.impact(world(), spot + Vector3.UP, SMOKE, true)
-		CombatVfx.shockwave(world(), spot, 1.4, SMOKE, 0.3)
+		CombatVfx.smoke_puff(world(), spot + Vector3.UP * 0.6, SMOKE)
 		_busy = false)
 
 func _pick_spot() -> Vector3:

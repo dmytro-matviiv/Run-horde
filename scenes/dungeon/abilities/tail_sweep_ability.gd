@@ -47,7 +47,8 @@ func resolve() -> void:
 	_clear()
 	var radius := float(config.get("radius", 4.8))
 	var arc := deg_to_rad(float(config.get("arc", 115.0)))
-	CombatVfx.shockwave(world(), _origin, radius, Color(0.8, 0.9, 1.0, 0.7), 0.3)
+	# Хвіст змітає пил і сніг — не магія.
+	CombatVfx.shockwave(world(), _origin, radius, Color(0.85, 0.85, 0.85, 0.6), 0.3)
 	var rig := enemy.get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
 		rig.shake(0.15)

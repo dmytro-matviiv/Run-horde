@@ -57,8 +57,7 @@ func tick(delta: float) -> void:
 
 func _raise() -> void:
 	var center := enemy.global_position
-	CombatVfx.impact_decal(world(), center + enemy.facing_vector() * 1.5, 2.0, COLOR, 1.0)
-	CombatVfx.shockwave(world(), center, 12.0, COLOR, 0.9)
+	CombatVfx.ground_hit(world(), center + enemy.facing_vector() * 1.5, 2.0)
 	var rig := enemy.get_tree().get_first_node_in_group(&"camera_rig")
 	if rig != null:
 		rig.shake(0.25)
@@ -73,8 +72,7 @@ func _raise() -> void:
 			_summon(spot, skeleton)
 
 func _summon(spot: Vector3, definition: Dictionary) -> void:
-	CombatVfx.impact(world(), spot + Vector3.UP * 0.6, COLOR, true)
-	CombatVfx.impact_decal(world(), spot, 1.2, Color(0.6, 0.55, 0.45), 0.6)
+	CombatVfx.ground_hit(world(), spot, 1.2)
 	enemy.spawn_requested.emit(spot, definition, enemy)
 
 ## Місця по колу довкола центру зали: від центру — до краю зали боса,

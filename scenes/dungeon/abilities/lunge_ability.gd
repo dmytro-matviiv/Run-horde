@@ -82,8 +82,7 @@ func _land() -> void:
 	_busy = false
 	enemy.global_position = _target
 	var radius := float(config.get("radius", 1.6))
-	CombatVfx.impact_decal(world(), _target, radius * 0.7, COLOR)
-	CombatVfx.shockwave(world(), _target, radius, COLOR, 0.25)
+	CombatVfx.ground_hit(world(), _target, radius * 0.7)
 	var hero := player()
 	if hero == null or not is_instance_valid(hero):
 		return

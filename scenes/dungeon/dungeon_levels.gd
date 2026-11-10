@@ -208,7 +208,7 @@ const LEVELS := [
 					"attack_range": 1.5, "cooldown": 0.9},
 			],
 			"x": [
-				{"name": "Токсичний слиз", "model": "res://assets/models/monsters/Pink Blob.glb", "kind": "exploder", "hp": 18.0, "damage": 24.0, "speed": 4.0, "height": 1.2, "xp": 3},
+				{"name": "Токсичний слиз", "model": "res://assets/models/monsters/Pink Blob.glb", "kind": "exploder", "blast_color": Color(0.5, 0.95, 0.3, 0.9), "hp": 18.0, "damage": 24.0, "speed": 4.0, "height": 1.2, "xp": 3},
 			],
 			"r": [
 				{"name": "Плювальник", "model": "res://assets/models/monsters/Squidle.glb", "kind": "ranged", "hp": 24.0, "damage": 7.0, "speed": 2.4, "height": 1.4, "hover": 0.7, "xp": 4,
@@ -685,7 +685,7 @@ const LEVELS := [
 					"tint": Color(0.35, 0.32, 0.3)},
 			],
 			"x": [
-				{"name": "Вибуховий дух горна", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "hp": 24.0, "damage": 30.0, "speed": 4.6, "height": 1.2, "hover": 0.5, "xp": 4,
+				{"name": "Вибуховий дух горна", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "blast_color": Color(1.0, 0.55, 0.15, 0.9), "hp": 24.0, "damage": 30.0, "speed": 4.6, "height": 1.2, "hover": 0.5, "xp": 4,
 					"tint": Color(1.0, 0.4, 0.15), "glow": Color(0.5, 0.1, 0.02)},
 			],
 		},
@@ -776,7 +776,7 @@ const LEVELS := [
 					"tint": Color(1.0, 0.82, 0.3), "attack_range": 1.3, "cooldown": 0.7},
 			],
 			"x": [
-				{"name": "Скарбний привид", "model": "res://assets/models/monsters/Ghost Skull.glb", "kind": "exploder", "hp": 26.0, "damage": 32.0, "speed": 4.3, "height": 1.3, "hover": 0.6, "xp": 4,
+				{"name": "Скарбний привид", "model": "res://assets/models/monsters/Ghost Skull.glb", "kind": "exploder", "blast_color": Color(0.7, 0.45, 1.0, 0.9), "hp": 26.0, "damage": 32.0, "speed": 4.3, "height": 1.3, "hover": 0.6, "xp": 4,
 					"tint": Color(1.0, 0.9, 0.5), "glow": Color(0.4, 0.3, 0.05)},
 			],
 			"t": [
@@ -867,7 +867,7 @@ const LEVELS := [
 			],
 			"r": [
 				{"name": "Розбійник-лучник", "model": "res://assets/models/monsters/Ninja.glb", "kind": "ranged", "hp": 36.0, "damage": 11.0, "speed": 2.7, "height": 1.6, "xp": 7,
-					"tint": Color(0.3, 0.4, 0.28), "projectile": {"color": Color(0.7, 0.55, 0.3), "speed": 11.0, "volley": 1}},
+					"tint": Color(0.3, 0.4, 0.28), "projectile": {"color": Color(0.78, 0.8, 0.86), "speed": 11.0, "volley": 1, "shape": "blade"}},
 			],
 			"w": [
 				{"name": "Здичавілий щур", "model": "res://assets/models/monsters/Green Spiky Blob.glb", "kind": "melee", "hp": 14.0, "damage": 6.0, "speed": 5.2, "height": 0.7, "xp": 1, "group": 5,
@@ -878,7 +878,7 @@ const LEVELS := [
 					"tint": Color(0.5, 0.35, 0.22)},
 			],
 			"x": [
-				{"name": "Вороняча зграя", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "hp": 26.0, "damage": 33.0, "speed": 4.9, "height": 1.1, "hover": 0.6, "xp": 4,
+				{"name": "Вороняча зграя", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "blast_color": Color(0.35, 0.33, 0.38, 0.9), "hp": 26.0, "damage": 33.0, "speed": 4.9, "height": 1.1, "hover": 0.6, "xp": 4,
 					"tint": Color(0.2, 0.2, 0.22)},
 			],
 		},
@@ -1141,7 +1141,7 @@ const LEVELS := [
 					"abilities": [{"id": "web", "cooldown": 7.0, "first": 5.5, "count": 2, "slow": 0.4, "slow_time": 2.5}]},
 			],
 			"x": [
-				{"name": "Спорова бульбашка", "model": "res://assets/models/monsters/Pink Blob.glb", "kind": "exploder", "hp": 42.0, "damage": 32.0, "speed": 3.6, "height": 1.1, "xp": 8,
+				{"name": "Спорова бульбашка", "model": "res://assets/models/monsters/Pink Blob.glb", "kind": "exploder", "blast_color": Color(0.6, 0.9, 0.3, 0.9), "hp": 42.0, "damage": 32.0, "speed": 3.6, "height": 1.1, "xp": 8,
 					"tint": Color(0.55, 0.9, 0.6), "glow": Color(0.2, 0.4, 0.15)},
 			],
 		},
@@ -1228,7 +1228,7 @@ const LEVELS := [
 					"tint": Color(0.7, 0.85, 1.0), "glow": Color(0.3, 0.5, 0.7)},
 			],
 			"w": [
-				{"name": "Метелиця", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "hp": 34.0, "damage": 30.0, "speed": 4.8, "height": 1.2, "hover": 0.6, "xp": 6,
+				{"name": "Метелиця", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "blast_color": Color(0.65, 0.9, 1.0, 0.9), "hp": 34.0, "damage": 30.0, "speed": 4.8, "height": 1.2, "hover": 0.6, "xp": 6,
 					"tint": Color(0.75, 0.88, 1.0), "glow": Color(0.35, 0.55, 0.75)},
 			],
 			"t": [
@@ -1318,7 +1318,7 @@ const LEVELS := [
 					"tint": Color(0.9, 0.4, 0.2), "glow": Color(0.5, 0.15, 0.02)},
 			],
 			"x": [
-				{"name": "Вугільна оса", "model": "res://assets/models/monsters/Armabee Evolved.glb", "kind": "exploder", "hp": 46.0, "damage": 34.0, "speed": 4.4, "height": 0.8, "hover": 0.7, "xp": 8,
+				{"name": "Вугільна оса", "model": "res://assets/models/monsters/Armabee Evolved.glb", "kind": "exploder", "blast_color": Color(1.0, 0.45, 0.1, 0.9), "hp": 46.0, "damage": 34.0, "speed": 4.4, "height": 0.8, "hover": 0.7, "xp": 8,
 					"tint": Color(0.85, 0.35, 0.15), "glow": Color(0.55, 0.15, 0.02)},
 			],
 			"r": [

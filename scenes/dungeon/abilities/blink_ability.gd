@@ -25,7 +25,7 @@ func try_use(distance: float) -> bool:
 		return false
 	start_cooldown()
 	_busy = true
-	CombatVfx.impact(world(), enemy.global_position + Vector3.UP, SMOKE, true)
+	CombatVfx.smoke_puff(world(), enemy.global_position + Vector3.UP * 0.6, SMOKE)
 	enemy.set_hidden(true)
 	var tween := enemy.create_tween()
 	tween.tween_interval(FADE)
@@ -38,7 +38,7 @@ func _reappear() -> void:
 	var spot := _free_spot(hero.global_position, -facing)
 	enemy.teleport_to(spot)
 	enemy.set_hidden(false)
-	CombatVfx.impact(world(), spot + Vector3.UP, SMOKE, true)
+	CombatVfx.smoke_puff(world(), spot + Vector3.UP * 0.6, SMOKE)
 	_busy = false
 	enemy.strike_now(STRIKE_WINDUP)
 

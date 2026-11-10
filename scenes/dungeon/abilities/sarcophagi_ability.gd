@@ -145,8 +145,8 @@ func _release() -> void:
 		definition.erase("group")
 		definition["no_elite"] = true
 		var spot: Vector3 = _coffins[i % _coffins.size()] + _inward * 1.4 if not _coffins.is_empty() else enemy.global_position + _inward * 2.0
-		CombatVfx.impact(world(), spot + Vector3.UP * 0.6, COLOR, true)
-		CombatVfx.shockwave(world(), spot, 1.6, COLOR, 0.4)
+		# Віко злітає — клуб пилу з саркофага.
+		CombatVfx.shockwave(world(), spot, 1.6, Color(0.75, 0.7, 0.62, 0.8), 0.4)
 		enemy.spawn_requested.emit(spot, definition, enemy)
 	AudioManager.play(&"explosion", 0.05)
 	_free_hero()

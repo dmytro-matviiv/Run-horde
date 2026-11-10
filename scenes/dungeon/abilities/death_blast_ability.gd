@@ -33,9 +33,8 @@ func on_death() -> void:
 		CombatVfx.set_param(marker, &"progress", value), 0.0, 1.0, float(config.get("delay", 0.45)))
 	tween.tween_callback(func() -> void:
 		marker.queue_free()
+		# Плоть лопається хмарою отрути — без вогняного вибуху й тріщин.
 		CombatVfx.shockwave(parent, center, radius, COLOR, 0.4)
-		Fx.flipbook(parent, center + Vector3.UP * 1.0, "explosion", radius * 1.5, COLOR.lightened(0.15), 0.55, false, true)
-		CombatVfx.impact_decal(parent, center, radius * 0.8, COLOR, 0.6)
 		var rig := tree.get_first_node_in_group(&"camera_rig")
 		if rig != null:
 			rig.shake(0.15)

@@ -70,7 +70,8 @@ func _use(player: Node) -> bool:
 	player.grant_invulnerable(time + 0.3)
 	player.add_attack_speed(FURY_ATTACK_SPEED, FURY_TIME)
 	var parent: Node = player.get_parent()
-	CombatVfx.shockwave(parent, player.global_position, 1.8, color, 0.3)
+	# Поштовх з місця — пил з-під ніг (не вогняне коло).
+	Fx.puff(parent, player.global_position + Vector3.UP * 0.25, Color(0.8, 0.75, 0.68), 1.0)
 	player.shake_camera(0.08)
 	return true
 
@@ -140,7 +141,6 @@ func _strike(player: Node) -> void:
 		player.deal_damage(enemy, DAMAGE * SPLASH_SHARE * power, push.normalized() * KNOCKBACK * 0.6, true, id)
 	CombatVfx.slash(parent, player.global_position + Vector3.UP * 1.1, player.facing_angle(), 3.0, 160.0, color,
 		false, -0.5, 0.3)
-	CombatVfx.shockwave(parent, center, SPLASH_RADIUS, color, 0.35)
 	CombatVfx.hitstop(player.get_tree(), 0.07)
 	player.shake_camera(0.15)
 	_target = null

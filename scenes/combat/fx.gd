@@ -69,7 +69,9 @@ static func tex(name: String) -> Texture2D:
 
 ## Стихія за кольором: "fire", "gold", "poison", "ice", "arcane" або "neutral".
 static func theme_of(color: Color) -> String:
-	if color.s < 0.22:
+	# Тьмяні кольори (пил, земля, кістка) — не стихія: інакше бурий пил
+	# "горів" вогняним кільцем, а сіро-жовтий — світився золотом.
+	if color.s < 0.22 or color.v < 0.7:
 		return "neutral"
 	var hue := color.h
 	if hue < 0.09 or hue > 0.95:
@@ -244,8 +246,8 @@ static func _free_later(node: Node, seconds: float) -> void:
 
 ## Клуб диму чи пилу (малий удар об землю, смерть ворога): кілька м'яких
 ## клубків, що розходяться й тануть. Без кіл.
-static func puff(parent: Node, position: Vector3, color: Color, size: float = 1.0) -> void:
-	var tint := color.lerp(Color(0.82, 0.78, 0.72), 0.55)
+static func puff(parent: Node, position: Vector3, color: Color, size: float = 1.0, earthy: float = 0.55) -> void:
+	var tint := color.lerp(Color(0.82, 0.78, 0.72), earthy)
 	var smoke := make_particles("smoke_04", Color(tint, 0.4), 3, 0.5, 0.8 * size)
 	smoke.one_shot = true
 	smoke.explosiveness = 1.0
