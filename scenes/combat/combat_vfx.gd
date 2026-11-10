@@ -776,6 +776,9 @@ static func make_telegraph(color: Color, radius: float, half_arc: float = PI, em
 				art = "hex"
 			_:
 				art = "rune"
+	else:
+		# Віяло — теж за стихією: крижані тріщини чи рунні дуги замість лави.
+		art = _themed_art(color, "cone")
 	instance.material_override = _get_telegraph_material(art, shape, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(radius * 2.0, 1.0, radius * 2.0)
@@ -801,6 +804,7 @@ static func make_line_telegraph(color: Color, length: float, width: float, art: 
 		embers: bool = false) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = _get_ring_mesh()
+	art = _themed_art(color, art)
 	instance.material_override = _get_telegraph_material(art, 2, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(width, 1.0, length)
@@ -929,6 +933,17 @@ static func _make_burst(art: String, color: Color, amount: int, lifetime: float,
 static func _hue_close(color: Color, hue: float) -> bool:
 	return absf(wrapf(color.h - hue, -0.5, 0.5)) < 0.075
 
+## Арт віяла/смуги за стихією: крига — "cone_frost"/"line_frost",
+## отрута й некромантія — "cone_hex"/"line_hex", решта — арт гравця.
+static func _themed_art(color: Color, art: String) -> String:
+	var kind := "cone" if art == "cone" else "line"
+	match Fx.theme_of(color):
+		"ice":
+			return kind + "_frost"
+		"poison":
+			return kind + "_hex"
+	return art
+
 static func _get_telegraph_material(art: String, shape: int, color: Color) -> ShaderMaterial:
 	var key := "%s|%d|%s" % [art, shape, color.to_html()]
 	if _telegraph_materials.has(key):
@@ -936,11 +951,13 @@ static func _get_telegraph_material(art: String, shape: int, color: Color) -> Sh
 	var material := ShaderMaterial.new()
 	material.shader = _shared_shader(TELEGRAPH_SHADER)
 	# Нові кола (frost, hex) — з набору ефектів (Fx), решта — арт гравця.
-	material.set_shader_parameter(&"art", TELEGRAPH_ART[art] if TELEGRAPH_ART.has(art) else Fx.tex("telegraph_circle_" + art))
+	var path := ("telegraph_" + art) if art.contains("_") else ("telegraph_circle_" + art)
+	material.set_shader_parameter(&"art", TELEGRAPH_ART[art] if TELEGRAPH_ART.has(art) else Fx.tex(path))
 	material.set_shader_parameter(&"color", color)
 	material.set_shader_parameter(&"shape", shape)
 	var native := RUNE_HUE if art == "rune" else WARM_HUE
-	material.set_shader_parameter(&"recolor", 0.0 if _hue_close(color, native) else 1.0)
+	var grey := art.ends_with("frost") or art.ends_with("hex")
+	material.set_shader_parameter(&"recolor", 1.0 if grey or not _hue_close(color, native) else 0.0)
 	material.set_shader_parameter(&"base", 0.0 if art == "cracks" else 1.0)
 	_telegraph_materials[key] = material
 	return material
@@ -1038,7 +1055,7 @@ static func set_param(node: Node, name: StringName, value: Variant) -> void:
 	var material := geometry.material_override as ShaderMaterial
 	if material == null:
 		return
-	if geometry.get_meta(&"vfx_material", null) != material:
+	if not geometry.has_meta(&"vfx_material") or geometry.get_meta(&"vfx_material") != material:
 		material = material.duplicate() as ShaderMaterial
 		geometry.material_override = material
 		geometry.set_meta(&"vfx_material", material)
