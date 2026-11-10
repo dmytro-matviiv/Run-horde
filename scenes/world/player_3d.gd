@@ -1539,15 +1539,19 @@ func _update_attack(delta: float) -> void:
 func _attack_vfx(step: Dictionary, reverse: bool) -> void:
 	var color := HEAVY_COLOR if step.heavy else SLASH_COLOR
 	var origin := global_position + Vector3.UP * 1.0
+	# Розсіч: легкий удар — тонкий швидкий серп, важкий — широкий, фініш
+	# серії ще й лишає на підлозі світний шрам.
+	var width := 1.3 if step.heavy else 0.85
+	var scar := bool(step.get("finisher", false))
 	match String(step.get("shape", "arc")):
 		"circle":
 			CombatVfx.slash(get_parent(), origin, _aim_angle(), _reach(step) + 0.2, 359.0, color,
-				reverse, 0.0, 0.3)
+				reverse, 0.0, 0.34, width, scar)
 		"line":
 			CombatVfx.thrust(get_parent(), origin, _aim_angle(), _reach(step) + 0.3, color)
 		_:
 			CombatVfx.slash(get_parent(), origin, _aim_angle(), _reach(step) + 0.2, _arc(step), color,
-				reverse, float(step.get("tilt", 0.0)), 0.24)
+				reverse, float(step.get("tilt", 0.0)), 0.26 if step.heavy else 0.22, width, scar)
 
 ## Шкода всім ворогам у дузі перед героєм. Стіна захищає: крізь неї
 ## меч не дістає.

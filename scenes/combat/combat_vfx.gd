@@ -17,6 +17,14 @@ class_name CombatVfx
 ## Слід меча: дуга, що "пробігає" від одного краю до іншого й гасне.
 ## progress іде від 0 до 1.4: спершу виростає голова сліду, далі хвіст
 ## наздоганяє її, і дуга зникає.
+## РОЗСІЧ — слід клинка, як у сучасних мобільних екшенах: півмісяць, що
+## пролітає за лезом. Голова розсічі біжить від початку замаху до кінця
+## (progress 0..1), за нею тягнеться хвіст, який розсипається смугами
+## вітру (шум уздовж дуги) і тане (progress до 1.4).
+##   UV.x — уздовж дуги (0 — початок замаху), UV.y — від внутрішнього
+##   краю (0) до кромки леза (1).
+## Три тони: біло-гаряча тонка кромка, кольорове тіло, темніше коріння
+## всередину дуги; найяскравіше — біля голови.
 const SLASH_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
@@ -25,18 +33,42 @@ uniform vec4 color : source_color = vec4(0.75, 0.88, 1.0, 1.0);
 uniform float progress = 0.0;
 uniform float reverse_dir = 0.0;
 uniform float intensity = 1.0;
+uniform float seed = 0.0;
+
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 
 void fragment() {
 	float u = mix(UV.x, 1.0 - UV.x, reverse_dir);
-	float head = progress;
-	float tail = progress - 0.6;
-	float along = smoothstep(tail, head, u) * (1.0 - step(head, u));
-	// Яскравий тонкий край леза й прозорий "хвіст" усередину дуги.
-	float radial = smoothstep(0.15, 0.85, UV.y) * (1.0 - smoothstep(0.93, 1.0, UV.y));
-	float edge = 0.15 + 0.85 * pow(UV.y, 3.0);
-	float fade = 1.0 - smoothstep(1.0, 1.4, progress);
-	ALBEDO = mix(color.rgb, vec3(1.0), pow(UV.y, 4.0) * 0.7) * 1.25 * intensity;
-	ALPHA = clamp(along * radial * edge * fade * 0.8, 0.0, 1.0);
+	float v = UV.y;
+	float behind = progress - u;
+	float shown = smoothstep(-0.03, 0.05, behind);
+	// Смуги вітру: шум, сильно витягнутий уздовж дуги.
+	float streak = noise(vec2(u * 2.5 + seed, v * 16.0));
+	float grain = noise(vec2(u * 9.0 - progress * 4.0 + seed * 1.7, v * 5.0));
+	float pattern = streak * 0.65 + grain * 0.35;
+	// Хвіст і кінець життя розсипаються: поріг росте з відставанням від
+	// голови й з часом.
+	float life = clamp((progress - 0.35) / 1.05, 0.0, 1.0);
+	float erode = clamp(behind * 0.75 + life * 1.05 - 0.1, 0.0, 1.2);
+	float mask = smoothstep(erode - 0.12, erode + 0.12, pattern);
+	float edge = smoothstep(0.80, 0.96, v) * (1.0 - smoothstep(0.985, 1.0, v));
+	float body = smoothstep(0.0, 0.85, v);
+	float head = exp(-max(behind, 0.0) * 8.0) * shown;
+	vec3 rgb = mix(color.rgb * 0.45, color.rgb, body);
+	rgb = mix(rgb, vec3(1.0), clamp(edge * 0.9 + head * 0.55, 0.0, 1.0));
+	float a = shown * mask * (body * 0.5 + edge * 0.95 + head * 0.45);
+	ALBEDO = rgb * intensity;
+	ALPHA = clamp(a, 0.0, 1.0);
 }
 """
 
@@ -254,42 +286,107 @@ static var _hitstop_token := 0
 ## Дуга удару довкола героя. yaw — куди дивиться герой, arc_deg — ширина
 ## замаху, reverse — замах у зворотний бік (друга ланка комбо).
 static func slash(parent: Node, origin: Vector3, yaw: float, radius: float, arc_deg: float,
-		color: Color, reverse: bool = false, tilt: float = 0.0, duration: float = 0.26) -> void:
+		color: Color, reverse: bool = false, tilt: float = 0.0, duration: float = 0.26,
+		width: float = 1.0, scar: bool = false) -> void:
+	var instance := _spawn_arc(parent, origin, Vector3(tilt, yaw, 0.0), radius, arc_deg, color, reverse,
+		duration, width, 1.0)
+	# Кінчик леза: коли розсіч долітає до кінця замаху, з нього злітає
+	# кілька іскор — уздовж руху клинка.
+	var half := deg_to_rad(minf(arc_deg, 359.0)) * 0.5
+	var end_angle := -half if reverse else half
+	var local_tip := Vector3(sin(end_angle), 0.0, cos(end_angle)) * radius
+	var local_dir := Vector3(cos(end_angle), 0.0, -sin(end_angle)) * (-1.0 if reverse else 1.0)
+	var tip := instance.global_transform * local_tip
+	var tip_dir := (instance.global_basis * local_dir).normalized()
+	# weakref: якщо зала зникла раніше (вихід із данжу), таймер нічого не робить.
+	var holder: WeakRef = weakref(parent)
+	instance.get_tree().create_timer(duration * 0.45, false).timeout.connect(func() -> void:
+		var target: Node = holder.get_ref()
+		if target != null:
+			_tip_sparks(target, tip, tip_dir, color))
+	# Фініш серії: на підлозі лишається світний шрам розсічі, що гасне.
+	if scar:
+		var floor_y := DungeonBuilder.FLOOR_TOP + 0.04
+		_spawn_arc(parent, Vector3(origin.x, floor_y, origin.z), Vector3(0.0, yaw, 0.0), radius * 0.95, arc_deg,
+			color.lerp(Color(1.0, 0.55, 0.2), 0.35), reverse, duration * 2.6, width * 0.7, 0.75)
+
+## Сама розсіч: меш-півмісяць і шейдер; progress біжить 0 -> 1.4 з різким
+## стартом (удар — швидкий) і плавним кінцем.
+static func _spawn_arc(parent: Node, origin: Vector3, rotation: Vector3, radius: float, arc_deg: float,
+		color: Color, reverse: bool, duration: float, width: float, intensity: float) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
-	instance.mesh = _get_slash_mesh(radius, arc_deg)
+	instance.mesh = _get_slash_mesh(radius, arc_deg, width)
 	instance.material_override = _get_material(_slash_materials, SLASH_SHADER, color)
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(instance)
 	instance.global_position = origin
-	instance.global_rotation = Vector3(tilt, yaw, 0.0)
+	instance.global_rotation = rotation
 	CombatVfx.set_param(instance, &"reverse_dir", 1.0 if reverse else 0.0)
+	CombatVfx.set_param(instance, &"seed", randf() * 50.0)
+	CombatVfx.set_param(instance, &"intensity", intensity)
 	CombatVfx.set_param(instance, &"progress", 0.0)
 	var tween := instance.create_tween()
-	tween.tween_method(func(value: float) -> void:
-		CombatVfx.set_param(instance, &"progress", value), 0.0, 1.4, duration)
+	var set_progress := func(value: float) -> void:
+		CombatVfx.set_param(instance, &"progress", value)
+	tween.tween_method(set_progress, 0.0, 1.0, duration * 0.45).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tween.tween_method(set_progress, 1.0, 1.4, duration * 0.55)
 	tween.tween_callback(instance.queue_free)
+	return instance
 
-## Плаский сектор кільця в площині XZ, розвернутий на +Z (туди, куди
-## дивиться герой). UV.x — уздовж дуги, UV.y — від внутрішнього краю до
-## зовнішнього.
-static func _get_slash_mesh(radius: float, arc_deg: float) -> ArrayMesh:
-	var key := "%.2f|%.1f" % [radius, arc_deg]
+## Іскри з кінчика леза: 4 світні цятки летять уздовж руху й гаснуть.
+static func _tip_sparks(parent: Node, position: Vector3, direction: Vector3, color: Color) -> void:
+	if not parent.is_inside_tree():
+		return
+	var sparks := CPUParticles3D.new()
+	sparks.one_shot = true
+	sparks.explosiveness = 1.0
+	sparks.amount = 4
+	sparks.lifetime = 0.25
+	sparks.mesh = _get_particle_mesh(0.12)
+	sparks.material_override = _get_particle_material("glow", true)
+	sparks.direction = direction
+	sparks.spread = 18.0
+	sparks.initial_velocity_min = 3.0
+	sparks.initial_velocity_max = 6.0
+	sparks.gravity = Vector3(0, -6.0, 0)
+	sparks.damping_min = 4.0
+	sparks.damping_max = 6.0
+	sparks.color = color.lerp(Color.WHITE, 0.5)
+	var curve := Curve.new()
+	curve.add_point(Vector2(0.0, 1.0))
+	curve.add_point(Vector2(1.0, 0.0))
+	sparks.scale_amount_curve = curve
+	parent.add_child(sparks)
+	sparks.global_position = position
+	sparks.emitting = true
+	_free_after(sparks, 0.4)
+
+## Півмісяць у площині XZ, розвернутий на +Z (туди, куди дивиться герой):
+## кромка леза — на радіусі, внутрішній край звужується до гострих кінців
+## (найтовще — посередині), як слід справжнього замаху. width — товщина.
+## UV.x — уздовж дуги, UV.y — від внутрішнього краю (0) до кромки (1).
+static func _get_slash_mesh(radius: float, arc_deg: float, width: float = 1.0) -> ArrayMesh:
+	var key := "%.2f|%.1f|%.2f" % [radius, arc_deg, width]
 	if _slash_meshes.has(key):
 		return _slash_meshes[key]
-	var inner := radius * 0.45
+	var full := arc_deg >= 358.0
+	var thickness := radius * 0.42 * width
 	var half := deg_to_rad(arc_deg) * 0.5
 	var vertices := PackedVector3Array()
 	var uvs := PackedVector2Array()
 	var indices := PackedInt32Array()
-	for i in SLASH_SEGMENTS + 1:
-		var t := float(i) / SLASH_SEGMENTS
+	var segments := SLASH_SEGMENTS * (2 if full else 1)
+	for i in segments + 1:
+		var t := float(i) / segments
 		var angle := lerpf(-half, half, t)
 		var direction := Vector3(sin(angle), 0.0, cos(angle))
-		vertices.append(direction * inner)
+		# Повне коло — серп звужується лише до хвоста (початку оберту).
+		var taper := pow(sin(PI * t), 0.6) if not full else pow(t, 0.5)
+		vertices.append(direction * (radius - thickness * maxf(taper, 0.02)))
 		uvs.append(Vector2(t, 0.0))
 		vertices.append(direction * radius)
 		uvs.append(Vector2(t, 1.0))
-		if i < SLASH_SEGMENTS:
+		if i < segments:
 			var a := i * 2
 			indices.append_array([a, a + 1, a + 2, a + 1, a + 3, a + 2])
 	var arrays := []
