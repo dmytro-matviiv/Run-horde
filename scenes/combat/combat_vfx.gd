@@ -218,6 +218,15 @@ void fragment() {
 const SLASH_SEGMENTS := 26
 
 static var _slash_meshes: Dictionary = {}
+## Мінімалізм: на одну подію (удар об землю, смерть, вибух) — один ефект.
+## Хто перший у цьому кадрі заявив місце, той і малює; хвиля, іскри й
+## тріщини в те саме місце того ж кадру вже не накладаються.
+static var _claims: Array = []
+## Вогники по краях попереджень. Мінімалізм: вимкнено — лише малюнок на підлозі.
+const EMBERS := false
+static var _claims_frame := -1
+static var _sparks_frame := -1
+static var _sparks_count := 0
 static var _slash_materials: Dictionary = {}
 static var _ring_materials: Dictionary = {}
 static var _flash_materials: Dictionary = {}
@@ -434,14 +443,31 @@ static func _get_beam_mesh() -> CylinderMesh:
 # --- влучання ---
 
 ## Іскри й короткий спалах у точці влучання. big — для сильних ударів.
+## true — місце вільне (і тепер зайняте цим ефектом); false — у цьому кадрі
+## тут уже щось спрацювало, другий ефект не потрібен.
+static func claim(position: Vector3, reach: float = 1.6) -> bool:
+	var frame := Engine.get_process_frames()
+	if frame != _claims_frame:
+		_claims_frame = frame
+		_claims.clear()
+	var flat := Vector2(position.x, position.z)
+	for spot: Vector2 in _claims:
+		if spot.distance_to(flat) < reach:
+			return false
+	_claims.append(flat)
+	return true
+
 static func impact(parent: Node, position: Vector3, color: Color, big: bool = false) -> void:
+	if not claim(position):
+		return
 	var particles := CPUParticles3D.new()
 	particles.one_shot = true
 	particles.explosiveness = 1.0
-	particles.amount = 18 if big else 10
-	particles.lifetime = 0.42 if big else 0.3
-	particles.mesh = _get_spark_mesh()
-	particles.material_override = _get_spark_material()
+	particles.amount = 7 if big else 4
+	particles.lifetime = 0.35 if big else 0.25
+	# Світні цятки, а не квадрати.
+	particles.mesh = _get_particle_mesh(0.16)
+	particles.material_override = _get_particle_material("glow", true)
 	particles.direction = Vector3.UP
 	particles.spread = 180.0
 	particles.initial_velocity_min = 3.0 if big else 2.0
@@ -485,6 +511,14 @@ const SPARK_STYLES := {
 }
 
 static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind: String, crit: bool = false) -> void:
+	# Махом зачепило натовп — іскри лише на перших двох, решта без ефекту.
+	var frame := Engine.get_process_frames()
+	if frame != _sparks_frame:
+		_sparks_frame = frame
+		_sparks_count = 0
+	_sparks_count += 1
+	if _sparks_count > 2:
+		return
 	var style: Dictionary = SPARK_STYLES.get(kind, SPARK_STYLES.slash)
 	var color: Color = style.color
 	if crit:
@@ -495,16 +529,16 @@ static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind:
 	# Слід порізу: дуга, що проходить крізь ворога (центр — ближче до героя).
 	var yaw := atan2(flat.x, flat.z)
 	var big := kind == "finisher"
-	for cut: Array in style.cuts:
-		slash(parent, position - flat * (0.75 if big else 0.6), yaw, (1.25 if big else 0.95) * boost,
-			110.0, color, bool(cut[1]), float(cut[0]), 0.2)
-	if kind == "spin":
-		slash(parent, position, yaw, 0.8 * boost, 359.0, color, false, 0.0, 0.22)
+	# Слід порізу — лише на фініші і лише на першому вороґові: замах героя
+	# вже малює свою дугу, другі дуги на кожному ворогові — зайве.
+	if big and _sparks_count == 1:
+		var cut: Array = style.cuts[0]
+		slash(parent, position - flat * 0.75, yaw, 1.25 * boost, 110.0, color, bool(cut[1]), float(cut[0]), 0.2)
 	# Світні іскри.
 	var particles := CPUParticles3D.new()
 	particles.one_shot = true
 	particles.explosiveness = 1.0
-	particles.amount = int(int(style.amount) * boost)
+	particles.amount = maxi(int(int(style.amount) * boost * 0.5), 3)
 	particles.lifetime = 0.45 if big else 0.35
 	particles.mesh = _get_particle_mesh(float(style.size) * boost)
 	particles.material_override = _get_particle_material("glow", true)
@@ -530,12 +564,10 @@ static func hit_spark(parent: Node, position: Vector3, direction: Vector3, kind:
 	_free_after(particles, particles.lifetime + 0.1)
 	var ground := Vector3(position.x, DungeonBuilder.FLOOR_TOP, position.z)
 	match kind:
-		"spin":
-			Fx.bloom(parent, position, "twirl_03", 2.0 * boost, Color(color, 0.85), 0.25, true, true, 0.4, -2.5)
 		"finisher":
-			Fx.flipbook(parent, position + Vector3.UP * 0.2, "big_hit", 2.6 * boost, color.lerp(Color.WHITE, 0.3), 0.32,
-				false, true, true)
-			var dust := _make_burst("dust", Color(0.75, 0.68, 0.58, 0.8), 8, 0.6, 0.6)
+			if _sparks_count > 1:
+				return
+			var dust := _make_burst("dust", Color(0.75, 0.68, 0.58, 0.6), 5, 0.6, 0.5)
 			dust.direction = Vector3.UP
 			dust.spread = 80.0
 			dust.flatness = 0.6
@@ -784,7 +816,7 @@ static func make_telegraph(color: Color, radius: float, half_arc: float = PI, em
 	instance.scale = Vector3(radius * 2.0, 1.0, radius * 2.0)
 	CombatVfx.set_param(instance, &"half_arc", half_arc)
 	CombatVfx.set_param(instance, &"progress", 0.0)
-	if embers and radius >= 1.0 and color.a > 0.05:
+	if embers and EMBERS and radius >= 1.0 and color.a > 0.05:
 		var points := PackedVector3Array()
 		var steps := clampi(int(radius * 6.0), 10, 28)
 		for i in steps:
@@ -809,7 +841,7 @@ static func make_line_telegraph(color: Color, length: float, width: float, art: 
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	instance.scale = Vector3(width, 1.0, length)
 	CombatVfx.set_param(instance, &"progress", 0.0)
-	if embers and color.a > 0.05:
+	if embers and EMBERS and color.a > 0.05:
 		var points := PackedVector3Array()
 		var steps := clampi(int(length), 4, 14)
 		for i in steps:
@@ -822,6 +854,8 @@ static func make_line_telegraph(color: Color, length: float, width: float, art: 
 ## Тріщини на підлозі там, де вдарило, — з камінцями й пилом. Тріщини
 ## гаснуть за мить, тож не захаращують залу.
 static func impact_decal(parent: Node, position: Vector3, radius: float, color: Color, linger: float = 0.5) -> void:
+	if not claim(position, maxf(radius, 1.6)):
+		return
 	var decal := MeshInstance3D.new()
 	decal.mesh = _get_ring_mesh()
 	decal.material_override = _get_telegraph_material("cracks", 0, Color(color, 1.0))
@@ -841,7 +875,7 @@ static func impact_decal(parent: Node, position: Vector3, radius: float, color: 
 
 	# Камінці злітають і падають; пил повільно розповзається.
 	var rocks := _make_burst("rock", Color.WHITE if _hue_close(color, WARM_HUE) else color.lerp(Color.WHITE, 0.5),
-		clampi(int(radius * 3.0), 5, 12), 0.75, 0.22)
+		clampi(int(radius * 1.5), 3, 6), 0.75, 0.2)
 	rocks.direction = Vector3.UP
 	rocks.spread = 55.0
 	rocks.initial_velocity_min = 3.0
@@ -853,7 +887,7 @@ static func impact_decal(parent: Node, position: Vector3, radius: float, color: 
 	rocks.global_position = position + Vector3(0, 0.2, 0)
 	rocks.emitting = true
 	_free_after(rocks, 1.0)
-	var dust := _make_burst("dust", Color(color.lerp(Color(0.8, 0.75, 0.7), 0.6), 0.55), 5, 0.9, radius * 0.7)
+	var dust := _make_burst("dust", Color(color.lerp(Color(0.8, 0.75, 0.7), 0.6), 0.35), 3, 0.9, radius * 0.6)
 	dust.direction = Vector3.UP
 	dust.spread = 80.0
 	dust.initial_velocity_min = 0.6
@@ -992,6 +1026,8 @@ static func _get_particle_mesh(size: float) -> QuadMesh:
 ## Вигляд — за стихією кольору (Fx.wave): вогняне кільце, крижане, дим...
 ## Мала хвиля (до 1.7 м) — лише клуб пилу, без кола.
 static func shockwave(parent: Node, position: Vector3, radius: float, color: Color, duration: float = 0.35) -> void:
+	if not claim(position, maxf(radius * 0.8, 1.6)):
+		return
 	Fx.wave(parent, position, radius, color, duration)
 
 ## Старе пласке кільце (лишилось для порівняння й запасу).

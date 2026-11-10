@@ -246,7 +246,7 @@ static func _free_later(node: Node, seconds: float) -> void:
 ## клубків, що розходяться й тануть. Без кіл.
 static func puff(parent: Node, position: Vector3, color: Color, size: float = 1.0) -> void:
 	var tint := color.lerp(Color(0.82, 0.78, 0.72), 0.55)
-	var smoke := make_particles("smoke_04", Color(tint, 0.55), 5, 0.55, 0.9 * size)
+	var smoke := make_particles("smoke_04", Color(tint, 0.4), 3, 0.5, 0.8 * size)
 	smoke.one_shot = true
 	smoke.explosiveness = 1.0
 	smoke.direction = Vector3.UP
@@ -275,25 +275,21 @@ static func wave(parent: Node, position: Vector3, radius: float, color: Color, d
 		return
 	var ground := Vector3(position.x, position.y + 0.08, position.z)
 	var time := maxf(duration, 0.3) + 0.15
+	# Мінімалізм: один шар, напівпрозорий; без розльоту частинок.
+	var a := 0.55 * color.a
 	match theme_of(color):
 		"fire":
-			flipbook(parent, ground, "fire_ring", radius * 2.25, Color(1, 1, 1, color.a), time, true, false, false, 0.3)
-			_ring_burst(parent, ground, radius, "flame_05", Color(1.0, 0.6, 0.2), true)
+			flipbook(parent, ground, "fire_ring", radius * 2.1, Color(1, 1, 1, 0.7 * color.a), time, true, false, false, 0.3)
 		"ice":
-			flipbook(parent, ground, "electric_ring", radius * 2.5, Color(color.lerp(Color.WHITE, 0.55), color.a), time,
-				true, false, true, 0.3)
-			_ring_burst(parent, ground, radius, "star_04", color.lerp(Color.WHITE, 0.5), true)
+			bloom(parent, ground, "smoke_10", radius * 2.2, Color(color.lerp(Color.WHITE, 0.4), a), time)
 		"poison":
-			bloom(parent, ground, "smoke_10", radius * 2.5, Color(color.darkened(0.15), 0.75 * color.a), time + 0.2)
-			bloom(parent, ground, "smoke_09", radius * 1.5, Color(color.lightened(0.2), 0.5 * color.a), time, true, false, 0.3, -0.8)
+			bloom(parent, ground, "smoke_10", radius * 2.2, Color(color.darkened(0.15), a), time + 0.1)
 		"arcane":
-			bloom(parent, ground, "light_02", radius * 2.3, Color(color.lerp(Color.WHITE, 0.25), color.a), time, true, true)
-			bloom(parent, ground, "twirl_03", radius * 1.6, Color(color, 0.6 * color.a), time, true, true, 0.3, -1.6)
+			bloom(parent, ground, "light_02", radius * 2.1, Color(color.lerp(Color.WHITE, 0.2), a), time, true, true)
 		"gold":
-			bloom(parent, ground, "circle_03", radius * 2.1, Color(color.lerp(Color.WHITE, 0.3), color.a), time, true, true)
-			_ring_burst(parent, ground, radius, "star_04", color.lerp(Color.WHITE, 0.4), true)
+			bloom(parent, ground, "circle_03", radius * 2.0, Color(color.lerp(Color.WHITE, 0.2), a), time, true, true)
 		_:
-			bloom(parent, ground, "smoke_10", radius * 2.5, Color(color.lerp(Color(0.8, 0.76, 0.7), 0.5), 0.6 * color.a), time + 0.1)
+			bloom(parent, ground, "smoke_10", radius * 2.2, Color(color.lerp(Color(0.8, 0.76, 0.7), 0.5), 0.45 * color.a), time)
 
 ## Кілька частинок, що розлітаються колом від центру хвилі.
 static func _ring_burst(parent: Node, position: Vector3, radius: float, name: String, color: Color, additive: bool) -> void:
@@ -431,7 +427,7 @@ static func whirl(host: Node3D, radius: float, color: Color, time: float) -> voi
 	var holder := Node3D.new()
 	host.add_child(holder)
 	holder.position = Vector3.ZERO
-	var layers := [["twirl_02", 0.2, 2.3, 0.0, 0.85], ["twirl_03", 0.9, 2.0, 2.1, 1.0], ["twirl_02", 1.5, 1.4, 4.2, 0.7]]
+	var layers := [["twirl_03", 0.8, 2.0, 0.0, 0.55]]
 	var total := time + 0.2
 	for layer: Array in layers:
 		var tint := color.lerp(Color.WHITE, 0.35)
@@ -466,11 +462,8 @@ static func whirl(host: Node3D, radius: float, color: Color, time: float) -> voi
 	streaks.angle_max = 0.0
 	streaks.position.y = 0.9
 	holder.add_child(streaks)
-	streaks.emitting = true
-	var world := host.get_parent()
-	if world != null:
-		bloom(world, host.global_position + Vector3.UP * 0.06, "smoke_10", radius * 2.4,
-			Color(0.8, 0.78, 0.72, 0.45), total, true, false, 0.4, -1.4)
+	streaks.emitting = false
+	streaks.queue_free()
 
 
 # --- снаряди й промені ---
