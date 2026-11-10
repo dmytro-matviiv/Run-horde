@@ -40,6 +40,8 @@ signal health_changed(current: float, maximum: float)
 signal hit_landed(amount: float, crit: bool)
 ## Ворожий удар прилетів у перші миті перекату — ухилився в останню мить.
 signal perfect_dodge
+## Почалась ланка комбо (index від 0) — для позначок серії на екрані.
+signal combo_step(index: int, total: int)
 
 const WALK_SPEED := 2.6
 const RUN_SPEED := 4.6
@@ -182,6 +184,69 @@ const STYLE_COMBOS := {
 	],
 }
 
+## Свої комбо героя (анімації — WardenMoves, зібрані кодом): п'ять ланок
+## замість трьох, кожна — свій рух і свої іскри ("spark", див.
+## CombatVfx.hit_spark); п'ята — фініш ("finisher": довша зупинка кадру й
+## трус). Стилі, яких тут немає, б'ють за STYLE_COMBOS.
+const HERO_COMBOS := {
+	&"blade_warden": {
+		# Меч: косий згори, зворотний знизу, широкий мах, оберт, стрибок-фініш.
+		"sword": [
+			{"shot": "SlashShot", "anim": "Combo_1", "anim_speed": 1.3, "damage": 0.9, "reach": 2.9, "arc": 150.0,
+				"hit_time": 0.16, "recover": 0.34, "pause": 0.05, "knockback": 0.6, "reverse": true, "tilt": 0.35,
+				"heavy": false, "spark": "slash"},
+			{"shot": "SlashFastShot", "anim": "Combo_2", "anim_speed": 1.3, "damage": 1.0, "reach": 2.9, "arc": 150.0,
+				"hit_time": 0.15, "recover": 0.32, "pause": 0.05, "knockback": 0.6, "reverse": false, "tilt": -0.35,
+				"heavy": false, "spark": "rising"},
+			{"shot": "KickShot", "anim": "Combo_3", "anim_speed": 1.2, "damage": 1.2, "reach": 3.1, "arc": 200.0,
+				"hit_time": 0.19, "recover": 0.38, "pause": 0.07, "knockback": 1.4, "reverse": true, "tilt": 0.0,
+				"heavy": false, "spark": "sweep"},
+			{"shot": "Combo4Shot", "anim": "Combo_4", "anim_speed": 1.0, "damage": 1.3, "reach": 3.0, "arc": 360.0,
+				"shape": "circle", "spin": 0.34, "hit_time": 0.24, "recover": 0.46, "pause": 0.1, "knockback": 2.0,
+				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "spin"},
+			{"shot": "Combo5Shot", "anim": "Combo_5", "anim_speed": 1.15, "damage": 2.4, "reach": 3.0, "arc": 360.0,
+				"shape": "circle", "hit_time": 0.39, "recover": 0.68, "pause": 0.45, "knockback": 4.0, "stun": 0.7,
+				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
+		],
+		# Кинджали: ті самі рухи швидше, кожен удар вибухає довкола цілі.
+		"daggers": [
+			{"shot": "SlashShot", "anim": "Combo_1", "anim_speed": 1.6, "damage": 0.75, "reach": 2.6, "arc": 120.0,
+				"burst": [1.6, 0.4], "hit_time": 0.13, "recover": 0.28, "pause": 0.04, "knockback": 0.3,
+				"reverse": true, "tilt": 0.35, "heavy": false, "spark": "slash"},
+			{"shot": "SlashFastShot", "anim": "Combo_2", "anim_speed": 1.6, "damage": 0.75, "reach": 2.6, "arc": 120.0,
+				"burst": [1.6, 0.4], "hit_time": 0.12, "recover": 0.27, "pause": 0.04, "knockback": 0.3,
+				"reverse": false, "tilt": -0.35, "heavy": false, "spark": "rising"},
+			{"shot": "KickShot", "anim": "Combo_3", "anim_speed": 1.45, "damage": 0.85, "reach": 2.8, "arc": 180.0,
+				"burst": [1.8, 0.45], "hit_time": 0.15, "recover": 0.32, "pause": 0.05, "knockback": 0.8,
+				"reverse": true, "tilt": 0.0, "heavy": false, "spark": "sweep"},
+			{"shot": "Combo4Shot", "anim": "Combo_4", "anim_speed": 1.2, "damage": 0.7, "reach": 2.8, "arc": 360.0,
+				"shape": "circle", "spin": 0.3, "hits": [0.3], "hit_time": 0.2, "recover": 0.4, "pause": 0.08,
+				"knockback": 1.6, "reverse": false, "tilt": 0.0, "heavy": true, "spark": "spin"},
+			{"shot": "Combo5Shot", "anim": "Combo_5", "anim_speed": 1.3, "damage": 1.9, "reach": 2.8, "arc": 360.0,
+				"shape": "circle", "burst": [2.4, 0.6], "hit_time": 0.35, "recover": 0.6, "pause": 0.42, "knockback": 3.0,
+				"stun": 0.5, "reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
+		],
+		# Парні клинки: ті самі рухи, і кожен замах б'є двічі.
+		"twin_blades": [
+			{"shot": "SlashShot", "anim": "Combo_1", "anim_speed": 1.4, "damage": 0.65, "reach": 2.8, "arc": 170.0,
+				"hits": [0.24], "hit_time": 0.14, "recover": 0.32, "pause": 0.05, "knockback": 0.4,
+				"reverse": true, "tilt": 0.35, "heavy": false, "spark": "slash"},
+			{"shot": "SlashFastShot", "anim": "Combo_2", "anim_speed": 1.4, "damage": 0.65, "reach": 2.8, "arc": 170.0,
+				"hits": [0.22], "hit_time": 0.13, "recover": 0.3, "pause": 0.05, "knockback": 0.4,
+				"reverse": false, "tilt": -0.35, "heavy": false, "spark": "rising"},
+			{"shot": "KickShot", "anim": "Combo_3", "anim_speed": 1.3, "damage": 0.8, "reach": 3.0, "arc": 200.0,
+				"hits": [0.27], "hit_time": 0.17, "recover": 0.36, "pause": 0.06, "knockback": 1.0,
+				"reverse": true, "tilt": 0.0, "heavy": false, "spark": "sweep"},
+			{"shot": "Combo4Shot", "anim": "Combo_4", "anim_speed": 1.0, "damage": 0.85, "reach": 2.9, "arc": 360.0,
+				"shape": "circle", "spin": 0.36, "hits": [0.34], "hit_time": 0.22, "recover": 0.46, "pause": 0.1,
+				"knockback": 1.8, "reverse": false, "tilt": 0.0, "heavy": true, "spark": "spin"},
+			{"shot": "Combo5Shot", "anim": "Combo_5", "anim_speed": 1.15, "damage": 1.9, "reach": 3.0, "arc": 360.0,
+				"shape": "circle", "hit_time": 0.39, "recover": 0.68, "pause": 0.45, "knockback": 3.5, "stun": 0.6,
+				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
+		],
+	},
+}
+
 ## Як чаклує герой залежно від зброї — жодних помахів, як мечем:
 ##   посохи (Чарівниця) — то штовхає посох уперед, то наводить на ворога;
 ##   книга рун — тримає книгу, а руну посилає вільною рукою;
@@ -198,8 +263,11 @@ const CAST_ANIM_SPEEDS := {
 }
 
 ## Три слоти анімації удару в дереві анімацій і їхні регулятори швидкості.
-const SLOTS := ["SlashShot", "SlashFastShot", "KickShot"]
-const SLOT_SCALES := ["SlashScale", "SlashFastScale", "KickScale"]
+const SLOTS := ["SlashShot", "SlashFastShot", "KickShot", "Combo4Shot", "Combo5Shot"]
+const SLOT_SCALES := ["SlashScale", "SlashFastScale", "KickScale", "Combo4Scale", "Combo5Scale"]
+## Кадр анімації Dash_Strike, коли клинок б'є (WardenMoves) — під нього
+## підганяємо швидкість, щоб удар збігся з кінцем ривка.
+const DASH_STRIKE_AT := 0.46
 ## Вибух довкола цілі (кинджали, тесак).
 const BURST_COLOR := Color(1.0, 0.6, 0.25)
 
@@ -526,6 +594,9 @@ static func _ensure_input_actions() -> void:
 func _build_animation_tree() -> void:
 	var player: AnimationPlayer = model.find_children("*", "AnimationPlayer", true, false)[0]
 	animation_tree.anim_player = animation_tree.get_path_to(player)
+	# Удари комбо й ривок Клинкової Вартової — зібрані кодом (WardenMoves).
+	if hero_def != null and HERO_COMBOS.has(hero_def.id):
+		ProceduralAnims.build(player, _anim("Idle_Sword"), WardenMoves.SPECS, _anim(""))
 	_make_looping(player, ["Idle", "Walk", "Run", "Run_Back", "Run_Left", "Run_Right"])
 	var slash_name := _anim("Sword_Slash")
 	if not player.has_animation(slash_name):
@@ -561,6 +632,16 @@ func _build_animation_tree() -> void:
 		["Kick_Right", "Punch_Right", "Sword_Slash"]), Vector2(0, 600))
 	tree.add_node(&"KickScale", AnimationNodeTimeScale.new(), Vector2(200, 600))
 	tree.add_node(&"KickShot", _one_shot(0.06, 0.2), Vector2(800, 0))
+	# Четверта й п'ята ланки (свої комбо героя) і ривок люті.
+	tree.add_node(&"Combo4Anim", _animation_node(slots[3], ["Sword_Slash"]), Vector2(0, 1400))
+	tree.add_node(&"Combo4Scale", AnimationNodeTimeScale.new(), Vector2(200, 1400))
+	tree.add_node(&"Combo4Shot", _one_shot(0.05, 0.16), Vector2(850, 0))
+	tree.add_node(&"Combo5Anim", _animation_node(slots[4], ["Sword_Slash"]), Vector2(0, 1600))
+	tree.add_node(&"Combo5Scale", AnimationNodeTimeScale.new(), Vector2(200, 1600))
+	tree.add_node(&"Combo5Shot", _one_shot(0.05, 0.2), Vector2(900, 0))
+	tree.add_node(&"DashAnim", _animation_node("Dash_Strike", ["Sword_Slash"]), Vector2(0, 1800))
+	tree.add_node(&"DashScale", AnimationNodeTimeScale.new(), Vector2(200, 1800))
+	tree.add_node(&"DashShot", _one_shot(0.05, 0.18), Vector2(950, 0))
 	tree.add_node(&"RollAnim", _animation_node("Roll", ["Run", "Walk"]), Vector2(0, 800))
 	tree.add_node(&"RollScale", AnimationNodeTimeScale.new(), Vector2(200, 800))
 	tree.add_node(&"RollShot", _one_shot(0.04, 0.12), Vector2(1000, 0))
@@ -582,7 +663,16 @@ func _build_animation_tree() -> void:
 	tree.connect_node(&"KickShot", 0, &"SlashFastShot")
 	tree.connect_node(&"KickShot", 1, &"KickScale")
 	tree.connect_node(&"RollScale", 0, &"RollAnim")
-	tree.connect_node(&"RollShot", 0, &"KickShot")
+	tree.connect_node(&"Combo4Scale", 0, &"Combo4Anim")
+	tree.connect_node(&"Combo4Shot", 0, &"KickShot")
+	tree.connect_node(&"Combo4Shot", 1, &"Combo4Scale")
+	tree.connect_node(&"Combo5Scale", 0, &"Combo5Anim")
+	tree.connect_node(&"Combo5Shot", 0, &"Combo4Shot")
+	tree.connect_node(&"Combo5Shot", 1, &"Combo5Scale")
+	tree.connect_node(&"DashScale", 0, &"DashAnim")
+	tree.connect_node(&"DashShot", 0, &"Combo5Shot")
+	tree.connect_node(&"DashShot", 1, &"DashScale")
+	tree.connect_node(&"RollShot", 0, &"DashShot")
 	tree.connect_node(&"RollShot", 1, &"RollScale")
 	tree.connect_node(&"HitShot", 0, &"RollShot")
 	tree.connect_node(&"HitShot", 1, &"HitAnim")
@@ -657,9 +747,10 @@ func _make_looping(player: AnimationPlayer, names: Array) -> void:
 
 func _apply_attack_speed() -> void:
 	var speed := attack_speed()
-	var speeds := [1.15, 1.45, 1.1]
+	var speeds := [1.15, 1.45, 1.1, 1.0, 1.0]
 	if is_caster():
-		speeds = CAST_ANIM_SPEEDS.get(weapon_def.spell, CAST_ANIM_SPEEDS["staff"])
+		speeds = (CAST_ANIM_SPEEDS.get(weapon_def.spell, CAST_ANIM_SPEEDS["staff"]) as Array).duplicate()
+		speeds.append_array([1.0, 1.0])
 	elif not is_ranged():
 		for step: Dictionary in _combo():
 			speeds[SLOTS.find(step.shot)] = float(step.get("anim_speed", 1.0))
@@ -669,16 +760,19 @@ func _apply_attack_speed() -> void:
 ## Комбо для зброї в руках — за її стилем (невідомий стиль б'є як меч).
 func _combo() -> Array:
 	var style: String = weapon_def.style_3d if weapon_def != null else "sword"
+	var own: Dictionary = HERO_COMBOS.get(hero_def.id if hero_def != null else &"", {})
+	if own.has(style):
+		return own[style]
 	return STYLE_COMBOS.get(style, STYLE_COMBOS["sword"])
 
 ## Анімації трьох слотів удару.
 func _attack_slot_animations() -> Array:
 	if is_ranged():
 		# Для стрільця третій слот — рух перезарядки.
-		return ["Gun_Shoot", "Gun_Shoot", "Interact"]
+		return ["Gun_Shoot", "Gun_Shoot", "Interact", "Gun_Shoot", "Gun_Shoot"]
 	if is_caster():
-		return CAST_ANIMS.get(weapon_def.spell, CAST_ANIMS["staff"])
-	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right"]
+		return (CAST_ANIMS.get(weapon_def.spell, CAST_ANIMS["staff"]) as Array) + ["Interact", "Interact"]
+	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right", "Sword_Slash", "Sword_Slash"]
 	for step: Dictionary in _combo():
 		result[SLOTS.find(step.shot)] = String(step.get("anim", "Sword_Slash"))
 	return result
@@ -727,7 +821,7 @@ func _fire(shot: String, upper_body_only: bool = false) -> void:
 	animation_tree.set("parameters/%s/request" % shot, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 
 func _abort_attacks() -> void:
-	for shot in ["SlashShot", "SlashFastShot", "KickShot"]:
+	for shot in SLOTS:
 		animation_tree.set("parameters/%s/request" % shot, AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
 
 # --- керування ---
@@ -1006,6 +1100,23 @@ func enemies_near(position: Vector3, radius: float) -> Array[Enemy3D]:
 func spin_model(time: float) -> void:
 	_spin_left = time
 	_spin_total = maxf(time, 0.01)
+
+## Ривок люті: анімація ривка з ударом у кінці; strike_in — за скільки
+## секунд ривок долетить (анімацію підганяємо, щоб удар збігся).
+func play_dash_strike(strike_in: float) -> void:
+	_attack_step = -1
+	_attack_queued = false
+	_abort_attacks()
+	animation_tree.set("parameters/DashScale/scale", clampf(DASH_STRIKE_AT / maxf(strike_in, 0.05), 0.6, 3.0))
+	_fire("DashShot")
+
+## Одразу повернутись у бік direction (ривок у ціль).
+func face_direction(direction: Vector3) -> void:
+	var flat := Vector3(direction.x, 0.0, direction.z)
+	if flat.length() < 0.01:
+		return
+	_facing_angle = atan2(flat.x, flat.z)
+	model.rotation.y = _facing_angle
 
 ## Ривок у заданий бік — ним користується "Ривок Люті".
 func dash(direction: Vector3, speed: float, time: float) -> void:
@@ -1368,6 +1479,7 @@ func _start_attack() -> void:
 	var step: Dictionary = combo[step_index]
 	_attack_step = step_index
 	_combo_index = (step_index + 1) % combo.size()
+	combo_step.emit(step_index, combo.size())
 	_attack_time = 0.0
 	_attack_hit_done = false
 	_attack_vfx_done = false
@@ -1484,7 +1596,11 @@ func _apply_hit(step: Dictionary) -> void:
 					continue
 		if not _can_see(enemy):
 			continue
-		deal_damage(enemy, step.damage, offset.normalized() * knockback, step.heavy)
+		var crit := deal_damage(enemy, step.damage, offset.normalized() * knockback, step.heavy)
+		# Іскри — свої для кожної ланки (не більше чотирьох ворогів за удар).
+		if hit.size() < 4:
+			CombatVfx.hit_spark(get_parent(), enemy.global_position + Vector3.UP * enemy.target_height * 0.55,
+				offset, _spark_kind(step), crit)
 		if step.has("stun"):
 			enemy.stun(float(step.stun))
 		hit.append(enemy)
@@ -1492,7 +1608,20 @@ func _apply_hit(step: Dictionary) -> void:
 		return
 	if step.has("burst"):
 		_burst(step, hit)
-	_feel_hit(step.heavy)
+	if step.get("finisher", false):
+		# Фініш серії: довша зупинка кадру й відчутний трус.
+		CombatVfx.hitstop(get_tree(), 0.09)
+		_shake_camera(0.16)
+	else:
+		_feel_hit(step.heavy)
+
+## Які іскри від цієї ланки: свої ("spark") або за формою удару.
+func _spark_kind(step: Dictionary) -> String:
+	if step.has("spark"):
+		return String(step.spark)
+	if String(step.get("shape", "arc")) == "circle":
+		return "spin"
+	return "sweep" if step.heavy else "slash"
 
 ## Вибух довкола цілі (кинджали, завершальний удар тесака): зачіпає
 ## сусідів тієї, в кого влучили, — невеликою часткою шкоди.
@@ -1524,10 +1653,11 @@ func _tick_skills(delta: float) -> void:
 ## завіса й критичні удари.
 ## source — хто вдарив: &"weapon" (зброя), id здібності чи пасивки. Для
 ## екрана підсумків данжу (damage_by_source).
+## Повертає, чи був удар критичним.
 func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: bool,
-		source: StringName = &"weapon") -> void:
+		source: StringName = &"weapon") -> bool:
 	if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive():
-		return
+		return false
 	var hp_before := enemy.current_hp
 	var crit := randf() < _crit_chance or _perfect_crit_left > 0.0
 	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
@@ -1550,10 +1680,11 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 	if _lifesteal > 0.0:
 		heal(amount * _lifesteal)
 	if passive == null:
-		return
+		return crit
 	passive.on_hit(self, enemy, amount, heavy)
 	if not enemy.is_alive():
 		passive.on_kill(self, enemy)
+	return crit
 
 ## Лише сильний удар (ногою) на мить пригальмовує гру й ледь трусить
 ## камеру. Звичайні помахи — без цього: на кожному ударі це

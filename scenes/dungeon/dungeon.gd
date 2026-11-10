@@ -293,6 +293,7 @@ func _setup_hud(title: String) -> void:
 	hud.add_child(_combo)
 	_combo.tier_reached.connect(_on_combo_tier)
 	player.hit_landed.connect(func(_amount: float, _crit: bool) -> void: _combo.add_hit())
+	player.combo_step.connect(_combo.set_combo_step)
 	player.perfect_dodge.connect(_on_perfect_dodge)
 	if not OS.has_feature("mobile"):
 		_add_keyboard_hint()
