@@ -645,7 +645,7 @@ func _build_animation_tree() -> void:
 	_anim_overrides = WeaponAnims.install(player, hero_id, style)
 	_dash_strike_at = float(WeaponAnims.get_set(hero_id, style).get("dash_strike_at", DASH_STRIKE_AT))
 	# Удари комбо й ривок Клинкової Вартової — зібрані кодом (WardenMoves).
-	if hero_def != null and HERO_COMBOS.has(hero_def.id):
+	if hero_def != null and hero_def.id == &"blade_warden":
 		ProceduralAnims.build(player, _anim("Idle_Sword"), WardenMoves.SPECS, _anim(""))
 	_make_looping(player, ["Idle", "Walk", "Run", "Run_Back", "Run_Left", "Run_Right"])
 	var slash_name := _anim("Sword_Slash")
@@ -819,7 +819,8 @@ func _apply_attack_speed() -> void:
 ## Комбо для зброї в руках — за її стилем (невідомий стиль б'є як меч).
 func _combo() -> Array:
 	var style: String = weapon_def.style_3d if weapon_def != null else "sword"
-	var own: Dictionary = HERO_COMBOS.get(hero_def.id if hero_def != null else &"", {})
+	var hero_id: StringName = hero_def.id if hero_def != null else &""
+	var own: Dictionary = HERO_COMBOS.get(hero_id, {})
 	if own.has(style):
 		return own[style]
 	return STYLE_COMBOS.get(style, STYLE_COMBOS["sword"])
@@ -1626,7 +1627,9 @@ func _attack_vfx(step: Dictionary, reverse: bool) -> void:
 			CombatVfx.slash(get_parent(), origin, _aim_angle(), _reach(step) + 0.2, 359.0, color,
 				reverse, 0.0, 0.34, width, scar)
 		"line":
-			CombatVfx.thrust(get_parent(), origin, _aim_angle(), _reach(step) + 0.3, color)
+			# Тризуб лишає три вітрові смуги вістрів, решта держакової — одну.
+			var prongs := 3 if weapon_def != null and weapon_def.id == &"harpoon_glaive" else 1
+			CombatVfx.thrust(get_parent(), origin, _aim_angle(), _reach(step) + 0.3, color, prongs)
 		_:
 			CombatVfx.slash(get_parent(), origin, _aim_angle(), _reach(step) + 0.2, _arc(step), color,
 				reverse, float(step.get("tilt", 0.0)), 0.26 if step.heavy else 0.22, width, scar)

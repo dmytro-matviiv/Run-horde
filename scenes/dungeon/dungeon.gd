@@ -1360,6 +1360,7 @@ func _warm_up_rendering() -> void:
 	batcher.flush(holder)
 
 	CombatVfx.slash(holder, center, 0.0, 2.0, 150.0, Color(0.72, 0.87, 1.0), false, 0.0, 0.5)
+	CombatVfx.thrust(holder, center, 0.0, 2.0, Color(0.72, 0.87, 1.0))
 	CombatVfx.impact(holder, center, Color(1.0, 0.65, 0.25), true)
 	CombatVfx.damage_number(holder, center, 12.0, true)
 	CombatVfx.shockwave(holder, center, 1.5, Color(0.35, 0.95, 1.0), 0.5)

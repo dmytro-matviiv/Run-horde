@@ -13,6 +13,9 @@ class_name WeaponAnims
 
 const ROOT := {
 	&"blade_warden": "res://assets/animations/warden/",
+	&"void_assassin": "res://assets/animations/void_assassin/",
+	&"ember_priestess": "res://assets/animations/ember_priestess/",
+	&"runewielder": "res://assets/animations/runewielder/",
 }
 
 ## Біг убік і назад з однорукою зброєю — спільний для меча, сокири, тесака,

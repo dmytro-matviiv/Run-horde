@@ -25,6 +25,64 @@ class_name CombatVfx
 ##   краю (0) до кромки леза (1).
 ## Три тони: біло-гаряча тонка кромка, кольорове тіло, темніше коріння
 ## всередину дуги; найяскравіше — біля голови.
+## Укол тризубом/списом: вітрові смуги вістрів (prongs: 1 — спис, 3 —
+## тризуб) летять уздовж удару від героя до цілі. Біля героя смуги сходяться
+## в одну (держак), до кінця розходяться на вістря; голова — яскравий наконечник.
+## UV.y — від героя (0) до кінця удару (1), UV.x — поперек (0..1).
+const THRUST_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+
+uniform vec4 color : source_color = vec4(0.75, 0.88, 1.0, 1.0);
+uniform float progress = 0.0;
+uniform float prongs = 3.0;
+uniform float seed = 0.0;
+
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+void fragment() {
+	float u = UV.y;
+	float x = UV.x * 2.0 - 1.0;
+	float behind = progress - u;
+	float shown = smoothstep(-0.02, 0.04, behind);
+	// Розходження вістрів: біля героя — одна смуга, далі — три.
+	float spread = smoothstep(0.2, 0.9, u) * 0.62;
+	float centre = exp(-pow(x / 0.11, 2.0));
+	float sides = 0.0;
+	if (prongs > 1.5) {
+		sides = exp(-pow((x - spread) / 0.075, 2.0)) + exp(-pow((x + spread) / 0.075, 2.0));
+	}
+	// М'яке тло — повітря, яке розтинає удар (ширшає до вістрів).
+	float body = exp(-pow(x / (0.2 + spread), 2.0)) * 0.12;
+	float lines = centre + sides * 0.85 + body;
+	// Вітер: витягнутий шум уздовж удару, хвіст розсипається.
+	float streak = noise(vec2(u * 3.0 - progress * 3.0 + seed, x * 6.0));
+	float life = clamp((progress - 1.0) / 0.45, 0.0, 1.0);
+	float erode = clamp(behind * 0.45 + life * 1.2 - 0.25, 0.0, 1.2);
+	float mask = smoothstep(erode - 0.2, erode + 0.2, streak * 0.6 + 0.4);
+	// Звуження до держака і м'який вхід біля героя.
+	float base = smoothstep(0.0, 0.18, u);
+	float head = exp(-max(behind, 0.0) * 10.0) * shown;
+	vec3 rgb = mix(color.rgb, vec3(1.0), clamp(head * 0.8 + centre * 0.25, 0.0, 1.0));
+	// Наконечник: яскравий спалах там, де зараз вістря.
+	float flare = exp(-pow(behind / 0.07, 2.0)) * exp(-pow(x / 0.3, 2.0)) * step(progress, 1.05);
+	rgb = mix(rgb, vec3(1.0), clamp(flare, 0.0, 1.0) * 0.6);
+	float a = shown * mask * base * (lines * (0.9 + head * 1.2)) + flare * 0.9 * base;
+	ALBEDO = rgb;
+	ALPHA = clamp(a, 0.0, 1.0);
+}
+"""
+
 const SLASH_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
@@ -270,7 +328,8 @@ static var _flare_mesh: QuadMesh
 static var _flare_materials: Dictionary = {}
 static var _ring_mesh: PlaneMesh
 static var _line_materials: Dictionary = {}
-static var _thrust_mesh: BoxMesh
+static var _thrust_mesh: QuadMesh
+static var _thrust_materials: Dictionary = {}
 static var _bolt_mesh: BoxMesh
 static var _beam_mesh: CylinderMesh
 static var _glow_materials: Dictionary = {}
@@ -401,23 +460,38 @@ static func _get_slash_mesh(radius: float, arc_deg: float, width: float = 1.0) -
 
 ## Укол списом чи тризубом: яскрава смуга вистрілює вперед на довжину
 ## удару й гасне — видно, що б'є вузько й далеко.
-static func thrust(parent: Node, origin: Vector3, yaw: float, length: float, color: Color) -> void:
+static func thrust(parent: Node, origin: Vector3, yaw: float, length: float, color: Color,
+		prongs: int = 3, duration: float = 0.3) -> void:
 	var pivot := Node3D.new()
 	parent.add_child(pivot)
 	pivot.global_position = origin
 	pivot.global_rotation = Vector3(0.0, yaw, 0.0)
-	var beam := MeshInstance3D.new()
-	beam.mesh = _get_thrust_mesh()
-	beam.material_override = get_glow_material(color)
-	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# Смуга лежить від героя вперед (меш — від 0 до 1 по Z).
-	beam.position = Vector3(0, 0, 0.5)
-	pivot.add_child(beam)
-	pivot.scale = Vector3(1.0, 1.0, 0.2)
-	var tween := pivot.create_tween()
-	tween.tween_property(pivot, "scale", Vector3(1.0, 1.0, length), 0.08)
-	tween.tween_property(beam, "transparency", 1.0, 0.16)
+	var streak := MeshInstance3D.new()
+	streak.mesh = _get_thrust_mesh()
+	streak.material_override = _get_material(_thrust_materials, THRUST_SHADER, color)
+	streak.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Площина лежить горизонтально від героя вперед (меш — від 0 до 1 по Z).
+	streak.rotation = Vector3(-PI * 0.5, 0.0, 0.0)
+	streak.position = Vector3(0, 0, length * 0.5)
+	streak.scale = Vector3(1.0, length, 1.0)
+	pivot.add_child(streak)
+	CombatVfx.set_param(streak, &"prongs", float(prongs))
+	CombatVfx.set_param(streak, &"seed", randf() * 50.0)
+	CombatVfx.set_param(streak, &"progress", 0.0)
+	var tween := streak.create_tween()
+	var set_progress := func(value: float) -> void:
+		CombatVfx.set_param(streak, &"progress", value)
+	tween.tween_method(set_progress, 0.0, 1.0, duration * 0.4).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tween.tween_method(set_progress, 1.0, 1.45, duration * 0.6)
 	tween.tween_callback(pivot.queue_free)
+	# Наконечник долітає — кілька іскор уперед.
+	var forward := Vector3(sin(yaw), 0.0, cos(yaw))
+	var tip := origin + forward * length
+	var holder: WeakRef = weakref(parent)
+	pivot.get_tree().create_timer(duration * 0.35, false).timeout.connect(func() -> void:
+		var target: Node = holder.get_ref()
+		if target != null:
+			_tip_sparks(target, tip, forward, color))
 
 ## Світний матеріал без освітлення (снаряди чар, укол) — один на колір.
 static func get_glow_material(color: Color) -> StandardMaterial3D:
@@ -432,10 +506,11 @@ static func get_glow_material(color: Color) -> StandardMaterial3D:
 	_glow_materials[key] = material
 	return material
 
-static func _get_thrust_mesh() -> BoxMesh:
+static func _get_thrust_mesh() -> QuadMesh:
 	if _thrust_mesh == null:
-		_thrust_mesh = BoxMesh.new()
-		_thrust_mesh.size = Vector3(0.16, 0.06, 1.0)
+		_thrust_mesh = QuadMesh.new()
+		# Ширина ~ розмах вістрів тризуба; довжину задає масштаб.
+		_thrust_mesh.size = Vector2(1.4, 1.0)
 	return _thrust_mesh
 
 # --- чари ---
