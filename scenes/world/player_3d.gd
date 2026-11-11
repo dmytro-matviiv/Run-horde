@@ -206,40 +206,81 @@ const HERO_COMBOS := {
 				"hit_time": 0.35, "recover": 0.66, "pause": 0.45, "knockback": 3.5, "stun": 0.6,
 				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
 		],
-		# Кинджали: ті самі рухи швидше, кожен удар вибухає довкола цілі.
-		"daggers": [
-			{"shot": "SlashShot", "anim": "Combo_1", "anim_speed": 1.6, "damage": 0.75, "reach": 2.6, "arc": 120.0,
-				"burst": [1.6, 0.4], "hit_time": 0.13, "recover": 0.28, "pause": 0.04, "knockback": 0.3,
-				"reverse": true, "tilt": 0.35, "heavy": false, "spark": "slash"},
-			{"shot": "SlashFastShot", "anim": "Combo_2", "anim_speed": 1.6, "damage": 0.75, "reach": 2.6, "arc": 120.0,
-				"burst": [1.6, 0.4], "hit_time": 0.12, "recover": 0.27, "pause": 0.04, "knockback": 0.3,
-				"reverse": false, "tilt": -0.35, "heavy": false, "spark": "rising"},
-			{"shot": "KickShot", "anim": "Combo_3", "anim_speed": 1.45, "damage": 0.85, "reach": 2.8, "arc": 180.0,
-				"burst": [1.8, 0.45], "hit_time": 0.15, "recover": 0.32, "pause": 0.05, "knockback": 0.8,
-				"reverse": true, "tilt": 0.0, "heavy": false, "spark": "sweep"},
-			{"shot": "Combo4Shot", "anim": "Combo_4", "anim_speed": 1.2, "damage": 0.7, "reach": 2.8, "arc": 360.0,
-				"shape": "circle", "spin": 0.3, "hits": [0.3], "hit_time": 0.2, "recover": 0.4, "pause": 0.08,
-				"knockback": 1.6, "reverse": false, "tilt": 0.0, "heavy": true, "spark": "spin"},
-			{"shot": "Combo5Shot", "anim": "Combo_5", "anim_speed": 1.3, "damage": 1.9, "reach": 2.8, "arc": 360.0,
-				"shape": "circle", "burst": [2.4, 0.6], "hit_time": 0.35, "recover": 0.6, "pause": 0.42, "knockback": 3.0,
-				"stun": 0.5, "reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
+		# Сокира (справжні анімації): горизонтальний мах, оберт на 360° (оберт
+		# у самому кліпі) і удар згори обома руками об землю.
+		"axe": [
+			{"shot": "SlashShot", "anim": "W_attack_1", "anim_speed": 1.5, "damage": 1.0, "reach": 2.9, "arc": 160.0,
+				"hit_time": 0.33, "recover": 0.52, "pause": 0.06, "knockback": 1.2, "reverse": false, "tilt": 0.2,
+				"heavy": true, "spark": "sweep"},
+			{"shot": "SlashFastShot", "anim": "W_attack_2", "anim_speed": 1.5, "damage": 1.15, "reach": 2.8, "arc": 360.0,
+				"shape": "circle", "hit_time": 0.4, "recover": 0.72, "pause": 0.08, "knockback": 1.6, "reverse": true,
+				"tilt": 0.0, "heavy": true, "spark": "spin"},
+			{"shot": "KickShot", "anim": "W_attack_3", "anim_speed": 1.4, "damage": 2.0, "reach": 3.0, "arc": 130.0,
+				"hit_time": 0.54, "recover": 0.88, "pause": 0.5, "knockback": 3.6, "stun": 0.5, "reverse": false,
+				"tilt": 1.3, "heavy": true, "spark": "finisher", "finisher": true},
 		],
-		# Парні клинки: ті самі рухи, і кожен замах б'є двічі.
+		# Тесак: три важкі рублячі удари без обертів, що оглушають; третій —
+		# згори, з ударом об землю.
+		"cleaver": [
+			{"shot": "SlashShot", "anim": "W_attack_1", "anim_speed": 1.3, "damage": 1.0, "reach": 2.9, "arc": 120.0,
+				"stun": 0.4, "hit_time": 0.27, "recover": 0.56, "pause": 0.08, "knockback": 1.2, "reverse": false,
+				"tilt": 0.3, "heavy": true, "spark": "slash"},
+			{"shot": "SlashFastShot", "anim": "W_attack_2", "anim_speed": 1.3, "damage": 1.1, "reach": 2.9, "arc": 120.0,
+				"stun": 0.4, "hit_time": 0.35, "recover": 0.56, "pause": 0.08, "knockback": 1.2, "reverse": true,
+				"tilt": -0.3, "heavy": true, "spark": "rising"},
+			{"shot": "KickShot", "anim": "W_attack_3", "anim_speed": 1.25, "damage": 1.9, "reach": 3.0, "arc": 130.0,
+				"stun": 1.0, "burst": [2.0, 0.5], "hit_time": 0.48, "recover": 0.82, "pause": 0.5, "knockback": 2.8,
+				"reverse": false, "tilt": 1.3, "heavy": true, "spark": "finisher", "finisher": true},
+		],
+		# Глефа (дворучна): укол прошиває ряд, оберт із замахом (оберт у
+		# кліпі), удар згори.
+		"glaive": [
+			{"shot": "SlashShot", "anim": "W_attack_1", "anim_speed": 1.4, "damage": 1.1, "reach": 3.4, "arc": 30.0,
+				"shape": "line", "width": 1.3, "hit_time": 0.3, "recover": 0.55, "pause": 0.06, "knockback": 1.2,
+				"reverse": false, "tilt": 0.0, "heavy": false, "spark": "slash"},
+			{"shot": "SlashFastShot", "anim": "W_attack_2", "anim_speed": 1.4, "damage": 1.2, "reach": 3.2, "arc": 360.0,
+				"shape": "circle", "hit_time": 0.43, "recover": 0.76, "pause": 0.08, "knockback": 1.8, "reverse": false,
+				"tilt": 0.0, "heavy": true, "spark": "spin"},
+			{"shot": "KickShot", "anim": "W_attack_3", "anim_speed": 1.35, "damage": 1.9, "reach": 3.4, "arc": 120.0,
+				"hit_time": 0.33, "recover": 0.72, "pause": 0.45, "knockback": 3.4, "stun": 0.5, "reverse": false,
+				"tilt": 1.3, "heavy": true, "spark": "finisher", "finisher": true},
+		],
+		# Кинджали (справжні анімації): уколи лівою, правою, лівою, зворотним
+		# хватом і подвійний укол-фініш. Кожен укол вибухає довкола цілі.
+		"daggers": [
+			{"shot": "SlashShot", "anim": "W_attack_1", "anim_speed": 1.5, "damage": 0.75, "reach": 2.6, "arc": 100.0,
+				"burst": [1.6, 0.4], "hit_time": 0.17, "recover": 0.31, "pause": 0.03, "knockback": 0.3,
+				"reverse": true, "tilt": 0.1, "heavy": false, "spark": "slash"},
+			{"shot": "SlashFastShot", "anim": "W_attack_2", "anim_speed": 1.5, "damage": 0.75, "reach": 2.6, "arc": 100.0,
+				"burst": [1.6, 0.4], "hit_time": 0.2, "recover": 0.36, "pause": 0.03, "knockback": 0.3,
+				"reverse": false, "tilt": -0.1, "heavy": false, "spark": "rising"},
+			{"shot": "KickShot", "anim": "W_attack_3", "anim_speed": 1.5, "damage": 0.8, "reach": 2.6, "arc": 100.0,
+				"burst": [1.6, 0.4], "hit_time": 0.17, "recover": 0.36, "pause": 0.03, "knockback": 0.4,
+				"reverse": true, "tilt": 0.1, "heavy": false, "spark": "slash"},
+			{"shot": "Combo4Shot", "anim": "W_attack_4", "anim_speed": 1.5, "damage": 0.9, "reach": 2.7, "arc": 120.0,
+				"burst": [1.8, 0.45], "hit_time": 0.23, "recover": 0.4, "pause": 0.05, "knockback": 0.8,
+				"reverse": false, "tilt": -0.2, "heavy": false, "spark": "sweep"},
+			{"shot": "Combo5Shot", "anim": "W_attack_5", "anim_speed": 1.4, "damage": 1.9, "reach": 2.8, "arc": 140.0,
+				"burst": [2.4, 0.6], "hit_time": 0.29, "recover": 0.62, "pause": 0.42, "knockback": 3.0, "stun": 0.5,
+				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
+		],
+		# Парні клинки (справжні анімації): лівий, правий, обидва, оберт
+		# (оберт у кліпі), хрест обома. Удари обома клинками б'ють двічі.
 		"twin_blades": [
-			{"shot": "SlashShot", "anim": "Combo_1", "anim_speed": 1.4, "damage": 0.65, "reach": 2.8, "arc": 170.0,
-				"hits": [0.24], "hit_time": 0.14, "recover": 0.32, "pause": 0.05, "knockback": 0.4,
-				"reverse": true, "tilt": 0.35, "heavy": false, "spark": "slash"},
-			{"shot": "SlashFastShot", "anim": "Combo_2", "anim_speed": 1.4, "damage": 0.65, "reach": 2.8, "arc": 170.0,
-				"hits": [0.22], "hit_time": 0.13, "recover": 0.3, "pause": 0.05, "knockback": 0.4,
-				"reverse": false, "tilt": -0.35, "heavy": false, "spark": "rising"},
-			{"shot": "KickShot", "anim": "Combo_3", "anim_speed": 1.3, "damage": 0.8, "reach": 3.0, "arc": 200.0,
-				"hits": [0.27], "hit_time": 0.17, "recover": 0.36, "pause": 0.06, "knockback": 1.0,
-				"reverse": true, "tilt": 0.0, "heavy": false, "spark": "sweep"},
-			{"shot": "Combo4Shot", "anim": "Combo_4", "anim_speed": 1.0, "damage": 0.85, "reach": 2.9, "arc": 360.0,
-				"shape": "circle", "spin": 0.36, "hits": [0.34], "hit_time": 0.22, "recover": 0.46, "pause": 0.1,
-				"knockback": 1.8, "reverse": false, "tilt": 0.0, "heavy": true, "spark": "spin"},
-			{"shot": "Combo5Shot", "anim": "Combo_5", "anim_speed": 1.15, "damage": 1.9, "reach": 3.0, "arc": 360.0,
-				"shape": "circle", "hit_time": 0.39, "recover": 0.68, "pause": 0.45, "knockback": 3.5, "stun": 0.6,
+			{"shot": "SlashShot", "anim": "W_attack_1", "anim_speed": 1.3, "damage": 0.7, "reach": 2.8, "arc": 160.0,
+				"hit_time": 0.27, "recover": 0.4, "pause": 0.04, "knockback": 0.4, "reverse": true, "tilt": 0.35,
+				"heavy": false, "spark": "slash"},
+			{"shot": "SlashFastShot", "anim": "W_attack_2", "anim_speed": 1.3, "damage": 0.7, "reach": 2.8, "arc": 160.0,
+				"hit_time": 0.19, "recover": 0.37, "pause": 0.04, "knockback": 0.4, "reverse": false, "tilt": -0.35,
+				"heavy": false, "spark": "rising"},
+			{"shot": "KickShot", "anim": "W_attack_3", "anim_speed": 1.3, "damage": 0.65, "reach": 2.9, "arc": 180.0,
+				"hits": [0.36], "hit_time": 0.3, "recover": 0.45, "pause": 0.05, "knockback": 0.8, "reverse": true,
+				"tilt": 0.0, "heavy": false, "spark": "sweep"},
+			{"shot": "Combo4Shot", "anim": "W_attack_4", "anim_speed": 1.2, "damage": 0.75, "reach": 2.9, "arc": 360.0,
+				"shape": "circle", "hits": [0.42], "hit_time": 0.29, "recover": 0.52, "pause": 0.06, "knockback": 1.8,
+				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "spin"},
+			{"shot": "Combo5Shot", "anim": "W_attack_5", "anim_speed": 1.1, "damage": 1.6, "reach": 3.0, "arc": 200.0,
+				"hits": [0.5], "hit_time": 0.2, "recover": 0.8, "pause": 0.45, "knockback": 3.5, "stun": 0.6,
 				"reverse": false, "tilt": 0.0, "heavy": true, "spark": "finisher", "finisher": true},
 		],
 	},
@@ -648,6 +689,10 @@ func _build_animation_tree() -> void:
 	tree.add_node(&"Combo5Anim", _animation_node(slots[4], ["Sword_Slash"]), Vector2(0, 1600))
 	tree.add_node(&"Combo5Scale", AnimationNodeTimeScale.new(), Vector2(200, 1600))
 	tree.add_node(&"Combo5Shot", _one_shot(0.05, 0.2), Vector2(900, 0))
+	# Вихор — свій слот (серія з 5 ударів займає всі п'ять слотів).
+	tree.add_node(&"WhirlAnim", _animation_node("W_whirl", ["Sword_Slash"]), Vector2(0, 1700))
+	tree.add_node(&"WhirlScale", AnimationNodeTimeScale.new(), Vector2(200, 1700))
+	tree.add_node(&"WhirlShot", _one_shot(0.06, 0.2), Vector2(925, 0))
 	tree.add_node(&"DashAnim", _animation_node("Dash_Strike", ["Sword_Slash"]), Vector2(0, 1800))
 	tree.add_node(&"DashScale", AnimationNodeTimeScale.new(), Vector2(200, 1800))
 	tree.add_node(&"DashShot", _one_shot(0.05, 0.18), Vector2(950, 0))
@@ -679,7 +724,10 @@ func _build_animation_tree() -> void:
 	tree.connect_node(&"Combo5Shot", 0, &"Combo4Shot")
 	tree.connect_node(&"Combo5Shot", 1, &"Combo5Scale")
 	tree.connect_node(&"DashScale", 0, &"DashAnim")
-	tree.connect_node(&"DashShot", 0, &"Combo5Shot")
+	tree.connect_node(&"WhirlScale", 0, &"WhirlAnim")
+	tree.connect_node(&"WhirlShot", 0, &"Combo5Shot")
+	tree.connect_node(&"WhirlShot", 1, &"WhirlScale")
+	tree.connect_node(&"DashShot", 0, &"WhirlShot")
 	tree.connect_node(&"DashShot", 1, &"DashScale")
 	tree.connect_node(&"RollShot", 0, &"DashShot")
 	tree.connect_node(&"RollShot", 1, &"RollScale")
@@ -786,9 +834,6 @@ func _attack_slot_animations() -> Array:
 	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right", "Sword_Slash", "Sword_Slash"]
 	for step: Dictionary in _combo():
 		result[SLOTS.find(step.shot)] = String(step.get("anim", "Sword_Slash"))
-	# Вільний п'ятий слот (серія коротша) — під Вихор зі справжнім обертом.
-	if _anim_overrides.has("W_whirl") and _combo().size() < SLOTS.size():
-		result[SLOTS.size() - 1] = "W_whirl"
 	return result
 
 ## Швидкість ударів разом із тимчасовим прискоренням (ривок люті).
@@ -1131,8 +1176,8 @@ func play_whirl(time: float) -> void:
 	_spin_left = duration
 	_spin_total = maxf(duration, 0.01)
 	_spin_turns = false
-	animation_tree.set("parameters/Combo5Scale/scale", length / duration)
-	_fire("Combo5Shot")
+	animation_tree.set("parameters/WhirlScale/scale", length / duration)
+	_fire("WhirlShot")
 
 ## Ривок люті: анімація ривка з ударом у кінці; strike_in — за скільки
 ## секунд ривок долетить (анімацію підганяємо, щоб удар збігся).
