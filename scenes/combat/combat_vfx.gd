@@ -83,6 +83,31 @@ void fragment() {
 }
 """
 
+## Розряд блискавки: стрічка, що дивиться в камеру. UV.y — поперек:
+## посередині біле серце, далі кольорове сяйво; уздовж (UV.x) біжить шум —
+## розряд мерехтить і рветься, flash гасить його.
+const LIGHTNING_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+
+uniform vec4 color : source_color = vec4(1.0, 0.92, 0.45, 1.0);
+uniform float flash = 1.0;
+uniform float seed = 0.0;
+
+float hash(float n) { return fract(sin(n) * 43758.5453); }
+
+void fragment() {
+	float x = abs(UV.y * 2.0 - 1.0);
+	float core = exp(-pow(x / 0.16, 2.0));
+	float glow = exp(-pow(x / 0.55, 2.0)) * 0.55;
+	float cell = floor(UV.x * 7.0 + seed * 13.0 + TIME * 40.0);
+	float flicker = 0.7 + 0.3 * hash(cell);
+	vec3 rgb = mix(color.rgb, vec3(1.0), core);
+	ALBEDO = rgb;
+	ALPHA = clamp((core + glow) * flicker * flash, 0.0, 1.0);
+}
+"""
+
 const SLASH_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
@@ -330,8 +355,7 @@ static var _ring_mesh: PlaneMesh
 static var _line_materials: Dictionary = {}
 static var _thrust_mesh: QuadMesh
 static var _thrust_materials: Dictionary = {}
-static var _bolt_mesh: BoxMesh
-static var _beam_mesh: CylinderMesh
+static var _lightning_materials: Dictionary = {}
 static var _glow_materials: Dictionary = {}
 static var _telegraph_materials: Dictionary = {}
 static var _particle_materials: Dictionary = {}
@@ -541,54 +565,103 @@ static func make_trail(color: Color, lifetime: float) -> CPUParticles3D:
 
 ## Блискавка: ламана лінія через точки (посох -> перший ворог -> другий...),
 ## спалахує на мить і зникає.
-static func lightning(parent: Node, points: Array[Vector3], color: Color) -> void:
-	var holder := Node3D.new()
-	parent.add_child(holder)
-	var material := get_glow_material(color)
+static func lightning(parent: Node, points: Array[Vector3], color: Color, width: float = 0.32,
+		life: float = 0.2) -> void:
+	var path: Array[Vector3] = []
 	for i in points.size() - 1:
 		var from: Vector3 = points[i]
 		var to: Vector3 = points[i + 1]
-		var side := (to - from).cross(Vector3.UP)
-		side = side.normalized() if side.length() > 0.01 else Vector3.RIGHT
-		var shake := minf(from.distance_to(to), 4.0) / 4.0
-		var joints: Array[Vector3] = [from]
-		for k in range(1, 5):
-			joints.append(from.lerp(to, k / 5.0) + side * randf_range(-0.35, 0.35) * shake
-				+ Vector3.UP * randf_range(-0.2, 0.2) * shake)
-		joints.append(to)
-		for k in joints.size() - 1:
-			_add_segment(holder, joints[k], joints[k + 1], material)
-	_free_after(holder, 0.18)
+		path.append_array(_zigzag(from, to, 0.35))
+	path.append(points[points.size() - 1])
+	var holder := Node3D.new()
+	parent.add_child(holder)
+	var material := _get_material(_lightning_materials, LIGHTNING_SHADER, color)
+	var bolt := _ribbon(holder, path, width, material)
+	# Гілочки: кілька коротких відростків від зламів.
+	for k in range(2, path.size() - 1, 3):
+		if randf() < 0.55:
+			var dir: Vector3 = (path[k + 1] - path[k - 1]).normalized()
+			var twig_dir := dir.rotated(Vector3.UP, randf_range(0.6, 1.1) * (1.0 if randf() < 0.5 else -1.0))
+			var twig_end: Vector3 = path[k] + twig_dir * randf_range(0.5, 1.1) + Vector3.UP * randf_range(-0.3, 0.2)
+			var twig := _zigzag(path[k], twig_end, 0.2)
+			twig.append(twig_end)
+			_ribbon(holder, twig, width * 0.5, material)
+	# Розряд б'є, двічі мерехтить і гасне.
+	var flash := func(value: float) -> void:
+		for child in holder.get_children():
+			CombatVfx.set_param(child, &"flash", value)
+	CombatVfx.set_param(bolt, &"seed", randf() * 10.0)
+	var tween := holder.create_tween()
+	tween.tween_method(flash, 1.0, 0.35, life * 0.3)
+	tween.tween_method(flash, 1.0, 0.0, life * 0.7)
+	tween.tween_callback(holder.queue_free)
 
-static func _add_segment(holder: Node3D, a: Vector3, b: Vector3, material: Material) -> void:
-	var length := a.distance_to(b)
-	if length < 0.01:
-		return
-	var segment := MeshInstance3D.new()
-	segment.mesh = _get_bolt_mesh()
-	segment.material_override = material
-	segment.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	holder.add_child(segment)
-	segment.global_position = (a + b) * 0.5
-	var up := Vector3.UP if absf((b - a).normalized().y) < 0.95 else Vector3.FORWARD
-	segment.look_at(b, up)
-	segment.scale = Vector3(1.0, 1.0, length)
+## Ламана лінія між двома точками (без кінцевої точки).
+static func _zigzag(from: Vector3, to: Vector3, amplitude: float) -> Array[Vector3]:
+	var length := from.distance_to(to)
+	var steps := clampi(int(length / 0.55), 2, 14)
+	var side := (to - from).cross(Vector3.UP)
+	side = side.normalized() if side.length() > 0.01 else Vector3.RIGHT
+	var shake := minf(length, 4.0) / 4.0 * amplitude
+	var result: Array[Vector3] = [from]
+	for k in range(1, steps):
+		result.append(from.lerp(to, float(k) / steps) + side * randf_range(-1.0, 1.0) * shake
+			+ Vector3.UP * randf_range(-0.6, 0.6) * shake)
+	return result
 
-## Промінь із неба (Місячна буря): світний стовп падає в точку й гасне.
+## Стрічка вздовж ламаної, розвернута до камери (один меш).
+static func _ribbon(holder: Node3D, path: Array[Vector3], width: float, material: Material) -> MeshInstance3D:
+	var camera := holder.get_viewport().get_camera_3d() if holder.is_inside_tree() else null
+	var eye: Vector3 = camera.global_position if camera != null else path[0] + Vector3(0, 12, 8)
+	var vertices := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var indices := PackedInt32Array()
+	var total := 0.0
+	for k in path.size():
+		var prev: Vector3 = path[maxi(k - 1, 0)]
+		var next: Vector3 = path[mini(k + 1, path.size() - 1)]
+		var along := (next - prev).normalized()
+		var side := along.cross((eye - path[k]).normalized()).normalized() * width * 0.5
+		if k > 0:
+			total += path[k].distance_to(path[k - 1])
+		vertices.append(path[k] - side)
+		vertices.append(path[k] + side)
+		uvs.append(Vector2(total, 0.0))
+		uvs.append(Vector2(total, 1.0))
+		if k < path.size() - 1:
+			var a := k * 2
+			indices.append_array([a, a + 1, a + 2, a + 1, a + 3, a + 2])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	instance.material_override = material
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(instance)
+	return instance
+
+## Блискавка з неба (Місячна буря): розряд падає в точку, по підлозі
+## розбігаються іскри розряду й лишається темна пропалина.
 static func sky_beam(parent: Node, position: Vector3, color: Color) -> void:
-	var beam := MeshInstance3D.new()
-	beam.mesh = _get_beam_mesh()
-	beam.material_override = get_glow_material(color)
-	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(beam)
-	beam.global_position = position + Vector3.UP * 3.5
-	beam.scale = Vector3(0.25, 1.0, 0.25)
-	var tween := beam.create_tween()
-	tween.tween_property(beam, "scale", Vector3(1.1, 1.0, 1.1), 0.08)
-	tween.tween_property(beam, "transparency", 1.0, 0.28)
-	tween.tween_callback(beam.queue_free)
-	shockwave(parent, position, 1.4, color, 0.3)
-	impact(parent, position + Vector3.UP * 0.4, color, true)
+	var top := position + Vector3(randf_range(-0.8, 0.8), 9.0, randf_range(-0.8, 0.8))
+	var points: Array[Vector3] = [top, position + Vector3.UP * 0.05]
+	lightning(parent, points, color, 0.4, 0.3)
+	if claim(position, 1.0):
+		Fx.bloom(parent, position + Vector3.UP * 0.06, "spark_02", 2.6, Color(color.lerp(Color.WHITE, 0.3), 0.95),
+			0.3, true, true, 0.5, 0.4)
+		var scorch := Fx.make_sprite("scorch_02", Color(0.08, 0.07, 0.1, 0.6), true)
+		parent.add_child(scorch)
+		scorch.global_position = position + Vector3.UP * 0.04
+		scorch.scale = Vector3.ONE * 1.6
+		scorch.rotation.y = randf() * TAU
+		var fade := scorch.create_tween()
+		fade.tween_property(scorch.material_override, "albedo_color:a", 0.0, 0.9).set_delay(0.6)
+		fade.tween_callback(scorch.queue_free)
 
 ## Іскра й її матеріал — для частинок, що фарбуються власним кольором
 ## (слід чар, бульбашки отрути).
@@ -597,22 +670,6 @@ static func spark_mesh() -> QuadMesh:
 
 static func spark_material() -> StandardMaterial3D:
 	return _get_spark_material()
-
-static func _get_bolt_mesh() -> BoxMesh:
-	if _bolt_mesh == null:
-		_bolt_mesh = BoxMesh.new()
-		_bolt_mesh.size = Vector3(0.07, 0.07, 1.0)
-	return _bolt_mesh
-
-static func _get_beam_mesh() -> CylinderMesh:
-	if _beam_mesh == null:
-		_beam_mesh = CylinderMesh.new()
-		_beam_mesh.top_radius = 0.22
-		_beam_mesh.bottom_radius = 0.22
-		_beam_mesh.height = 7.0
-		_beam_mesh.radial_segments = 6
-		_beam_mesh.rings = 1
-	return _beam_mesh
 
 # --- влучання ---
 

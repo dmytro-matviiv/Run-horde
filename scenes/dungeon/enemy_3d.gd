@@ -115,12 +115,6 @@ const SUMMON_COLOR := Color(0.5, 1.0, 0.4, 0.9)
 const VOLLEY_COOLDOWN := 5.0
 const DRAGON_CHARGE_COOLDOWN := 7.5
 
-## Чари героя: іней під сповільненим ворогом і крижана брила навколо
-## замороженого.
-const FROST_COLOR := Color(0.55, 0.85, 1.0, 0.9)
-const ICE_COLOR := Color(0.72, 0.92, 1.0, 0.42)
-
-static var _ice_material: StandardMaterial3D
 
 @export var kind: Kind = Kind.MELEE
 @export var max_hp := 30.0
@@ -286,7 +280,7 @@ var _slow_factor := 1.0
 var _slow_left := 0.0
 var _frozen_left := 0.0
 var _frost_marker: MeshInstance3D
-var _ice_block: MeshInstance3D
+var _ice_block: Node3D
 var _windup_left := 0.0
 var _windup_total := 0.0
 var _windup_slam := false
@@ -1720,41 +1714,27 @@ func _tick_status(delta: float) -> void:
 		if _frozen_left <= 0.0:
 			_show_ice(false)
 
-## Іней на підлозі під ворогом — видно, кого сповільнено.
+## Іней на підлозі під ворогом (тріщини льоду) — видно, кого сповільнено.
 func _show_frost(shown: bool) -> void:
 	if shown and _frost_marker == null:
-		_frost_marker = CombatVfx.make_ground_marker(FROST_COLOR, 0.7 + target_height * 0.12)
-		CombatVfx.set_param(_frost_marker, &"progress", 1.0)
+		_frost_marker = IceVfx.make_frost(0.6 + target_height * 0.22)
 		add_child(_frost_marker)
-		_frost_marker.position = Vector3(0, 0.06, 0)
 	if _frost_marker != null:
-		_frost_marker.visible = shown
+		_frost_marker.visible = shown and _ice_block == null
 
-## Крижана брила — шестигранна прозора призма навколо ворога.
+## Заморожений — у кущі крижаних кристалів (IceVfx); розмерз — кристали
+## розлітаються уламками.
 func _show_ice(shown: bool) -> void:
 	if shown and _ice_block == null:
-		var mesh := CylinderMesh.new()
-		mesh.radial_segments = 6
-		mesh.rings = 1
-		mesh.top_radius = 0.4 + target_height * 0.08
-		mesh.bottom_radius = mesh.top_radius * 1.15
-		mesh.height = target_height * 1.08
-		_ice_block = MeshInstance3D.new()
-		_ice_block.mesh = mesh
-		_ice_block.material_override = _get_ice_material()
-		_ice_block.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_ice_block = IceVfx.make_cluster(target_height * 0.95, 0.35 + target_height * 0.12, get_instance_id())
 		add_child(_ice_block)
-		_ice_block.position = Vector3(0, mesh.height * 0.5 + hover, 0)
-	if _ice_block != null:
-		_ice_block.visible = shown
-
-static func _get_ice_material() -> StandardMaterial3D:
-	if _ice_material == null:
-		_ice_material = StandardMaterial3D.new()
-		_ice_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_ice_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_ice_material.albedo_color = ICE_COLOR
-	return _ice_material
+		_ice_block.position = Vector3(0, hover, 0)
+	elif not shown and _ice_block != null:
+		IceVfx.shatter(get_parent(), global_position + Vector3.UP * hover, target_height)
+		_ice_block.queue_free()
+		_ice_block = null
+	if _frost_marker != null:
+		_frost_marker.visible = _slow_left > 0.0 and _ice_block == null
 
 # --- отримання шкоди ---
 

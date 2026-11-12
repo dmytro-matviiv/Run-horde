@@ -67,6 +67,11 @@ static func tex(name: String) -> Texture2D:
 		_textures[name] = load(path) if ResourceLoader.exists(path) else null
 	return _textures[name]
 
+## Текстура частинки за короткою назвою: Kenney — без префікса ("star_07"
+## -> k_star_07), інші набори — з власним ("se_crack_01").
+static func art(name: String) -> Texture2D:
+	return tex(name if name.begins_with("se_") else "k_" + name)
+
 ## Стихія за кольором: "fire", "gold", "poison", "ice", "arcane" або "neutral".
 static func theme_of(color: Color) -> String:
 	# Тьмяні кольори (пил, земля, кістка) — не стихія: інакше бурий пил
@@ -159,7 +164,7 @@ static func make_sprite(name: String, color: Color, flat: bool, additive: bool =
 	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_texture = tex("k_" + name)
+	material.albedo_texture = art(name)
 	material.albedo_color = color
 	material.disable_receive_shadows = true
 	material.no_depth_test = false
@@ -201,7 +206,7 @@ static func _particle_material(name: String, additive: bool) -> StandardMaterial
 			material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 		material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 		material.vertex_color_use_as_albedo = true
-		material.albedo_texture = tex("k_" + name)
+		material.albedo_texture = art(name)
 		material.disable_receive_shadows = true
 		_particle_materials[key] = material
 	return _particle_materials[key]
@@ -393,6 +398,11 @@ static func make_pool(color: Color, radius: float) -> Node3D:
 		rise.gravity = Vector3(0, 2.5, 0)
 		rise.angle_max = 0.0
 	else:
+		# Отруйний відсвіт — щоб пляму було видно й на темній підлозі.
+		var sheen := make_sprite("circle_05", Color(color, 0.32), true, true)
+		sheen.scale = Vector3.ONE * radius * 2.2
+		sheen.position.y = 0.05
+		holder.add_child(sheen)
 		rise = make_particles("smoke_04", Color(color.lightened(0.15), 0.35), maxi(amount / 2, 4), 1.1, 0.7, false, true)
 		rise.initial_velocity_min = 0.2
 		rise.initial_velocity_max = 0.6

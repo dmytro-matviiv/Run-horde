@@ -4,3 +4,4 @@
 - telegraph_circle_hex.png — з Pixel Dreamer Studio "12 Free VFX Textures" (вільне використання).
 - telegraph_circle_frost.png — намальовано для гри.
 Текстури зменшено для телефона. Сирці — D:\Ефекти.
+- se_*.png — Spell Effects Free (тріщина льоду, удар), вільне використання.

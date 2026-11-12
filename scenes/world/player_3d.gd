@@ -808,8 +808,12 @@ func _apply_attack_speed() -> void:
 	var speed := attack_speed()
 	var speeds := [1.15, 1.45, 1.1, 1.0, 1.0]
 	if is_caster():
-		speeds = (CAST_ANIM_SPEEDS.get(weapon_def.spell, CAST_ANIM_SPEEDS["staff"]) as Array).duplicate()
-		speeds.append_array([1.0, 1.0])
+		var casts := _cast_moves()
+		if not casts.is_empty():
+			speeds = [casts[0][2], casts[1 % casts.size()][2], 1.0, 1.0, 1.0]
+		else:
+			speeds = (CAST_ANIM_SPEEDS.get(weapon_def.spell, CAST_ANIM_SPEEDS["staff"]) as Array).duplicate()
+			speeds.append_array([1.0, 1.0])
 	elif not is_ranged():
 		for step: Dictionary in _combo():
 			speeds[SLOTS.find(step.shot)] = float(step.get("anim_speed", 1.0))
@@ -831,6 +835,9 @@ func _attack_slot_animations() -> Array:
 		# Для стрільця третій слот — рух перезарядки.
 		return ["Gun_Shoot", "Gun_Shoot", "Interact", "Gun_Shoot", "Gun_Shoot"]
 	if is_caster():
+		var casts := _cast_moves()
+		if not casts.is_empty():
+			return [casts[0][0], casts[1 % casts.size()][0], "Interact", "Interact", "Interact"]
 		return (CAST_ANIMS.get(weapon_def.spell, CAST_ANIMS["staff"]) as Array) + ["Interact", "Interact"]
 	var result := ["Sword_Slash", "Sword_Slash", "Kick_Right", "Sword_Slash", "Sword_Slash"]
 	for step: Dictionary in _combo():
@@ -1014,12 +1021,19 @@ func _try_cast() -> void:
 	if _roll_left > 0.0 or _cast_left > 0.0 or _cast_pending_left >= 0.0:
 		return
 	_cast_left = weapon_def.cast_interval * _cast_rate_factor / maxf(attack_speed(), 0.1)
-	# Снаряд злітає з посоха в мить помаху — трохи згодом.
-	_cast_pending_left = 0.12 / maxf(attack_speed(), 0.1)
+	_cast_count += 1
+	# Снаряд злітає з посоха в мить помаху — трохи згодом. Зі справжнім
+	# кастом — точно тоді, коли рука викидає чари (непарний каст — перший
+	# слот, парний — другий).
+	var release := 0.12
+	var casts := _cast_moves()
+	if not casts.is_empty():
+		var move: Array = casts[(0 if _cast_count % 2 == 1 else 1) % casts.size()]
+		release = float(move[1]) / float(move[2])
+	_cast_pending_left = release / maxf(attack_speed(), 0.1)
 	_combat_left = COMBAT_MEMORY
 	_since_attack = 0.0
 	_refresh_target()
-	_cast_count += 1
 	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
 	_fire("SlashShot" if _cast_count % 2 == 1 else "SlashFastShot", moving)
 
@@ -1121,7 +1135,8 @@ func use_skill(index: int = 0) -> void:
 	if not skill.try_use(self):
 		return
 	_combat_left = COMBAT_MEMORY
-	_fire("SlashFastShot")
+	if not play_skill_move(skill.id):
+		_fire("SlashFastShot")
 
 func get_dodge_cooldown() -> Vector2:
 	return Vector2(_dodge_cooldown_left, DODGE_COOLDOWN * _dodge_cooldown_factor)
@@ -1162,6 +1177,29 @@ func spin_model(time: float) -> void:
 	_spin_total = maxf(time, 0.01)
 	_spin_turns = true
 
+## Касти чаклуна під чари в руках: [[анімація, мить викиду, швидкість], ...].
+func _cast_moves() -> Array:
+	if weapon_def == null or hero_def == null:
+		return []
+	var casts := WeaponAnims.cast_moves(hero_def.id, weapon_def.style_3d, weapon_def.spell)
+	return casts.filter(func(move: Array) -> bool: return _anim_overrides.has(move[0]))
+
+## Рух здібності (чаклуни): грає в слоті Вихору. false — свого руху немає.
+func play_skill_move(skill_id: StringName) -> bool:
+	if weapon_def == null or hero_def == null:
+		return false
+	var short_name := WeaponAnims.skill_move(hero_def.id, weapon_def.style_3d, skill_id)
+	if short_name == "" or not _anim_overrides.has(short_name):
+		return false
+	var node := (animation_tree.tree_root as AnimationNodeBlendTree).get_node(&"WhirlAnim") as AnimationNodeAnimation
+	node.animation = _anim_overrides[short_name]
+	animation_tree.set("parameters/WhirlScale/scale", 1.3)
+	# Оберт моделі кодом (Рунна нова) не потрібен — рух уже в кліпі.
+	_spin_left = 0.0
+	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
+	_fire("WhirlShot", moving)
+	return true
+
 ## Вихор: якщо в зброї є справжня анімація оберту — граємо її (оберт у
 ## самому кліпі, модель кодом не крутимо); інакше — старий оберт моделі.
 func play_whirl(time: float) -> void:
@@ -1170,6 +1208,7 @@ func play_whirl(time: float) -> void:
 		return
 	var player: AnimationPlayer = animation_tree.get_node(animation_tree.anim_player)
 	var length := player.get_animation(_anim_overrides["W_whirl"]).length
+	((animation_tree.tree_root as AnimationNodeBlendTree).get_node(&"WhirlAnim") as AnimationNodeAnimation).animation = _anim_overrides["W_whirl"]
 	var duration := time + 0.35
 	_attack_step = -1
 	_attack_queued = false

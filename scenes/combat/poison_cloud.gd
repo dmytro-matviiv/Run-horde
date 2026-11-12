@@ -5,7 +5,8 @@ class_name PoisonCloud
 ## за разом труїть усіх, хто в ній. Велике болото (здібність посоха)
 ## ще й сповільнює.
 ##
-## Для телефона — дешево: одне коло на підлозі й кілька бульбашок.
+## Вигляд — отруйна калюжа (Fx.make_pool): темна пляма з нерівним краєм,
+## зелений дим і бульбашки, без пласкої заливки колом. Під кінець усихає.
 
 const TICK := 0.5
 const COLOR := Color(0.45, 0.95, 0.3, 0.85)
@@ -21,7 +22,7 @@ var slow := 1.0
 var _player: Node
 var _left := 0.0
 var _tick_left := 0.0
-var _marker: MeshInstance3D
+var _pool: Node3D
 
 static func spawn(parent: Node, player: Node, position: Vector3, cloud_radius: float, seconds: float,
 		damage: float, slow_factor: float = 1.0) -> PoisonCloud:
@@ -38,20 +39,21 @@ static func spawn(parent: Node, player: Node, position: Vector3, cloud_radius: f
 
 func _ready() -> void:
 	_left = duration
-	_marker = CombatVfx.make_ground_marker(COLOR, radius)
-	CombatVfx.set_param(_marker, &"progress", 1.0)
-	add_child(_marker)
-	_marker.position = Vector3(0, 0.07, 0)
-	add_child(_make_bubbles())
-	CombatVfx.shockwave(get_parent(), global_position, radius, COLOR, 0.3)
+	_pool = Fx.make_pool(COLOR, radius * 0.75)
+	add_child(_pool)
+	# Калюжа розтікається з точки влучання.
+	_pool.scale = Vector3.ONE * 0.3
+	_pool.create_tween().tween_property(_pool, "scale", Vector3.ONE, 0.25).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	Fx.puff(get_parent(), global_position + Vector3.UP * 0.3, COLOR, 0.6 + radius * 0.15, 0.2)
 
 func _physics_process(delta: float) -> void:
 	_left -= delta
 	if _left <= 0.0 or _player == null or not is_instance_valid(_player):
 		queue_free()
 		return
-	# Під кінець хмара блідне — видно, що скоро зникне.
-	CombatVfx.set_param(_marker, &"fade", clampf(_left / 0.6, 0.0, 1.0))
+	# Під кінець калюжа всихає — видно, що скоро зникне.
+	if _left < 0.6:
+		_pool.scale = Vector3.ONE * maxf(_left / 0.6, 0.05)
 	_tick_left -= delta
 	if _tick_left > 0.0:
 		return
@@ -60,28 +62,3 @@ func _physics_process(delta: float) -> void:
 		_player.deal_damage(enemy, tick_damage, Vector3.ZERO, false, source)
 		if slow < 1.0 and enemy.is_alive():
 			enemy.apply_slow(slow, TICK + 0.3)
-
-## Бульбашки, що повільно здіймаються з трясовини.
-func _make_bubbles() -> CPUParticles3D:
-	var bubbles := CPUParticles3D.new()
-	bubbles.amount = int(clampf(radius * 6.0, 8.0, 22.0))
-	bubbles.lifetime = 1.1
-	bubbles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	bubbles.emission_box_extents = Vector3(radius * 0.7, 0.05, radius * 0.7)
-	bubbles.direction = Vector3.UP
-	bubbles.spread = 10.0
-	bubbles.gravity = Vector3.ZERO
-	bubbles.initial_velocity_min = 0.3
-	bubbles.initial_velocity_max = 0.8
-	bubbles.scale_amount_min = 0.8
-	bubbles.scale_amount_max = 1.5
-	var curve := Curve.new()
-	curve.add_point(Vector2(0.0, 0.4))
-	curve.add_point(Vector2(0.5, 1.0))
-	curve.add_point(Vector2(1.0, 0.0))
-	bubbles.scale_amount_curve = curve
-	bubbles.mesh = CombatVfx.spark_mesh()
-	bubbles.material_override = CombatVfx.spark_material()
-	bubbles.color = COLOR
-	bubbles.position = Vector3(0, 0.15, 0)
-	return bubbles

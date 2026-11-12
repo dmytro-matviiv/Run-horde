@@ -155,15 +155,17 @@ static func card_hit(_enemy: Enemy3D, position: Vector3, player: Node) -> void:
 
 # --- що робить влучання ---
 
-static func arcane_hit(enemy: Enemy3D, position: Vector3, player: Node) -> void:
-	CombatVfx.impact(player.get_parent(), position, ARCANE_COLOR, false)
-	if enemy != null:
-		CombatVfx.shockwave(player.get_parent(), enemy.global_position, 0.9, ARCANE_COLOR, 0.2)
+## Аркана: на влучанні спалахує й тане чотирипроменевий знак (одним ефектом).
+static func arcane_hit(_enemy: Enemy3D, position: Vector3, player: Node) -> void:
+	if CombatVfx.claim(position, 0.6):
+		Fx.bloom(player.get_parent(), position, "magic_04", 1.4, Color(ARCANE_COLOR.lerp(Color.WHITE, 0.15), 0.95),
+			0.28, false, true, 0.4, 0.0)
 
 ## Крига: сповільнює, а третє влучання поспіль заморожує в брилу.
 static func frost_hit(enemy: Enemy3D, position: Vector3, player: Node) -> void:
 	var parent: Node = player.get_parent()
-	CombatVfx.impact(parent, position, FROST_COLOR, false)
+	# Уламок розколюється на крижинки (не спалах).
+	IceVfx.chips(parent, position)
 	if enemy == null or not enemy.is_alive():
 		return
 	var power: float = player.spell_power()
@@ -171,14 +173,14 @@ static func frost_hit(enemy: Enemy3D, position: Vector3, player: Node) -> void:
 	var stacks := int(enemy.get_meta(&"frost_stacks", 0)) + 1
 	if stacks >= FROST_STACKS_TO_FREEZE:
 		stacks = 0
+		# Видно саме заморожування: ворог обростає кристалами (IceVfx).
 		enemy.freeze(FROST_FREEZE_TIME * power)
-		CombatVfx.shockwave(parent, enemy.global_position, 1.3, FROST_COLOR, 0.3)
 	enemy.set_meta(&"frost_stacks", stacks)
 
 ## Отрута: там, де куля влучила (у ворога чи в стіну), лишається хмара.
 static func venom_hit(enemy: Enemy3D, position: Vector3, player: Node) -> void:
 	var parent: Node = player.get_parent()
-	CombatVfx.impact(parent, position, VENOM_COLOR, false)
+	# Влучання — лише хмара (вона сама й бризкає), без іскор.
 	var at := enemy.global_position if enemy != null and is_instance_valid(enemy) else position
 	PoisonCloud.spawn(parent, player, at, VENOM_CLOUD_RADIUS * sqrt(player.spell_power()),
 		VENOM_CLOUD_TIME, VENOM_TICK_DAMAGE)

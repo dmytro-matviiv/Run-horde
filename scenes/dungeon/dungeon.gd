@@ -1361,6 +1361,13 @@ func _warm_up_rendering() -> void:
 
 	CombatVfx.slash(holder, center, 0.0, 2.0, 150.0, Color(0.72, 0.87, 1.0), false, 0.0, 0.5)
 	CombatVfx.thrust(holder, center, 0.0, 2.0, Color(0.72, 0.87, 1.0))
+	# Чари: розряд блискавки й лід (кристали, уламки) — свої шейдери.
+	var spark_path: Array[Vector3] = [center, center + Vector3(1.0, 0.0, 0.0)]
+	CombatVfx.lightning(holder, spark_path, Color(1.0, 0.92, 0.45))
+	var ice := IceVfx.make_cluster(1.0, 0.4, 0)
+	holder.add_child(ice)
+	ice.global_position = center - Vector3(0, 0.8, 0)
+	IceVfx.chips(holder, center)
 	CombatVfx.impact(holder, center, Color(1.0, 0.65, 0.25), true)
 	CombatVfx.damage_number(holder, center, 12.0, true)
 	CombatVfx.shockwave(holder, center, 1.5, Color(0.35, 0.95, 1.0), 0.5)

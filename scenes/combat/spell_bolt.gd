@@ -58,15 +58,24 @@ func _ready() -> void:
 		# Карта летить пласко, як тарілка, і крутиться.
 		_body.material_override = _get_card_material()
 		_body.rotation_degrees.x = -90.0
+	elif kind == "frost":
+		# Справжній крижаний уламок (меш уже загострений уздовж -Z).
+		_body.material_override = IceVfx.material()
+		_body.scale = Vector3.ONE * 0.75
 	else:
 		_body.material_override = CombatVfx.get_glow_material(color)
-	# Уламок — загострений уздовж польоту (вперед у Godot — це -Z).
-	if kind == "frost":
-		_body.rotation_degrees.x = -90.0
 	add_child(_body)
+	# Аркана: світний знак, що обертається довкола кулі.
+	if kind == "arcane":
+		var sigil := Fx.make_sprite("magic_03", Color(color.lerp(Color.WHITE, 0.2), 0.95), false, true)
+		sigil.scale = Vector3.ONE * 0.75
+		add_child(sigil)
+		var spin_tween := sigil.create_tween().set_loops()
+		spin_tween.tween_property(sigil, "rotation:z", TAU, 0.6).from(0.0)
 	add_child(CombatVfx.make_trail(color, 0.32 if kind == "venom" else 0.24))
 	# Ореол і слід за стихією чарів (картам — лише іскри).
-	if kind != "card":
+	# (крижаному уламку — без ореолу: видно сам кристал).
+	if kind != "card" and kind != "frost":
 		add_child(Fx.make_projectile(color, 0.8))
 	if boomerang:
 		_life = LIFETIME + 0.6
@@ -169,13 +178,7 @@ static func _get_mesh(bolt_kind: String) -> Mesh:
 		quad.size = Vector2(0.34, 0.48)
 		mesh = quad
 	elif bolt_kind == "frost":
-		var shard := CylinderMesh.new()
-		shard.top_radius = 0.0
-		shard.bottom_radius = 0.09
-		shard.height = 0.62
-		shard.radial_segments = 5
-		shard.rings = 1
-		mesh = shard
+		mesh = IceVfx.shard_mesh()
 	else:
 		var sphere := SphereMesh.new()
 		sphere.radius = 0.2 if bolt_kind == "venom" else 0.15

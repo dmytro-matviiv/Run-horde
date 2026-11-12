@@ -13,7 +13,6 @@ class_name WeaponAnims
 
 const ROOT := {
 	&"blade_warden": "res://assets/animations/warden/",
-	&"void_assassin": "res://assets/animations/void_assassin/",
 	&"ember_priestess": "res://assets/animations/ember_priestess/",
 	&"runewielder": "res://assets/animations/runewielder/",
 }
@@ -22,6 +21,12 @@ const ROOT := {
 ## клинків і кинджалів (інакше змішування з бігом моделі крутило кисть).
 const ONE_HAND_MOVES := {
 	"Run_Back": "onehand/run_back", "Run_Left": "onehand/run_left", "Run_Right": "onehand/run_right",
+}
+
+## Стійка й біг чаклуна (Mixamo "magic"): руки вільні, готовий чаклувати.
+const CASTER_MOVES := {
+	"Idle": "idle", "Walk": "run", "Run": "run",
+	"Run_Back": "run_back", "Run_Left": "run_left", "Run_Right": "run_right",
 }
 
 const SETS := {
@@ -95,6 +100,41 @@ const SETS := {
 			"dash_strike_at": 0.78,
 		},
 	},
+	# Чаклуни: свої стійка й біг (ліва рука вільна, без зброї в обох),
+	# касти під кожні чари й рух для кожної здібності.
+	#   "cast"   — чари -> [[кліп, мить викиду (с кліпу), швидкість], ...]:
+	#              чергуються з кожним кастом;
+	#   "skills" — id здібності -> кліп (обрізаний так, щоб викид був на
+	#              ~0.3 с: здібності спрацьовують одразу).
+	&"ember_priestess": {
+		"staff": {
+			"clips": CASTER_MOVES,
+			"cast": {
+				"arcane": [["cast_sweep", 0.3, 1.4], ["cast_forward", 0.4, 1.8]],
+				"frost": [["cast_forward", 0.4, 1.8], ["cast_upsweep", 0.35, 1.6]],
+				"venom": [["cast_upsweep", 0.35, 1.6], ["cast_sweep", 0.3, 1.4]],
+				"lightning": [["cast_raise", 0.3, 1.4], ["cast_forward", 0.4, 1.8]],
+			},
+			"skills": {
+				&"fire_ring": "skill_ground", &"frost_nova": "skill_ground", &"venom_swamp": "skill_ground",
+				&"arcane_barrage": "skill_blast", &"moon_storm": "skill_sky",
+			},
+		},
+	},
+	&"runewielder": {
+		"staff": {
+			"clips": CASTER_MOVES,
+			"cast": {
+				# Книга в правій — руну посилає вільна ліва.
+				"rune": [["cast_forward_left", 0.4, 1.7], ["cast_sweep_left", 0.3, 1.4]],
+				# По карті в кожній руці — кидає то правою, то лівою.
+				"cards": [["throw_right", 0.42, 1.7], ["throw_left", 0.42, 1.7]],
+			},
+			"skills": {
+				&"rune_nova": "skill_clap", &"great_seal": "skill_ground", &"card_storm": "skill_blast",
+			},
+		},
+	},
 }
 
 ## Кліпи, що мають крутитись по колу.
@@ -105,9 +145,15 @@ static func get_set(hero_id: StringName, style: String) -> Dictionary:
 	var by_style: Dictionary = SETS.get(hero_id, {})
 	return by_style.get(style, {})
 
-## Коротка назва -> шлях кліпу (відносно ROOT) для набору.
+## Коротка назва -> шлях кліпу (відносно ROOT) для набору. Касти й рухи
+## здібностей додаються під назвою "W_<кліп>".
 static func clips_of(set: Dictionary) -> Dictionary:
 	var clips: Dictionary = (set.get("clips", {}) as Dictionary).duplicate()
+	for moves: Array in (set.get("cast", {}) as Dictionary).values():
+		for move: Array in moves:
+			clips["W_" + String(move[0])] = move[0]
+	for file: String in (set.get("skills", {}) as Dictionary).values():
+		clips["W_" + file] = file
 	if set.get("one_hand_moves", false):
 		for short_name: String in ONE_HAND_MOVES:
 			if not clips.has(short_name):
@@ -137,3 +183,17 @@ static func install(player: AnimationPlayer, hero_id: StringName, style: String)
 			library.add_animation(full_name, anim)
 		overrides[short_name] = full_name
 	return overrides
+
+## Касти для чар: [[коротка назва, мить викиду (с кліпу), швидкість], ...]
+## або порожньо, якщо своїх кастів немає.
+static func cast_moves(hero_id: StringName, style: String, spell: String) -> Array:
+	var moves: Array = (get_set(hero_id, style).get("cast", {}) as Dictionary).get(spell, [])
+	var result := []
+	for move: Array in moves:
+		result.append(["W_" + String(move[0]), float(move[1]), float(move[2])])
+	return result
+
+## Рух здібності (коротка назва) або "" — свого руху немає.
+static func skill_move(hero_id: StringName, style: String, skill_id: StringName) -> String:
+	var file: String = (get_set(hero_id, style).get("skills", {}) as Dictionary).get(skill_id, "")
+	return "W_" + file if file != "" else ""
