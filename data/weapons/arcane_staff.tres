@@ -26,4 +26,5 @@ speed_mult_3d = 1.0
 knockback_mult_3d = 0.6
 grip_offset = Vector3(-0.003451, 0.001176, -0.000273)
 grip_rotation_deg = Vector3(0, 0, 90)
+upright_3d = true
 model_scale = 0.1409

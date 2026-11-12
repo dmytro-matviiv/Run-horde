@@ -123,6 +123,9 @@ var style_3d: String = "sword"
 ## Парна зброя: друга така сама модель у лівій руці, дзеркально до
 ## правої (парні клинки, кинджали).
 @export var dual_wield := false
+## Посох чаклуна: стоїть у руці рівно вертикально (UprightGrip), а не
+## повертається разом із кистю.
+@export var upright_3d := false
 
 @export_group("Статус-ефект")
 ## Порожній StringName = без ефекту. Решта — StatusEffects.POISON/BURN/SLOW.

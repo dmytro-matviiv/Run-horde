@@ -108,7 +108,12 @@ const SETS := {
 	#              ~0.3 с: здібності спрацьовують одразу).
 	&"ember_priestess": {
 		"staff": {
-			"clips": CASTER_MOVES,
+			# Стійка й біг "з факелом": права рука тримає посох збоку, рівно
+			# (сам посох стоїть вертикально — WeaponDef.upright_3d).
+			"clips": {
+				"Idle": "staff_idle", "Walk": "staff_run", "Run": "staff_run",
+				"Run_Back": "staff_run_back", "Run_Left": "staff_run_left", "Run_Right": "staff_run_right",
+			},
 			"cast": {
 				"arcane": [["cast_sweep", 0.3, 1.4], ["cast_forward", 0.4, 1.8]],
 				"frost": [["cast_forward", 0.4, 1.8], ["cast_upsweep", 0.35, 1.6]],

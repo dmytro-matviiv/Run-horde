@@ -70,6 +70,11 @@ static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> No
 	var grip := Transform3D(
 		Basis.from_euler(weapon.grip_rotation_deg * (PI / 180.0)).scaled(Vector3.ONE * weapon.model_scale / maxf(bone_scale, 0.0001)),
 		weapon.grip_offset)
+	if weapon.upright_3d:
+		# Посох чаклуна — рівно вертикально, рука лише тримає (UprightGrip).
+		var holder := UprightGrip.wrap(_make_weapon(scene, weapon), model, weapon.model_scale / maxf(bone_scale, 0.0001))
+		_hold(skeleton, bone, holder, Transform3D.IDENTITY)
+		return holder.get_child(0) as Node3D
 	var weapon_node := _hold(skeleton, bone, _make_weapon(scene, weapon), grip)
 	if weapon.dual_wield:
 		var other := skeleton.find_bone(String(hero.offhand_bone))
