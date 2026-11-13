@@ -4,7 +4,7 @@ extends Node
 ## запускаючи гру руками.
 ##   godot --path . res://tools/town_shots.tscn -- --out=D:/папка
 
-const SCENE := "res://scenes/world/base_island.tscn"
+const SCENE := "res://scenes/world/haven/haven.tscn"
 
 ## Точка героя, поворот і нахил камери, відстань.
 const VIEWS := [

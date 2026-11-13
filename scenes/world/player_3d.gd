@@ -1311,6 +1311,16 @@ func enemies_in_radius(radius: float, require_sight: bool = true) -> Array[Enemy
 		result.append(enemy)
 	return result
 
+## Робота в Прихистку (рубати, добувати, збирати): повернутись до точки й
+## махнути — той самий рух, що й перший удар зброї (у чаклуна — помах посохом).
+func play_work(point: Vector3) -> void:
+	var flat := point - global_position
+	flat.y = 0.0
+	if flat.length() > 0.05:
+		_facing_angle = atan2(flat.x, flat.z)
+		model.rotation.y = _facing_angle
+	_fire("SlashShot")
+
 func facing_vector() -> Vector3:
 	return _facing_vector()
 

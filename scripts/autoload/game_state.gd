@@ -145,7 +145,7 @@ func buy_starter_pack(id: StringName) -> bool:
 # повертатись — у місто до тих самих дверей або в головне меню, якщо
 # екран відкрили звідти. Між запусками не зберігається.
 const MAIN_MENU_SCENE := "res://scenes/ui/main_menu.tscn"
-const TOWN_SCENE := "res://scenes/world/base_island.tscn"
+const TOWN_SCENE := "res://scenes/world/haven/haven.tscn"
 var ui_return_scene := MAIN_MENU_SCENE
 var town_return_spot := Vector3.INF
 
@@ -346,6 +346,18 @@ func claim_chest_reward() -> int:
 	last_chest_claim_timestamp = int(Time.get_unix_time_from_system())
 	SaveManager.save_game()
 	return reward
+
+# Прихисток: ресурси, квести (QuestBook).
+## Добуте в Прихистку: "wood", "stone", "herb" -> кількість.
+var resources: Dictionary = {}
+## id квесту -> {"state", "progress"} (див. QuestBook).
+var quests: Dictionary = {}
+signal quests_changed
+
+func add_resource(id: String, amount: int = 1) -> void:
+	resources[id] = int(resources.get(id, 0)) + amount
+	QuestBook.report(id, amount)
+	SaveManager.save_game()
 
 func add_gold(amount: int) -> void:
 	if amount <= 0:

@@ -14,7 +14,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	get_tree().current_scene = dummy
 
-	await _go("res://scenes/world/base_island.tscn", "База")
+	await _go("res://scenes/world/haven/haven.tscn", "База")
 	await _go("res://scenes/dungeon/dungeon.tscn", "Забуті склепи")
 	var choice_found := false
 	for node in get_tree().current_scene.get_node("HUD").get_children():
@@ -25,7 +25,7 @@ func _ready() -> void:
 	get_tree().paused = false
 	await get_tree().create_timer(1.0).timeout
 	print("LOADER: ворогів у данжі ", get_tree().current_scene.get_node("Enemies").get_child_count())
-	await _go("res://scenes/world/base_island.tscn", "База")
+	await _go("res://scenes/world/haven/haven.tscn", "База")
 	get_tree().quit(0)
 
 func _go(path: String, title: String) -> void:

@@ -240,7 +240,7 @@ func _show_offline_reward() -> void:
 
 ## "Грати" веде на базу героя — звідти він сам піде в данж через портал.
 func _on_play_pressed() -> void:
-	SceneLoader.change_scene("res://scenes/world/base_island.tscn", "База")
+	SceneLoader.change_scene("res://scenes/world/haven/haven.tscn", "Прихисток")
 
 func _on_shop_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/shop.tscn")

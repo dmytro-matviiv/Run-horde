@@ -7,7 +7,7 @@ extends Node
 ##   godot --path . res://tools/town_return_probe.tscn
 ## Пише рядки "PROBE ..." і в кінці "RESULT: OK" або "RESULT: FAIL".
 
-const TOWN := "res://scenes/world/base_island.tscn"
+const TOWN := "res://scenes/world/haven/haven.tscn"
 ## Скільки герой має пройти за пів секунди, щоб вважати, що він не застряг.
 ## Застряглий проходив 0,00 м; вільний — 1,2-1,8 м (з центру зали один бік
 ## упирається в стіну будівлі).

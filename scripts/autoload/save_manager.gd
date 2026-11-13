@@ -44,6 +44,8 @@ func save_game() -> void:
 		"max_dungeon_level": GameState.max_dungeon_level,
 		"owned_weapon_ids": _stringnames_to_strings(GameState.owned_weapon_ids),
 		"equipped_weapon_ids": _keys_to_string(_values_to_strings(GameState.equipped_weapon_ids)),
+		"resources": GameState.resources,
+		"quests": GameState.quests,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -79,6 +81,15 @@ func load_game() -> void:
 	GameState.max_dungeon_level = data.get("max_dungeon_level", 0)
 	GameState.owned_weapon_ids = _strings_to_stringnames(data.get("owned_weapon_ids", []))
 	GameState.equipped_weapon_ids = _keys_to_string_name(_values_to_stringnames(data.get("equipped_weapon_ids", {})))
+	GameState.resources = data.get("resources", {})
+	# JSON читає числа як float — прогрес квестів тримаємо цілими.
+	var quests: Dictionary = data.get("quests", {})
+	for id: String in quests:
+		var entry: Dictionary = quests[id]
+		var progress: Array = entry.get("progress", [])
+		for i in progress.size():
+			progress[i] = int(progress[i])
+	GameState.quests = quests
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає
 ## сейв у форматі наступної, тому старі сейви ніколи не ламаються.

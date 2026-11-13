@@ -24,7 +24,7 @@ const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
 const COMBAT_BUTTONS_SCRIPT := preload("res://scenes/ui/combat_buttons.gd")
 const ENEMY_SCRIPT := preload("res://scenes/dungeon/enemy_3d.gd")
 ## Портал виходу — та сама арка з вихровою пеленою, що й прохід у данж у
-## місті (base_island: Town/DungeonGate/Arch + Effects/Portal).
+## Прихистку (scenes/world/haven).
 const EXIT_ARCH_SCENE := preload("res://assets/models/dungeon/Arch.fbx")
 const PORTAL_SHADER := preload("res://scenes/world/portal.gdshader")
 ## Арка в данжі менша, ніж у місті (там 1.75): стіни тут по 2 м.
@@ -42,7 +42,7 @@ const PORTAL_WALL_OFFSET := 0.8
 ## і складність, і запобіжник для слабкого телефона.
 const MAX_SUMMONS := 6
 
-const BASE_SCENE_PATH := "res://scenes/world/base_island.tscn"
+const BASE_SCENE_PATH := "res://scenes/world/haven/haven.tscn"
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 const DUNGEON_SCENE_PATH := "res://scenes/dungeon/dungeon.tscn"
 ## Воскресіння за відео: частка здоров'я й щит (с). Раз за похід.
@@ -1099,6 +1099,7 @@ func _on_ward_broken(boss: Enemy3D) -> void:
 
 func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_elite: bool) -> void:
 	_alive_enemies -= 1
+	QuestBook.report("kill")
 	var is_boss := kind == Enemy3D.Kind.BOSS
 	# Золото й досвід вилітають фонтаном і зараховуються, коли долетять до
 	# героя (_on_loot_collected). Еліта сипле втричі щедріше.
@@ -1597,6 +1598,7 @@ func _on_exit_pressed() -> void:
 		return
 	_add_gold(int(round(GOLD_FOR_CLEAR * _gold_scale)))
 	GameState.unlock_next_dungeon_level()
+	QuestBook.report("clear")
 	exit_button.visible = false
 	_show_results(true)
 

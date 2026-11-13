@@ -2,7 +2,7 @@ extends Node
 ## Тимчасово (лише в test_env): HUD міста з кнопкою входу в будівлю.
 func _ready() -> void:
 	PerfSettings.persist_settings = false
-	var world: Node = load("res://scenes/world/base_island.tscn").instantiate()
+	var world: Node = load("res://scenes/world/haven/haven.tscn").instantiate()
 	add_child(world)
 	await get_tree().create_timer(2.5).timeout
 	var action: Button = world.get("action_button")

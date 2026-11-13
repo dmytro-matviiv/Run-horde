@@ -4,7 +4,7 @@ extends Node
 ## секунд і зберігає знімок екрана. Так я можу побачити результат сам,
 ## не смикаючи замовника проханням "запусти й покажи".
 
-const SCENE := "res://scenes/world/base_island.tscn"
+const SCENE := "res://scenes/world/haven/haven.tscn"
 const OUT_PATH := "user://world_screenshot.png"
 const WARMUP_SECONDS := 1.5
 

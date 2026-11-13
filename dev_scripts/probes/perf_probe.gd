@@ -12,7 +12,7 @@ const ProbeUtil := preload("res://tools/probe_util.gd")
 
 const SCENES := {
 	"dungeon": "res://scenes/dungeon/dungeon.tscn",
-	"island": "res://scenes/world/base_island.tscn",
+	"island": "res://scenes/world/haven/haven.tscn",
 }
 
 func _ready() -> void:
