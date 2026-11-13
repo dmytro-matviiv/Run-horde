@@ -29,14 +29,14 @@ func _use(player: Node) -> bool:
 	_left = DURATION
 	_next_tick = 0.0
 	_age = 0.0
-	# Живе вогняне кільце довкола Чарівниці (Fx): розгоряється, іде за нею,
-	# по краю — язики полум'я; наприкінці гасне.
+	# Стіна вогню довкола Чарівниці (Fx.make_fire_wall): розгоряється від
+	# неї назовні, іде за нею, язики полум'я по колу; наприкінці гасне.
 	if _ring != null and is_instance_valid(_ring):
 		_ring.queue_free()
-	_ring = Fx.make_ring(color)
+	_ring = Fx.make_fire_wall()
 	player.add_child(_ring)
-	_ring.position = Vector3(0, 0.06, 0)
-	(_ring.get_node("Trail") as CPUParticles3D).amount = 28
+	_ring.position = Vector3(0, 0.04, 0)
+	Fx.update_fire_wall(_ring, 0.3, 0.2, 0.0)
 	return true
 
 func _update(player: Node, delta: float) -> void:
@@ -45,13 +45,15 @@ func _update(player: Node, delta: float) -> void:
 	_left -= delta
 	_age += delta
 	if _ring != null and is_instance_valid(_ring):
-		var grow := minf(_age / 0.25, 1.0)
-		var fade := clampf(_left / 0.4, 0.0, 1.0)
-		Fx.update_ring(_ring, _radius(player) * grow, _age, fade)
+		var grow := ease(minf(_age / 0.3, 1.0), 0.4)
+		var fade := clampf(_left / 0.45, 0.0, 1.0)
+		var power := minf(_age / 0.15, 1.0) * fade
+		Fx.update_fire_wall(_ring, maxf(_radius(player) * grow, 0.3), 1.35 * (0.4 + 0.6 * grow) * (0.5 + 0.5 * fade), power)
 		if _left <= 0.0:
 			var ring := _ring
-			(ring.get_node("Trail") as CPUParticles3D).emitting = false
-			ring.get_tree().create_timer(0.6, false).timeout.connect(ring.queue_free)
+			(ring.get_node("Embers") as CPUParticles3D).emitting = false
+			(ring.get_node("Flames") as CPUParticles3D).emitting = false
+			ring.get_tree().create_timer(0.8, false).timeout.connect(ring.queue_free)
 			_ring = null
 	_next_tick -= delta
 	if _next_tick > 0.0:

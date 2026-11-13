@@ -643,3 +643,167 @@ static func signature(parent: Node, kind: String, from: Vector3, target: Vector3
 	fx.call("play")
 	fx.connect("finished", fx.queue_free)
 	return fx
+
+## СТІНА ВОГНЮ по колу (Вогняне коло Чарівниці): язики полум'я
+## здіймаються по краю кола, під ними розпечена підлога, угору летять
+## жарини. Полум'я малює шейдер (шум, що біжить угору), а не мальована
+## текстура, тож на великому колі воно не розпливається квадратиками.
+## UV.x — по колу, UV.y — висота (0 — низ).
+const FIRE_WALL_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+
+uniform vec4 hot : source_color = vec4(1.0, 0.86, 0.45, 1.0);
+uniform vec4 mid : source_color = vec4(1.0, 0.42, 0.08, 1.0);
+uniform vec4 deep : source_color = vec4(0.55, 0.07, 0.02, 1.0);
+uniform float tiles = 12.0;
+uniform float intensity = 1.0;
+uniform float flip = 0.0;
+
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+float fbm(vec2 p) {
+	float v = noise(p) * 0.55;
+	v += noise(p * 2.03 + 3.1) * 0.3;
+	v += noise(p * 4.1 + 7.7) * 0.15;
+	return v;
+}
+
+void fragment() {
+	float h = mix(UV.y, 1.0 - UV.y, flip);
+	// М'яке жаріння біля основи полум'я, що мерехтить уздовж кола.
+	float n = fbm(vec2(UV.x * tiles, h * 1.5 - TIME * 1.2));
+	float glow = pow(1.0 - h, 2.2) * (0.55 + 0.45 * n);
+	vec3 rgb = mix(mid.rgb, hot.rgb, pow(1.0 - h, 3.0) * n);
+	ALBEDO = rgb;
+	ALPHA = clamp(glow * 0.55 * intensity, 0.0, 1.0);
+}
+"""
+
+## Розпечена підлога під стіною: жар уздовж кола, що мерехтить.
+## UV — від центру (0.5, 0.5); край кола — радіус 0.5.
+const FIRE_FLOOR_SHADER := """
+shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled;
+
+uniform vec4 glow : source_color = vec4(1.0, 0.38, 0.06, 1.0);
+uniform float intensity = 1.0;
+
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+void fragment() {
+	vec2 d = UV - vec2(0.5);
+	float r = length(d) * 2.0;
+	float a = atan(d.y, d.x);
+	float flick = 0.75 + 0.25 * hash(vec2(floor(a * 6.0 + TIME * 5.0), 1.0));
+	float band = smoothstep(0.78, 0.97, r) * (1.0 - smoothstep(0.97, 1.07, r));
+	float inner = (1.0 - smoothstep(0.0, 0.97, r)) * 0.04;
+	ALBEDO = glow.rgb;
+	ALPHA = clamp((band * 0.55 * flick + inner) * intensity, 0.0, 1.0);
+}
+"""
+
+static var _fire_wall_mesh: CylinderMesh
+static var _fire_wall_material: ShaderMaterial
+static var _fire_floor_material: ShaderMaterial
+
+## Стіна вогню (радіус і сила — update_fire_wall). Чіпляється до героя.
+static func make_fire_wall() -> Node3D:
+	if _fire_wall_mesh == null:
+		_fire_wall_mesh = CylinderMesh.new()
+		_fire_wall_mesh.top_radius = 1.0
+		_fire_wall_mesh.bottom_radius = 1.0
+		_fire_wall_mesh.height = 1.0
+		_fire_wall_mesh.radial_segments = 48
+		_fire_wall_mesh.rings = 1
+		_fire_wall_mesh.cap_top = false
+		_fire_wall_mesh.cap_bottom = false
+		_fire_wall_material = ShaderMaterial.new()
+		_fire_wall_material.shader = Shader.new()
+		_fire_wall_material.shader.code = FIRE_WALL_SHADER
+		_fire_floor_material = ShaderMaterial.new()
+		_fire_floor_material.shader = Shader.new()
+		_fire_floor_material.shader.code = FIRE_FLOOR_SHADER
+	var holder := Node3D.new()
+	holder.name = "FireWall"
+	var wall := MeshInstance3D.new()
+	wall.name = "Wall"
+	wall.mesh = _fire_wall_mesh
+	wall.material_override = _fire_wall_material.duplicate()
+	wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(wall)
+	var floor_glow := MeshInstance3D.new()
+	floor_glow.name = "Floor"
+	floor_glow.mesh = _mesh(true)
+	floor_glow.material_override = _fire_floor_material.duplicate()
+	floor_glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	floor_glow.position.y = 0.03
+	holder.add_child(floor_glow)
+	# Язики полум'я: невеликі мальовані язики (Kenney flame) уздовж кола —
+	# кожен свого розміру, не розтягнуті, тож не пікселяться.
+	var flames := make_particles("flame_05", Color(1.0, 0.46, 0.12), 44, 0.6, 2.7, true, true)
+	flames.name = "Flames"
+	flames.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	flames.emission_ring_axis = Vector3.UP
+	flames.emission_ring_radius = 1.0
+	flames.emission_ring_inner_radius = 0.95
+	flames.emission_ring_height = 0.05
+	flames.direction = Vector3.UP
+	flames.spread = 6.0
+	flames.initial_velocity_min = 0.6
+	flames.initial_velocity_max = 1.4
+	flames.gravity = Vector3(0, 1.2, 0)
+	flames.angle_max = 0.0
+	flames.scale_amount_min = 0.7
+	flames.scale_amount_max = 1.2
+	flames.position.y = 0.55
+	holder.add_child(flames)
+	# Жарини злітають з полум'я вгору й гаснуть.
+	var embers := make_particles("spark_04", Color(1.0, 0.62, 0.22), 26, 0.9, 0.22, true, true)
+	embers.name = "Embers"
+	embers.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
+	embers.emission_ring_axis = Vector3.UP
+	embers.emission_ring_radius = 1.0
+	embers.emission_ring_inner_radius = 0.92
+	embers.emission_ring_height = 0.1
+	embers.direction = Vector3.UP
+	embers.spread = 20.0
+	embers.initial_velocity_min = 1.0
+	embers.initial_velocity_max = 2.4
+	embers.gravity = Vector3(0, 0.6, 0)
+	embers.position.y = 0.3
+	holder.add_child(embers)
+	return holder
+
+## Радіус (м), висота полум'я (м) і сила (0..1 — розгоряється й гасне).
+static func update_fire_wall(holder: Node3D, radius: float, height: float, power: float) -> void:
+	var wall := holder.get_node("Wall") as MeshInstance3D
+	# Жаріння — низько біля основи полум'я (вище — лише язики).
+	var glow_height := maxf(height * 0.4, 0.01)
+	wall.scale = Vector3(radius, glow_height, radius)
+	wall.position.y = glow_height * 0.5
+	var wall_material := wall.material_override as ShaderMaterial
+	wall_material.set_shader_parameter(&"intensity", power)
+	wall_material.set_shader_parameter(&"tiles", maxf(roundf(TAU * radius / 0.75), 4.0))
+	var floor_glow := holder.get_node("Floor") as MeshInstance3D
+	floor_glow.scale = Vector3.ONE * radius * 2.15
+	(floor_glow.material_override as ShaderMaterial).set_shader_parameter(&"intensity", power)
+	var embers := holder.get_node("Embers") as CPUParticles3D
+	embers.emission_ring_radius = radius
+	embers.emission_ring_inner_radius = radius * 0.94
+	var flames := holder.get_node("Flames") as CPUParticles3D
+	flames.emission_ring_radius = radius
+	flames.emission_ring_inner_radius = radius * 0.96
+	flames.emitting = power > 0.3
