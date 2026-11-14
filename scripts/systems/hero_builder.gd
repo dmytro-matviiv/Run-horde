@@ -21,6 +21,8 @@ static func build_model(hero: HeroDef) -> Array:
 	if scene == null:
 		return [null, true]
 	var instance: Node3D = scene.instantiate()
+	# 13–17 поверхонь моделі -> одна (для телефона це найдорожче в герої).
+	HeroMerge.apply(instance, scene.resource_path)
 	if placeholder:
 		tint(instance, hero.color)
 	return [instance, placeholder]

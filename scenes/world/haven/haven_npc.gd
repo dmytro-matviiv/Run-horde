@@ -41,6 +41,9 @@ var _home_yaw := 0.0
 var _mark: Label3D
 var _player: Node3D
 var _near := false
+## Чи жителя видно на екрані: поза кадром анімація стоїть (телефону не
+## треба рахувати кістки тих, кого гравець не бачить).
+var _on_screen: VisibleOnScreenNotifier3D
 
 static func create(npc_id: StringName, scene: PackedScene) -> HavenNpc:
 	var npc := HavenNpc.new()
@@ -86,6 +89,9 @@ func _ready() -> void:
 	bob.tween_property(_mark, "position:y", 3.0, 0.6).set_trans(Tween.TRANS_SINE)
 	bob.tween_property(_mark, "position:y", 2.85, 0.6).set_trans(Tween.TRANS_SINE)
 	refresh_mark()
+	_on_screen = VisibleOnScreenNotifier3D.new()
+	_on_screen.aabb = AABB(Vector3(-0.9, 0.0, -0.9), Vector3(1.8, 2.3, 1.8))
+	add_child(_on_screen)
 
 func set_player(player: Node3D) -> void:
 	_player = player
@@ -102,6 +108,9 @@ func refresh_mark() -> void:
 		_mark.visible = false
 
 func _process(delta: float) -> void:
+	var visible_now := _on_screen.is_on_screen()
+	if _player_anim.active != visible_now:
+		_player_anim.active = visible_now
 	if _player == null:
 		return
 	var offset := _player.global_position - global_position

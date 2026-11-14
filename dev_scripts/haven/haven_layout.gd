@@ -40,6 +40,9 @@ const WEST_HILL := [Vector2(-40.0, 4.0), Vector2(11.0, 15.0), 1.8]
 
 const SPAWN := Vector3(0.0, 0.0, 34.0)
 const PORTAL := Vector3(0.0, HIGH_HEIGHT, -24.0)
+## Арка порталу (масштаб моделі дверної рами) і де стоять стовпчики з вогнем.
+const PORTAL_ARCH_SCALE := 1.75
+const PORTAL_FIRE_X := 3.6
 
 ## Місця NPC (на площі, висота нижньої тераси) і куди вони дивляться (кут
 ## навколо Y; 0 — на південь, до камери).
@@ -64,18 +67,69 @@ const PATHS := [
 
 # --- рельєф ---
 
+## На скільки земля під сходами нижча за підніжжя (її закривають сходинки
+## й поміст) і на скільки схил тераси захований углиб підпірної стіни.
+const STAIR_SINK := 0.35
+const EDGE_TUCK := 0.22
+
+## Висота для ФІЗИКИ: земля + рівні пандуси під сходами (герой іде по
+## пандусу, а бачить сходинки).
 static func height(x: float, z: float) -> float:
+	var h := ground(x, z)
+	for s: Array in STAIRS:
+		h = maxf(h, _ramp(x, z, s))
+	return h
+
+## Земля без пандусів: чаша з горбиками, пагорб, тераси.
+static func ground(x: float, z: float) -> float:
 	var h := _bowl(x, z) + _bumps(x, z)
 	var hill: Array = WEST_HILL
 	var c: Vector2 = hill[0]
 	var r: Vector2 = hill[1]
 	var d := Vector2((x - c.x) / r.x, (z - c.y) / r.y).length()
 	h = maxf(h, float(hill[2]) * (1.0 - smoothstep(0.35, 1.0, d)) + _bumps(x, z))
+	# Біля підніжжя сходів земля рівна — щоб перша сходинка не тонула в
+	# горбику й не висіла над ямкою.
+	for s: Array in STAIRS:
+		if not is_equal_approx(float(s[3]), LOW_HEIGHT):
+			continue
+		var from := Vector2(s[0], s[1]) + (s[2] as Vector2) * 1.0
+		var to := Vector2(s[0], s[1]) + (s[2] as Vector2) * 6.0
+		var near := Geometry2D.get_closest_point_to_segment(Vector2(x, z), from, to).distance_to(Vector2(x, z))
+		h = lerpf(h, float(s[3]) - 2.0, 1.0 - smoothstep(2.6, 5.2, near))
 	h = maxf(h, _terrace(x, z, LOW_TERRACE, LOW_HEIGHT))
 	h = maxf(h, _terrace(x, z, HIGH_TERRACE, HIGH_HEIGHT))
-	for s: Array in STAIRS:
-		h = maxf(h, _ramp(x, z, s))
 	return h
+
+## Де стоїть вершина ВИДИМОЇ землі для вузла сітки (x, z). Від фізики
+## відрізняється у двох місцях:
+##  - під сходами земля опущена — інакше схил накривав би сходинки, а їхні
+##    краї мерехтіли б крізь нього;
+##  - кільце вершин одразу за краєм тераси підсунуте під підпірну стіну —
+##    крутий схил ховається в товщі стіни, і стіну видно на всю висоту.
+static func visual_vertex(x: float, z: float) -> Vector3:
+	var p := Vector2(x, z)
+	for s: Array in STAIRS:
+		var rel := p - Vector2(s[0], s[1])
+		var dir: Vector2 = s[2]
+		var along := rel.dot(dir)
+		var side := absf(rel.dot(Vector2(-dir.y, dir.x)))
+		if side < float(s[4]) * 0.5 - 0.01 and along > 0.01 and along < 3.99:
+			return Vector3(x, float(s[3]) - 2.0 - STAIR_SINK, z)
+	var out := Vector3(x, ground(x, z), z)
+	for rect: Rect2 in [HIGH_TERRACE, LOW_TERRACE]:
+		var dx := maxf(rect.position.x - x, x - rect.end.x)
+		var dz := maxf(rect.position.y - z, z - rect.end.y)
+		var d := maxf(dx, dz)
+		if d > 0.01 and d < 1.01:
+			var cx := clampf(x, rect.position.x, rect.end.x)
+			var cz := clampf(z, rect.position.y, rect.end.y)
+			if dx > 0.01:
+				out.x = cx + signf(x - cx) * EDGE_TUCK
+			if dz > 0.01:
+				out.z = cz + signf(z - cz) * EDGE_TUCK
+			break
+	return out
 
 ## Чаша довкола: рівно в середині, за краєм — пагорби вгору.
 static func _bowl(x: float, z: float) -> float:

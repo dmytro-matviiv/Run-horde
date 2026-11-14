@@ -1,7 +1,10 @@
 shader_type spatial;
-render_mode cull_back, specular_disabled;
+// Освітлення рахується у вершинах: земля — плавна сітка з кроком 1 м, тож
+// різниці з попіксельним не видно, а піксельний шейдер (земля займає
+// більшу частину екрана) стає в рази коротшим — це важливо для телефона.
+render_mode cull_back, specular_disabled, vertex_lighting;
 
-// ЗЕМЛЯ ПРИХИСТКУ — один меш із пагорбами й терасами (будує HavenBuilder).
+// ЗЕМЛЯ ПРИХИСТКУ — меш із пагорбами й терасами (будує HavenBuilder).
 // Що де лежить, записано в кольорі вершин (його кладе будівник):
 //   червоний — утоптана стежка (ґрунт);
 //   зелений  — скельний схил / кам'янистий ґрунт;
@@ -20,18 +23,26 @@ uniform vec3 dirt_dark : source_color = vec3(0.46, 0.35, 0.25);
 uniform vec3 rock_light : source_color = vec3(0.62, 0.58, 0.52);
 uniform vec3 rock_dark : source_color = vec3(0.38, 0.35, 0.32);
 
-varying vec3 world_pos;
-varying vec3 world_normal;
+// Координати шуму рахуємо у вершинах (три масштаби) — у пікселі лишаються
+// самі вибірки текстури.
+varying vec2 uv_far;
+varying vec2 uv_mid;
+varying vec2 uv_near;
+varying float slope;
 
 void vertex() {
-	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	vec3 world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vec3 world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	uv_far = world_pos.xz * 0.031;
+	uv_mid = world_pos.xz * 0.17;
+	uv_near = world_pos.xz * 1.3;
+	slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
 }
 
 void fragment() {
-	float n1 = texture(detail, world_pos.xz * 0.031).r;
-	float n2 = texture(detail, world_pos.xz * 0.17).r;
-	float n3 = texture(detail, world_pos.xz * 1.3).r;
+	float n1 = texture(detail, uv_far).r;
+	float n2 = texture(detail, uv_mid).r;
+	float n3 = texture(detail, uv_near).r;
 	float spots = smoothstep(0.2, 0.85, n1 * 0.6 + n2 * 0.3 + n3 * 0.1);
 	vec3 grass = mix(grass_dark, grass_light, spots);
 	// Теплі сонячні плями на траві.
@@ -42,7 +53,6 @@ void fragment() {
 	vec3 dirt = mix(dirt_dark, dirt_light, smoothstep(0.25, 0.8, n2 * 0.7 + n3 * 0.3));
 
 	// Камінь: розмічений будівником або крутий схил.
-	float slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
 	float rock = clamp(COLOR.g + smoothstep(0.32, 0.55, slope), 0.0, 1.0);
 	rock = smoothstep(0.3, 0.7, rock + (n3 - 0.5) * 0.3);
 	vec3 stone = mix(rock_dark, rock_light, smoothstep(0.2, 0.8, n2 * 0.5 + n3 * 0.5));

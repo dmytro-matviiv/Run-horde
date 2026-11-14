@@ -1,0 +1,179 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_camp.res" id="1_rhme5"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_plaza.res" id="2_thd12"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_upper.res" id="3_qrtx8"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_1.res" id="4_julpw"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_2.res" id="5_uesog"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_3.res" id="6_so5m6"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_4.res" id="7_wsxcn"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_0.res" id="8_o2yc6"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_1.res" id="9_0ecs8"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_2.res" id="10_8n0gv"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_3.res" id="11_qr3rn"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_4.res" id="12_4irlm"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_5.res" id="13_qk2s1"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_0.res" id="14_ihpi2"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_1.res" id="15_klrj2"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_2.res" id="16_yseqm"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_3.res" id="17_380kt"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_4.res" id="18_8848h"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_5.res" id="19_evw33"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_0.res" id="20_u40fv"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_1.res" id="21_5jh6u"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_2.res" id="22_m5gve"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_3.res" id="23_ovv7o"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_4.res" id="24_k5j1a"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_5.res" id="25_c86g2"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_0.res" id="26_lgg0y"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_1.res" id="27_hm6av"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_2.res" id="28_dm8qm"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_3.res" id="29_0v6mt"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_4.res" id="30_1impl"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_5.res" id="31_v3e8q"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_1.res" id="32_7t6hv"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_2.res" id="33_dadk1"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_3.res" id="34_tyr2h"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_4.res" id="35_v05n8"]
+
+[node name="Lite" type="Node3D" unique_id=1348209703]
+
+[node name="ArchCamp" type="MeshInstance3D" parent="." unique_id=748115045]
+cast_shadow = 0
+mesh = ExtResource("1_rhme5")
+
+[node name="ArchPlaza" type="MeshInstance3D" parent="." unique_id=531320877]
+cast_shadow = 0
+mesh = ExtResource("2_thd12")
+
+[node name="ArchUpper" type="MeshInstance3D" parent="." unique_id=1951594033]
+cast_shadow = 0
+mesh = ExtResource("3_qrtx8")
+
+[node name="Nature01" type="MeshInstance3D" parent="." unique_id=2116774547]
+cast_shadow = 0
+mesh = ExtResource("4_julpw")
+
+[node name="Nature02" type="MeshInstance3D" parent="." unique_id=1776105722]
+cast_shadow = 0
+mesh = ExtResource("5_uesog")
+
+[node name="Nature03" type="MeshInstance3D" parent="." unique_id=1921300400]
+cast_shadow = 0
+mesh = ExtResource("6_so5m6")
+
+[node name="Nature04" type="MeshInstance3D" parent="." unique_id=2095824038]
+cast_shadow = 0
+mesh = ExtResource("7_wsxcn")
+
+[node name="Nature10" type="MeshInstance3D" parent="." unique_id=846826922]
+cast_shadow = 0
+mesh = ExtResource("8_o2yc6")
+
+[node name="Nature11" type="MeshInstance3D" parent="." unique_id=218419721]
+cast_shadow = 0
+mesh = ExtResource("9_0ecs8")
+
+[node name="Nature12" type="MeshInstance3D" parent="." unique_id=1358121801]
+cast_shadow = 0
+mesh = ExtResource("10_8n0gv")
+
+[node name="Nature13" type="MeshInstance3D" parent="." unique_id=339218557]
+cast_shadow = 0
+mesh = ExtResource("11_qr3rn")
+
+[node name="Nature14" type="MeshInstance3D" parent="." unique_id=692519592]
+cast_shadow = 0
+mesh = ExtResource("12_4irlm")
+
+[node name="Nature15" type="MeshInstance3D" parent="." unique_id=1939378085]
+cast_shadow = 0
+mesh = ExtResource("13_qk2s1")
+
+[node name="Nature20" type="MeshInstance3D" parent="." unique_id=319671269]
+cast_shadow = 0
+mesh = ExtResource("14_ihpi2")
+
+[node name="Nature21" type="MeshInstance3D" parent="." unique_id=1627561416]
+cast_shadow = 0
+mesh = ExtResource("15_klrj2")
+
+[node name="Nature22" type="MeshInstance3D" parent="." unique_id=270285558]
+cast_shadow = 0
+mesh = ExtResource("16_yseqm")
+
+[node name="Nature23" type="MeshInstance3D" parent="." unique_id=877881418]
+cast_shadow = 0
+mesh = ExtResource("17_380kt")
+
+[node name="Nature24" type="MeshInstance3D" parent="." unique_id=990583426]
+cast_shadow = 0
+mesh = ExtResource("18_8848h")
+
+[node name="Nature25" type="MeshInstance3D" parent="." unique_id=1228163541]
+cast_shadow = 0
+mesh = ExtResource("19_evw33")
+
+[node name="Nature30" type="MeshInstance3D" parent="." unique_id=1689913716]
+cast_shadow = 0
+mesh = ExtResource("20_u40fv")
+
+[node name="Nature31" type="MeshInstance3D" parent="." unique_id=319744435]
+cast_shadow = 0
+mesh = ExtResource("21_5jh6u")
+
+[node name="Nature32" type="MeshInstance3D" parent="." unique_id=2014504657]
+cast_shadow = 0
+mesh = ExtResource("22_m5gve")
+
+[node name="Nature33" type="MeshInstance3D" parent="." unique_id=294722648]
+cast_shadow = 0
+mesh = ExtResource("23_ovv7o")
+
+[node name="Nature34" type="MeshInstance3D" parent="." unique_id=1671953377]
+cast_shadow = 0
+mesh = ExtResource("24_k5j1a")
+
+[node name="Nature35" type="MeshInstance3D" parent="." unique_id=1187667653]
+cast_shadow = 0
+mesh = ExtResource("25_c86g2")
+
+[node name="Nature40" type="MeshInstance3D" parent="." unique_id=508422598]
+cast_shadow = 0
+mesh = ExtResource("26_lgg0y")
+
+[node name="Nature41" type="MeshInstance3D" parent="." unique_id=251921330]
+cast_shadow = 0
+mesh = ExtResource("27_hm6av")
+
+[node name="Nature42" type="MeshInstance3D" parent="." unique_id=1628738533]
+cast_shadow = 0
+mesh = ExtResource("28_dm8qm")
+
+[node name="Nature43" type="MeshInstance3D" parent="." unique_id=1998650490]
+cast_shadow = 0
+mesh = ExtResource("29_0v6mt")
+
+[node name="Nature44" type="MeshInstance3D" parent="." unique_id=1340862653]
+cast_shadow = 0
+mesh = ExtResource("30_1impl")
+
+[node name="Nature45" type="MeshInstance3D" parent="." unique_id=1998662681]
+cast_shadow = 0
+mesh = ExtResource("31_v3e8q")
+
+[node name="Nature51" type="MeshInstance3D" parent="." unique_id=2060454803]
+cast_shadow = 0
+mesh = ExtResource("32_7t6hv")
+
+[node name="Nature52" type="MeshInstance3D" parent="." unique_id=1612645184]
+cast_shadow = 0
+mesh = ExtResource("33_dadk1")
+
+[node name="Nature53" type="MeshInstance3D" parent="." unique_id=1995104877]
+cast_shadow = 0
+mesh = ExtResource("34_tyr2h")
+
+[node name="Nature54" type="MeshInstance3D" parent="." unique_id=1442967938]
+cast_shadow = 0
+mesh = ExtResource("35_v05n8")

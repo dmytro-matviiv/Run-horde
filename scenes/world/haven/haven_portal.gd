@@ -12,10 +12,10 @@ class_name HavenPortal
 signal player_near()
 signal player_left()
 
-const V := "res://assets/models/haven/village/"
-const F := "res://assets/models/haven/forest/"
 const RADIUS := 3.2
+## Як у будівника (HavenLayout.PORTAL_ARCH_SCALE / PORTAL_FIRE_X).
 const ARCH_SCALE := 1.75
+const FIRE_X := 3.6
 const COLOR_OUTER := Color(0.42, 0.16, 0.95)
 const COLOR_CORE := Color(0.3, 0.8, 1.0)
 
@@ -53,7 +53,6 @@ void fragment() {
 }
 """
 
-var _static: Node3D
 var _vortex: MeshInstance3D
 var _runes: MeshInstance3D
 var _shards: Array[Node3D] = []
@@ -62,19 +61,13 @@ var _player: Node3D
 var _near := false
 
 func _ready() -> void:
-	# Нерухоме (поміст, бордюр, арка, стовпи) — пакуємо в одну команду
-	# на модель (TownBatcher): для телефона дешевше.
-	_static = Node3D.new()
-	_static.name = "Static"
-	add_child(_static)
-	_build_dais()
-	_build_arch()
+	# Поміст, арку й стовпчики ставить будівник (вони нерухомі й пакуються
+	# разом з усією архітектурою); тут — лише те, що рухається й світиться.
 	_build_vortex()
 	_build_rune_circle()
-	_build_pillars()
+	_build_fires()
 	_build_shards()
 	_build_motes()
-	TownBatcher.batch(_static, 0.0)
 
 func set_player(player: Node3D) -> void:
 	_player = player
@@ -98,29 +91,6 @@ func _process(delta: float) -> void:
 			player_near.emit()
 		else:
 			player_left.emit()
-
-func _model(path: String, pos: Vector3, yaw: float, scale: Vector3, moving: bool = false) -> Node3D:
-	var node: Node3D = (load(path) as PackedScene).instantiate()
-	(self if moving else _static).add_child(node)
-	node.position = pos
-	node.rotation.y = yaw
-	node.scale = scale
-	return node
-
-## Поміст: квадрат бруківки 3×3 плити з кам'яним бордюром.
-func _build_dais() -> void:
-	for x in 3:
-		for z in 3:
-			_model(V + "Floor_UnevenBrick.gltf", Vector3((x - 1) * 2.0, 0.02, (z - 1) * 2.0), 0.0, Vector3.ONE)
-	for k in 3:
-		var t := (k - 1) * 2.0
-		_model(V + "Prop_ExteriorBorder_Straight1.gltf", Vector3(t, 0.0, 3.0), PI, Vector3.ONE)
-		_model(V + "Prop_ExteriorBorder_Straight1.gltf", Vector3(t, 0.0, -3.0), 0.0, Vector3.ONE)
-		_model(V + "Prop_ExteriorBorder_Straight1.gltf", Vector3(3.0, 0.0, t), -PI * 0.5, Vector3.ONE)
-		_model(V + "Prop_ExteriorBorder_Straight1.gltf", Vector3(-3.0, 0.0, t), PI * 0.5, Vector3.ONE)
-
-func _build_arch() -> void:
-	_model(V + "DoorFrame_Round_Brick.gltf", Vector3(0, 0.02, 0), 0.0, Vector3.ONE * ARCH_SCALE)
 
 func _build_vortex() -> void:
 	_vortex = MeshInstance3D.new()
@@ -156,12 +126,10 @@ func _build_rune_circle() -> void:
 	add_child(_runes)
 	_runes.position = Vector3(0, 0.06, 0)
 
-## Стовпи з вогнем обабіч арки.
-func _build_pillars() -> void:
-	for side in [-1.0, 1.0]:
-		var x: float = side * 3.6
-		_model(V + "Corner_Exterior_Brick.gltf", Vector3(x, 0.0, 0.6), PI * 0.25, Vector3(1.4, 0.55, 1.4))
-		var fire := Fx.make_particles("flame_05", Color(1.0, 0.5, 0.18), 18, 0.55, 0.9, true, true)
+## Вогонь на стовпчиках обабіч арки.
+func _build_fires() -> void:
+	for x: float in [-FIRE_X, FIRE_X]:
+		var fire := Fx.make_particles("flame_05", Color(1.0, 0.5, 0.18), PerfSettings.scaled_count(18), 0.55, 0.9, true, true)
 		fire.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 		fire.emission_sphere_radius = 0.18
 		fire.direction = Vector3.UP
@@ -171,10 +139,6 @@ func _build_pillars() -> void:
 		fire.gravity = Vector3(0, 1.4, 0)
 		add_child(fire)
 		fire.position = Vector3(x, 1.85, 0.6)
-		var glow := Fx.make_sprite("circle_05", Color(1.0, 0.55, 0.2, 0.45), false, true)
-		glow.scale = Vector3.ONE * 1.6
-		add_child(glow)
-		glow.position = Vector3(x, 2.0, 0.6)
 
 ## Рунні кристали кружляють над аркою: загострені уламки, що світяться.
 func _build_shards() -> void:
@@ -198,7 +162,7 @@ func _build_shards() -> void:
 
 ## Світні цятки: виникають довкола й летять у прохід.
 func _build_motes() -> void:
-	var motes := Fx.make_particles("spark_04", COLOR_CORE.lerp(Color.WHITE, 0.3), 28, 1.6, 0.18, true, true)
+	var motes := Fx.make_particles("spark_04", COLOR_CORE.lerp(Color.WHITE, 0.3), PerfSettings.scaled_count(28), 1.6, 0.18, true, true)
 	motes.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 	motes.emission_sphere_radius = 2.8
 	motes.direction = Vector3.ZERO

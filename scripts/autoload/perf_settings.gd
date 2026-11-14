@@ -38,8 +38,8 @@ const QUALITY_TITLES := ["Низька", "Середня", "Висока"]
 const SETTINGS_PATH := "user://settings.cfg"
 
 ## Що міняє кожен рівень якості.
-##   max_fps          — стеля кадрів. Рівні 30 приємніші за "плаваючі"
-##                      40-55, і телефон гріється вдвічі менше.
+##   max_fps          — стеля кадрів. На "низькій" вона ще й підлаштовується
+##                      під екран і сцену — див. _pick_fps_cap().
 ##   render_scale_*   — межі динамічної роздільності 3D.
 ##   shadows          — тіні від сонця на острові.
 ##   lod_threshold    — наскільки охоче далекі моделі спрощуються.
@@ -52,7 +52,7 @@ const SETTINGS_PATH := "user://settings.cfg"
 ##   horde_size       — скільки дрібноти в орді засідки.
 const PROFILES := {
 	Quality.LOW: {
-		"max_fps": 30,
+		"max_fps": 60,
 		"render_scale_max": 0.65,
 		"render_scale_min": 0.5,
 		"shadows": false,
@@ -92,6 +92,19 @@ const PROFILES := {
 	},
 }
 
+## СТЕЛЯ КАДРІВ НА "НИЗЬКІЙ". Раніше там було жорстко 30. Тепер:
+##  - екран 90 Гц (як у Moto G32) — 45 кадрів: рівно кожне друге оновлення
+##    екрана, тож рух такий самий рівний, як 30 на 60 Гц, але в півтора
+##    раза плавніший;
+##  - інші екрани — 60.
+## Якщо якась сцена (важкий рівень данжу) на мінімальній роздільності не
+## тримає цю стелю кілька секунд поспіль, для неї гра повертається до
+## рівних 30 і запам'ятовує це — "плаваючі" 33-40 кадрів гірші за рівні 30.
+const LOW_SAFE_FPS := 30
+## Версія оптимізацій: після оновлення гри список "важких" сцен
+## скидається — їм дається нова спроба.
+const PERF_VERSION := 2
+
 ## Динамічна роздільність: крок униз більший за крок угору. Коли
 ## гальмує — треба рятувати швидко; коли є запас — повертатись обережно,
 ## щоб не "гойдатись" туди-сюди.
@@ -117,6 +130,10 @@ var show_fps := false
 var persist_settings := true
 
 var _render_scale := 1.0
+var _fps_cap := 60
+## Сцени, що на "низькій" не тримають підвищену стелю кадрів (ключ — шлях
+## сцени, для данжу ще й номер рівня).
+var _slow_scenes: Array = []
 var _adaptive := false
 var _gpu_timing_ready := false
 
@@ -158,6 +175,15 @@ func get_value(key: String) -> Variant:
 func get_quality_title() -> String:
 	return QUALITY_TITLES[quality]
 
+## Кількість дрібниць (частинки вогню, іскри) під рівень якості: на
+## "низькій" — половина, на "середній" — три чверті.
+func scaled_count(count: int) -> int:
+	var factor: float = [0.5, 0.75, 1.0][quality]
+	return maxi(1, ceili(count * factor))
+
+func get_fps_cap() -> int:
+	return _fps_cap
+
 ## Чи працює легкий рушій (OpenGL ES 3). На телефонах гра стартує саме в
 ## ньому: на слабких відеочипах він швидший за Vulkan у рази.
 static func is_compatibility() -> bool:
@@ -180,11 +206,7 @@ func set_show_fps(enabled: bool) -> void:
 func apply_quality(level: int, save: bool = true) -> void:
 	quality = clampi(level, Quality.LOW, Quality.HIGH)
 	var profile: Dictionary = PROFILES[quality]
-	Engine.max_fps = profile.max_fps
-	# Фізика рахується стільки ж разів, скільки малюються кадри: тоді
-	# рух плавний без додаткових хитрощів, а на "низькій" процесор
-	# рахує фізику вдвічі рідше.
-	Engine.physics_ticks_per_second = profile.max_fps
+	_apply_fps_cap()
 	_render_scale = profile.render_scale_max
 	_apply_render_scale()
 	get_tree().root.mesh_lod_threshold = profile.lod_threshold
@@ -197,6 +219,39 @@ func apply_quality(level: int, save: bool = true) -> void:
 	quality_changed.emit(quality)
 	if save:
 		_save_settings()
+
+# --- стеля кадрів ---
+
+func _apply_fps_cap() -> void:
+	_fps_cap = _pick_fps_cap()
+	Engine.max_fps = _fps_cap
+	# Фізика рахується стільки ж разів, скільки малюються кадри: тоді
+	# рух плавний без додаткових хитрощів.
+	Engine.physics_ticks_per_second = _fps_cap
+
+func _pick_fps_cap() -> int:
+	var cap: int = PROFILES[quality].max_fps
+	if quality == Quality.LOW and _slow_scenes.has(_scene_key()):
+		return LOW_SAFE_FPS
+	# Екран 90 Гц показує рівно лише 90, 45 або 30 кадрів. Стеля 60 на
+	# ньому дає ривки, а щойно кадр не встигає — екран сам скидає до 30
+	# (саме тому лічильник раніше не піднімався вище 30).
+	var refresh := DisplayServer.screen_get_refresh_rate()
+	if refresh >= 85.0 and refresh < 100.0 and quality != Quality.HIGH:
+		return 45
+	return cap
+
+## Ключ сцени для списку "важких": шлях, а для данжу — ще й рівень.
+func _scene_key() -> String:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return ""
+	var key := scene.scene_file_path
+	if key.contains("dungeon"):
+		var state := get_node_or_null("/root/GameState")
+		if state != null:
+			key += "#%d" % int(state.get("dungeon_level"))
+	return key
 
 # --- що не залежить від рівня ---
 
@@ -335,7 +390,7 @@ func _evaluate_window() -> void:
 	if _window_worst_frame > 0.25 or _window_frames == 0:
 		return
 	var profile: Dictionary = PROFILES[quality]
-	var target_fps: float = profile.max_fps
+	var target_fps := float(_fps_cap)
 	var budget_ms := 1000.0 / target_fps
 	var fps := _window_frames / _window_time
 	var cost_ms := _window_cost_ms / _window_frames
@@ -365,9 +420,19 @@ func _on_struggling(profile: Dictionary, budget_ms: float, gpu_ms: float) -> voi
 		_render_scale = maxf(_render_scale - SCALE_STEP_DOWN, profile.render_scale_min)
 		_apply_render_scale()
 		return
-	if auto_quality and quality > Quality.LOW and _struggle_seconds >= DOWNGRADE_AFTER_SEC:
+	if _struggle_seconds < DOWNGRADE_AFTER_SEC:
+		return
+	if auto_quality and quality > Quality.LOW:
 		_upgrade_blocked = true
 		apply_quality(quality - 1)
+	elif quality == Quality.LOW and _fps_cap > LOW_SAFE_FPS:
+		# Ця сцена підвищену стелю не тримає — рівні 30 і запам'ятати.
+		var key := _scene_key()
+		if key != "" and not _slow_scenes.has(key):
+			_slow_scenes.append(key)
+			_save_settings()
+		_apply_fps_cap()
+		_struggle_seconds = 0
 
 func _on_comfortable(profile: Dictionary, cost_ms: float, gpu_ms: float, budget_ms: float) -> void:
 	_struggle_seconds = 0
@@ -394,6 +459,9 @@ func _on_scene_changed() -> void:
 	_last_scene = get_tree().current_scene
 	_settle_left = SETTLE_AFTER_SCENE_SEC
 	_reset_window()
+	# Стеля кадрів залежить від сцени (важкі на "низькій" ідуть на 30).
+	_apply_fps_cap()
+	_struggle_seconds = 0
 	if _headroom:
 		_headroom = false
 		apply_quality(quality + 1)
@@ -433,6 +501,8 @@ func _load_settings() -> void:
 	auto_quality = config.get_value("graphics", "auto", true)
 	quality = config.get_value("graphics", "quality", _detect_quality())
 	show_fps = config.get_value("graphics", "show_fps", false)
+	if int(config.get_value("graphics", "perf_version", 0)) == PERF_VERSION:
+		_slow_scenes = config.get_value("graphics", "slow_scenes", [])
 
 func _save_settings() -> void:
 	if not persist_settings:
@@ -441,4 +511,6 @@ func _save_settings() -> void:
 	config.set_value("graphics", "auto", auto_quality)
 	config.set_value("graphics", "quality", quality)
 	config.set_value("graphics", "show_fps", show_fps)
+	config.set_value("graphics", "perf_version", PERF_VERSION)
+	config.set_value("graphics", "slow_scenes", _slow_scenes)
 	config.save(SETTINGS_PATH)

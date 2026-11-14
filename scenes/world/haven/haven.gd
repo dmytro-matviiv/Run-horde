@@ -13,6 +13,13 @@ extends Node3D
 ##
 ## Сцену складає будівник (dev_scripts/haven/haven_builder.gd) за планом
 ## HavenLayout; тут — те, що оживає в грі.
+##
+## ЯКІСТЬ. Основа (ця сцена) — земля, фізика, жителі, ресурси. Стіни,
+## сходи, будинки й природа лежать окремо у двох варіантах:
+##   haven_detail.tscn — звичайні моделі (середня/висока якість);
+##   haven_lite.tscn   — те саме, злите у великі шматки з легкими
+##                       матеріалами (низька якість, слабкий телефон).
+## Потрібний варіант підвантажується під поточну якість (_load_detail).
 
 const JOYSTICK_SCENE := preload("res://scenes/ui/virtual_joystick.tscn")
 const CAMERA_TOUCH_SCENE := preload("res://scenes/ui/camera_touch.tscn")
@@ -36,16 +43,14 @@ const RESOURCE_NAMES := {"wood": "Дерево", "stone": "Камінь", "herb"
 const CAMERA_DISTANCE := 11.5
 const CAMERA_PITCH := -42.0
 
+const DETAIL_SCENE := "res://scenes/world/haven/haven_detail.tscn"
+const LITE_SCENE := "res://scenes/world/haven/haven_lite.tscn"
+## Повні деталі пакуються на ходу (однакові моделі — одна команда), і
+## розмір ділянки пакування: дрібніші — те, що поза кадром, не малюється.
 const BATCH_GROUPS := {"Architecture": 0.0, "Nature": 40.0}
-const SOLID_GROUPS := {
-	"Architecture/Walls": 1.0,
-	"Architecture/Houses": 0.92,
-	"Architecture/Stations": 0.7,
-	"Nature/BigTrees": 0.18,
-	"Nature/Forest": 0.2,
-	"Nature/Rocks": 0.7,
-	"Nature/Cliffs": 0.8,
-}
+## Як часто перераховувати, куди веде навчання (сама стрілка рухається
+## щокадру, а мета міняється рідко).
+const GUIDE_REFRESH := 0.25
 
 @onready var player: CharacterBody3D = $Player
 @onready var camera_rig: Node3D = $CameraRig
@@ -70,7 +75,12 @@ var _talking: HavenNpc
 
 var _guide_marker: Label3D
 var _guide_arrow: MeshInstance3D
-var _guide_target := Vector3.INF
+var _guide_goal_cache: Array = []
+var _guide_wait := 0.0
+
+## Підвантажені деталі (стіни, будинки, природа) і чи це легкий варіант.
+var _detail: Node3D
+var _detail_lite := false
 
 func _ready() -> void:
 	SceneLoader.hold()
@@ -93,12 +103,33 @@ func _ready() -> void:
 
 	_light_fires()
 	await get_tree().process_frame
-	_build_colliders()
+	_load_detail()
+	PerfSettings.quality_changed.connect(_on_quality_changed)
 	await get_tree().process_frame
-	for group: String in BATCH_GROUPS:
-		if has_node(group):
-			TownBatcher.batch(get_node(group) as Node3D, BATCH_GROUPS[group])
 	SceneLoader.release()
+
+## Стіни, сходи, будинки й природа — у варіанті під поточну якість.
+func _load_detail() -> void:
+	var lite := PerfSettings.quality == PerfSettings.Quality.LOW
+	if _detail != null and lite == _detail_lite:
+		return
+	if _detail != null:
+		_detail.queue_free()
+	_detail_lite = lite
+	_detail = (load(LITE_SCENE if lite else DETAIL_SCENE) as PackedScene).instantiate()
+	add_child(_detail)
+	if not lite:
+		for group: String in BATCH_GROUPS:
+			if _detail.has_node(group):
+				TownBatcher.batch(_detail.get_node(group) as Node3D, BATCH_GROUPS[group])
+	# Дерева на зруб, каміння й трави — окремі вузли: їм легкі матеріали.
+	if has_node("Resources"):
+		HavenLite.apply($Resources, lite)
+
+## Гра сама опустила якість посеред локації (телефон не встигав) —
+## міняємо деталі на легкий варіант.
+func _on_quality_changed(_quality: int) -> void:
+	_load_detail()
 
 func _setup_camera() -> void:
 	camera_rig.distance = CAMERA_DISTANCE
@@ -106,6 +137,10 @@ func _setup_camera() -> void:
 	camera_rig.set("_pitch", deg_to_rad(CAMERA_PITCH))
 	camera_rig.spring_arm.rotation_degrees.x = CAMERA_PITCH
 	camera_rig.camera.fov = 44.0
+	# Ближня й дальня межі камери щільніші за стандартні: точніша глибина —
+	# близькі поверхні (бруківка на землі) не мерехтять одна крізь одну.
+	camera_rig.camera.near = 0.3
+	camera_rig.camera.far = 260.0
 	camera_rig.set_world_collision(false)
 
 # --- світ ---
@@ -159,21 +194,13 @@ func _wrap_resources() -> void:
 			node.player_left.connect(_on_left)
 			_gatherables.append(node)
 
-func _build_colliders() -> void:
-	var body := StaticBody3D.new()
-	body.name = "Colliders"
-	add_child(body)
-	for group: String in SOLID_GROUPS:
-		if has_node(group):
-			TownBatcher.add_box_colliders(get_node(group) as Node3D, body, SOLID_GROUPS[group])
-
 ## Вогонь у багатті й на стовпцях біля сходів: язики полум'я й теплий
 ## відсвіт — без справжнього світла (телефону його не рахувати).
 func _light_fires() -> void:
 	if not has_node("Effects"):
 		return
 	for marker: Node3D in $Effects.get_children():
-		var fire := Fx.make_particles("flame_05", Color(1.0, 0.52, 0.18), 16, 0.55, 0.8, true, true)
+		var fire := Fx.make_particles("flame_05", Color(1.0, 0.52, 0.18), PerfSettings.scaled_count(16), 0.55, 0.8, true, true)
 		fire.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
 		fire.emission_sphere_radius = 0.16
 		fire.direction = Vector3.UP
@@ -362,7 +389,11 @@ func _on_action_pressed() -> void:
 	elif thing == _portal:
 		_open_dungeon_select()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_guide_wait -= delta
+	if _guide_wait <= 0.0:
+		_guide_wait = GUIDE_REFRESH
+		_guide_goal_cache = _guide_goal()
 	_update_guide()
 
 # --- розмова ---
@@ -411,6 +442,7 @@ func _on_dialog_choice(choice: String) -> void:
 	_refresh_action()
 
 func _on_quests_changed() -> void:
+	_guide_wait = 0.0
 	for npc: HavenNpc in _npcs.values():
 		npc.refresh_mark()
 	_refresh_tracker()
@@ -500,7 +532,7 @@ func _nearest_gatherable(kind: String) -> Gatherable:
 	return best
 
 func _update_guide() -> void:
-	var goal := _guide_goal()
+	var goal := _guide_goal_cache
 	if goal.is_empty() or _dialog.visible:
 		_guide_marker.visible = false
 		_guide_arrow.visible = false

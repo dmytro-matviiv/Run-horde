@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Fire"
+shading_mode = 2
+albedo_color = Color(0.7062219, 0.40475056, 0.15068948, 1)
+metallic_specular = 0.3
+roughness = 0.9
+emission_enabled = true
+emission = Color(0.7803922, 0.44954675, 0.17073101, 1)
+emission_energy_multiplier = 0.0

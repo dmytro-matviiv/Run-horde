@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Wood"
+shading_mode = 2
+albedo_color = Color(0.43856022, 0.31934118, 0.2793592, 1)
+metallic_specular = 0.3
+roughness = 0.9
+emission_enabled = true
+emission = Color(0.48665074, 0.35581547, 0.3119378, 1)
+emission_energy_multiplier = 0.0
