@@ -46,6 +46,7 @@ func save_game() -> void:
 		"equipped_weapon_ids": _keys_to_string(_values_to_strings(GameState.equipped_weapon_ids)),
 		"resources": GameState.resources,
 		"quests": GameState.quests,
+		"haven": GameState.haven,
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -90,6 +91,11 @@ func load_game() -> void:
 		for i in progress.size():
 			progress[i] = int(progress[i])
 	GameState.quests = quests
+	var haven: Dictionary = data.get("haven", {})
+	var boons: Dictionary = haven.get("boons", {})
+	for id: String in boons:
+		boons[id] = int(boons[id])
+	GameState.haven = haven
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає
 ## сейв у форматі наступної, тому старі сейви ніколи не ламаються.

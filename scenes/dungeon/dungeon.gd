@@ -311,7 +311,14 @@ func _setup_hud(title: String) -> void:
 	exit_button.visible = false
 	exit_button.pressed.connect(_on_exit_pressed)
 	_update_status(title)
+	# Підготовка в Прихистку: вечеря, гостре лезо, зілля в торбі.
+	var boons := Boons.begin_run(player)
+	player.potion_used.connect(func(left: int) -> void:
+		_show_banner("Зілля!", "здоров'я відновлено" + (", лишилось %d" % left if left > 0 else "")))
 	_on_player_health_changed(player.current_hp, player.max_hp)
+	if not boons.is_empty():
+		get_tree().create_timer(1.2, false).timeout.connect(func() -> void:
+			_show_banner("Підготовка з Прихистку", ", ".join(boons)))
 
 ## Лівий верхній кут — панель у рамці теми (UiTheme): назва рівня й
 ## рівень героя, смуги здоров'я й досвіду, під ними золото, вороги й стан

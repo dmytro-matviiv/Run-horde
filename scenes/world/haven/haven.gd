@@ -11,6 +11,13 @@ extends Node3D
 ## — це перші квести (QuestBook): познайомся з усіма, нарубай дров, збери
 ## трави, пройди перший рівень.
 ##
+## ЩО ДАЮТЬ РЕСУРСИ (Boons). Квести тут не закінчуються золотом —
+## принесене міняє Прихисток: дрова розпалюють багаття в таборі (біля
+## нього тепер вечеряють перед походом: більше здоров'я), камінь лагодить
+## точило Коваля (гостріння: більше шкоди), трави наповнюють казан
+## Мудреця (зілля, що рятує в бою). Плюс п'ять загублених скринь Торговки
+## по всій долині і щоденне доручення Старійшини.
+##
 ## Сцену складає будівник (dev_scripts/haven/haven_builder.gd) за планом
 ## HavenLayout; тут — те, що оживає в грі.
 ##
@@ -47,6 +54,18 @@ const DETAIL_SCENE := "res://scenes/world/haven/haven_detail.tscn"
 const LITE_SCENE := "res://scenes/world/haven/haven_lite.tscn"
 ## Повні деталі пакуються на ходу (однакові моделі — одна команда), і
 ## розмір ділянки пакування: дрібніші — те, що поза кадром, не малюється.
+## Місця підготовки до походу: id переваги (Boons) -> де стоїть.
+## Багаття — у таборі біля місця появи; точило — ковадло Коваля; казан —
+## у Мудреця (так само, як їх ставить будівник).
+const CAMP_FIRE := Vector3(4.5, 0.0, 31.0)
+## Загублені скрині Торговки: за возом, на західному пагорбі, на краю гаю,
+## за порталом, на південно-східній галявині.
+const CACHES := {
+	"wagon": Vector2(-8.5, 28.5), "hill": Vector2(-42.0, 0.0), "grove": Vector2(44.0, 18.0),
+	"portal": Vector2(6.5, -28.0), "meadow": Vector2(16.0, 38.0),
+}
+const CACHE_GOLD := 120
+const CHEST_MODEL := "res://assets/models/haven/props/Chest_Wood.gltf"
 const BATCH_GROUPS := {"Architecture": 0.0, "Nature": 40.0}
 ## Як часто перераховувати, куди веде навчання (сама стрілка рухається
 ## щокадру, а мета міняється рідко).
@@ -73,6 +92,10 @@ var _portal: HavenPortal
 var _nearby: Array = []
 var _talking: HavenNpc
 
+var _spots: Array[HavenSpot] = []
+var _camp_fire: Node3D
+var _bag: Label
+
 var _guide_marker: Label3D
 var _guide_arrow: MeshInstance3D
 var _guide_goal_cache: Array = []
@@ -97,11 +120,14 @@ func _ready() -> void:
 	_spawn_npcs()
 	_spawn_portal()
 	_wrap_resources()
+	_build_spots()
+	_build_caches()
 	_build_guide()
 	GameState.quests_changed.connect(_on_quests_changed)
 	_on_quests_changed()
 
 	_light_fires()
+	_refresh_spots()
 	await get_tree().process_frame
 	_load_detail()
 	PerfSettings.quality_changed.connect(_on_quality_changed)
@@ -209,6 +235,130 @@ func _light_fires() -> void:
 		fire.initial_velocity_max = 1.1
 		fire.gravity = Vector3(0, 1.3, 0)
 		marker.add_child(fire)
+		var spot := Vector2(marker.global_position.x, marker.global_position.z)
+		if spot.distance_to(Vector2(CAMP_FIRE.x, CAMP_FIRE.z)) < 1.0:
+			_camp_fire = fire
+
+# --- підготовка до походу і загублені скрині ---
+
+## Де стоїть місце переваги: багаття, ковадло Коваля, казан Мудреця.
+func _boon_position(id: String) -> Vector3:
+	match id:
+		"meal":
+			return Vector3(CAMP_FIRE.x, HavenLayout.height(CAMP_FIRE.x, CAMP_FIRE.z), CAMP_FIRE.z)
+		"sharp":
+			return _station_point(&"smith", Vector3(0.0, 0, 1.4))
+		_:
+			return _station_point(&"sage", Vector3(-2.4, 0, -1.0))
+
+func _station_point(npc: StringName, local: Vector3) -> Vector3:
+	var info: Array = HavenLayout.NPCS[npc]
+	return (info[0] as Vector3) + Basis(Vector3.UP, float(info[1])) * local
+
+func _build_spots() -> void:
+	for id: String in Boons.BOONS:
+		var spot := HavenSpot.new()
+		spot.id = id
+		spot.kind = "boon"
+		spot.radius = 2.8 if id == "meal" else 2.4
+		add_child(spot)
+		spot.global_position = _boon_position(id)
+		_add_spot(spot)
+
+func _build_caches() -> void:
+	var found := QuestBook.found_caches()
+	for id: String in CACHES:
+		if found.has(id):
+			continue
+		var at: Vector2 = CACHES[id]
+		var spot := HavenSpot.new()
+		spot.id = id
+		spot.kind = "cache"
+		spot.label = "Відкрити скриню"
+		spot.radius = 2.5
+		add_child(spot)
+		spot.global_position = Vector3(at.x, HavenLayout.height(at.x, at.y), at.y)
+		spot.rotation.y = randf() * TAU
+		var chest: Node3D = (load(CHEST_MODEL) as PackedScene).instantiate()
+		chest.scale = Vector3.ONE * 1.3
+		spot.add_child(chest)
+		HavenLite.apply(chest, PerfSettings.quality == PerfSettings.Quality.LOW)
+		# Поблискує — щоб знайти здалеку.
+		var shine := Fx.make_particles("star_04", Color(1.0, 0.85, 0.35), PerfSettings.scaled_count(6), 1.2, 0.35, true, true)
+		shine.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		shine.emission_sphere_radius = 0.6
+		shine.direction = Vector3.UP
+		shine.initial_velocity_min = 0.2
+		shine.initial_velocity_max = 0.5
+		shine.gravity = Vector3.ZERO
+		shine.position = Vector3.UP * 0.7
+		spot.add_child(shine)
+		_add_spot(spot)
+
+func _add_spot(spot: HavenSpot) -> void:
+	spot.set_player(player)
+	spot.player_near.connect(_on_near)
+	spot.player_left.connect(_on_left)
+	_spots.append(spot)
+
+## Хто що вміє зараз: місця переваг — лише відкриті квестом; багаття
+## горить, коли квест із дровами здано.
+func _refresh_spots() -> void:
+	for spot in _spots:
+		if spot.kind != "boon":
+			continue
+		spot.enabled = Boons.is_unlocked(spot.id)
+		spot.label = "%s (%s)" % [Boons.BOONS[spot.id].verb, Boons.cost_text(spot.id)]
+	if _camp_fire != null:
+		_camp_fire.visible = Boons.is_unlocked("meal")
+	_refresh_action()
+
+func _use_spot(spot: HavenSpot) -> void:
+	if spot.kind == "cache":
+		_open_cache(spot)
+		return
+	var boon: Dictionary = Boons.BOONS[spot.id]
+	var problem := Boons.problem(spot.id)
+	if problem != "":
+		_show_toast(problem, Color(1.0, 0.7, 0.55))
+		return
+	Boons.craft(spot.id)
+	player.play_work(spot.global_position)
+	var color := {"meal": Color(1.0, 0.6, 0.25), "sharp": Color(0.8, 0.9, 1.0), "potion": Color(0.45, 1.0, 0.5)}[spot.id] as Color
+	Fx.wave(self, spot.global_position + Vector3.UP * 0.1, 1.8, color, 0.5)
+	Fx.puff(self, spot.global_position + Vector3.UP * 0.8, color, 0.7, 0.2)
+	_show_toast(String(boon.done), UiTheme.GOLD)
+	_refresh_bag()
+
+func _open_cache(spot: HavenSpot) -> void:
+	QuestBook.found_caches().append(spot.id)
+	GameState.add_gold(CACHE_GOLD)
+	QuestBook.report("chest")
+	SaveManager.save_game()
+	spot.enabled = false
+	_spots.erase(spot)
+	Fx.wave(self, spot.global_position + Vector3.UP * 0.1, 1.6, UiTheme.GOLD, 0.45)
+	Fx.puff(self, spot.global_position + Vector3.UP * 0.6, Color(1.0, 0.85, 0.4), 0.8, 0.2)
+	var tween := spot.create_tween()
+	tween.tween_property(spot, "scale", Vector3.ONE * 1.15, 0.12)
+	tween.tween_property(spot, "scale", Vector3.ONE * 0.01, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tween.tween_callback(spot.queue_free)
+	var left := CACHES.size() - QuestBook.found_caches().size()
+	_show_toast("Загублена скриня! +%d золота%s" % [CACHE_GOLD, ("  (лишилось %d)" % left) if left > 0 else "  — усі знайдено!"], UiTheme.GOLD)
+	_gold_badge.set_amount(GameState.gold)
+
+## Торба: ресурси й що герой бере в похід.
+func _refresh_bag() -> void:
+	if _bag == null:
+		return
+	var parts := PackedStringArray()
+	for resource: String in Boons.RESOURCE_TITLES:
+		parts.append("%s %d" % [Boons.RESOURCE_TITLES[resource], int(GameState.resources.get(resource, 0))])
+	var text := "  ".join(parts)
+	var ready := Boons.summary()
+	if ready != "":
+		text += "\nУ похід: " + ready
+	_bag.text = text
 
 # --- інтерфейс ---
 
@@ -237,6 +387,9 @@ func _build_hud() -> void:
 	wallet.add_child(_gold_badge)
 	_gems_badge = CurrencyBadge.new(&"gem", 18, false)
 	wallet.add_child(_gems_badge)
+	_bag = Label.new()
+	UiTheme.hud_text(_bag, 15, Color(0.85, 0.95, 0.8))
+	column.add_child(_bag)
 	_tracker = VBoxContainer.new()
 	_tracker.add_theme_constant_override("separation", 2)
 	column.add_child(_tracker)
@@ -372,6 +525,8 @@ func _refresh_action() -> void:
 		_action_button.text = "Говорити"
 	elif thing is Gatherable:
 		_action_button.text = (thing as Gatherable).verb()
+	elif thing is HavenSpot:
+		_action_button.text = (thing as HavenSpot).label
 	else:
 		_action_button.text = "У данж"
 	_action_button.visible = true
@@ -386,6 +541,9 @@ func _on_action_pressed() -> void:
 		if node.work():
 			GameState.add_resource(node.kind)
 			_show_toast("+1 %s" % RESOURCE_NAMES.get(node.kind, node.kind), Color(0.85, 1.0, 0.7))
+			_refresh_bag()
+	elif thing is HavenSpot:
+		_use_spot(thing as HavenSpot)
 	elif thing == _portal:
 		_open_dungeon_select()
 
@@ -407,7 +565,7 @@ func _talk(npc: HavenNpc) -> void:
 	var offer := QuestBook.available_for(npc.id)
 	if not ready.is_empty():
 		text = String(ready.done_text)
-		choices.append(["claim:" + String(ready.id), "Здати (+%d)" % int(ready.reward), true])
+		choices.append(["claim:" + String(ready.id), "Здати (%s)" % QuestBook.reward_text(ready), true])
 	elif not offer.is_empty():
 		text = String(offer.text)
 		choices.append(["accept:" + String(offer.id), "Взяти завдання", true])
@@ -427,7 +585,12 @@ func _on_dialog_choice(choice: String) -> void:
 	elif choice.begins_with("claim:"):
 		var reward := QuestBook.complete(choice.get_slice(":", 1))
 		_gold_badge.set_amount(GameState.gold)
-		_show_toast("Завдання виконано! +%d золота" % reward, UiTheme.GOLD)
+		_gems_badge.set_amount(GameState.gems)
+		var boon := String(reward.get("boon", ""))
+		if boon != "":
+			_show_toast("Відкрито: %s — %s" % [Boons.BOONS[boon].title, Boons.BOONS[boon].effect], UiTheme.GOLD)
+		else:
+			_show_toast("Завдання виконано! %s" % QuestBook.reward_text(QuestBook.get_quest(choice.get_slice(":", 1))), UiTheme.GOLD)
 		# Одразу — наступне завдання цього ж жителя, якщо є.
 		if npc != null:
 			_talk(npc)
@@ -446,7 +609,10 @@ func _on_quests_changed() -> void:
 	for npc: HavenNpc in _npcs.values():
 		npc.refresh_mark()
 	_refresh_tracker()
+	_refresh_spots()
+	_refresh_bag()
 	_gold_badge.set_amount(GameState.gold)
+	_gems_badge.set_amount(GameState.gems)
 
 # --- навчання: куди йти ---
 
@@ -506,9 +672,13 @@ func _guide_goal() -> Array:
 					var node := _nearest_gatherable(String(objective.kind))
 					if node != null:
 						return [node.global_position + Vector3.UP * (5.5 if objective.kind == "wood" else 1.8), String(objective.label)]
-				"clear", "kill":
+				"clear", "kill", "potion":
 					return [_portal.global_position + Vector3.UP * 5.5, String(objective.label)]
-	for quest: Dictionary in QuestBook.QUESTS:
+				"chest":
+					var cache := _nearest_cache()
+					if cache != null:
+						return [cache.global_position + Vector3.UP * 2.2, String(objective.label)]
+	for quest: Dictionary in QuestBook.all_quests():
 		if QuestBook.is_available(quest):
 			return _npc_goal(quest.giver, "Поговори %s — у нього є завдання" % HavenNpc.ROLES[quest.giver].with)
 	return []
@@ -529,6 +699,18 @@ func _nearest_gatherable(kind: String) -> Gatherable:
 		if d < best_d:
 			best_d = d
 			best = node
+	return best
+
+func _nearest_cache() -> HavenSpot:
+	var best: HavenSpot = null
+	var best_d := INF
+	for spot in _spots:
+		if spot.kind != "cache" or not spot.enabled:
+			continue
+		var d := spot.global_position.distance_to(player.global_position)
+		if d < best_d:
+			best_d = d
+			best = spot
 	return best
 
 func _update_guide() -> void:

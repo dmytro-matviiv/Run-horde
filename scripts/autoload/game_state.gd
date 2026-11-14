@@ -352,6 +352,9 @@ func claim_chest_reward() -> int:
 var resources: Dictionary = {}
 ## id квесту -> {"state", "progress"} (див. QuestBook).
 var quests: Dictionary = {}
+## Інше з Прихистку: "boons" (підготовка до походу, див. Boons),
+## "caches" (id знайдених загублених скринь).
+var haven: Dictionary = {}
 signal quests_changed
 
 func add_resource(id: String, amount: int = 1) -> void:

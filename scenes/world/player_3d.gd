@@ -40,6 +40,8 @@ signal health_changed(current: float, maximum: float)
 signal hit_landed(amount: float, crit: bool)
 ## Ворожий удар прилетів у перші миті перекату — ухилився в останню мить.
 signal perfect_dodge
+## Зілля з Прихистку врятувало героя (див. Boons).
+signal potion_used(left: int)
 ## Почалась ланка комбо (index від 0) — для позначок серії на екрані.
 signal combo_step(index: int, total: int)
 
@@ -1276,6 +1278,29 @@ func add_attack_speed(multiplier: float, seconds: float) -> void:
 	_attack_speed_left = seconds
 	_apply_attack_speed()
 
+## Підготовка з Прихистку (Boons.begin_run): вечеря — більше здоров'я,
+## гостре лезо — більше шкоди, зілля — у торбі.
+var _potions := 0
+
+func apply_boons(hp_factor: float, damage_factor: float, potions: int) -> void:
+	max_hp *= hp_factor
+	current_hp = max_hp
+	_damage *= damage_factor
+	_potions = potions
+	_update_health_bar()
+	health_changed.emit(current_hp, max_hp)
+
+## Здоров'я впало нижче третини — герой сам випиває зілля.
+func _try_potion() -> void:
+	if _potions <= 0 or current_hp <= 0.0 or current_hp > max_hp * Boons.POTION_THRESHOLD:
+		return
+	_potions -= 1
+	Boons.spend_potion()
+	heal(max_hp * Boons.POTION_HEAL)
+	CombatVfx.flash_model(model, Color(0.45, 1.0, 0.5), 0.3)
+	Fx.wave(get_parent(), global_position + Vector3.UP * 0.1, 2.0, Color(0.4, 1.0, 0.5), 0.45)
+	potion_used.emit(_potions)
+
 func heal(amount: float) -> void:
 	current_hp = minf(current_hp + amount, max_hp)
 	_update_health_bar()
@@ -1910,6 +1935,7 @@ func take_damage(amount: float) -> bool:
 	health_changed.emit(current_hp, max_hp)
 	CombatVfx.flash_model(model, Color(1.0, 0.25, 0.2), 0.12)
 	_shake_camera(0.06)
+	_try_potion()
 	if _attack_step < 0 and _roll_left <= 0.0:
 		_fire("HitShot")
 	if current_hp <= 0.0:
