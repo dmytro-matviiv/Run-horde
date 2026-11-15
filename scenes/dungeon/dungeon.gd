@@ -415,7 +415,7 @@ func _open_pause() -> void:
 	_pause_menu.quit_confirmed.connect(func() -> void:
 		_close_pause()
 		_run_over = true
-		SceneLoader.change_scene(BASE_SCENE_PATH, "Місто"))
+		SceneLoader.change_scene(BASE_SCENE_PATH, "Прихисток"))
 
 func _close_pause() -> void:
 	if _pause_menu != null:
@@ -1527,7 +1527,7 @@ func _show_results(victory: bool) -> void:
 	_results = RunResults.new()
 	_results.process_mode = Node.PROCESS_MODE_ALWAYS
 	_results.setup(_results_data(victory))
-	_results.home_pressed.connect(_leave_to.bind(MAIN_MENU_PATH, "Меню"))
+	_results.home_pressed.connect(_leave_to.bind(BASE_SCENE_PATH, "Прихисток"))
 	_results.next_pressed.connect(_on_results_next.bind(victory))
 	_results.double_pressed.connect(_on_double_gold_pressed)
 	hud.add_child(_results)
@@ -1578,7 +1578,7 @@ func _on_double_gold_pressed() -> void:
 func _on_results_next(victory: bool) -> void:
 	var index := GameState.dungeon_level + (1 if victory else 0)
 	if index >= DungeonLevels.get_level_count():
-		_leave_to(BASE_SCENE_PATH, "Місто")
+		_leave_to(BASE_SCENE_PATH, "Прихисток")
 		return
 	GameState.select_dungeon_level(index)
 	_leave_to(DUNGEON_SCENE_PATH, DungeonLevels.get_level(GameState.dungeon_level).title)
