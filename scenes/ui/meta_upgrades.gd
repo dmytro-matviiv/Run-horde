@@ -28,7 +28,7 @@ const TALENTS := {
 
 const BOTTOM_MARGIN := 24.0
 ## Тло — храм з колонами й рунним вівтарем (арт гравця).
-const TEMPLE_BACKGROUND := "res://assets/ui/backgrounds/temple.jpg"
+const TEMPLE_BACKGROUND := "res://assets/ui/kit/backgrounds/bg_talents.jpg"
 
 @onready var content: VBoxContainer = $VBoxContainer
 @onready var hero_label: Label = $VBoxContainer/HeroLabel

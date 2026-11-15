@@ -15,8 +15,8 @@ const CREDITS_SCRIPT := preload("res://scenes/ui/credits.gd")
 
 const CHEST_MESSAGE_SEC := 3.0
 ## Тло меню: своє (поклади assets/ui/backgrounds/menu.jpg), інакше — зала.
-const MENU_BACKGROUND := "res://assets/ui/backgrounds/menu.jpg"
-const HALL_BACKGROUND := "res://assets/ui/backgrounds/hero_hall.jpg"
+const MENU_BACKGROUND := "res://assets/ui/kit/backgrounds/bg_menu.jpg"
+const HALL_BACKGROUND := "res://assets/ui/kit/backgrounds/bg_heroes.jpg"
 
 var _gold_badge: CurrencyBadge
 var _gems_badge: CurrencyBadge
@@ -57,11 +57,34 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
+	# Логотип ліворуч (ледь "дихає"), меню праворуч.
+	var split := HBoxContainer.new()
+	split.add_theme_constant_override("separation", 48)
+	split.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_child(split)
+	if ResourceLoader.exists(UiTheme.LOGO):
+		var logo := TextureRect.new()
+		logo.texture = load(UiTheme.LOGO)
+		logo.custom_minimum_size = Vector2(360, 360)
+		logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		logo.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		logo.pivot_offset = Vector2(180, 180)
+		split.add_child(logo)
+		var breathe := logo.create_tween().set_loops()
+		breathe.tween_property(logo, "scale", Vector2.ONE * 1.03, 1.6).set_trans(Tween.TRANS_SINE)
+		breathe.tween_property(logo, "scale", Vector2.ONE, 1.6).set_trans(Tween.TRANS_SINE)
+		# Поява: логотип "падає" на місце.
+		logo.scale = Vector2.ONE * 0.6
+		logo.modulate.a = 0.0
+		var intro := logo.create_tween().set_parallel()
+		intro.tween_property(logo, "modulate:a", 1.0, 0.35)
+		intro.tween_property(logo, "scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	var stack := VBoxContainer.new()
-	stack.custom_minimum_size = Vector2(540, 0)
+	stack.custom_minimum_size = Vector2(500, 0)
 	stack.add_theme_constant_override("separation", 18)
-	center.add_child(stack)
-	stack.add_child(OrnateBanner.new("Rune Horde", 38))
+	stack.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	split.add_child(stack)
 
 	var panel := OrnatePanel.new()
 	stack.add_child(panel)

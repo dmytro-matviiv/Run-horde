@@ -44,14 +44,20 @@ static func apply(model: Node3D, key: String) -> void:
 	body.skin = merged.skin
 	body.layers = parts[0].layers
 	body.cast_shadow = parts[0].cast_shadow
+	# Вершини лишились у просторі першої частини — і вузол стоїть так само
+	# (інакше межі моделі, AABB, виходили б у сотні разів більші).
+	body.transform = parts[0].transform
 	skeleton.add_child(body)
 	body.skeleton = parts[0].skeleton
 	for part in parts:
 		skeleton.remove_child(part)
 		part.free()
 
+static var _base_xf := Transform3D.IDENTITY
+
 static func _merge(parts: Array[MeshInstance3D]) -> Variant:
 	var skin := parts[0].skin
+	_base_xf = parts[0].transform
 	# Групи поверхонь, що відрізняються лише кольором: підпис -> дані.
 	var groups := {}
 	for part in parts:
@@ -98,7 +104,8 @@ static func _append(group: Dictionary, part: MeshInstance3D, surface: int, mater
 	if material.vertex_color_use_as_albedo and arrays[Mesh.ARRAY_COLOR] != null:
 		own_colors = arrays[Mesh.ARRAY_COLOR]
 	var linear_colors := not material.vertex_color_is_srgb
-	var xf := part.transform
+	# Відносно першої частини (зазвичай у всіх частин однаковий transform).
+	var xf := _base_xf.affine_inverse() * part.transform
 	var normal_basis := xf.basis.inverse().transposed()
 	var out_v: PackedVector3Array = group.v
 	var out_n: PackedVector3Array = group.n

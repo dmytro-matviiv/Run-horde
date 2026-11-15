@@ -1,252 +1,235 @@
 extends Control
 
-## Зала героїв — та сама вітрина, що й зброя: гортаєш геройв іконками
-## (ряд слотів), а не стрілками "вперед-назад". Обраний герой — велика
-## 3D-модель посередині зі своєю зброєю в руці, нижче — опис, здібності
-## й дія (обрати або купити).
+## ЗАЛА ГЕРОЇВ («Рунічна казка»).
+##
+## Герой — живою 3D-моделлю на рунічному постаменті посеред зали (фон
+## kit/bg_heroes); його можна крутити пальцем. Ліворуч — сукняна панель:
+## ім'я, роль, характеристики смугами (заповнюються анімацією), опис.
+## Праворуч — медальйони його прийомів (натиск — вікно з описом). Унизу —
+## картки героїв з артом у рамках (обраний — золота, вище за інших;
+## закритий — притемнений, із замком і ціною), остання — "скоро" для
+## майбутнього героя. Справа внизу — головна дія: обрати або купити.
+##
+## Переходи: екран в'їжджає частинами (панелі з боків, картки знизу),
+## при зміні героя модель "виростає" з постаменту, а смуги
+## характеристик набігають заново.
 
 const ABILITY_ICON_SCRIPT := preload("res://scenes/ui/ability_icon.gd")
 const MODEL_PREVIEW_SCRIPT := preload("res://scenes/ui/model_preview.gd")
-const STAGE_GLOW_SCRIPT := preload("res://scenes/ui/stage_glow.gd")
-const SKY_STAGE_SCRIPT := preload("res://scenes/ui/sky_stage.gd")
-## Скільки плиток здібностей стоїть ліворуч від героя — решта праворуч.
-const LEFT_SLOT_COUNT := 2
-## Плитка здібності: ширина — під найдовшу назву ("Димова Граната") одним
-## рядком, щоб усі плитки були однакові.
-const TILE_SIZE := Vector2(136, 108)
-const TILE_ICON := 70.0
-const TILE_GAP := 8
-## Відступ плиток від країв вітрини.
-const TILE_MARGIN := 10
-const HALL_BACKGROUND := "res://assets/ui/backgrounds/hero_hall.jpg"
+const HALL_BACKGROUND := "res://assets/ui/kit/backgrounds/bg_heroes.jpg"
+const FRAME_DIR := "res://assets/ui/kit/frames/"
+const MYSTERY_ART := "res://assets/ui/kit/heroes/hero_mystery.jpg"
+## Де на фоні стоїть верх постаменту (частка висоти екрана).
+const PEDESTAL_Y := 0.665
+## Картка героя (3:4) і вікно під арт у рамці (частки розміру рамки).
+const CARD_SIZE := Vector2(96, 128)
+const CARD_WINDOW := Rect2(0.19, 0.2, 0.62, 0.665)
+const CARD_LIFT := 12.0
 ## Найбільша висота списку зброї у вікні Арсеналу — далі він гортається.
 const ARSENAL_MAX_HEIGHT := 320.0
-## Ярлик виду прийому у вікні опису.
 const KIND_TAGS := {
 	&"talent": "Пасивна риса",
 	&"blade": "Здібність",
 	&"weapon": "Зброя героя",
 }
-const NAME_COLOR := Color(1.0, 0.85, 0.45)
-## Кольори чисел у рядку характеристик (bbcode, тому — hex).
-const HP_COLOR := "#ff8f80"
-const SPEED_COLOR := "#7fe3ff"
-const PENALTY_COLOR := "#ff9a6b"
-const WEAPON_COLOR := "#ffd36b"
+## Роль героя — коротко, під іменем.
+const ROLES := {
+	&"blade_warden": "Воїн • ближній бій",
+	&"ember_priestess": "Чарівниця вогню • дальній бій",
+	&"runewielder": "Маг рун • контроль",
+	&"void_assassin": "Тінь • швидкі удари",
+}
+const NAME_COLOR := Color(1.0, 0.86, 0.45)
+const SKILL_SIZE := 78.0
 
 var _index := 0
 var _preview: ModelPreview
 var _placeholder_label: Label
-var _glow: Control
-var _sky: SkyStage
 
 var _gold_badge: CurrencyBadge
 var _gem_badge: CurrencyBadge
-var _slot_row: HBoxContainer
-var _slot_scroll: ScrollContainer
-var _slot_buttons: Array[Button] = []
+var _cards: Array[Control] = []
+var _left_panel: Control
+var _right_column: VBoxContainer
+var _card_row: HBoxContainer
 var _name_label: Label
+var _role_label: Label
 var _description_label: Label
-var _stats_label: RichTextLabel
-var _left_slots: BoxContainer
-var _right_slots: BoxContainer
-var _ability_layer: Control
+var _stat_bars: Array[ProgressBar] = []
+var _stat_values: Array[Label] = []
 var _action_button: Button
+var _skills_box: VBoxContainer
 
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var background := ColorRect.new()
-	background.color = Color(0.055, 0.065, 0.078)
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(background)
-	# Тло — зала зі статуями лицарів (арт гравця), обрізане під екран.
-	if ResourceLoader.exists(HALL_BACKGROUND):
-		var hall := TextureRect.new()
-		hall.texture = load(HALL_BACKGROUND)
-		hall.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		hall.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		hall.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		hall.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(hall)
+	if has_node("Background"):
+		($Background as CanvasItem).visible = false
+	UiTheme.add_background(self, [HALL_BACKGROUND])
 
-	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	column.offset_left = 28.0
-	column.offset_top = 16.0
-	column.offset_right = -28.0
-	column.offset_bottom = -16.0
-	column.add_theme_constant_override("separation", 10)
-	add_child(column)
-
-	var top_row := HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 10)
-	column.add_child(top_row)
-	var title_box := OrnateBanner.new("Зала героїв", 30)
-	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top_row.add_child(title_box)
-	# Валюта — навпроти полотна банера, а не його герба: відступ згори.
-	var wallet := MarginContainer.new()
-	wallet.add_theme_constant_override("margin_top", int(OrnateBanner.CREST_RISE))
-	top_row.add_child(wallet)
-	var wallet_row := HBoxContainer.new()
-	wallet_row.add_theme_constant_override("separation", 8)
-	wallet.add_child(wallet_row)
-	_gold_badge = CurrencyBadge.new(&"gold", 20)
-	wallet_row.add_child(_gold_badge)
-	_gem_badge = CurrencyBadge.new(&"gem", 20)
-	wallet_row.add_child(_gem_badge)
-
-	# Вітрина: герой на своєму тлі посередині, а обабіч нього, на тій самій
-	# вітрині, — плитки його прийомів (як спорядження в зразку мобільної гри).
-	var stage := PanelContainer.new()
-	stage.custom_minimum_size = Vector2(0, 150)
-	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	stage.add_theme_stylebox_override("panel", UiTheme.panel_box())
-	stage.clip_contents = true
-	column.add_child(stage)
-	_sky = SKY_STAGE_SCRIPT.new()
-	_sky.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	stage.add_child(_sky)
-	_glow = STAGE_GLOW_SCRIPT.new()
-	_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stage.add_child(_glow)
+	# --- герой на постаменті ---
 	_preview = MODEL_PREVIEW_SCRIPT.new()
-	_preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	stage.add_child(_preview)
+	_preview.interactive = true
+	_preview.anchor_left = 0.5
+	_preview.anchor_right = 0.5
+	_preview.anchor_top = PEDESTAL_Y
+	_preview.anchor_bottom = PEDESTAL_Y
+	_preview.offset_left = -200.0
+	_preview.offset_right = 200.0
+	_preview.offset_top = -340.0
+	_preview.offset_bottom = 22.0
+	add_child(_preview)
 	_placeholder_label = Label.new()
 	_placeholder_label.text = "Тимчасова модель — справжня буде пізніше"
 	_placeholder_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_placeholder_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	_placeholder_label.offset_top = -22.0
+	_placeholder_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_placeholder_label.offset_top = -170.0
 	_placeholder_label.add_theme_font_size_override("font_size", 13)
-	_placeholder_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
-	_placeholder_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
-	_placeholder_label.add_theme_constant_override("outline_size", 4)
-	stage.add_child(_placeholder_label)
+	add_child(_placeholder_label)
 
-	# Шар плиток поверх вітрини. Звичайний Control, а не контейнер: його
-	# мінімальний розмір нульовий, тож плитки не розпирають вітрину (і низ
-	# екрана) — лише розкладаються в тому місці, що вітрині дісталось.
-	_ability_layer = Control.new()
-	_ability_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	stage.add_child(_ability_layer)
-	var ability_row := HBoxContainer.new()
-	ability_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ability_row.offset_left = TILE_MARGIN
-	ability_row.offset_top = TILE_MARGIN
-	ability_row.offset_right = -TILE_MARGIN
-	ability_row.offset_bottom = -TILE_MARGIN
-	ability_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ability_layer.add_child(ability_row)
-	_left_slots = _make_tile_group()
-	ability_row.add_child(_left_slots)
-	var hero_gap := Control.new()
-	hero_gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hero_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ability_row.add_child(hero_gap)
-	_right_slots = _make_tile_group()
-	ability_row.add_child(_right_slots)
-	_ability_layer.resized.connect(_update_tile_layout)
+	# --- верх: назад, стрічка, гаманець ---
+	var back := UiTheme.make_icon_button("back", 58.0, "Назад")
+	back.icon = load(UiTheme.KIT_DIR + "btn_back.png") if ResourceLoader.exists(UiTheme.KIT_DIR + "btn_back.png") else back.icon
+	for state: String in ["normal", "hover", "pressed"]:
+		back.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	back.expand_icon = true
+	back.position = Vector2(18, 14)
+	back.pressed.connect(_on_back_pressed)
+	add_child(back)
 
-	# Ряд слотів — героя гортаєш і обираєш іконками.
-	var picker := UiTheme.make_picker_row()
-	_slot_scroll = picker.scroll
-	_slot_row = picker.row
-	_slot_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_child(_slot_scroll)
-	for i in HeroPool.ALL_HEROES.size():
-		var def := HeroPool.ALL_HEROES[i]
-		# Портрет героя на всю картку, якщо гравець його поклав; інакше —
-		# щит-емблема. Колір героя — у кільці картки (style_picker_slot).
-		var texture := ArtSlots.hero_portrait(def.id)
-		var portrait := texture != null
-		if not portrait:
-			texture = UiTheme.control_icon("shield")
-		var slot := UiTheme.make_picker_slot(texture, Color.WHITE, 88.0, portrait)
-		slot.pressed.connect(_on_slot_pressed.bind(i))
-		_slot_row.add_child(slot)
-		_slot_buttons.append(slot)
+	var title := OrnateBanner.new("Зала героїв", 28)
+	title.anchor_left = 0.5
+	title.anchor_right = 0.5
+	title.offset_left = -210.0
+	title.offset_right = 210.0
+	title.offset_top = 2.0
+	title.offset_bottom = 86.0
+	add_child(title)
 
-	# Опис і дії — в одному ряду: ліворуч панель опису, праворуч кнопки
-	# стовпчиком. Окремий ряд кнопок під описом вилазив за низ екрана,
-	# щойно опис переносився на другий рядок (вужчий екран, довший опис).
-	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 14)
-	column.add_child(bottom)
+	var wallet := HBoxContainer.new()
+	wallet.add_theme_constant_override("separation", 8)
+	wallet.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	wallet.offset_left = -330.0
+	wallet.offset_right = -18.0
+	wallet.offset_top = 20.0
+	wallet.alignment = BoxContainer.ALIGNMENT_END
+	add_child(wallet)
+	_gold_badge = CurrencyBadge.new(&"gold", 19)
+	wallet.add_child(_gold_badge)
+	_gem_badge = CurrencyBadge.new(&"gem", 19)
+	wallet.add_child(_gem_badge)
 
-	var info_panel := OrnatePanel.new()
-	info_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bottom.add_child(info_panel)
+	# --- ліворуч: ім'я, роль, характеристики, опис ---
+	var panel := OrnatePanel.new()
+	panel.position = Vector2(18, 92)
+	panel.custom_minimum_size = Vector2(330, 0)
+	panel.size = Vector2(330, 0)
+	add_child(panel)
+	_left_panel = panel
 	var info := VBoxContainer.new()
-	info.alignment = BoxContainer.ALIGNMENT_CENTER
 	info.add_theme_constant_override("separation", 6)
-	info_panel.add_child(info)
-
-	# Текст на темній панелі: ім'я — золоте (як різьблення рамки), опис —
-	# теплий білий, а не сіро-блакитний колір героя, що зливався з тлом.
+	panel.add_child(info)
 	_name_label = Label.new()
-	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_label.add_theme_font_override("font", UiTheme.font(900))
-	_name_label.add_theme_font_size_override("font_size", 26)
+	_name_label.add_theme_font_size_override("font_size", 28)
 	_name_label.add_theme_color_override("font_color", NAME_COLOR)
-	_name_label.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.0, 0.85))
-	_name_label.add_theme_constant_override("outline_size", 6)
+	_name_label.add_theme_constant_override("outline_size", 7)
 	info.add_child(_name_label)
-
+	_role_label = Label.new()
+	_role_label.add_theme_font_size_override("font_size", 15)
+	_role_label.add_theme_color_override("font_color", UiTheme.RUNE)
+	info.add_child(_role_label)
+	var stats := GridContainer.new()
+	stats.columns = 3
+	stats.add_theme_constant_override("h_separation", 8)
+	stats.add_theme_constant_override("v_separation", 6)
+	info.add_child(stats)
+	for row: Array in [["stat_hp", "Здоров'я", Color(0.93, 0.33, 0.3)], ["stat_speed", "Швидкість", Color(0.36, 0.8, 0.95)],
+			["stat_damage", "Сила зброї", Color(1.0, 0.72, 0.25)]]:
+		var icon := UiTheme.make_bare_icon(ArtSlots.kit_icon(row[0]), 30.0)
+		icon.tooltip_text = row[1]
+		stats.add_child(icon)
+		var bar := UiTheme.make_bar(row[2], Vector2(170, 18))
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.max_value = 1.0
+		bar.step = 0.001
+		stats.add_child(bar)
+		_stat_bars.append(bar)
+		var value := Label.new()
+		value.custom_minimum_size = Vector2(54, 0)
+		value.add_theme_font_size_override("font_size", 16)
+		stats.add_child(value)
+		_stat_values.append(value)
 	_description_label = Label.new()
-	_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_description_label.add_theme_font_override("font", UiTheme.font(700))
-	_description_label.add_theme_font_size_override("font_size", 17)
-	_description_label.add_theme_color_override("font_color", Color(0.98, 0.96, 0.9))
-	_description_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
-	_description_label.add_theme_constant_override("outline_size", 3)
+	_description_label.custom_minimum_size = Vector2(250, 0)
+	_description_label.add_theme_font_size_override("font_size", 14)
+	_description_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 	info.add_child(_description_label)
 
-	# Характеристики — назва приглушена, а число своїм яскравим кольором:
-	# око одразу ловить "85" і "+18%", а не читає весь рядок.
-	_stats_label = RichTextLabel.new()
-	_stats_label.bbcode_enabled = true
-	_stats_label.fit_content = true
-	_stats_label.scroll_active = false
-	_stats_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_stats_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_stats_label.add_theme_font_override("normal_font", UiTheme.font(700))
-	_stats_label.add_theme_font_override("bold_font", UiTheme.font(900))
-	_stats_label.add_theme_font_size_override("normal_font_size", 16)
-	_stats_label.add_theme_font_size_override("bold_font_size", 16)
-	_stats_label.add_theme_color_override("default_color", Color(0.8, 0.78, 0.92))
-	_stats_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
-	_stats_label.add_theme_constant_override("outline_size", 3)
-	info.add_child(_stats_label)
+	# --- праворуч: прийоми медальйонами ---
+	_right_column = VBoxContainer.new()
+	_right_column.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_right_column.offset_left = -150.0
+	_right_column.offset_right = -18.0
+	_right_column.offset_top = 92.0
+	_right_column.add_theme_constant_override("separation", 4)
+	add_child(_right_column)
+	var skills_title := Label.new()
+	skills_title.text = "Прийоми"
+	skills_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	skills_title.add_theme_font_size_override("font_size", 17)
+	skills_title.add_theme_color_override("font_color", UiTheme.GOLD)
+	_right_column.add_child(skills_title)
+	_skills_box = VBoxContainer.new()
+	_skills_box.add_theme_constant_override("separation", 2)
+	_right_column.add_child(_skills_box)
 
-	var actions := VBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_CENTER
-	actions.add_theme_constant_override("separation", 10)
-	bottom.add_child(actions)
+	# --- унизу: картки героїв і головна дія ---
+	_card_row = HBoxContainer.new()
+	_card_row.add_theme_constant_override("separation", 12)
+	_card_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_card_row.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_card_row.offset_top = -CARD_SIZE.y - 34.0
+	_card_row.offset_bottom = -10.0
+	_card_row.offset_left = -330.0
+	_card_row.offset_right = 330.0
+	add_child(_card_row)
+	for i in HeroPool.ALL_HEROES.size():
+		var card := _make_card(HeroPool.ALL_HEROES[i])
+		card.gui_input.connect(_on_card_input.bind(i))
+		_card_row.add_child(card)
+		_cards.append(card)
+	_card_row.add_child(_make_mystery_card())
 
-	# Кнопки — арт гравця: зелена з золотими рунами й синя зі срібними.
 	_action_button = Button.new()
-	_action_button.custom_minimum_size = Vector2(240, 56)
-	_action_button.add_theme_font_size_override("font_size", 20)
-	UiTheme.art_primary(_action_button)
+	_action_button.custom_minimum_size = Vector2(230, 58)
+	_action_button.add_theme_font_size_override("font_size", 22)
+	_action_button.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_action_button.offset_left = -248.0
+	_action_button.offset_top = -78.0
+	_action_button.offset_right = -18.0
+	_action_button.offset_bottom = -20.0
 	_action_button.pressed.connect(_on_action_pressed)
-	actions.add_child(_action_button)
-
-	var back := Button.new()
-	back.text = "Назад"
-	back.custom_minimum_size = Vector2(240, 48)
-	back.add_theme_font_size_override("font_size", 18)
-	UiTheme.art_secondary(back)
-	back.pressed.connect(_on_back_pressed)
-	actions.add_child(back)
-
+	add_child(_action_button)
 
 	_index = _find_index(GameState.selected_hero_id)
 	_rebuild()
-	UiTheme.scroll_to_center.call_deferred(_slot_scroll, _slot_buttons[_index])
+	_intro()
+
+## Екран в'їжджає частинами.
+func _intro() -> void:
+	var pieces := [[_left_panel, Vector2(-380, 0)], [_right_column, Vector2(200, 0)], [_card_row, Vector2(0, 180)],
+		[_action_button, Vector2(280, 0)]]
+	for i in pieces.size():
+		var node: Control = pieces[i][0]
+		var shift: Vector2 = pieces[i][1]
+		var home := node.position
+		node.position = home + shift
+		node.modulate.a = 0.0
+		var tween := node.create_tween().set_parallel()
+		tween.tween_property(node, "position", home, 0.45).set_delay(0.05 * i).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tween.tween_property(node, "modulate:a", 1.0, 0.3).set_delay(0.05 * i)
 
 func _find_index(hero_id: StringName) -> int:
 	for i in HeroPool.ALL_HEROES.size():
@@ -257,129 +240,209 @@ func _find_index(hero_id: StringName) -> int:
 func _current() -> HeroDef:
 	return HeroPool.ALL_HEROES[_index]
 
+func _on_card_input(event: InputEvent, index: int) -> void:
+	var press := event is InputEventMouseButton and (event as InputEventMouseButton).pressed \
+		and (event as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT
+	if press or (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed):
+		_on_slot_pressed(index)
+
 func _on_slot_pressed(index: int) -> void:
+	if index == _index:
+		return
 	_index = index
 	_rebuild()
-	UiTheme.scroll_to_center(_slot_scroll, _slot_buttons[_index])
 
-func _process(_delta: float) -> void:
-	_glow.queue_redraw()
+# --- картки ---
+
+func _make_card(def: HeroDef) -> Control:
+	var card := Control.new()
+	card.custom_minimum_size = CARD_SIZE + Vector2(0, CARD_LIFT + 18)
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.pivot_offset = CARD_SIZE * 0.5
+	var holder := Control.new()
+	holder.name = "Holder"
+	holder.size = CARD_SIZE
+	holder.position = Vector2(0, CARD_LIFT)
+	holder.pivot_offset = CARD_SIZE * 0.5
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(holder)
+	var art := TextureRect.new()
+	art.name = "Art"
+	var texture := ArtSlots.hero_card_art(def.id)
+	art.texture = texture if texture != null else ArtSlots.hero_portrait(def.id)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.position = CARD_SIZE * CARD_WINDOW.position
+	art.size = CARD_SIZE * CARD_WINDOW.size
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(art)
+	var frame := TextureRect.new()
+	frame.name = "Frame"
+	frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	frame.stretch_mode = TextureRect.STRETCH_SCALE
+	frame.size = CARD_SIZE
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(frame)
+	var lock := TextureRect.new()
+	lock.name = "Lock"
+	lock.texture = load(UiTheme.KIT_DIR + "btn_lock.png")
+	lock.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lock.size = Vector2(40, 40)
+	lock.position = Vector2(CARD_SIZE.x * 0.5 - 20, CARD_SIZE.y * 0.5 - 24)
+	lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(lock)
+	var caption := Label.new()
+	caption.name = "Caption"
+	caption.text = def.title
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_theme_font_size_override("font_size", 12)
+	caption.position = Vector2(-20, CARD_LIFT + CARD_SIZE.y - 4)
+	caption.size = Vector2(CARD_SIZE.x + 40, 18)
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(caption)
+	return card
+
+## Картка майбутнього героя: силует лучника за рунічним знаком питання.
+func _make_mystery_card() -> Control:
+	var fake := HeroDef.new()
+	fake.id = &"mystery"
+	fake.title = "Скоро"
+	var card := _make_card(fake)
+	var art := card.get_node("Holder/Art") as TextureRect
+	if ResourceLoader.exists(MYSTERY_ART):
+		art.texture = load(MYSTERY_ART)
+	(card.get_node("Holder/Frame") as TextureRect).texture = load(FRAME_DIR + "card_common.png")
+	(card.get_node("Holder/Lock") as CanvasItem).visible = false
+	card.modulate = Color(0.85, 0.85, 0.9)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.tooltip_text = "Новий герой — скоро"
+	return card
+
+func _style_cards() -> void:
+	for i in _cards.size():
+		var def := HeroPool.ALL_HEROES[i]
+		var card := _cards[i]
+		var selected := i == _index
+		var unlocked := GameState.is_hero_unlocked(def.id)
+		var rarity := "legendary" if selected else ("epic" if GameState.selected_hero_id == def.id else ("rare" if unlocked else "common"))
+		(card.get_node("Holder/Frame") as TextureRect).texture = load(FRAME_DIR + "card_%s.png" % rarity)
+		(card.get_node("Holder/Art") as CanvasItem).modulate = Color.WHITE if unlocked else Color(0.35, 0.33, 0.4)
+		(card.get_node("Holder/Lock") as CanvasItem).visible = not unlocked
+		var caption := card.get_node("Caption") as Label
+		caption.add_theme_color_override("font_color", NAME_COLOR if selected else UiTheme.TEXT_DIM)
+		var holder := card.get_node("Holder") as Control
+		var tween := holder.create_tween().set_parallel()
+		tween.tween_property(holder, "position:y", 0.0 if selected else CARD_LIFT, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tween.tween_property(holder, "scale", Vector2.ONE * (1.08 if selected else 1.0), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+# --- герой ---
 
 func _rebuild() -> void:
 	var def := _current()
 	_gold_badge.set_amount(GameState.gold)
 	_gem_badge.set_amount(GameState.gems)
-	for i in _slot_buttons.size():
-		var other := HeroPool.ALL_HEROES[i]
-		var unlocked := GameState.is_hero_unlocked(other.id)
-		UiTheme.style_picker_slot(_slot_buttons[i], i == _index, unlocked, other.color)
-		_slot_buttons[i].button_pressed = i == _index
+	_style_cards()
 
-	_glow.set("glow_color", def.color)
-	_sky.set_background(ArtSlots.hero_background(def.id))
 	var weapon := WeaponPool.get_def(GameState.get_equipped_weapon_id(def.id))
 	_placeholder_label.visible = _preview.show_hero(def, weapon)
 
 	_name_label.text = def.title
+	_role_label.text = ROLES.get(def.id, "")
 	_description_label.text = def.description
-	var hp := int(Balance.HERO_MAX_HP + def.bonus_max_hp)
-	var speed_percent := int(round(def.move_speed_percent * 100.0))
-	_stats_label.text = "[center]Здоров'я [b][color=%s]%d[/color][/b]      Швидкість [b][color=%s]%+d%%[/color][/b]      Зброя: [b][color=%s]%s[/color][/b][/center]" % [
-		HP_COLOR, hp, SPEED_COLOR if speed_percent >= 0 else PENALTY_COLOR, speed_percent, WEAPON_COLOR, weapon.title]
-
-	for child in _left_slots.get_children():
-		child.queue_free()
-	for child in _right_slots.get_children():
-		child.queue_free()
-	var cards := _cards_for(def)
-	for i in cards.size():
-		var card: Dictionary = cards[i]
-		var target := _left_slots if i < LEFT_SLOT_COUNT else _right_slots
-		target.add_child(_build_ability_slot(card))
+	_pop(_name_label)
+	_fill_stats(def, weapon)
+	_fill_skills(def)
 
 	PriceTag.clear(_action_button)
+	_action_button.disabled = false
 	if GameState.selected_hero_id == def.id:
 		_action_button.text = "Обрано"
 		_action_button.disabled = true
+		UiTheme.jelly(_action_button, "green")
 	elif GameState.is_hero_unlocked(def.id):
 		_action_button.text = "Обрати"
-		_action_button.disabled = false
+		UiTheme.jelly(_action_button, "green")
 	elif def.gem_cost > 0:
+		UiTheme.jelly(_action_button, "gold")
 		_action_button.disabled = GameState.gems < def.gem_cost
 		PriceTag.apply(_action_button, &"gem", def.gem_cost, "Купити")
 	else:
+		UiTheme.jelly(_action_button, "gold")
 		_action_button.disabled = GameState.gold < def.unlock_cost
 		PriceTag.apply(_action_button, &"gold", def.unlock_cost, "Купити")
 
-## Група плиток з одного боку героя. Стовпчиком чи рядком — вирішує
-## _update_tile_layout за висотою вітрини.
-func _make_tile_group() -> BoxContainer:
-	var group := BoxContainer.new()
-	group.alignment = BoxContainer.ALIGNMENT_CENTER
-	group.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	group.add_theme_constant_override("separation", TILE_GAP)
-	group.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return group
+## Ім'я "підстрибує", коли змінюється герой.
+func _pop(node: Control) -> void:
+	node.pivot_offset = node.size * 0.5
+	node.scale = Vector2.ONE * 0.85
+	node.create_tween().tween_property(node, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-## Дві плитки з боку — стовпчиком, якщо вітрина достатньо висока; на
-## низькій (вузький екран, довгий опис героя) — поруч, рядком, щоб не
-## вилазили за вітрину.
-func _update_tile_layout() -> void:
-	var stacked := _ability_layer.size.y >= TILE_SIZE.y * 2 + TILE_GAP + TILE_MARGIN * 2
-	_left_slots.vertical = stacked
-	_right_slots.vertical = stacked
+## Смуги характеристик відносно найсильнішого героя — набігають заново.
+func _fill_stats(def: HeroDef, weapon: WeaponDef) -> void:
+	var best_hp := 1.0
+	var best_speed := 1.0
+	for other: HeroDef in HeroPool.ALL_HEROES:
+		best_hp = maxf(best_hp, Balance.HERO_MAX_HP + other.bonus_max_hp)
+		best_speed = maxf(best_speed, 1.0 + other.move_speed_percent)
+	var hp := Balance.HERO_MAX_HP + def.bonus_max_hp
+	var speed := 1.0 + def.move_speed_percent
+	var power := weapon.damage_mult_3d if weapon != null else 1.0
+	var fractions := [hp / best_hp * 0.92, speed / best_speed * 0.92, clampf(power / 1.6, 0.1, 1.0)]
+	var texts := ["%d" % int(hp), "%+d%%" % int(round(def.move_speed_percent * 100.0)), "%d%%" % int(round(power * 100.0))]
+	for i in _stat_bars.size():
+		var bar := _stat_bars[i]
+		bar.value = 0.0
+		bar.create_tween().tween_property(bar, "value", fractions[i], 0.6).set_delay(0.08 * i).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_stat_values[i].text = texts[i]
 
-## Плитка прийому на вітрині: іконка й назва на рунній рамці (арт гравця).
-## Без підкладки іконку й підпис з'їдало строкате тло героя й зали.
-## Натиск — вікно з описом прийому.
+func _fill_skills(def: HeroDef) -> void:
+	for child in _skills_box.get_children():
+		child.queue_free()
+	var cards := _cards_for(def)
+	for i in cards.size():
+		var tile := _build_ability_slot(cards[i])
+		tile.modulate.a = 0.0
+		tile.create_tween().tween_property(tile, "modulate:a", 1.0, 0.25).set_delay(0.06 * i)
+		_skills_box.add_child(tile)
+
+## Медальйон прийому з підписом; натиск — вікно з описом.
 func _build_ability_slot(card: Dictionary) -> Button:
 	var tile := Button.new()
-	tile.custom_minimum_size = TILE_SIZE
-	tile.tooltip_text = card.title
+	tile.flat = true
 	tile.focus_mode = Control.FOCUS_NONE
-	var tints := {"normal": Color.WHITE, "hover": Color(1.18, 1.18, 1.25), "pressed": Color(0.8, 0.8, 0.85)}
-	for state: String in tints:
-		tile.add_theme_stylebox_override(state, UiTheme.rune_frame_box(tints[state]))
-	tile.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	tile.tooltip_text = card.title
+	tile.custom_minimum_size = Vector2(132, SKILL_SIZE + 18)
+	for state: String in ["normal", "hover", "pressed", "focus"]:
+		tile.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	tile.pressed.connect(_on_ability_pressed.bind(card))
-
 	var content := VBoxContainer.new()
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content.offset_left = 6
-	content.offset_top = 7
-	content.offset_right = -6
-	content.offset_bottom = -7
 	content.alignment = BoxContainer.ALIGNMENT_CENTER
-	content.add_theme_constant_override("separation", 2)
+	content.add_theme_constant_override("separation", 0)
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	tile.add_child(content)
-	# Своя іконка здібності (арт гравця) — як є; немає — фігура кодом.
 	var own_icon := ArtSlots.skill_icon(card.get("id", &""))
 	if own_icon != null:
-		var image := UiTheme.make_bare_icon(own_icon, TILE_ICON)
+		var image := UiTheme.make_bare_icon(own_icon, SKILL_SIZE)
 		image.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(image)
 	else:
 		var drawn: Button = ABILITY_ICON_SCRIPT.new()
 		drawn.setup(card.kind, card.color, card.title)
-		drawn.custom_minimum_size = Vector2(TILE_ICON, TILE_ICON)
+		drawn.custom_minimum_size = Vector2(SKILL_SIZE, SKILL_SIZE)
 		drawn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		drawn.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(drawn)
 	var caption := Label.new()
 	caption.text = card.title
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption.add_theme_font_override("font", UiTheme.font(800))
-	caption.add_theme_font_size_override("font_size", 14)
-	caption.add_theme_color_override("font_color", (card.color as Color).lerp(Color.WHITE, 0.6))
-	caption.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
-	caption.add_theme_constant_override("outline_size", 4)
+	caption.add_theme_font_size_override("font_size", 13)
 	content.add_child(caption)
 	return tile
 
 ## Картки здібностей беремо з того, що герой СПРАВДІ вміє в бою
-## (Skills3D), а не з окремого опису — тоді вітрина не бреше. Третьою
+## (Skills3D), а не з окремого опису — тоді вітрина не бреше. Останньою
 ## йде картка про арсенал зброї.
 func _cards_for(def: HeroDef) -> Array:
 	var cards := []
@@ -396,7 +459,6 @@ func _cards_for(def: HeroDef) -> Array:
 	var lines := []
 	for weapon: WeaponDef in weapons:
 		lines.append("%s — %s" % [weapon.title, weapon.description])
-	# id "arsenal" — та сама картинка для всіх героїв (icons/skills/arsenal.png).
 	cards.append({
 		"kind": &"weapon", "color": Color(1.0, 0.85, 0.4),
 		"title": "Арсенал",
@@ -406,9 +468,8 @@ func _cards_for(def: HeroDef) -> Array:
 	})
 	return cards
 
-## Опис прийому — у різьбленій рамці: іконка, назва, вид прийому, текст.
-## Арсенал — не абзацом, а списком зброї з картинками: що в руках, що ще
-## не куплено і за скільки.
+## Опис прийому — у вікні з рамкою: іконка, назва, вид прийому, текст.
+## Арсенал — списком зброї з картинками.
 func _on_ability_pressed(card: Dictionary) -> void:
 	var is_arsenal: bool = card.has("hero_id")
 	var dialog := OrnateDialog.new(card.title, ArtSlots.skill_icon(card.get("id", &"")), card.color,
@@ -420,8 +481,6 @@ func _on_ability_pressed(card: Dictionary) -> void:
 	dialog.add_button("Зрозуміло")
 	add_child(dialog)
 
-## Уся зброя героя рядками на рунній рамці. Довгий список гортається —
-## вікно не вилазить за екран.
 func _arsenal_list(hero_id: StringName) -> Control:
 	var list := VBoxContainer.new()
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -429,7 +488,7 @@ func _arsenal_list(hero_id: StringName) -> Control:
 	var equipped := GameState.get_equipped_weapon_id(hero_id)
 	for weapon: WeaponDef in WeaponPool.get_for_hero(hero_id):
 		var row_panel := PanelContainer.new()
-		row_panel.add_theme_stylebox_override("panel", UiTheme.rune_frame_box())
+		row_panel.add_theme_stylebox_override("panel", UiTheme.inset_box())
 		list.add_child(row_panel)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 12)
@@ -448,9 +507,9 @@ func _arsenal_list(hero_id: StringName) -> Control:
 		text.add_child(name_row)
 		var name_label := Label.new()
 		name_label.text = weapon.title
-		name_label.add_theme_font_override("font", UiTheme.font(800))
+		name_label.add_theme_font_override("font", UiTheme.font(900))
 		name_label.add_theme_font_size_override("font_size", 17)
-		name_label.add_theme_color_override("font_color", OrnateDialog.TITLE_COLOR)
+		name_label.add_theme_color_override("font_color", NAME_COLOR)
 		name_row.add_child(name_label)
 		if weapon.id == equipped:
 			name_row.add_child(OrnateDialog.make_tag("У руках", Color(0.45, 0.9, 0.5)))
@@ -462,11 +521,9 @@ func _arsenal_list(hero_id: StringName) -> Control:
 		description.text = weapon.description
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		description.add_theme_font_size_override("font_size", 14)
-		description.add_theme_color_override("font_color", Color(0.86, 0.84, 0.94))
+		description.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 		text.add_child(description)
 	UiTheme.tag_scroll_pass(list)
-	# Висота прокрутки — як у списку, але не більше ARSENAL_MAX_HEIGHT.
-	# Висоту списку з перенесеними описами видно лише після розкладки.
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.custom_minimum_size = Vector2(0, ARSENAL_MAX_HEIGHT)
@@ -487,7 +544,15 @@ func _on_action_pressed() -> void:
 		AudioManager.play(&"purchase", 0.0)
 		GameState.select_hero(def.id)
 	_rebuild()
+	# Святковий спалах на обраному герої.
+	var flash := ColorRect.new()
+	flash.color = Color(1.0, 0.92, 0.6, 0.35)
+	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(flash)
+	var tween := flash.create_tween()
+	tween.tween_property(flash, "color:a", 0.0, 0.45)
+	tween.tween_callback(flash.queue_free)
 
 func _on_back_pressed() -> void:
-	# Назад — туди, звідки прийшли: у місто до дверей будівлі чи в меню.
 	GameState.return_from_ui()

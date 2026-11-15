@@ -67,18 +67,37 @@ static func has_hero_model(hero_id: StringName, explicit: PackedScene = null) ->
 
 # --- іконки ---
 
+## Новий набір іконок «Рунічної казки» (assets/ui/kit/icons): skill_<id>,
+## meta_* і talent_* (таланти), menu_*, stat_*, res_*, boon_*. Якщо там
+## немає — старі папки вище.
+const KIT_ICON_DIR := "res://assets/ui/kit/icons/"
+
+static func kit_icon(name: String) -> Texture2D:
+	var path := KIT_ICON_DIR + name + ".png"
+	return load(path) if ResourceLoader.exists(path) else null
+
 static func menu_icon(name: String) -> Texture2D:
-	return _find_texture(MENU_ICON_DIR, name)
+	var kit := kit_icon("menu_" + name)
+	return kit if kit != null else _find_texture(MENU_ICON_DIR, name)
 
 static func skill_icon(skill_id: StringName) -> Texture2D:
-	return _find_texture(SKILL_ICON_DIR, String(skill_id))
+	var kit := kit_icon("skill_" + String(skill_id))
+	return kit if kit != null else _find_texture(SKILL_ICON_DIR, String(skill_id))
 
 static func talent_icon(talent_id: StringName) -> Texture2D:
-	return _find_texture(TALENT_ICON_DIR, String(talent_id))
+	var kit := kit_icon(String(talent_id))
+	return kit if kit != null else _find_texture(TALENT_ICON_DIR, String(talent_id))
 
 ## Картинка кнопки бою за її видом (attack, gun, staff, book, cards,
 ## dodge). Немає файла — кнопка малює свій значок сама.
 static func combat_icon(kind: String) -> Texture2D:
+	# Удар і ухил — медальйони набору (kit/icons/skill_attack, skill_dodge).
+	# Атака будь-якою зброєю (меч, посох, книга, карти, ствол) — один
+	# медальйон "схрещені меч і посох".
+	if kind in ["attack", "dodge", "staff", "book", "cards", "gun"]:
+		var kit := kit_icon("skill_" + ("dodge" if kind == "dodge" else "attack"))
+		if kit != null:
+			return kit
 	return _find_texture(COMBAT_ICON_DIR, kind)
 
 ## Картинка рівня данжу на екрані вибору (crypts, fungal, citadel).
@@ -92,6 +111,12 @@ static func hero_background(hero_id: StringName) -> Texture2D:
 ## Портрет героя для ряду вибору (blade_warden, void_assassin...).
 static func hero_portrait(hero_id: StringName) -> Texture2D:
 	return _find_texture(HERO_PORTRAIT_DIR, String(hero_id))
+
+## Арт героя на всю картку (3:4, kit/heroes/hero_<id>.jpg); hero_mystery —
+## для героя, якого ще немає.
+static func hero_card_art(hero_id: StringName) -> Texture2D:
+	var path := "res://assets/ui/kit/heroes/hero_%s.jpg" % hero_id
+	return load(path) if ResourceLoader.exists(path) else null
 
 ## Іконка валюти: &"gold" чи &"gem". Немає файла — кольорова заглушка.
 static func currency_icon(kind: StringName) -> Texture2D:

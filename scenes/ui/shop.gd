@@ -19,7 +19,7 @@ const GEM_TITLES := {
 
 const STATUS_SEC := 3.0
 ## Тло — крамниця з полицями й скринями (арт гравця).
-const SHOP_BACKGROUND := "res://assets/ui/backgrounds/shop.jpg"
+const SHOP_BACKGROUND := "res://assets/ui/kit/backgrounds/bg_shop.jpg"
 
 var _gems_badge: CurrencyBadge
 var _gold_badge: CurrencyBadge

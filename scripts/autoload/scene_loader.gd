@@ -40,6 +40,9 @@ var _root: Control
 var _title_label: Label
 var _hint_label: Label
 var _bar: ProgressBar
+var _logo: TextureRect
+## Перший перехід після старту гри (з main.tscn у меню).
+var first_boot := false
 
 func _ready() -> void:
 	layer = 110
@@ -57,6 +60,15 @@ func change_scene(path: String, title: String = "") -> void:
 	_shown_progress = 0.0
 	_bar.value = 0.0
 	_title_label.text = title if title != "" else "Завантаження"
+	# Перший запуск гри — одразу видно, без проявлення (до цього лише
+	# темний екран Godot).
+	if first_boot:
+		first_boot = false
+		_root.modulate.a = 1.0
+		visible = true
+		_hint_label.text = HINTS[randi() % HINTS.size()]
+		_start_loading()
+		return
 	_hint_label.text = HINTS[randi() % HINTS.size()]
 	_root.modulate.a = 0.0
 	visible = true
@@ -73,6 +85,9 @@ func is_busy() -> bool:
 	return _state != State.IDLE
 
 func _process(delta: float) -> void:
+	# Логотип ледь "дихає", поки вантажиться.
+	if _logo != null and _state != State.IDLE:
+		_logo.scale = Vector2.ONE * (1.0 + 0.025 * sin(Time.get_ticks_msec() * 0.0028))
 	match _state:
 		State.FADING_IN:
 			_timer += delta
@@ -146,35 +161,66 @@ func _build_ui() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 
+	# Заставка «Рунічної казки»: картина селища з порталом, притемнена знизу,
+	# логотип, назва місця на золотій стрічці й бірюзова рунічна смужка.
 	var background := ColorRect.new()
 	background.color = UiTheme.BG_DARK
 	background.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(background)
+	if ResourceLoader.exists(UiTheme.SPLASH):
+		var art := TextureRect.new()
+		art.texture = load(UiTheme.SPLASH)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_root.add_child(art)
+		var shade := TextureRect.new()
+		var gradient := Gradient.new()
+		gradient.set_color(0, Color(0, 0, 0, 0.0))
+		gradient.set_color(1, Color(0.04, 0.02, 0.03, 0.85))
+		var ramp := GradientTexture2D.new()
+		ramp.gradient = gradient
+		ramp.fill_from = Vector2(0.5, 0.35)
+		ramp.fill_to = Vector2(0.5, 1.0)
+		shade.texture = ramp
+		shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_root.add_child(shade)
+
+	if ResourceLoader.exists(UiTheme.LOGO):
+		_logo = TextureRect.new()
+		_logo.texture = load(UiTheme.LOGO)
+		_logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_logo.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_logo.custom_minimum_size = Vector2(300, 300)
+		_logo.size = Vector2(300, 300)
+		_logo.position = Vector2(-150, 18)
+		_logo.pivot_offset = Vector2(150, 150)
+		_root.add_child(_logo)
 
 	var column := VBoxContainer.new()
-	column.set_anchors_preset(Control.PRESET_CENTER)
-	column.custom_minimum_size = Vector2(520, 0)
-	column.position = Vector2(-260, -90)
-	column.add_theme_constant_override("separation", 18)
+	column.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	column.custom_minimum_size = Vector2(560, 0)
+	column.position = Vector2(-280, -200)
+	column.add_theme_constant_override("separation", 12)
 	_root.add_child(column)
 
-	var game_label := Label.new()
-	game_label.text = "RUNE HORDE"
-	game_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	game_label.add_theme_font_size_override("font_size", 22)
-	game_label.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
-	column.add_child(game_label)
-
-	# Назва місця — блідо-зелена між розділювачами з руків'ям меча, смуга —
-	# як здоров'я в HUD: те саме фентезійне оформлення (UiTheme).
 	_title_label = Label.new()
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title_label.add_theme_font_size_override("font_size", 40)
-	_title_label.add_theme_color_override("font_color", UiTheme.HEADING)
+	_title_label.add_theme_font_size_override("font_size", 30)
 	column.add_child(_title_label)
-	UiTheme.add_dividers(_title_label)
+	var ribbon := UiTheme.add_dividers(_title_label)
+	_title_label.add_theme_font_override("font", UiTheme.font(900))
+	_title_label.add_theme_color_override("font_color", UiTheme.RIBBON_TEXT)
+	_title_label.add_theme_color_override("font_outline_color", Color(1.0, 0.93, 0.7, 0.85))
+	_title_label.add_theme_constant_override("outline_size", 3)
+	ribbon.custom_minimum_size = Vector2(380, 84)
 
-	_bar = UiTheme.make_bar(UiTheme.HEADING, Vector2(0, 12))
+	_bar = ProgressBar.new()
+	_bar.show_percentage = false
+	_bar.custom_minimum_size = Vector2(0, 28)
+	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(_bar)
 
 	_hint_label = Label.new()

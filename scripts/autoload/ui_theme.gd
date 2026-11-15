@@ -4,28 +4,36 @@ extends Node
 ## корінь дерева сцен — звідти Godot роздає її всім вікнам і кнопкам
 ## автоматично, тож кожен екран не мусить знати про стилі нічого.
 ##
-## СТИЛЬ — "пухкі" округлі кнопки мобільної гри: градієнт, товста темніша
-## рамка, глянцевий відблиск зверху й м'яка тінь під кожною кнопкою чи
-## панеллю; заголовки — на кольоровій плашці-пігулці. Текстури генерує
-## tools/build_new_theme_textures.py (лежить поза репозиторієм — одноразовий
-## скрипт, результат зберігається тут, у assets/ui/theme). Шрифт — Nunito
-## (Google Fonts, OFL), змінної ваги: UiTheme.font(700) і важче для великих
+## СТИЛЬ «РУНІЧНА КАЗКА» (з 2026-11-15): зелене сукно в золотій рамі
+## (панелі), сливові вставки (слоти, плашки), кнопки-«желейки» з жирним
+## темно-коричневим контуром (зелена — головна дія, синя — решта, золота —
+## преміум, червона — небезпечна), золота стрічка під заголовками,
+## бірюзові руни — фірмовий акцент. Арт згенеровано (Adobe Firefly) і
+## підготовлено скриптами D:\RuneHorde_work\scripts\prep_kit.py і
+## prep_nine.py; лежить в assets/ui/kit (у kit/nine — уже зменшені під
+## 9-slice). Шрифт — Nunito змінної ваги: UiTheme.font(700) і важче для
 ## заголовків. Немає файла текстури — лишається проста плоска рамка.
 ##
 ## ШРИФТ МУСИТЬ МАТИ КИРИЛИЦЮ (з і, ї, є, ґ). Попередній, Baloo 2, її не
 ## мав — і вся українська тихо малювалась тонким запасним шрифтом Godot,
 ## на який ще й вага не діяла: текст губився на темних панелях.
 
-# Палітра: глибокий індиго, лавандові лінії, зелена головна дія.
-const BG_DARK := Color(0.055, 0.05, 0.11)
-const PANEL := Color(0.118, 0.102, 0.227)
-const PANEL_LIGHT := Color(0.19, 0.17, 0.34)
+# Палітра «Рунічної казки»: смарагдове сукно, слива, золото, бірюзові руни.
+const BG_DARK := Color(0.07, 0.045, 0.06)
+const PANEL := Color(0.24, 0.13, 0.21)
+const PANEL_LIGHT := Color(0.34, 0.19, 0.3)
 const ACCENT := Color(1.0, 0.78, 0.25)
 const ACCENT_DARK := Color(0.75, 0.52, 0.12)
-const HEADING := Color(0.88, 0.85, 1.0)
-const LINE := Color(0.75, 0.78, 0.95)
-const TEXT := Color(0.96, 0.96, 1.0)
-const TEXT_DIM := Color(0.68, 0.68, 0.82)
+const HEADING := Color(1.0, 0.95, 0.82)
+const LINE := Color(0.91, 0.71, 0.29)
+const TEXT := Color(1.0, 0.98, 0.94)
+const TEXT_DIM := Color(0.86, 0.8, 0.72)
+## Темно-коричневий контур — ним обведено все в стилі (і текст теж).
+const OUTLINE := Color(0.16, 0.09, 0.05)
+## Бірюза рун — фірмовий колір гри.
+const RUNE := Color(0.36, 0.86, 0.72)
+## Колір написів на золотій стрічці.
+const RIBBON_TEXT := Color(0.29, 0.16, 0.06)
 const TEXT_DARK := Color(0.1, 0.11, 0.12)
 const GOLD := Color(1.0, 0.86, 0.4)
 ## Фіолетовий — як гем на іконці валюти (арт гравця).
@@ -33,6 +41,17 @@ const GEM := Color(0.86, 0.58, 1.0)
 const DANGER := Color(1.0, 0.35, 0.35)
 
 const THEME_DIR := "res://assets/ui/theme/"
+const KIT_DIR := "res://assets/ui/kit/"
+const NINE_DIR := "res://assets/ui/kit/nine/"
+## Фони екранів (20:9) — kit/backgrounds/<назва>.jpg.
+const BG_MENU := KIT_DIR + "backgrounds/bg_menu.jpg"
+const BG_HEROES := KIT_DIR + "backgrounds/bg_heroes.jpg"
+const BG_ARMORY := KIT_DIR + "backgrounds/bg_armory.jpg"
+const BG_TALENTS := KIT_DIR + "backgrounds/bg_talents.jpg"
+const BG_SHOP := KIT_DIR + "backgrounds/bg_shop.jpg"
+const BG_DUNGEONS := KIT_DIR + "backgrounds/bg_dungeons.jpg"
+const SPLASH := KIT_DIR + "backgrounds/splash.jpg"
+const LOGO := KIT_DIR + "logo.png"
 const CURSOR_DIR := "res://assets/ui/cursors/"
 const FONT_PATH := "res://assets/ui/fonts/Nunito-Variable.ttf"
 
@@ -110,10 +129,61 @@ static func make_box(color: Color, radius: int = 10, border: int = 0, border_col
 ## Панель із візерунчастою рамкою. accent — відтінок рамки (біле — як є):
 ## так споряджена зброя чи обраний рівень виділяються своїм кольором.
 static func panel_box(accent: Color = Color.WHITE) -> StyleBox:
-	var box := _texture_box("panel.png", 34, 22, 16)
+	var box := nine_box("panel_main.png", 58, 58, 40, 32)
 	if box is StyleBoxTexture:
 		(box as StyleBoxTexture).modulate_color = accent
 	return box
+
+## 9-slice з набору kit/nine: margin — краї, що не тягнуться (з боків і
+## згори/знизу), content — відступ вмісту. Немає файла — плоска рамка.
+static func nine_box(file: String, margin_h: int, margin_v: int, content_h: int, content_v: int) -> StyleBox:
+	var path := NINE_DIR + file
+	if not ResourceLoader.exists(path):
+		var flat := make_box(PANEL, 10, 3, LINE)
+		flat.content_margin_left = content_h
+		flat.content_margin_right = content_h
+		flat.content_margin_top = content_v
+		flat.content_margin_bottom = content_v
+		return flat
+	var box := StyleBoxTexture.new()
+	box.texture = load(path)
+	box.texture_margin_left = margin_h
+	box.texture_margin_right = margin_h
+	box.texture_margin_top = margin_v
+	box.texture_margin_bottom = margin_v
+	box.content_margin_left = content_h
+	box.content_margin_right = content_h
+	box.content_margin_top = content_v
+	box.content_margin_bottom = content_v
+	return box
+
+## Сливова вставка (плашка під текст, рядок списку).
+static func inset_box(tint: Color = Color.WHITE) -> StyleBox:
+	var box := nine_box("slot_wide.png", 24, 24, 18, 10)
+	if box is StyleBoxTexture:
+		(box as StyleBoxTexture).modulate_color = tint
+	return box
+
+## Кнопка-«желейка» з набору: green / blue / gold / red / grey.
+static func jelly_box(color_name: String, tint: Color = Color.WHITE) -> StyleBox:
+	var box := nine_box("btn_%s.png" % color_name, 22, 19, 24, 4)
+	if box is StyleBoxTexture:
+		(box as StyleBoxTexture).modulate_color = tint
+	return box
+
+## Зробити кнопку желейкою потрібного кольору (усі стани).
+static func jelly(button: Button, color_name: String = "blue") -> void:
+	button.add_theme_stylebox_override("normal", jelly_box(color_name))
+	button.add_theme_stylebox_override("hover", jelly_box(color_name, Color(1.1, 1.1, 1.1)))
+	button.add_theme_stylebox_override("pressed", jelly_box(color_name, Color(0.82, 0.82, 0.82)))
+	button.add_theme_stylebox_override("disabled", jelly_box("grey"))
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_font_override("font", font(900))
+	for state: String in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color"]:
+		button.add_theme_color_override(state, Color.WHITE)
+	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.8))
+	button.add_theme_color_override("font_outline_color", OUTLINE)
+	button.add_theme_constant_override("outline_size", 7)
 
 ## КАРТКА ТОВАРУ (арт гравця): темна рамка з рунами по кутах і квадратний
 ## відсік під іконку зліва. Текстура вже зменшена до ITEM_CARD_HEIGHT, а
@@ -127,22 +197,10 @@ const ITEM_ICON := 64.0
 const ITEM_ICON_GAP := 36
 
 static func item_card_box() -> StyleBox:
-	var path := THEME_DIR + "item_card.png"
-	if not ResourceLoader.exists(path):
-		return panel_box()
-	var box := StyleBoxTexture.new()
-	box.texture = load(path)
-	# Лівий край — рамка й відсік (118 px), правий — рамка з рунами.
-	# Згори/знизу — по половині висоти: посередині не тягнеться нічого.
-	box.texture_margin_left = 118
-	box.texture_margin_right = 27
-	box.texture_margin_top = 59
-	box.texture_margin_bottom = 59
-	# Центр відсіку — 60 px від лівого краю й посередині висоти.
+	# Сливова вставка в золотому канті; іконка — зліва, з відступом від краю.
+	var box := nine_box("slot_wide.png", 24, 24, 28, 12)
 	box.content_margin_left = 60 - ITEM_ICON * 0.5
-	box.content_margin_right = 26
-	box.content_margin_top = 12
-	box.content_margin_bottom = 12
+	box.content_margin_right = 22
 	return box
 
 ## Компактна картка (84 px) — та сама рамка з відсіком, менша: кнопки
@@ -154,16 +212,9 @@ const ITEM_SMALL_SLOT_CENTER := 42.0
 const ITEM_SMALL_TEXT_X := 94.0
 
 static func item_card_small_box(tint: Color = Color.WHITE) -> StyleBox:
-	var path := THEME_DIR + "item_card_small.png"
-	if not ResourceLoader.exists(path):
-		return panel_box(tint)
-	var box := StyleBoxTexture.new()
-	box.texture = load(path)
-	box.texture_margin_left = 83
-	box.texture_margin_right = 19
-	box.texture_margin_top = 41
-	box.texture_margin_bottom = 41
-	box.modulate_color = tint
+	var box := nine_box("slot_wide.png", 24, 24, 20, 8)
+	if box is StyleBoxTexture:
+		(box as StyleBoxTexture).modulate_color = tint
 	return box
 
 ## Рунна рамка (арт гравця, та сама, що в картки товару, але без відсіку):
@@ -171,20 +222,9 @@ static func item_card_small_box(tint: Color = Color.WHITE) -> StyleBox:
 ## строкатого арту (здібності на вітрині героя). Середина тягнеться як
 ## завгодно. tint — для наведення/натискання кнопки.
 static func rune_frame_box(tint: Color = Color.WHITE) -> StyleBox:
-	var path := THEME_DIR + "rune_frame.png"
-	if not ResourceLoader.exists(path):
-		return panel_box(tint)
-	var box := StyleBoxTexture.new()
-	box.texture = load(path)
-	box.texture_margin_left = 20
-	box.texture_margin_right = 20
-	box.texture_margin_top = 20
-	box.texture_margin_bottom = 20
-	box.content_margin_left = 10
-	box.content_margin_right = 10
-	box.content_margin_top = 8
-	box.content_margin_bottom = 8
-	box.modulate_color = tint
+	var box := nine_box("slot_square.png", 22, 22, 10, 8)
+	if box is StyleBoxTexture:
+		(box as StyleBoxTexture).modulate_color = tint
 	return box
 
 ## Картка товару (Ринок, Храм) з іконкою у відсіку. Повертає картку; її
@@ -212,7 +252,7 @@ static func make_item_card(icon: Texture2D, tint: Color = Color.WHITE) -> PanelC
 ## accent — свій відтінок слота (колір прийому, зброї), як у зразку, де
 ## кожен предмет спорядження сидить у слоті свого кольору.
 static func slot_box(accent: Color = Color.WHITE) -> StyleBox:
-	var box := _texture_box("slot.png", 20, 8, 8)
+	var box := nine_box("slot_square.png", 22, 22, 9, 9)
 	if box is StyleBoxTexture:
 		(box as StyleBoxTexture).modulate_color = accent
 	return box
@@ -220,9 +260,9 @@ static func slot_box(accent: Color = Color.WHITE) -> StyleBox:
 ## Панель поверх гри (здоров'я, золото в місті): та сама рамка, але
 ## тонші поля й прозоріша — щоб не затуляти бій.
 static func hud_box() -> StyleBox:
-	var box := _texture_box("panel.png", 34, 14, 10)
+	var box := nine_box("slot_wide.png", 24, 24, 16, 9)
 	if box is StyleBoxTexture:
-		(box as StyleBoxTexture).modulate_color = Color(1, 1, 1, 0.88)
+		(box as StyleBoxTexture).modulate_color = Color(1, 1, 1, 0.93)
 	return box
 
 ## Текст просто поверх 3D-сцени — з темним контуром, щоб читався і на
@@ -230,7 +270,7 @@ static func hud_box() -> StyleBox:
 static func hud_text(label: Label, font_size: int = 18, color: Color = TEXT) -> void:
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+	label.add_theme_color_override("font_outline_color", OUTLINE)
 	label.add_theme_constant_override("outline_size", 6)
 
 ## Колір валюти — для числа поруч з іконкою й облямівки плашки.
@@ -257,9 +297,22 @@ static func make_icon_button(icon_name: String, side: float = 56.0, tooltip: Str
 	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.custom_minimum_size = Vector2(side, side)
 	button.tooltip_text = tooltip
-	for state: String in ["normal", "hover", "pressed"]:
-		var file := "button.png" if state == "normal" else "button_%s.png" % state
-		button.add_theme_stylebox_override(state, _texture_box(file, 16, 13, 13))
+	# Кругла кнопка в золотому обідку (kit/btn_round): вся картинка
+	# масштабується під розмір кнопки, без 9-slice.
+	var round_path := KIT_DIR + "btn_round.png"
+	if ResourceLoader.exists(round_path):
+		var tints := {"normal": Color.WHITE, "hover": Color(1.12, 1.12, 1.12), "pressed": Color(0.8, 0.8, 0.8)}
+		for state: String in tints:
+			var box := StyleBoxTexture.new()
+			box.texture = load(round_path)
+			box.modulate_color = tints[state]
+			var pad := side * 0.24
+			box.content_margin_left = pad
+			box.content_margin_right = pad
+			box.content_margin_top = pad
+			box.content_margin_bottom = pad
+			button.add_theme_stylebox_override(state, box)
+		button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	return button
 
 ## Смуга (здоров'я, досвід) у кольорі fill.
@@ -268,13 +321,18 @@ static func make_bar(fill: Color, bar_size: Vector2) -> ProgressBar:
 	bar.show_percentage = false
 	bar.custom_minimum_size = bar_size
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var fill_box := make_box(fill, 3)
+	# Заливка — пухка "желейка" свого кольору з темним контуром і
+	# світлішою смужкою зверху; тло — темний жолоб із контуром.
+	var radius := int(bar_size.y * 0.5)
+	var fill_box := make_box(fill, radius, 2, OUTLINE)
+	fill_box.border_width_top = 2
+	fill_box.shadow_size = 0
 	fill_box.content_margin_left = 0
 	fill_box.content_margin_right = 0
 	fill_box.content_margin_top = 0
 	fill_box.content_margin_bottom = 0
 	bar.add_theme_stylebox_override("fill", fill_box)
-	var back := make_box(Color(0, 0, 0, 0.55), 3, 1, Color(LINE, 0.55))
+	var back := make_box(Color(0.13, 0.07, 0.1, 0.92), radius, 2, OUTLINE)
 	back.content_margin_left = 0
 	back.content_margin_right = 0
 	back.content_margin_top = 0
@@ -289,12 +347,15 @@ static func make_bar(fill: Color, bar_size: Vector2) -> ProgressBar:
 static func make_title(text: String, font_size: int = 26, color: Color = HEADING) -> PanelContainer:
 	var pill := PanelContainer.new()
 	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	pill.add_theme_stylebox_override("panel", _texture_box("title_pill.png", 22, 26, 8))
+	pill.add_theme_stylebox_override("panel", ribbon_box())
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_font_override("font", font(800))
-	label.add_theme_color_override("font_color", color)
+	label.add_theme_font_override("font", font(900))
+	# На золотій стрічці — темно-коричневий напис зі світлою обвідкою.
+	label.add_theme_color_override("font_color", RIBBON_TEXT if color == HEADING else color)
+	label.add_theme_color_override("font_outline_color", Color(1.0, 0.93, 0.7, 0.85))
+	label.add_theme_constant_override("outline_size", 3)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pill.add_child(label)
 	return pill
@@ -338,10 +399,10 @@ const ART_PRIMARY_DISABLED := THEME_DIR + "button_hero_select_disabled.png"
 const ART_SECONDARY := THEME_DIR + "button_hero_back.png"
 
 static func art_primary(button: Button) -> void:
-	art_button(button, ART_PRIMARY, 27, 23, ART_PRIMARY_DISABLED)
+	jelly(button, "green")
 
 static func art_secondary(button: Button) -> void:
-	art_button(button, ART_SECONDARY, 13, 10)
+	jelly(button, "blue")
 
 ## Тло екрана з арту гравця: перша наявна картинка зі списку (своя для
 ## екрана, далі запасні), обрізана під екран. dim — наскільки притемнити
@@ -354,7 +415,14 @@ static func add_background(parent: Control, paths: Array, dim: float = 0.0) -> v
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(base)
 	parent.move_child(base, 0)
+	# Новий фон екрана (kit/backgrounds) має перевагу над старим, якщо
+	# екран його ще не знає: вибір за ключовим словом у старому шляху.
+	var kit_paths := []
 	for path: String in paths:
+		for key: String in BACKGROUND_KEYS:
+			if path.contains(key):
+				kit_paths.append(BACKGROUND_KEYS[key])
+	for path: String in kit_paths + paths:
 		if not ResourceLoader.exists(path):
 			continue
 		var art := TextureRect.new()
@@ -373,6 +441,12 @@ static func add_background(parent: Control, paths: Array, dim: float = 0.0) -> v
 			parent.add_child(shade)
 			parent.move_child(shade, 2)
 		return
+
+## Старі назви фонів екранів -> нові фони набору.
+const BACKGROUND_KEYS := {
+	"menu": BG_MENU, "hero": BG_HEROES, "armory": BG_ARMORY, "weapon": BG_ARMORY,
+	"temple": BG_TALENTS, "talent": BG_TALENTS, "shop": BG_SHOP, "market": BG_SHOP, "dungeon": BG_DUNGEONS,
+}
 
 static func _art_box(texture: Texture2D, margin_x: int, margin_y: int, margin_right: int = -1) -> StyleBoxTexture:
 	var right := margin_x if margin_right < 0 else margin_right
@@ -532,29 +606,29 @@ static func style_picker_slot(button: Button, selected: bool, available: bool, o
 	var image := button.get_node("Image") as TextureRect
 	var tint: Color = image.get_meta(&"tint", Color.WHITE)
 
-	var plate_box := StyleBoxFlat.new()
-	plate_box.bg_color = Color(0.09, 0.08, 0.17, 0.95)
-	plate_box.set_corner_radius_all(radius)
-	plate_box.anti_aliasing = true
-	if selected and available:
-		plate_box.shadow_color = Color(own_color, 0.6)
-		plate_box.shadow_size = 10
+	# Сливова вставка в золотому канті (kit/nine/slot_square); обрана —
+	# з бірюзовим сяйвом рун і золотим обідком, закрита — притемнена.
+	var plate_box := slot_box(Color.WHITE if available else Color(0.55, 0.55, 0.6))
 	(button.get_node("Plate") as Panel).add_theme_stylebox_override("panel", plate_box)
 
 	var ring_box := StyleBoxFlat.new()
 	ring_box.draw_center = false
 	ring_box.set_corner_radius_all(radius)
 	ring_box.anti_aliasing = true
-	if not available:
-		ring_box.border_color = Color(0.55, 0.55, 0.6, 0.45)
-		ring_box.set_border_width_all(2)
-	elif selected:
-		ring_box.border_color = own_color.lerp(Color.WHITE, 0.35)
+	if selected:
+		ring_box.border_color = Color(1.0, 0.84, 0.35)
 		ring_box.set_border_width_all(4)
+		ring_box.shadow_color = Color(RUNE, 0.65)
+		ring_box.shadow_size = 12
 	else:
-		ring_box.border_color = Color(own_color, 0.45)
-		ring_box.set_border_width_all(2)
+		ring_box.border_color = Color(0, 0, 0, 0)
+		ring_box.set_border_width_all(0)
 	(button.get_node("Ring") as Panel).add_theme_stylebox_override("panel", ring_box)
+	# Обрана трохи більша — "підстрибує".
+	button.pivot_offset = button.custom_minimum_size * 0.5
+	var target := Vector2.ONE * (1.1 if selected else 1.0)
+	if not button.scale.is_equal_approx(target):
+		button.create_tween().tween_property(button, "scale", target, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 	if not available:
 		image.modulate = tint * Color(0.32, 0.32, 0.36)
@@ -613,12 +687,26 @@ static func add_dividers(label: Control) -> PanelContainer:
 	var index := label.get_index()
 	var pill := PanelContainer.new()
 	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	pill.add_theme_stylebox_override("panel", _texture_box("title_pill.png", 22, 26, 8))
+	pill.add_theme_stylebox_override("panel", ribbon_box())
 	parent.remove_child(label)
 	pill.add_child(label)
 	parent.add_child(pill)
 	parent.move_child(pill, index)
 	return pill
+
+## Золота стрічка під заголовок: хвости по боках не тягнуться, середина —
+## так. Напис сидить у верхній (широкій) частині стрічки.
+static func ribbon_box() -> StyleBox:
+	var box := nine_box("ribbon.png", 56, 0, 64, 0)
+	if box is StyleBoxTexture:
+		var tex := box as StyleBoxTexture
+		tex.texture_margin_top = 0
+		tex.texture_margin_bottom = 0
+		# Стрічка вигнута дугою: широка смуга — у верхній половині, внизу
+		# лише хвости. Напис — по центру смуги.
+		tex.content_margin_top = 0
+		tex.content_margin_bottom = 40
+	return box
 
 ## Покласти кілька сусідніх вузлів екрана на одну панель у рамці.
 static func wrap_in_panel(nodes: Array[Control], accent: Color = Color.WHITE) -> PanelContainer:
@@ -663,39 +751,30 @@ func _build_theme() -> Theme:
 	new_theme.default_font_size = 18
 	new_theme.default_font = font(700)
 
-	# --- кнопки: округлі, градієнт, товста рамка, глянець і тінь ---
-	new_theme.set_stylebox("normal", "Button", _texture_box("button.png", 16, 22, 12))
-	new_theme.set_stylebox("hover", "Button", _texture_box("button_hover.png", 16, 22, 12))
-	new_theme.set_stylebox("pressed", "Button", _texture_box("button_pressed.png", 16, 22, 12))
-	new_theme.set_stylebox("disabled", "Button", _texture_box("button_disabled.png", 16, 22, 12))
-	new_theme.set_stylebox("focus", "Button", StyleBoxEmpty.new())
-	new_theme.set_color("font_color", "Button", TEXT)
-	new_theme.set_color("font_hover_color", "Button", Color.WHITE)
-	new_theme.set_color("font_pressed_color", "Button", TEXT_DIM)
-	new_theme.set_color("font_focus_color", "Button", TEXT)
-	# Вимкнена кнопка ("У руках", "Обрано") — сіра, але напис мусить читатись.
-	new_theme.set_color("font_disabled_color", "Button", Color(0.86, 0.86, 0.92, 0.85))
-	new_theme.set_font("font", "Button", font(800))
+	# --- кнопки-«желейки»: звичайна — синя, головна — зелена ---
+	_set_jelly(new_theme, &"Button", "blue")
 	new_theme.set_font_size("font_size", "Button", 18)
-
-	# --- головна кнопка: зелена, текст білий ---
 	new_theme.set_type_variation(&"PrimaryButton", &"Button")
-	new_theme.set_stylebox("normal", "PrimaryButton", _texture_box("button_primary.png", 16, 22, 12))
-	new_theme.set_stylebox("hover", "PrimaryButton", _texture_box("button_primary_hover.png", 16, 22, 12))
-	new_theme.set_stylebox("pressed", "PrimaryButton", _texture_box("button_primary_pressed.png", 16, 22, 12))
-	new_theme.set_color("font_color", "PrimaryButton", Color.WHITE)
-	new_theme.set_color("font_hover_color", "PrimaryButton", Color.WHITE)
-	new_theme.set_color("font_pressed_color", "PrimaryButton", Color(1, 1, 1, 0.82))
-	new_theme.set_color("font_focus_color", "PrimaryButton", Color.WHITE)
+	_set_jelly(new_theme, &"PrimaryButton", "green")
+	new_theme.set_type_variation(&"GoldButton", &"Button")
+	_set_jelly(new_theme, &"GoldButton", "gold")
+	new_theme.set_type_variation(&"DangerButton", &"Button")
+	_set_jelly(new_theme, &"DangerButton", "red")
 
 	# --- панелі ---
 	new_theme.set_stylebox("panel", "PanelContainer", panel_box())
 	new_theme.set_stylebox("panel", "Panel", panel_box())
 
-	# --- текст ---
+	# --- текст: кремовий з коричневим контуром (читається і на сукні,
+	# і на фоні-картині) ---
 	new_theme.set_color("font_color", "Label", TEXT)
-	new_theme.set_font("font", "Label", font(700))
+	new_theme.set_color("font_outline_color", "Label", OUTLINE)
+	new_theme.set_constant("outline_size", "Label", 4)
+	new_theme.set_font("font", "Label", font(800))
 	new_theme.set_font_size("font_size", "Label", 18)
+	new_theme.set_color("default_color", "RichTextLabel", TEXT)
+	new_theme.set_color("font_outline_color", "RichTextLabel", OUTLINE)
+	new_theme.set_constant("outline_size", "RichTextLabel", 4)
 
 	# --- прокрутка: тонка кремова смужка замість сірої ---
 	var grabber := make_box(Color(LINE, 0.55), 3)
@@ -709,12 +788,25 @@ func _build_theme() -> Theme:
 	track.content_margin_right = 3
 	new_theme.set_stylebox("scroll", "VScrollBar", track)
 
-	# --- смуги прогресу (здоров'я, досвід, заряд уміння) ---
-	new_theme.set_stylebox("background", "ProgressBar", make_box(Color(0, 0, 0, 0.45), 4, 1, Color(LINE, 0.5)))
-	new_theme.set_stylebox("fill", "ProgressBar", make_box(HEADING, 4))
+	# --- смуги прогресу: темний жолоб і бірюзова рунічна заливка ---
+	new_theme.set_stylebox("background", "ProgressBar", nine_box("bar_frame.png", 13, 12, 0, 0))
+	new_theme.set_stylebox("fill", "ProgressBar", nine_box("bar_fill.png", 11, 10, 0, 0))
 	new_theme.set_color("font_color", "ProgressBar", TEXT)
 
 	return new_theme
+
+func _set_jelly(target: Theme, type: StringName, color_name: String) -> void:
+	target.set_stylebox("normal", type, jelly_box(color_name))
+	target.set_stylebox("hover", type, jelly_box(color_name, Color(1.1, 1.1, 1.1)))
+	target.set_stylebox("pressed", type, jelly_box(color_name, Color(0.82, 0.82, 0.82)))
+	target.set_stylebox("disabled", type, jelly_box("grey"))
+	target.set_stylebox("focus", type, StyleBoxEmpty.new())
+	for state: String in ["font_color", "font_hover_color", "font_focus_color", "font_pressed_color"]:
+		target.set_color(state, type, Color.WHITE)
+	target.set_color("font_disabled_color", type, Color(1, 1, 1, 0.8))
+	target.set_color("font_outline_color", type, OUTLINE)
+	target.set_constant("outline_size", type, 7)
+	target.set_font("font", type, font(900))
 
 ## Курсор миші на ПК — піксельне лезо, над кнопками — рука з пальцем
 ## (Kenney Cursor Pixel Pack). На телефоні миші немає — нічого не робимо.

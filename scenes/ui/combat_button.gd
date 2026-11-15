@@ -135,55 +135,14 @@ func _draw() -> void:
 	var is_ready := cooldown_ratio <= 0.0 and (charge < 0.0 or charge >= 1.0)
 	# Обідок кольору здібності — диск під темною кнопкою, а не згладжена
 	# лінія: дві прості команди малювання (дешевше для телефона).
-	draw_circle(center, radius, Color(accent, 0.95 if is_ready else 0.35), true, -1.0, true)
-	if _background != null:
-		var inner := radius - 3.0
-		draw_texture_rect(_background, Rect2(center - Vector2(inner, inner), Vector2(inner, inner) * 2.0),
-			false, Color(0.72, 0.72, 0.72) if _down else Color.WHITE)
+	# Медальйон «Рунічної казки» (kit/icons) — сам собі кнопка: золотий
+	# обідок і диск уже намальовані, тож малюємо лише його, на весь розмір.
+	if icon_texture != null and icon_texture.resource_path.contains("/kit/icons/"):
+		var full := radius * 2.12
+		draw_texture_rect(icon_texture, Rect2(center - Vector2(full, full) * 0.5, Vector2(full, full)),
+			false, Color(1, 1, 1) if is_ready else Color(0.45, 0.45, 0.5))
 	else:
-		draw_circle(center, radius - 4.0, Color(0.05, 0.06, 0.09, 0.8 if not _down else 0.9))
-	var glyph_color := Color(1, 1, 1, 0.95 if is_ready else 0.45)
-	if icon_texture != null:
-		var side := radius * 1.1
-		draw_texture_rect(icon_texture, Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)),
-			false, Color(1, 1, 1, 0.95 if is_ready else 0.5))
-	elif _pack_icon != null:
-		var side := radius * 0.92
-		draw_set_transform(center, PACK_ICON_TURN.get(icon_kind, 0.0))
-		draw_texture_rect(_pack_icon, Rect2(-Vector2(side, side) * 0.5, Vector2(side, side)), false, glyph_color)
-		draw_set_transform(Vector2.ZERO)
-	else:
-		match icon_kind:
-			"attack":
-				_draw_sword(center, radius * 0.5, glyph_color)
-			"dodge":
-				_draw_chevrons(center, radius * 0.42, glyph_color)
-			"dash":
-				_draw_dash(center, radius * 0.45, glyph_color)
-			"nova":
-				_draw_nova(center, radius * 0.45, glyph_color)
-			"fire":
-				_draw_fire(center, radius * 0.45, glyph_color)
-			"smoke":
-				_draw_smoke(center, radius * 0.45, glyph_color)
-			"gun":
-				_draw_gun(center, radius * 0.5, glyph_color)
-			"staff":
-				_draw_staff(center, radius * 0.5, glyph_color)
-			"frost":
-				_draw_frost(center, radius * 0.45, glyph_color)
-			"venom":
-				_draw_venom(center, radius * 0.45, glyph_color)
-			"bolt":
-				_draw_bolt(center, radius * 0.45, glyph_color)
-			"book":
-				_draw_book(center, radius * 0.45, glyph_color)
-			"cards":
-				_draw_cards(center, radius * 0.45, glyph_color)
-			"rune":
-				_draw_rune(center, radius * 0.45, glyph_color)
-			_:
-				_draw_whirl(center, radius * 0.45, glyph_color)
+		_draw_face(center, is_ready)
 
 	# Шкала накопичення: кільце наповнюється знизу за годинниковою.
 	if charge >= 0.0 and charge < 1.0:
@@ -363,3 +322,55 @@ func _draw_whirl(center: Vector2, size_px: float, color: Color) -> void:
 	for i in 3:
 		var start := TAU * i / 3.0
 		draw_arc(center, size_px * (0.45 + 0.2 * i), start, start + PI * 0.9, 16, color, size_px * 0.16)
+
+## Звичайна кнопка: диск кольору здібності, темна середина, значок.
+func _draw_face(center: Vector2, is_ready: bool) -> void:
+	draw_circle(center, radius, Color(accent, 0.95 if is_ready else 0.35), true, -1.0, true)
+	if _background != null:
+		var inner := radius - 3.0
+		draw_texture_rect(_background, Rect2(center - Vector2(inner, inner), Vector2(inner, inner) * 2.0),
+			false, Color(0.72, 0.72, 0.72) if _down else Color.WHITE)
+	else:
+		draw_circle(center, radius - 4.0, Color(0.05, 0.06, 0.09, 0.8 if not _down else 0.9))
+	var glyph_color := Color(1, 1, 1, 0.95 if is_ready else 0.45)
+	if icon_texture != null:
+		var side := radius * 1.1
+		draw_texture_rect(icon_texture, Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)),
+			false, Color(1, 1, 1, 0.95 if is_ready else 0.5))
+	elif _pack_icon != null:
+		var side := radius * 0.92
+		draw_set_transform(center, PACK_ICON_TURN.get(icon_kind, 0.0))
+		draw_texture_rect(_pack_icon, Rect2(-Vector2(side, side) * 0.5, Vector2(side, side)), false, glyph_color)
+		draw_set_transform(Vector2.ZERO)
+	else:
+		match icon_kind:
+			"attack":
+				_draw_sword(center, radius * 0.5, glyph_color)
+			"dodge":
+				_draw_chevrons(center, radius * 0.42, glyph_color)
+			"dash":
+				_draw_dash(center, radius * 0.45, glyph_color)
+			"nova":
+				_draw_nova(center, radius * 0.45, glyph_color)
+			"fire":
+				_draw_fire(center, radius * 0.45, glyph_color)
+			"smoke":
+				_draw_smoke(center, radius * 0.45, glyph_color)
+			"gun":
+				_draw_gun(center, radius * 0.5, glyph_color)
+			"staff":
+				_draw_staff(center, radius * 0.5, glyph_color)
+			"frost":
+				_draw_frost(center, radius * 0.45, glyph_color)
+			"venom":
+				_draw_venom(center, radius * 0.45, glyph_color)
+			"bolt":
+				_draw_bolt(center, radius * 0.45, glyph_color)
+			"book":
+				_draw_book(center, radius * 0.45, glyph_color)
+			"cards":
+				_draw_cards(center, radius * 0.45, glyph_color)
+			"rune":
+				_draw_rune(center, radius * 0.45, glyph_color)
+			_:
+				_draw_whirl(center, radius * 0.45, glyph_color)

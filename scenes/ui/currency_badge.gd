@@ -14,12 +14,10 @@ func _init(kind: StringName = &"gold", font_size: int = 18, backing: bool = true
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var accent := UiTheme.currency_color(kind)
 	if backing:
-		var box := UiTheme.make_box(Color(0.04, 0.03, 0.09, 0.75), 18, 2, Color(accent, 0.55))
+		# Сливова плашка в золотому канті (kit/nine/pill).
+		var box := UiTheme.nine_box("pill.png", 20, 20, 16, 4)
 		box.content_margin_left = 6
-		box.content_margin_right = 16
-		box.content_margin_top = 3
-		box.content_margin_bottom = 3
-		box.anti_aliasing = true
+		box.content_margin_right = 18
 		add_theme_stylebox_override("panel", box)
 	else:
 		add_theme_stylebox_override("panel", StyleBoxEmpty.new())
@@ -42,7 +40,7 @@ func _init(kind: StringName = &"gold", font_size: int = 18, backing: bool = true
 	_label.add_theme_font_override("font", UiTheme.font(800))
 	_label.add_theme_font_size_override("font_size", font_size)
 	_label.add_theme_color_override("font_color", accent.lerp(Color.WHITE, 0.3))
-	_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.65))
+	_label.add_theme_color_override("font_outline_color", UiTheme.OUTLINE)
 	_label.add_theme_constant_override("outline_size", 4)
 	row.add_child(_label)
 

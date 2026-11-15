@@ -32,6 +32,16 @@ var _placeholder := false
 ## true — показуємо зброю: погойдуємо, а не крутимо.
 var _sway := false
 var _sway_time := 0.0
+## Героя можна крутити пальцем (Зала героїв). Після дотику модель кілька
+## секунд стоїть, як її повернули, а тоді знову повільно обертається.
+var interactive := false:
+	set(value):
+		interactive = value
+		mouse_filter = Control.MOUSE_FILTER_STOP if value else Control.MOUSE_FILTER_IGNORE
+var _hold_left := 0.0
+var _spin_speed := 0.0
+const DRAG_TURN := 0.012
+const HOLD_AFTER_DRAG := 2.5
 
 func _init() -> void:
 	stretch = true
@@ -75,6 +85,14 @@ func _ready() -> void:
 	rim.light_color = Color(1.0, 0.92, 0.8)
 	_viewport.add_child(rim)
 
+	# Бірюзове світло рун знизу — герой стоїть на рунічному постаменті.
+	var rune_light := OmniLight3D.new()
+	rune_light.position = Vector3(0, 0.05, 0.6)
+	rune_light.light_color = Color(0.36, 0.9, 0.75)
+	rune_light.light_energy = 1.1
+	rune_light.omni_range = 2.2
+	_viewport.add_child(rune_light)
+
 ## Герой зі своєю зброєю. Повертає true, якщо модель тимчасова.
 func show_hero(hero: HeroDef, weapon: WeaponDef) -> bool:
 	_clear()
@@ -88,6 +106,13 @@ func show_hero(hero: HeroDef, weapon: WeaponDef) -> bool:
 	HeroBuilder.play_idle(instance)
 	_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	_frame(instance, 1.15)
+	# Поява: герой "виростає" з постаменту.
+	_pivot.scale = Vector3.ONE * 0.82
+	_pivot.rotation.y = -0.5
+	var tween := _pivot.create_tween().set_parallel()
+	tween.tween_property(_pivot, "scale", Vector3.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(_pivot, "rotation:y", 0.0, 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_hold_left = 0.6
 	return _placeholder
 
 ## Сама зброя великим планом.
@@ -139,7 +164,10 @@ func _pose_weapon(holder: Node3D, instance: Node3D) -> void:
 ## Ставить камеру так, щоб модель уміщалась повністю. Раніше камера
 ## стояла на фіксованій відстані, і високому героєві зрізало голову.
 func _frame(instance: Node3D, margin: float) -> void:
-	var bounds := _visual_bounds(instance)
+	# Кадр — по тілу героя (меші зі скелетом): зброя в першу мить ще не
+	# стоїть у руці (посох тримає UprightGrip з наступного кадру) і її межі
+	# роздували кадр так, що герой ставав крихітним.
+	var bounds := _visual_bounds(instance, true)
 	if bounds.size.y <= 0.01:
 		_camera.position = Vector3(0, 1.0, 2.6)
 		return
@@ -150,11 +178,13 @@ func _frame(instance: Node3D, margin: float) -> void:
 	_camera.rotation_degrees = Vector3.ZERO
 
 ## Габарити всього, що видно в моделі (у її власних координатах).
-func _visual_bounds(instance: Node3D) -> AABB:
+func _visual_bounds(instance: Node3D, skinned_only: bool = false) -> AABB:
 	var bounds := AABB()
 	var first := true
 	for node in instance.find_children("*", "VisualInstance3D", true, false):
 		var visual := node as VisualInstance3D
+		if skinned_only and not (visual is MeshInstance3D and (visual as MeshInstance3D).skin != null):
+			continue
 		var box: AABB = visual.global_transform * visual.get_aabb()
 		if first:
 			bounds = box
@@ -177,8 +207,27 @@ func _process(delta: float) -> void:
 	if _sway:
 		_sway_time += delta
 		_pivot.rotation.y = sin(_sway_time * SWAY_SPEED) * SWAY_ANGLE
+	elif _hold_left > 0.0:
+		_hold_left -= delta
+		# Інерція після змаху пальцем.
+		_pivot.rotate_y(_spin_speed * delta)
+		_spin_speed = lerpf(_spin_speed, 0.0, minf(delta * 4.0, 1.0))
 	else:
-		_pivot.rotate_y(ROTATION_SPEED * delta)
+		_pivot.rotate_y((ROTATION_SPEED * (0.5 if interactive else 1.0)) * delta)
+
+func _gui_input(event: InputEvent) -> void:
+	if not interactive:
+		return
+	var dx := 0.0
+	if event is InputEventScreenDrag:
+		dx = (event as InputEventScreenDrag).relative.x
+	elif event is InputEventMouseMotion and ((event as InputEventMouseMotion).button_mask & MOUSE_BUTTON_MASK_LEFT) != 0:
+		dx = (event as InputEventMouseMotion).relative.x
+	if dx != 0.0:
+		_pivot.rotate_y(dx * DRAG_TURN)
+		_spin_speed = dx * DRAG_TURN * 30.0
+		_hold_left = HOLD_AFTER_DRAG
+		accept_event()
 
 func _notification(what: int) -> void:
 	# Поки вітрини не видно на екрані, не малюємо її взагалі.
