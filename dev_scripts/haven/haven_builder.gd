@@ -19,7 +19,7 @@ extends Node
 ## Перезапуск будівника перезаписує всі три сцени (ручні правки — у плані
 ## HavenLayout чи тут).
 
-const L := preload("res://dev_scripts/haven/haven_layout.gd")
+const L := preload("res://scenes/world/haven/haven_layout.gd")
 const V := "res://assets/models/haven/village/"
 const N := "res://assets/models/haven/nature/"
 const P := "res://assets/models/haven/props/"
