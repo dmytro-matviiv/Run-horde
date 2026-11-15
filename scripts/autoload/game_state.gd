@@ -149,18 +149,29 @@ const TOWN_SCENE := "res://scenes/world/haven/haven.tscn"
 var ui_return_scene := MAIN_MENU_SCENE
 var town_return_spot := Vector3.INF
 
+## Прихисток, поверх якого екрани жителів відкриваються БЕЗ завантаження:
+## світ ставиться на паузу, екран — зверху, "Назад" — і герой стоїть там
+## само, де був, уже з новим героєм/зброєю. Реєструється сам (haven.gd).
+var overlay_host: Node = null
+
 ## Відкрити екран будівлі з міста: "Назад" поверне героя до її дверей.
 func open_from_town(scene_path: String, spot: Vector3) -> void:
+	if is_instance_valid(overlay_host):
+		overlay_host.call("open_screen", scene_path)
+		return
 	ui_return_scene = TOWN_SCENE
 	town_return_spot = spot
 	get_tree().change_scene_to_file(scene_path)
 
 ## "Назад" з екрана будівлі.
 func return_from_ui() -> void:
+	if is_instance_valid(overlay_host) and overlay_host.call("has_screen"):
+		overlay_host.call("close_screen")
+		return
 	var target := ui_return_scene
 	ui_return_scene = MAIN_MENU_SCENE
 	if target == TOWN_SCENE:
-		SceneLoader.change_scene(TOWN_SCENE, "Місто")
+		SceneLoader.change_scene(TOWN_SCENE, "Прихисток")
 	else:
 		get_tree().change_scene_to_file(target)
 

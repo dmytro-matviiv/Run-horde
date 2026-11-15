@@ -540,6 +540,14 @@ func _ready() -> void:
 
 # --- хто в грі: герой, зброя, таланти ---
 
+## Гравець змінив героя чи зброю в Прихистку (екран поверх світу) —
+## перезбираємо героя на місці, без перезавантаження локації.
+func reload_hero() -> void:
+	animation_tree.active = false
+	_load_hero()
+	_build_animation_tree()
+	animation_tree.active = true
+
 ## Збирає героя: модель, зброю в руці, здібності й числа з талантів.
 func _load_hero() -> void:
 	hero_def = HeroPool.get_def(GameState.selected_hero_id)

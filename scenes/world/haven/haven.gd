@@ -105,6 +105,11 @@ var _guide_wait := 0.0
 var _detail: Node3D
 var _detail_lite := false
 
+## Екран жителя (герої, зброя, таланти, крамниця) поверх Прихистку.
+var _screen_layer: CanvasLayer
+var _screen_loadout := ""
+const SCREEN_FADE := 0.16
+
 func _ready() -> void:
 	SceneLoader.hold()
 	player.set_torch_enabled(false)
@@ -128,6 +133,7 @@ func _ready() -> void:
 
 	_light_fires()
 	_refresh_spots()
+	GameState.overlay_host = self
 	await get_tree().process_frame
 	_load_detail()
 	PerfSettings.quality_changed.connect(_on_quality_changed)
@@ -733,6 +739,63 @@ func _update_guide() -> void:
 		var dir := flat.normalized()
 		_guide_arrow.global_position = player.global_position + dir * 1.6 + Vector3.UP * 0.08
 		_guide_arrow.global_rotation = Vector3(0, atan2(dir.x, dir.z), 0)
+
+# --- екрани жителів поверх світу (без завантаження) ---
+
+func has_screen() -> bool:
+	return _screen_layer != null and is_instance_valid(_screen_layer)
+
+func _loadout_key() -> String:
+	return "%s|%s" % [GameState.selected_hero_id, GameState.get_equipped_weapon_id(GameState.selected_hero_id)]
+
+func open_screen(path: String) -> void:
+	if has_screen():
+		return
+	_screen_loadout = _loadout_key()
+	player.set_move_input(Vector2.ZERO)
+	_dialog.visible = false
+	_screen_layer = CanvasLayer.new()
+	_screen_layer.layer = 40
+	get_tree().root.add_child(_screen_layer)
+	var screen: Control = (load(path) as PackedScene).instantiate()
+	_screen_layer.add_child(screen)
+	# Плавна поява: екран виїжджає трохи знизу й проявляється.
+	screen.modulate.a = 0.0
+	screen.position.y = 24.0
+	var tween := screen.create_tween().set_parallel()
+	tween.tween_property(screen, "modulate:a", 1.0, SCREEN_FADE)
+	tween.tween_property(screen, "position:y", 0.0, SCREEN_FADE * 1.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	# Світ за екраном не малюється й не рахується.
+	tween.chain().tween_callback(func() -> void:
+		if has_screen():
+			visible = false
+			hud.visible = false
+			process_mode = Node.PROCESS_MODE_DISABLED)
+
+func close_screen() -> void:
+	if not has_screen():
+		return
+	var layer := _screen_layer
+	_screen_layer = null
+	visible = true
+	hud.visible = true
+	process_mode = Node.PROCESS_MODE_INHERIT
+	if _loadout_key() != _screen_loadout:
+		player.reload_hero()
+	_on_quests_changed()
+	_refresh_action()
+	var screen := layer.get_child(0) as Control
+	screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tween := screen.create_tween().set_parallel()
+	tween.tween_property(screen, "modulate:a", 0.0, SCREEN_FADE)
+	tween.tween_property(screen, "position:y", 24.0, SCREEN_FADE)
+	tween.chain().tween_callback(layer.queue_free)
+
+func _exit_tree() -> void:
+	if GameState.overlay_host == self:
+		GameState.overlay_host = null
+	if has_screen():
+		_screen_layer.queue_free()
 
 # --- данж і меню ---
 
