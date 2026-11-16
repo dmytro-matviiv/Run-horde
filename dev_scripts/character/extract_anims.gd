@@ -4,7 +4,8 @@ extends Node
 const SOURCES := ["res://incoming/anims/UAL1_Standard.glb", "res://incoming/anims/UAL2_Standard.glb"]
 const CLIPS := ["Idle", "Walk", "Jog_Fwd", "Sprint", "Roll", "Sword_Idle", "Sword_Attack", "Spell_Simple_Shoot",
 	"Spell_Simple_Idle", "Hit_Chest", "Death01", "Interact", "PickUp_Table", "Dance", "Idle_Talking", "Jump",
-	"Sword_Regular_A", "Sword_Regular_B", "Sword_Regular_C", "Sword_Dash", "Idle_Shield", "Shield_Dash", "Yes", "Idle_FoldArms"]
+	"Sword_Regular_A", "Sword_Regular_B", "Sword_Regular_C", "Sword_Dash", "Idle_Shield", "Shield_Dash", "Yes", "Idle_FoldArms",
+	"Punch_Jab", "Punch_Cross", "Sword_Heavy_Combo", "Spell_Simple_Enter", "Pistol_Shoot", "Hit_Head", "Melee_Hook"]
 const OUT := "res://assets/animations/character/"
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))

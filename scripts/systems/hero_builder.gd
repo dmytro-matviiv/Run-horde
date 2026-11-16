@@ -46,7 +46,12 @@ static func tint(instance: Node3D, color: Color) -> void:
 ## герой бере щось інше, — інакше він тримав би дві зброї.
 ## Повертає вузол причепленої зброї (або null, якщо лишився вбудований
 ## у модель меч) — з нього беремо кінчик ствола для пострілу.
-static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> Node3D:
+## Поправка хвату для руки бази UBC (hand_r): кістка повернута інакше,
+## ніж зап'ястя старих героїв (Wrist.R), під які налаштовано grip зброї.
+static var CHARACTER_GRIP_FIX := Transform3D(Basis.from_euler(Vector3(0.0, 0.0, -PI * 0.5)), Vector3.ZERO)
+
+static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef, bone_override: StringName = &"",
+		offhand_override: StringName = &"", grip_fix: Transform3D = Transform3D.IDENTITY) -> Node3D:
 	var scene: PackedScene = null
 	if weapon != null:
 		scene = ArtSlots.weapon_model(weapon.id, weapon.model_scene)
@@ -61,15 +66,15 @@ static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> No
 	if skeletons.is_empty():
 		return null
 	var skeleton := skeletons[0] as Skeleton3D
-	var bone := skeleton.find_bone(String(hero.weapon_bone))
+	var bone := skeleton.find_bone(String(bone_override if bone_override != &"" else hero.weapon_bone))
 	if bone < 0:
 		return null
-	if scene == null and weapon.style_3d == "sword":
+	if scene == null and weapon.style_3d == "sword" and bone_override == &"":
 		return null   # у моделі вже є меч — лишаємо його
 
 	# Кістки моделі мають власний масштаб, тож зброю зводимо до метрів.
 	var bone_scale: float = skeleton.global_transform.basis.get_scale().x
-	var grip := Transform3D(
+	var grip := grip_fix * Transform3D(
 		Basis.from_euler(weapon.grip_rotation_deg * (PI / 180.0)).scaled(Vector3.ONE * weapon.model_scale / maxf(bone_scale, 0.0001)),
 		weapon.grip_offset)
 	if weapon.upright_3d:
@@ -79,7 +84,7 @@ static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef) -> No
 		return holder.get_child(0) as Node3D
 	var weapon_node := _hold(skeleton, bone, _make_weapon(scene, weapon), grip)
 	if weapon.dual_wield:
-		var other := skeleton.find_bone(String(hero.offhand_bone))
+		var other := skeleton.find_bone(String(offhand_override if offhand_override != &"" else hero.offhand_bone))
 		if other >= 0:
 			var copy := _hold(skeleton, other, _make_weapon(scene, weapon), _mirrored_grip(skeleton, bone, other, grip))
 			# Друга рука теж "стріляє" (карти летять із тієї руки, що кидає).

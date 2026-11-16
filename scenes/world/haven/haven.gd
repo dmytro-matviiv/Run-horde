@@ -803,7 +803,8 @@ func has_screen() -> bool:
 	return _screen_layer != null and is_instance_valid(_screen_layer)
 
 func _loadout_key() -> String:
-	return "%s|%s" % [GameState.selected_hero_id, GameState.get_equipped_weapon_id(GameState.selected_hero_id)]
+	return "%s|%s|%s|%s" % [GameState.selected_hero_id, GameState.get_equipped_weapon_id(GameState.selected_hero_id),
+		str(GameState.equipment), str(GameState.character.get("look", {}))]
 
 func open_screen(path: String) -> void:
 	if has_screen():

@@ -548,10 +548,55 @@ func reload_hero() -> void:
 	_build_animation_tree()
 	animation_tree.active = true
 
+## ВЛАСНИЙ ПЕРСОНАЖ (створений гравцем, CharacterBuilder). Клас — за
+## зброєю в руці: меч — набір мечника, посох — мага, книга/карти —
+## руновода; без зброї — б'ється кулаками. Анімації — з бази UBC
+## (assets/animations/character), не з моделей старих героїв.
+const CHARACTER_ANIM_DIR := "res://assets/animations/character/"
+## Коротка назва (як у старих героїв) -> кліп UBC.
+const CHARACTER_ANIMS := {
+	"Walk": "Walk", "Run": "Jog_Fwd", "Run_Back": "Walk", "Run_Left": "Jog_Fwd", "Run_Right": "Jog_Fwd",
+	"Roll": "Roll", "HitRecieve": "Hit_Chest", "HitReact": "Hit_Chest", "Death": "Death01", "Interact": "Interact",
+	"Sword_Slash": "Sword_Regular_A", "Dash_Strike": "Sword_Dash", "W_whirl": "Sword_Regular_C",
+	"Idle_Sword": "Sword_Idle", "Kick_Right": "Sword_Regular_C", "Punch_Right": "Punch_Cross",
+	"Gun_Shoot": "Pistol_Shoot", "Idle_Gun": "Pistol_Idle",
+}
+var _character_mode := false
+
+## МАНА — у магів (посох, книга, карти) і друїда. Прийоми коштують ману;
+## вона відновлюється сама з часом і з кожного переможеного ворога.
+## Броня мага/друїда дає більше мани (ItemDb: mana, mana_regen).
+signal mana_changed(current: float, maximum: float)
+const BASE_MANA := 60.0
+const BASE_MANA_REGEN := 3.0
+const SKILL_MANA_COST := 20.0
+const MANA_PER_KILL := 4.0
+var max_mana := 0.0
+var mana := 0.0
+var _mana_regen := 0.0
+
+## Чи потрібна цьому герою мана (маг, руновод, друїд).
+func uses_mana() -> bool:
+	return _character_mode and is_caster()
+
+func add_mana(amount: float) -> void:
+	if max_mana <= 0.0:
+		return
+	mana = minf(mana + amount, max_mana)
+	mana_changed.emit(mana, max_mana)
+
 ## Збирає героя: модель, зброю в руці, здібності й числа з талантів.
 func _load_hero() -> void:
-	hero_def = HeroPool.get_def(GameState.selected_hero_id)
-	weapon_def = WeaponPool.get_def(GameState.get_equipped_weapon_id(hero_def.id))
+	_character_mode = not GameState.character.is_empty()
+	if _character_mode:
+		# Хто ти — вирішує зброя в руці.
+		var weapon_item: Dictionary = ItemDb.equipped_items().get("weapon", {})
+		var weapon_id := String(ItemDb.base_of(weapon_item).get("weapon", ""))
+		weapon_def = WeaponPool.get_def(StringName(weapon_id)) if weapon_id != "" else null
+		hero_def = HeroPool.get_def(weapon_def.hero_id if weapon_def != null else &"blade_warden")
+	else:
+		hero_def = HeroPool.get_def(GameState.selected_hero_id)
+		weapon_def = WeaponPool.get_def(GameState.get_equipped_weapon_id(hero_def.id))
 	_build_model()
 	_equip_weapon()
 	_apply_loadout()
@@ -572,6 +617,22 @@ func _build_model() -> void:
 	for child in model.get_children():
 		model.remove_child(child)
 		child.queue_free()
+	if _character_mode:
+		_model_instance = CharacterBuilder.build(GameState.character.get("look", {}), ItemDb.gear_look())
+		var anim_player := AnimationPlayer.new()
+		anim_player.name = "AnimationPlayer"
+		_model_instance.add_child(anim_player)
+		anim_player.root_node = anim_player.get_path_to(_model_instance)
+		var library := AnimationLibrary.new()
+		var dir := DirAccess.open(CHARACTER_ANIM_DIR)
+		if dir != null:
+			for file in dir.get_files():
+				var clip_file := file.trim_suffix(".remap")
+				if clip_file.ends_with(".res"):
+					library.add_animation(clip_file.get_basename(), load(CHARACTER_ANIM_DIR + clip_file))
+		anim_player.add_animation_library(&"", library)
+		model.add_child(_model_instance)
+		return
 	var built := HeroBuilder.build_model(hero_def)
 	_model_instance = built[0]
 	if _model_instance == null:
@@ -580,7 +641,9 @@ func _build_model() -> void:
 	model.add_child(_model_instance)
 
 func _equip_weapon() -> void:
-	if _model_instance != null:
+	if _model_instance != null and _character_mode:
+		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def, &"hand_r", &"hand_l", HeroBuilder.CHARACTER_GRIP_FIX)
+	elif _model_instance != null:
 		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def)
 	if is_ranged():
 		_ammo = magazine_size()
@@ -606,6 +669,14 @@ func _apply_loadout() -> void:
 	_damage *= 1.0 + float(gear.get("damage", 0)) / 100.0
 	_attack_speed *= 1.0 + float(gear.get("attack_speed", 0)) / 100.0
 	_speed_bonus += float(gear.get("move_speed", 0)) / 100.0
+	if uses_mana():
+		max_mana = BASE_MANA + float(gear.get("mana", 0))
+		_mana_regen = BASE_MANA_REGEN + float(gear.get("mana_regen", 0))
+	else:
+		max_mana = 0.0
+		_mana_regen = 0.0
+	mana = max_mana
+	mana_changed.emit(mana, max_mana)
 
 ## Світло, яке герой носить із собою. Це найдешевший спосіб освітити
 ## підземелля: одне джерело замість десятків по стінах.
@@ -659,10 +730,14 @@ func _build_animation_tree() -> void:
 	# Справжні анімації під зброю героя (стійка, біг, серія, ривок, вихор).
 	var style: String = weapon_def.style_3d if weapon_def != null else "sword"
 	var hero_id: StringName = hero_def.id if hero_def != null else &""
-	_anim_overrides = WeaponAnims.install(player, hero_id, style)
-	_dash_strike_at = float(WeaponAnims.get_set(hero_id, style).get("dash_strike_at", DASH_STRIKE_AT))
+	if _character_mode:
+		_anim_overrides = {}
+		_dash_strike_at = DASH_STRIKE_AT
+	else:
+		_anim_overrides = WeaponAnims.install(player, hero_id, style)
+		_dash_strike_at = float(WeaponAnims.get_set(hero_id, style).get("dash_strike_at", DASH_STRIKE_AT))
 	# Удари комбо й ривок Клинкової Вартової — зібрані кодом (WardenMoves).
-	if hero_def != null and hero_def.id == &"blade_warden":
+	if hero_def != null and hero_def.id == &"blade_warden" and not _character_mode:
 		ProceduralAnims.build(player, _anim("Idle_Sword"), WardenMoves.SPECS, _anim(""))
 	_make_looping(player, ["Idle", "Walk", "Run", "Run_Back", "Run_Left", "Run_Right"])
 	var slash_name := _anim("Sword_Slash")
@@ -795,6 +870,16 @@ func _collect_upper_body_tracks(animation: Animation) -> Array[NodePath]:
 ## ("CharacterArmature|Run"), але в HeroDef.animation_names можна задати
 ## свої назви для моделі з іншого набору.
 func _anim(short_name: String) -> String:
+	if _character_mode:
+		if short_name == "Idle":
+			if weapon_def == null:
+				return "Idle"
+			return "Spell_Simple_Idle" if is_caster() else ("Pistol_Idle" if is_ranged() else "Sword_Idle")
+		var clip: String = CHARACTER_ANIMS.get(short_name, short_name)
+		var player := _model_instance.get_node_or_null("AnimationPlayer") as AnimationPlayer if _model_instance != null else null
+		if player != null and not player.has_animation(clip):
+			return "Sword_Regular_A" if weapon_def != null else "Punch_Jab"
+		return clip
 	if _anim_overrides.has(short_name):
 		return _anim_overrides[short_name]
 	if hero_def != null and hero_def.animation_names.has(short_name):
@@ -848,6 +933,14 @@ func _combo() -> Array:
 
 ## Анімації трьох слотів удару.
 func _attack_slot_animations() -> Array:
+	if _character_mode:
+		if weapon_def == null:
+			return ["Punch_Jab", "Punch_Cross", "Punch_Jab", "Punch_Cross", "Melee_Hook"]
+		if is_caster():
+			return ["Spell_Simple_Shoot", "Spell_Simple_Shoot", "Interact", "Interact", "Interact"]
+		if is_ranged():
+			return ["Pistol_Shoot", "Pistol_Shoot", "Interact", "Pistol_Shoot", "Pistol_Shoot"]
+		return ["Sword_Regular_A", "Sword_Regular_B", "Sword_Regular_C", "Sword_Attack", "Sword_Regular_A"]
 	if is_ranged():
 		# Для стрільця третій слот — рух перезарядки.
 		return ["Gun_Shoot", "Gun_Shoot", "Interact", "Gun_Shoot", "Gun_Shoot"]
@@ -1146,11 +1239,18 @@ func use_skill(index: int = 0) -> void:
 	# здібність: вона сама може задати рух (ривок люті), і зачищати його
 	# після цього не можна.
 	var skill := _skills[index]
+	# Магові на прийом потрібна мана.
+	if uses_mana() and mana < SKILL_MANA_COST:
+		CombatVfx.flash_model(model, Color(0.35, 0.55, 1.0), 0.15)
+		return
 	_attack_step = -1
 	_lunge_left = 0.0
 	_abort_attacks()
 	if not skill.try_use(self):
 		return
+	if uses_mana():
+		mana -= SKILL_MANA_COST
+		mana_changed.emit(mana, max_mana)
 	_combat_left = COMBAT_MEMORY
 	if not play_skill_move(skill.id):
 		_fire("SlashFastShot")
@@ -1413,6 +1513,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
+	if _mana_regen > 0.0 and mana < max_mana and not _dead:
+		mana = minf(mana + _mana_regen * delta, max_mana)
+		mana_changed.emit(mana, max_mana)
 	if _regen_per_second > 0.0 and current_hp < max_hp:
 		current_hp = minf(current_hp + _regen_per_second * delta, max_hp)
 		_update_health_bar()

@@ -176,6 +176,7 @@ var _shrine_label: Label
 var _arena_spawns: Array = []
 var _arena_status := ""
 var _banner: Control
+var _mana_bar: ProgressBar
 var _callout: Control
 var _combo: ComboMeter
 var _last_hp := 0.0
@@ -350,6 +351,19 @@ func _style_hud() -> void:
 	health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	health_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	UiTheme.hud_text(health_label, 15)
+
+	# Мана — лише в магів і друїда (власний персонаж).
+	_mana_bar = UiTheme.make_bar(Color(0.25, 0.5, 1.0), Vector2(300, 12))
+	_mana_bar.visible = false
+	column.add_child(_mana_bar)
+	player.mana_changed.connect(func(current: float, maximum: float) -> void:
+		_mana_bar.visible = maximum > 0.0
+		_mana_bar.max_value = maxf(maximum, 1.0)
+		_mana_bar.value = current)
+	if player.max_mana > 0.0:
+		_mana_bar.visible = true
+		_mana_bar.max_value = player.max_mana
+		_mana_bar.value = player.mana
 
 	_xp_bar = UiTheme.make_bar(UiTheme.HEADING, Vector2(300, 7))
 	column.add_child(_xp_bar)
@@ -1107,6 +1121,7 @@ func _on_ward_broken(boss: Enemy3D) -> void:
 func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_elite: bool) -> void:
 	_alive_enemies -= 1
 	QuestBook.report("kill")
+	player.add_mana(player.MANA_PER_KILL)
 	var is_boss := kind == Enemy3D.Kind.BOSS
 	# Золото й досвід вилітають фонтаном і зараховуються, коли долетять до
 	# героя (_on_loot_collected). Еліта сипле втричі щедріше.
