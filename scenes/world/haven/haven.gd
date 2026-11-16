@@ -41,8 +41,9 @@ const MENU_BUTTON_WIDTH := 140.0
 const ACTION_SCENES := {
 	"heroes": "res://scenes/ui/heroes.tscn",
 	"weapons": "res://scenes/ui/weapons.tscn",
-	"talents": "res://scenes/ui/meta_upgrades.tscn",
+	"talents": "res://scenes/ui/talent_tree_screen.tscn",
 	"shop": "res://scenes/ui/shop.tscn",
+	"inventory": "res://scenes/ui/inventory.tscn",
 }
 const RESOURCE_NAMES := {"wood": "Дерево", "stone": "Камінь", "herb": "Трави"}
 
@@ -386,6 +387,11 @@ func _refresh_bag() -> void:
 	for resource: String in Boons.RESOURCE_TITLES:
 		parts.append("%s %d" % [Boons.RESOURCE_TITLES[resource], int(GameState.resources.get(resource, 0))])
 	var text := "  ".join(parts)
+	if not GameState.character.is_empty():
+		var need := GameState.xp_for(GameState.hero_level)
+		text = "Рівень %d  •  досвід %d/%d%s
+" % [GameState.hero_level, GameState.hero_xp, need,
+			("  •  очок талантів: %d" % TalentTree.points_free()) if TalentTree.points_free() > 0 else ""] + text
 	var ready := Boons.summary()
 	if ready != "":
 		text += "\nУ похід: " + ready
@@ -625,8 +631,9 @@ func _talk(npc: HavenNpc) -> void:
 	elif not offer.is_empty():
 		text = String(offer.text)
 		choices.append(["accept:" + String(offer.id), "Взяти завдання", true])
-	if npc.info.action != "":
-		choices.append(["open", String(npc.info.button), choices.is_empty()])
+	var action := _npc_action(npc)
+	if action != "":
+		choices.append(["open", String(_npc_button(npc)), choices.is_empty()])
 	choices.append(["bye", "До побачення", false])
 	_dialog.show_line(String(npc.info.name), text, choices)
 	_action_button.visible = false
@@ -646,6 +653,8 @@ func _on_dialog_choice(choice: String) -> void:
 		var items: Array = reward.get("items", [])
 		if not items.is_empty():
 			_pulse_gear_button()
+		if int(reward.get("levels", 0)) > 0:
+			_level_up_fanfare()
 		if boon != "":
 			_show_toast("Відкрито: %s — %s" % [Boons.BOONS[boon].title, Boons.BOONS[boon].effect], UiTheme.GOLD)
 		else:
@@ -655,13 +664,30 @@ func _on_dialog_choice(choice: String) -> void:
 			_talk(npc)
 			return
 	elif choice == "open" and npc != null:
-		var path: String = ACTION_SCENES.get(npc.info.action, "")
+		var path: String = ACTION_SCENES.get(_npc_action(npc), "")
 		if path != "":
 			GameState.open_from_town(path, player.global_position)
 			return
 	else:
 		_dialog.visible = false
 	_refresh_action()
+
+## Власний персонаж: Наставниця веде до спорядження (героїв обирати вже
+## не треба), а стара Збройня Коваля (зброя старих героїв) — прихована,
+## поки не з'явиться нова крамниця зброї.
+func _npc_action(npc: HavenNpc) -> String:
+	var action := String(npc.info.action)
+	if not GameState.character.is_empty():
+		if action == "heroes":
+			return "inventory"
+		if action == "weapons":
+			return ""
+	return action
+
+func _npc_button(npc: HavenNpc) -> String:
+	if _npc_action(npc) == "inventory":
+		return "Спорядження"
+	return String(npc.info.button)
 
 func _on_quests_changed() -> void:
 	_guide_wait = 0.0
@@ -854,6 +880,14 @@ func _exit_tree() -> void:
 		GameState.overlay_host = null
 	if has_screen():
 		_screen_layer.queue_free()
+
+## Новий рівень героя: золотий спалах і підказка про таланти.
+func _level_up_fanfare() -> void:
+	Fx.wave(self, player.global_position + Vector3.UP * 0.1, 2.6, Color(1.0, 0.85, 0.35), 0.6)
+	Fx.puff(self, player.global_position + Vector3.UP * 1.0, Color(1.0, 0.85, 0.35), 1.2, 0.1)
+	await get_tree().create_timer(1.6).timeout
+	if is_inside_tree():
+		_show_toast("Рівень %d! Очки талантів чекають у Мудреця" % GameState.hero_level, UiTheme.GOLD)
 
 ## Нова річ у торбі — кнопка спорядження "підстрибує".
 func _pulse_gear_button() -> void:

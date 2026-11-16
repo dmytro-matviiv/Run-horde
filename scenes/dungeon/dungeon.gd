@@ -235,6 +235,7 @@ func _ready() -> void:
 	_boss_spot = markers.boss
 	_setup_hud(level.title)
 	player.died.connect(_on_player_died)
+	GameState.hero_leveled.connect(_on_hero_leveled)
 	player.health_changed.connect(_on_player_health_changed)
 	# Здобич з убитих ворогів летить до героя й зараховується, коли долетить.
 	_loot = LootSwarm.new()
@@ -1121,6 +1122,8 @@ func _on_ward_broken(boss: Enemy3D) -> void:
 func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_elite: bool) -> void:
 	_alive_enemies -= 1
 	QuestBook.report("kill")
+	# Досвід героя (рівні 1..30, таланти): за кожного переможеного.
+	GameState.add_hero_xp((80 if kind == Enemy3D.Kind.BOSS else 3) + GameState.dungeon_level, false)
 	player.add_mana(player.MANA_PER_KILL)
 	var is_boss := kind == Enemy3D.Kind.BOSS
 	# Золото й досвід вилітають фонтаном і зараховуються, коли долетять до
@@ -1170,7 +1173,7 @@ func _celebrate_boss(position: Vector3) -> void:
 ## загине на виході.
 func _add_gold(amount: int) -> void:
 	var levels := GameState.get_meta_level(GameState.selected_hero_id, &"meta_gold_gain")
-	var total := int(round(amount * (1.0 + TALENT_GOLD_PER_LEVEL * levels)))
+	var total := int(round(amount * (1.0 + TALENT_GOLD_PER_LEVEL * levels + player.talent("gold_find") / 100.0)))
 	_run_gold += total
 	GameState.add_gold(total)
 	_update_status()
@@ -1498,6 +1501,16 @@ func _update_status(title: String = "") -> void:
 ## Герой загинув — це має бути видно, а не виглядати як "застряг".
 ## Герой упав. Раз за похід можна повернутись у бій за відео (80%
 ## здоров'я й щит на 3 с); відмовився — підсумки поразки.
+## Новий рівень ГЕРОЯ (не походу): очки в дерево талантів.
+func _on_hero_leveled(level: int) -> void:
+	if not is_inside_tree():
+		return
+	_show_banner("Рівень героя %d!" % level, "+%d очки талантів — вивчи їх у Мудреця" % TalentTree.POINTS_PER_LEVEL)
+
+func _exit_tree() -> void:
+	if GameState.hero_leveled.is_connected(_on_hero_leveled):
+		GameState.hero_leveled.disconnect(_on_hero_leveled)
+
 func _on_player_died() -> void:
 	# Мить на анімацію падіння, а вже тоді вікно.
 	await get_tree().create_timer(1.1).timeout
@@ -1621,6 +1634,7 @@ func _on_exit_pressed() -> void:
 	_add_gold(int(round(GOLD_FOR_CLEAR * _gold_scale)))
 	GameState.unlock_next_dungeon_level()
 	QuestBook.report("clear")
+	GameState.add_hero_xp(100 + 40 * GameState.dungeon_level)
 	exit_button.visible = false
 	_show_results(true)
 

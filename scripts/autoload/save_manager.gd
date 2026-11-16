@@ -148,6 +148,10 @@ func save_game() -> void:
 		"equipment": GameState.equipment,
 		"stash": GameState.stash,
 		"hero_level": GameState.hero_level,
+		"hero_xp": GameState.hero_xp,
+		"talents": GameState.talents,
+		"talent_resets": GameState.talent_resets,
+		"bonus_talent_points": GameState.bonus_talent_points,
 	}
 	var path := _save_path()
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -212,6 +216,10 @@ func _load_file(path: String) -> void:
 	GameState.equipment = data.get("equipment", {})
 	GameState.stash = _items_from_json(data.get("stash", []))
 	GameState.hero_level = int(data.get("hero_level", 1))
+	GameState.hero_xp = int(data.get("hero_xp", 0))
+	GameState.talents = data.get("talents", {})
+	GameState.talent_resets = int(data.get("talent_resets", 0))
+	GameState.bonus_talent_points = int(data.get("bonus_talent_points", 0))
 	# Сейв із часів до спорядження (давній гравець): він уже пройшов
 	# стартові квести, тож не голий — у простому одязі й з мечем.
 	if not data.has("inventory") and int(data.get("completed_runs", 0)) > 0:

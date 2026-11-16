@@ -113,6 +113,11 @@ static func pick(player: Node, taken: Dictionary, luck: float = 0.0, count: int 
 	for upgrade: Dictionary in UPGRADES:
 		if not _fits(upgrade, player) or int(taken.get(upgrade.id, 0)) >= int(upgrade.max):
 			continue
+		# Власний персонаж: лише загальні посилення, що пасують усім
+		# (здоров'я, шкода, перезарядка, відновлення...) — розвиток класу
+		# тепер у дереві талантів.
+		if bool(player.get("_character_mode")) and upgrade.scope != "any":
+			continue
 		if upgrade.scope in ["any", "melee", "ranged", "spell"]:
 			general.append(upgrade)
 		else:

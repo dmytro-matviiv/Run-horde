@@ -191,9 +191,16 @@ static func complete(id: String) -> Dictionary:
 		ItemDb.give(item)
 		given.append(ItemDb.title_of(item))
 	result["items"] = given
+	# Досвід героя: за кожне завдання.
+	result["xp"] = xp_of(quest)
+	result["levels"] = GameState.add_hero_xp(result.xp)
 	GameState.quests_changed.emit()
 	SaveManager.save_game()
 	return result
+
+## Досвід за завдання: більше золота — більше досвіду.
+static func xp_of(quest: Dictionary) -> int:
+	return 60 + int(quest.get("reward", 0)) / 2 + int(quest.get("gems", 0)) * 10
 
 ## Рядок нагороди для кнопки "Здати": "+200 золота, +5 гемів".
 static func reward_text(quest: Dictionary) -> String:
@@ -202,6 +209,7 @@ static func reward_text(quest: Dictionary) -> String:
 		parts.append("+%d золота" % int(quest.reward))
 	if int(quest.get("gems", 0)) > 0:
 		parts.append("+%d гемів" % int(quest.gems))
+	parts.append("+%d досвіду" % xp_of(quest))
 	for entry: Array in quest.get("items", []):
 		parts.append(String(ItemDb.BASES.get(entry[0], {}).get("title", "річ")))
 	return ", ".join(parts)

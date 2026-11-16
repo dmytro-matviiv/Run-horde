@@ -380,6 +380,38 @@ var stash: Array = []
 var hero_level := 1
 signal equipment_changed
 
+## РІВЕНЬ ГЕРОЯ 1..30: досвід — за квести жителів і данжі. Кожен рівень
+## дає очки талантів (TalentTree). talents — id вивчених вузлів.
+var hero_xp := 0
+var talents: Dictionary = {}
+var talent_resets := 0
+var bonus_talent_points := 0
+signal talents_changed
+signal hero_leveled(level: int)
+
+## Скільки досвіду треба з рівня level на наступний.
+static func xp_for(level: int) -> int:
+	return int(round(100.0 * pow(level, 1.35)))
+
+## Додати досвід (таланти "Слідопит" множать). Повертає, скільки рівнів
+## здобуто.
+func add_hero_xp(amount: int, save := true) -> int:
+	if character.is_empty() or hero_level >= TalentTree.MAX_LEVEL or amount <= 0:
+		return 0
+	var bonus := float(TalentTree.total_effects().get("xp_gain", 0.0)) / 100.0
+	hero_xp += int(round(amount * (1.0 + bonus)))
+	var gained := 0
+	while hero_level < TalentTree.MAX_LEVEL and hero_xp >= xp_for(hero_level):
+		hero_xp -= xp_for(hero_level)
+		hero_level += 1
+		gained += 1
+		hero_leveled.emit(hero_level)
+	if hero_level >= TalentTree.MAX_LEVEL:
+		hero_xp = 0
+	if save or gained > 0:
+		SaveManager.save_game()
+	return gained
+
 ## Прогрес персонажа — до початкового стану (новий персонаж, перемикання).
 ## Те, що належить акаунту (геми, покупки), не чіпаємо.
 func reset_progress() -> void:
@@ -404,6 +436,10 @@ func reset_progress() -> void:
 	equipment = {}
 	stash = []
 	hero_level = 1
+	hero_xp = 0
+	talents = {}
+	talent_resets = 0
+	bonus_talent_points = 0
 
 func add_resource(id: String, amount: int = 1) -> void:
 	resources[id] = int(resources.get(id, 0)) + amount

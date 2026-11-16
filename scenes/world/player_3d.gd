@@ -575,6 +575,45 @@ var max_mana := 0.0
 var mana := 0.0
 var _mana_regen := 0.0
 
+var _talents := {}
+var _armor := 0.0
+var _crit_bonus := 0.0
+var _talent_skills: Array = []
+
+func talent(key: String) -> float:
+	return float(_talents.get(key, 0.0))
+
+## Особливі таланти (крім звичайних характеристик).
+func _apply_talent_effects(stats: Dictionary) -> void:
+	_armor = float(stats.get("armor", 0))
+	_crit_chance = CRIT_CHANCE + float(stats.get("crit", 0)) / 100.0
+	_crit_bonus = talent("crit_damage") / 100.0
+	_lifesteal = talent("lifesteal") / 100.0
+	_regen_per_second = float(stats.get("regen", 0))
+	_skill_cooldown_factor = maxf(0.4, 1.0 - float(stats.get("cooldown", 0)) / 100.0)
+	_dodge_cooldown_factor = maxf(0.4, 1.0 - talent("dodge_cooldown") / 100.0)
+	_damage_taken_factor = maxf(0.3, 1.0 - talent("damage_reduction") / 100.0)
+	if talent("glass_cannon") > 0.0:
+		_damage *= 1.35
+		max_hp *= 0.8
+	if talent("stoneskin") > 0.0:
+		_armor *= 1.4
+		max_hp *= 1.1
+		_speed_bonus -= 0.12
+	if talent("blood_magic") > 0.0:
+		max_hp *= 1.15
+	if talent("berserk") > 0.0:
+		_armor *= 0.5
+	if talent("deadeye") > 0.0:
+		_crit_chance += 0.08
+		_crit_bonus += 1.0
+	if talent("wild_heart") > 0.0:
+		_damage *= 1.12
+		_armor *= 1.12
+		_regen_per_second *= 2.0
+	current_hp = max_hp
+	_talent_skills = _talents.get("skills", [])
+
 ## Чи потрібна цьому герою мана (маг, руновод, друїд).
 func uses_mana() -> bool:
 	return _character_mode and is_caster()
@@ -603,6 +642,16 @@ func _load_hero() -> void:
 
 	passive = Skills3D.create_passive(hero_def.passive_id)
 	_skills = Skills3D.create_for_hero(hero_def)
+	# Прийоми з дерева талантів — ще кнопки (без повторів).
+	for skill_id: String in _talent_skills:
+		var has := false
+		for existing: HeroSkill3D in _skills:
+			if String(existing.id) == skill_id:
+				has = true
+		if not has:
+			var extra := Skills3D.create_skill(StringName(skill_id))
+			if extra != null:
+				_skills.append(extra)
 	# У посоха своя особлива здібність — вона стає першою кнопкою.
 	if weapon_def != null and weapon_def.staff_skill != &"":
 		var staff_skill := Skills3D.create_skill(weapon_def.staff_skill)
@@ -662,16 +711,23 @@ func _apply_loadout() -> void:
 	if weapon_def != null:
 		_damage *= weapon_def.damage_mult_3d
 		_attack_speed = weapon_def.speed_mult_3d
-	# Надіте спорядження (ItemDb): здоров'я, шкода, швидкість.
+	# Надіте спорядження (ItemDb) + вивчені таланти (TalentTree).
 	var gear := ItemDb.total_stats()
+	_talents = TalentTree.total_effects() if _character_mode else {}
+	for key: String in _talents:
+		if ItemDb.STATS.has(key):
+			gear[key] = float(gear.get(key, 0)) + float(_talents[key])
 	max_hp += float(gear.get("hp", 0))
 	current_hp = max_hp
 	_damage *= 1.0 + float(gear.get("damage", 0)) / 100.0
 	_attack_speed *= 1.0 + float(gear.get("attack_speed", 0)) / 100.0
 	_speed_bonus += float(gear.get("move_speed", 0)) / 100.0
+	_apply_talent_effects(gear)
 	if uses_mana():
 		max_mana = BASE_MANA + float(gear.get("mana", 0))
 		_mana_regen = BASE_MANA_REGEN + float(gear.get("mana_regen", 0))
+		if talent("wild_heart") > 0.0:
+			_mana_regen *= 0.5
 	else:
 		max_mana = 0.0
 		_mana_regen = 0.0
@@ -959,7 +1015,10 @@ func amp_attack_speed() -> float:
 	return attack_speed()
 
 func attack_speed() -> float:
-	return _attack_speed * (_attack_speed_buff if _attack_speed_left > 0.0 else 1.0) * _chill()
+	var berserk := 1.0
+	if talent("berserk") > 0.0 and max_hp > 0.0:
+		berserk += 0.4 * (1.0 - current_hp / max_hp)
+	return _attack_speed * (_attack_speed_buff if _attack_speed_left > 0.0 else 1.0) * _chill() * berserk
 
 func _chill() -> float:
 	return _chill_factor if _chill_left > 0.0 else 1.0
@@ -1240,7 +1299,10 @@ func use_skill(index: int = 0) -> void:
 	# після цього не можна.
 	var skill := _skills[index]
 	# Магові на прийом потрібна мана.
-	if uses_mana() and mana < SKILL_MANA_COST:
+	if talent("blood_magic") > 0.0:
+		if current_hp <= max_hp * 0.1:
+			return
+	elif uses_mana() and mana < SKILL_MANA_COST:
 		CombatVfx.flash_model(model, Color(0.35, 0.55, 1.0), 0.15)
 		return
 	_attack_step = -1
@@ -1248,7 +1310,11 @@ func use_skill(index: int = 0) -> void:
 	_abort_attacks()
 	if not skill.try_use(self):
 		return
-	if uses_mana():
+	if talent("blood_magic") > 0.0:
+		current_hp -= max_hp * 0.08
+		_update_health_bar()
+		health_changed.emit(current_hp, max_hp)
+	elif uses_mana():
 		mana -= SKILL_MANA_COST
 		mana_changed.emit(mana, max_mana)
 	_combat_left = COMBAT_MEMORY
@@ -1411,7 +1477,7 @@ func _try_potion() -> void:
 		return
 	_potions -= 1
 	Boons.spend_potion()
-	heal(max_hp * Boons.POTION_HEAL)
+	heal(max_hp * Boons.POTION_HEAL * (1.0 + talent("potion_heal") / 100.0))
 	CombatVfx.flash_model(model, Color(0.45, 1.0, 0.5), 0.3)
 	Fx.wave(get_parent(), global_position + Vector3.UP * 0.1, 2.0, Color(0.4, 1.0, 0.5), 0.45)
 	potion_used.emit(_potions)
@@ -1941,7 +2007,14 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 		return false
 	var hp_before := enemy.current_hp
 	var crit := randf() < _crit_chance or _perfect_crit_left > 0.0
-	var amount := _damage * multiplier * (CRIT_MULTIPLIER if crit else 1.0)
+	var amount := _damage * multiplier * ((CRIT_MULTIPLIER + _crit_bonus) if crit else 1.0)
+	if not _talents.is_empty():
+		if talent("first_strike") > 0.0 and enemy.current_hp >= enemy.max_hp * 0.99:
+			amount *= 1.0 + talent("first_strike") / 100.0
+		if talent("low_hp_damage") > 0.0 and current_hp < max_hp * 0.35:
+			amount *= 1.0 + talent("low_hp_damage") / 100.0
+		if talent("deadeye") > 0.0 and not crit:
+			amount *= 0.85
 	if _bonus_damage_left > 0.0:
 		amount *= _bonus_damage
 	if _concealed_left > 0.0:
@@ -1960,6 +2033,10 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 	# Вампіризм: частина завданої шкоди повертається здоров'ям.
 	if _lifesteal > 0.0:
 		heal(amount * _lifesteal)
+	if talent("mana_on_hit") > 0.0:
+		add_mana(talent("mana_on_hit"))
+	if talent("kill_heal") > 0.0 and not enemy.is_alive():
+		heal(max_hp * talent("kill_heal") / 100.0)
 	if passive == null:
 		return crit
 	passive.on_hit(self, enemy, amount, heavy)
@@ -2037,6 +2114,16 @@ func take_damage(amount: float) -> bool:
 			_on_perfect_dodge()
 		return false
 	amount *= _damage_taken_factor
+	if _armor > 0.0:
+		var armor := _armor
+		if talent("last_stand") > 0.0 and current_hp < max_hp * 0.35:
+			armor *= 1.0 + talent("last_stand") / 100.0
+		amount *= 100.0 / (100.0 + armor)
+	if talent("arcane_shield") > 0.0 and mana > 0.0:
+		var absorbed := minf(amount * 0.5, mana)
+		mana -= absorbed
+		amount -= absorbed
+		mana_changed.emit(mana, max_mana)
 	if _has_shrine(&"guard"):
 		amount *= SHRINE_GUARD_FACTOR
 	current_hp = maxf(current_hp - amount, 0.0)
