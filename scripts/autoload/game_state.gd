@@ -368,6 +368,29 @@ var quests: Dictionary = {}
 var haven: Dictionary = {}
 signal quests_changed
 
+## Хто цей персонаж: {"name", "look"} (look — для CharacterBuilder).
+var character: Dictionary = {}
+
+## Прогрес персонажа — до початкового стану (новий персонаж, перемикання).
+## Те, що належить акаунту (геми, покупки), не чіпаємо.
+func reset_progress() -> void:
+	gold = 0
+	hero_meta_levels = {}
+	last_seen_timestamp = int(Time.get_unix_time_from_system())
+	pending_offline_gold = 0
+	last_chest_claim_timestamp = 0
+	completed_runs = 0
+	dungeon_level = 0
+	max_dungeon_level = 0
+	unlocked_hero_ids = [&"runewielder"]
+	selected_hero_id = &"runewielder"
+	owned_weapon_ids = []
+	equipped_weapon_ids = {}
+	resources = {}
+	quests = {}
+	haven = {}
+	character = {}
+
 func add_resource(id: String, amount: int = 1) -> void:
 	resources[id] = int(resources.get(id, 0)) + amount
 	QuestBook.report(id, amount)

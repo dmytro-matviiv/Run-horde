@@ -34,6 +34,8 @@ var _sway := false
 var _sway_time := 0.0
 ## Героя можна крутити пальцем (Зала героїв). Після дотику модель кілька
 ## секунд стоїть, як її повернули, а тоді знову повільно обертається.
+const CHARACTER_ANIMS := "res://assets/animations/character/"
+const ONE_SHOT_ANIMS := ["Yes", "Sword_Attack", "Spell_Simple_Shoot", "Interact", "PickUp_Table", "Jump", "Roll"]
 var interactive := false:
 	set(value):
 		interactive = value
@@ -89,7 +91,7 @@ func _ready() -> void:
 	var rune_light := OmniLight3D.new()
 	rune_light.position = Vector3(0, 0.05, 0.6)
 	rune_light.light_color = Color(0.36, 0.9, 0.75)
-	rune_light.light_energy = 1.1
+	rune_light.light_energy = 0.45
 	rune_light.omni_range = 2.2
 	_viewport.add_child(rune_light)
 
@@ -116,6 +118,45 @@ func show_hero(hero: HeroDef, weapon: WeaponDef) -> bool:
 	return _placeholder
 
 ## Сама зброя великим планом.
+## Створений гравцем персонаж (CharacterBuilder): вигляд і надіте.
+## anim — кліп з assets/animations/character (Idle, Dance, Yes...).
+func show_character(look: Dictionary, gear: Dictionary = {}, anim: String = "Idle") -> void:
+	_clear()
+	var instance := CharacterBuilder.build(look, gear)
+	_pivot.add_child(instance)
+	play_character_anim(anim)
+	_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+	_frame(instance, 1.12)
+	_pivot.scale = Vector3.ONE * 0.9
+	_pivot.create_tween().tween_property(_pivot, "scale", Vector3.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_hold_left = 0.4
+
+## Програти кліп на показаному персонажі (зациклений, крім разових).
+func play_character_anim(anim: String) -> void:
+	if _pivot.get_child_count() == 0:
+		return
+	var instance := _pivot.get_child(0) as Node3D
+	var player := instance.get_node_or_null("Anim") as AnimationPlayer
+	if player == null:
+		player = AnimationPlayer.new()
+		player.name = "Anim"
+		instance.add_child(player)
+		player.root_node = player.get_path_to(instance)
+		player.add_animation_library(&"", AnimationLibrary.new())
+	var library := player.get_animation_library(&"")
+	var path := CHARACTER_ANIMS + anim + ".res"
+	if not library.has_animation(anim) and ResourceLoader.exists(path):
+		var clip: Animation = (load(path) as Animation).duplicate()
+		clip.loop_mode = Animation.LOOP_NONE if anim in ONE_SHOT_ANIMS else Animation.LOOP_LINEAR
+		library.add_animation(anim, clip)
+	if library.has_animation(anim):
+		player.play(anim, 0.25)
+		if anim in ONE_SHOT_ANIMS and not player.animation_finished.is_connected(_back_to_idle):
+			player.animation_finished.connect(_back_to_idle)
+
+func _back_to_idle(_name: StringName) -> void:
+	play_character_anim("Idle")
+
 func show_weapon(weapon: WeaponDef) -> bool:
 	_clear()
 	var scene := ArtSlots.weapon_model(weapon.id, weapon.model_scene)

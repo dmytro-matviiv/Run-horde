@@ -1,0 +1,4 @@
+[gd_scene format=3]
+[ext_resource type="Script" path="res://dev_scripts/character/extract_anims.gd" id="1"]
+[node name="X" type="Node"]
+script = ExtResource("1")

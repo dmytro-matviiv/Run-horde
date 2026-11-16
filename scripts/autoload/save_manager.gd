@@ -8,6 +8,101 @@ extends Node
 const SAVE_PATH := "user://save.json"
 const CURRENT_SCHEMA_VERSION := 7
 
+## ПЕРСОНАЖІ. Кожен персонаж — окремий файл user://char_<id>.json (його
+## прогрес: золото, квести, рівні...). Список персонажів і все, що
+## належить АКАУНТУ, а не персонажу (геми, куплене за гроші, без
+## реклами), — у user://characters.json. Старий єдиний сейв (save.json)
+## при першому запуску стає першим персонажем.
+const ROSTER_PATH := "user://characters.json"
+const ACCOUNT_KEYS := ["gems", "ads_removed", "claimed_starter_packs", "install_timestamp", "last_interstitial_timestamp"]
+var roster := {"active": "", "list": []}
+
+func characters() -> Array:
+	return roster.list
+
+func active_id() -> String:
+	return String(roster.active)
+
+func _char_path(id: String) -> String:
+	return "user://char_%s.json" % id
+
+func _save_path() -> String:
+	return _char_path(active_id()) if active_id() != "" else SAVE_PATH
+
+## Новий персонаж: чистий прогрес, свій вигляд. Стає активним.
+func create_character(char_name: String, look: Dictionary) -> String:
+	if active_id() != "":
+		save_game()
+	var id := "c%d" % Time.get_ticks_usec() + str(randi() % 1000)
+	GameState.reset_progress()
+	GameState.character = {"name": char_name, "look": look}
+	roster.list.append({"id": id, "name": char_name, "look": look, "level": 1, "created": int(Time.get_unix_time_from_system())})
+	roster.active = id
+	save_game()
+	return id
+
+## Обрати персонажа: його прогрес стає поточним.
+func select_character(id: String) -> void:
+	if active_id() != "" and active_id() != id:
+		save_game()
+	roster.active = id
+	GameState.reset_progress()
+	_load_file(_char_path(id))
+	_apply_account()
+	_save_roster()
+
+## Видалити персонажа назавжди (файл його прогресу теж).
+func delete_character(id: String) -> void:
+	for entry: Dictionary in roster.list.duplicate():
+		if entry.id == id:
+			roster.list.erase(entry)
+	var path := ProjectSettings.globalize_path(_char_path(id))
+	if FileAccess.file_exists(_char_path(id)):
+		DirAccess.remove_absolute(path)
+	if active_id() == id:
+		roster.active = ""
+		if not roster.list.is_empty():
+			select_character(String(roster.list[0].id))
+			return
+		GameState.reset_progress()
+	_save_roster()
+
+func _save_roster() -> void:
+	var account := {}
+	for key: String in ACCOUNT_KEYS:
+		var value: Variant = GameState.get(key)
+		account[key] = _stringnames_to_strings(value) if value is Array else value
+	roster["account"] = account
+	for entry: Dictionary in roster.list:
+		if entry.id == active_id():
+			entry["level"] = int(GameState.get("hero_level")) if GameState.get("hero_level") != null else 1
+			entry["name"] = String(GameState.character.get("name", entry.name))
+			entry["look"] = GameState.character.get("look", entry.look)
+	var file := FileAccess.open(ROSTER_PATH, FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify(roster, "\t"))
+
+func _load_roster() -> void:
+	if FileAccess.file_exists(ROSTER_PATH):
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(ROSTER_PATH))
+		if typeof(parsed) == TYPE_DICTIONARY:
+			roster = parsed
+			if not roster.has("list"):
+				roster["list"] = []
+			return
+	# Перший запуск нової версії: старий сейв стає першим персонажем.
+	if FileAccess.file_exists(SAVE_PATH):
+		var id := "c1"
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(_char_path(id)))
+		roster = {"active": id, "list": [{"id": id, "name": "Мандрівник", "look": {}, "level": 1}]}
+
+func _apply_account() -> void:
+	var account: Dictionary = roster.get("account", {})
+	for key: String in ACCOUNT_KEYS:
+		if account.has(key):
+			var value: Variant = account[key]
+			GameState.set(key, _strings_to_stringnames(value) if value is Array else value)
+
 ## v7: Руновод узяв книгу рун і рунні карти замість посохів-заглушок.
 const V7_WEAPON_RENAMES := {
 	"rune_bolt": "rune_book",
@@ -47,23 +142,33 @@ func save_game() -> void:
 		"resources": GameState.resources,
 		"quests": GameState.quests,
 		"haven": GameState.haven,
+		"character": GameState.character,
 	}
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	var path := _save_path()
+	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
-		push_error("Не вдалось відкрити файл сейву для запису: %s" % SAVE_PATH)
+		push_error("Не вдалось відкрити файл сейву для запису: %s" % path)
 		return
 	file.store_string(JSON.stringify(data, "\t"))
+	file.close()
+	if active_id() != "":
+		_save_roster()
 
 func load_game() -> void:
-	if not FileAccess.file_exists(SAVE_PATH):
+	_load_roster()
+	_load_file(_save_path())
+	_apply_account()
+
+func _load_file(path: String) -> void:
+	if not FileAccess.file_exists(path):
 		return
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		push_error("Не вдалось відкрити файл сейву для читання: %s" % SAVE_PATH)
+		push_error("Не вдалось відкрити файл сейву для читання: %s" % path)
 		return
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	if typeof(parsed) != TYPE_DICTIONARY:
-		push_error("Сейв пошкоджений, ігнорую: %s" % SAVE_PATH)
+		push_error("Сейв пошкоджений, ігнорую: %s" % path)
 		return
 	var data: Dictionary = _migrate(parsed)
 	GameState.gold = data.get("gold", 0)
@@ -96,6 +201,7 @@ func load_game() -> void:
 	for id: String in boons:
 		boons[id] = int(boons[id])
 	GameState.haven = haven
+	GameState.character = data.get("character", {})
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає
 ## сейв у форматі наступної, тому старі сейви ніколи не ламаються.
