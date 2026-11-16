@@ -17,8 +17,11 @@ const PEDESTAL_Y := 0.665
 const LEFT_SLOTS := ["helmet", "chest", "legs", "boots"]
 const RIGHT_SLOTS := ["weapon", "amulet", "ring1", "ring2"]
 const SLOT_SIZE := 74.0
-const CELL_SIZE := 64.0
-const BAG_COLUMNS := 4
+const CELL_SIZE := 62.0
+const BAG_COLUMNS := 3
+const STATS_WIDTH := 236.0
+## Ширина місця під персонажа між колонками слотів.
+const CHARACTER_GAP := 250.0
 ## Скільки золота дають за річ кожної рідкості.
 const SELL_PRICE := {"common": 15, "uncommon": 40, "rare": 110, "epic": 300, "legendary": 800}
 const BASE_HP := 100
@@ -45,8 +48,8 @@ func _ready() -> void:
 	_preview.anchor_right = 0.5
 	_preview.anchor_top = PEDESTAL_Y
 	_preview.anchor_bottom = PEDESTAL_Y
-	_preview.offset_left = -150.0
-	_preview.offset_right = 150.0
+	_preview.offset_left = -130.0
+	_preview.offset_right = 130.0
 	_preview.offset_top = -360.0
 	_preview.offset_bottom = 22.0
 	add_child(_preview)
@@ -69,26 +72,41 @@ func _ready() -> void:
 	add_child(back)
 	_gold_badge = CurrencyBadge.new(&"gold", 19)
 	_gold_badge.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	_gold_badge.offset_left = -190.0
+	_gold_badge.offset_left = -150.0
 	_gold_badge.offset_right = -18.0
 	_gold_badge.offset_top = 20.0
 	add_child(_gold_badge)
 
-	# Слоти обабіч персонажа.
+	# Розкладка рядом, що підлаштовується під ширину екрана:
+	# [характеристики] [слоти] [персонаж] [слоти] [торба]. Порожні
+	# розпірки по краях стискаються першими — нічого не наїжджає.
+	var row := HBoxContainer.new()
+	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	row.offset_left = 14.0
+	row.offset_right = -14.0
+	row.offset_top = 86.0
+	row.offset_bottom = -14.0
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(row)
+
+	var stats_panel := OrnatePanel.new()
+	stats_panel.custom_minimum_size = Vector2(STATS_WIDTH, 0)
+	stats_panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(stats_panel)
+	_stats_box = VBoxContainer.new()
+	_stats_box.add_theme_constant_override("separation", 3)
+	stats_panel.add_child(_stats_box)
+	row.add_child(_spacer())
+
 	for side in 2:
 		var column := VBoxContainer.new()
-		column.add_theme_constant_override("separation", 6)
-		column.anchor_left = 0.5
-		column.anchor_right = 0.5
-		column.anchor_top = 0.5
-		column.anchor_bottom = 0.5
-		var x := -250.0 if side == 0 else 250.0 - SLOT_SIZE
-		column.offset_left = x
-		column.offset_right = x + SLOT_SIZE
-		column.offset_top = -200.0
-		add_child(column)
+		column.add_theme_constant_override("separation", 4)
+		column.custom_minimum_size = Vector2(SLOT_SIZE + 16, 0)
+		column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		for slot: String in (LEFT_SLOTS if side == 0 else RIGHT_SLOTS):
 			var button := _make_cell(SLOT_SIZE)
+			button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			button.pressed.connect(_on_slot_pressed.bind(slot))
 			column.add_child(button)
 			var caption := Label.new()
@@ -97,25 +115,18 @@ func _ready() -> void:
 			caption.add_theme_font_size_override("font_size", 12)
 			column.add_child(caption)
 			_slot_buttons[slot] = button
+		row.add_child(column)
+		if side == 0:
+			# Місце під персонажа (він сам — посеред екрана, на постаменті).
+			var middle := Control.new()
+			middle.custom_minimum_size = Vector2(CHARACTER_GAP, 0)
+			middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(middle)
+	row.add_child(_spacer())
 
-	# Характеристики — ліворуч.
-	var stats_panel := OrnatePanel.new()
-	stats_panel.position = Vector2(14, 86)
-	stats_panel.custom_minimum_size = Vector2(250, 0)
-	add_child(stats_panel)
-	_stats_box = VBoxContainer.new()
-	_stats_box.add_theme_constant_override("separation", 3)
-	stats_panel.add_child(_stats_box)
-
-	# Торба / скриня — праворуч.
 	var bag_panel := OrnatePanel.new()
-	bag_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	bag_panel.offset_left = -14.0 - (CELL_SIZE + 6) * BAG_COLUMNS - 80.0
-	bag_panel.offset_right = -14.0
-	bag_panel.offset_top = 86.0
-	bag_panel.offset_bottom = -16.0
-	bag_panel.anchor_bottom = 1.0
-	add_child(bag_panel)
+	bag_panel.custom_minimum_size = Vector2((CELL_SIZE + 6) * BAG_COLUMNS + 70.0, 0)
+	row.add_child(bag_panel)
 	var bag_column := VBoxContainer.new()
 	bag_column.add_theme_constant_override("separation", 6)
 	bag_panel.add_child(bag_column)
@@ -148,6 +159,12 @@ func _ready() -> void:
 
 	GameState.equipment_changed.connect(_refresh)
 	_refresh()
+
+func _spacer() -> Control:
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return spacer
 
 func _exit_tree() -> void:
 	if GameState.equipment_changed.is_connected(_refresh):
@@ -239,8 +256,11 @@ func _fill_bag() -> void:
 		_style_cell(cell, item)
 		cell.pressed.connect(_show_item.bind(item, _show_stash))
 		_bag_grid.add_child(cell)
+	if sorted.is_empty() and not _show_stash:
+		_bag_title.text = "Торба порожня"
+		_bag_title.tooltip_text = "Речі дають жителі за завдання й випадають у данжах"
 	# Порожні клітинки — щоб торба не виглядала голою.
-	for i in maxi(0, BAG_COLUMNS * 4 - sorted.size()):
+	for i in maxi(0, BAG_COLUMNS * 5 - sorted.size()):
 		var empty := _make_cell(CELL_SIZE)
 		_style_cell(empty, {})
 		empty.disabled = true
