@@ -48,10 +48,10 @@ func _ready() -> void:
 	_preview.anchor_right = 0.5
 	_preview.anchor_top = PEDESTAL_Y
 	_preview.anchor_bottom = PEDESTAL_Y
-	_preview.offset_left = -130.0
-	_preview.offset_right = 130.0
-	_preview.offset_top = -360.0
-	_preview.offset_bottom = 22.0
+	_preview.offset_left = -170.0
+	_preview.offset_right = 170.0
+	_preview.offset_top = -430.0
+	_preview.offset_bottom = 66.0
 	add_child(_preview)
 
 	var title := OrnateBanner.new("Скриня і спорядження" if _stash_mode else "Спорядження", 26)
@@ -199,7 +199,9 @@ func _refresh() -> void:
 		_style_cell(_slot_buttons[slot], equipped.get(slot, {}), ItemDb.slot_icon(slot), locked)
 		if locked:
 			(_slot_buttons[slot] as Button).tooltip_text = "Відкриється з %d рівня" % ItemDb.JEWELRY_LEVEL
-	_preview.show_character(GameState.character.get("look", {}), ItemDb.gear_look(equipped))
+	var weapon_id := String(ItemDb.base_of(equipped.get("weapon", {})).get("weapon", ""))
+	var weapon: WeaponDef = WeaponPool.get_def(StringName(weapon_id)) if weapon_id != "" else null
+	_preview.show_character(GameState.character.get("look", {}), ItemDb.gear_look(equipped), "", weapon)
 	_fill_stats(equipped)
 	_fill_bag()
 

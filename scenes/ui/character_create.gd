@@ -37,8 +37,8 @@ func _ready() -> void:
 	_preview.anchor_bottom = PEDESTAL_Y
 	_preview.offset_left = -190.0
 	_preview.offset_right = 190.0
-	_preview.offset_top = -380.0
-	_preview.offset_bottom = 22.0
+	_preview.offset_top = -430.0
+	_preview.offset_bottom = 66.0
 	add_child(_preview)
 
 	var title := OrnateBanner.new("Новий герой", 28)

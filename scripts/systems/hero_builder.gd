@@ -48,7 +48,7 @@ static func tint(instance: Node3D, color: Color) -> void:
 ## у модель меч) — з нього беремо кінчик ствола для пострілу.
 ## Поправка хвату для руки бази UBC (hand_r): кістка повернута інакше,
 ## ніж зап'ястя старих героїв (Wrist.R), під які налаштовано grip зброї.
-static var CHARACTER_GRIP_FIX := Transform3D(Basis.from_euler(Vector3(0.0, 0.0, -PI * 0.5)), Vector3.ZERO)
+static var CHARACTER_GRIP_FIX := Transform3D(Basis.from_euler(Vector3(PI * 0.5, 0.0, 0.0)), Vector3.ZERO)
 
 static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef, bone_override: StringName = &"",
 		offhand_override: StringName = &"", grip_fix: Transform3D = Transform3D.IDENTITY) -> Node3D:

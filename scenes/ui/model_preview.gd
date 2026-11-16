@@ -98,6 +98,7 @@ func _ready() -> void:
 ## Герой зі своєю зброєю. Повертає true, якщо модель тимчасова.
 func show_hero(hero: HeroDef, weapon: WeaponDef) -> bool:
 	_clear()
+	_character_shown = false
 	var built := HeroBuilder.build_model(hero)
 	var instance: Node3D = built[0]
 	_placeholder = built[1]
@@ -120,16 +121,57 @@ func show_hero(hero: HeroDef, weapon: WeaponDef) -> bool:
 ## Сама зброя великим планом.
 ## Створений гравцем персонаж (CharacterBuilder): вигляд і надіте.
 ## anim — кліп з assets/animations/character (Idle, Dance, Yes...).
-func show_character(look: Dictionary, gear: Dictionary = {}, anim: String = "Idle") -> void:
-	_clear()
+## weapon — зброя в руці (видно на вітрині). Перший показ — з появою,
+## наступні (перевдягання, зміна зачіски) — тихо, на тому ж місці й
+## з тим самим поворотом: персонаж не "з'являється наново".
+func show_character(look: Dictionary, gear: Dictionary = {}, anim: String = "", weapon: WeaponDef = null) -> void:
+	var first := _pivot.get_child_count() == 0 or not _character_shown
+	var keep_yaw := _pivot.rotation.y
+	var old_anim_time := 0.0
+	if not first:
+		var old_player := _pivot.get_child(0).get_node_or_null("Anim") as AnimationPlayer
+		if old_player != null and old_player.is_playing():
+			old_anim_time = old_player.current_animation_position
+	for child in _pivot.get_children():
+		_pivot.remove_child(child)
+		child.queue_free()
 	var instance := CharacterBuilder.build(look, gear)
 	_pivot.add_child(instance)
+	if weapon != null:
+		HeroBuilder.attach_weapon(instance, HeroPool.get_def(weapon.hero_id), weapon, &"hand_r", &"hand_l", HeroBuilder.CHARACTER_GRIP_FIX)
+	if anim == "":
+		anim = "Idle" if weapon == null else ("Spell_Simple_Idle" if weapon.style_3d in ["staff", "book", "cards"] else "Sword_Idle")
 	play_character_anim(anim)
+	var player := instance.get_node_or_null("Anim") as AnimationPlayer
+	if player != null and old_anim_time > 0.0:
+		player.seek(old_anim_time, true)
 	_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-	_frame(instance, 1.12)
-	_pivot.scale = Vector3.ONE * 0.9
-	_pivot.create_tween().tween_property(_pivot, "scale", Vector3.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_hold_left = 0.4
+	_character_shown = true
+	_frame_character()
+	if first:
+		_pivot.rotation.y = 0.0
+		_pivot.scale = Vector3.ONE * 0.9
+		_pivot.create_tween().tween_property(_pivot, "scale", Vector3.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_hold_left = 0.4
+	else:
+		_pivot.rotation.y = keep_yaw
+		_pivot.scale = Vector3.ONE
+
+## ПОСТІЙНИЙ кадр для персонажа (не за межами моделі — тоді він "ріс" і
+## "зменшувався" з кожною річчю): усі однакового зросту, тож кадр один.
+## Ступні — на CHARACTER_FOOT_MARGIN пікселів вище низу вітрини (щоб пальці
+## не обрізались, коли персонажа крутять), згори — місце під посох.
+const CHARACTER_VIEW_HEIGHT := 2.75
+const CHARACTER_FOOT_MARGIN := 60.0
+var _character_shown := false
+
+func _frame_character() -> void:
+	var rect_h := maxf(size.y, 100.0)
+	var margin_m := CHARACTER_VIEW_HEIGHT * CHARACTER_FOOT_MARGIN / rect_h
+	var center := CHARACTER_VIEW_HEIGHT * 0.5 - margin_m
+	var distance := (CHARACTER_VIEW_HEIGHT * 0.5) / tan(deg_to_rad(_camera.fov * 0.5))
+	_camera.position = Vector3(0, center, distance)
+	_camera.rotation_degrees = Vector3.ZERO
 
 ## Програти кліп на показаному персонажі (зациклений, крім разових).
 func play_character_anim(anim: String) -> void:
@@ -159,6 +201,7 @@ func _back_to_idle(_name: StringName) -> void:
 
 func show_weapon(weapon: WeaponDef) -> bool:
 	_clear()
+	_character_shown = false
 	var scene := ArtSlots.weapon_model(weapon.id, weapon.model_scene)
 	var instance: Node3D
 	_placeholder = scene == null
@@ -245,6 +288,8 @@ func _clear() -> void:
 func _process(delta: float) -> void:
 	if _pivot == null:
 		return
+	if _character_shown:
+		_frame_character()
 	if _sway:
 		_sway_time += delta
 		_pivot.rotation.y = sin(_sway_time * SWAY_SPEED) * SWAY_ANGLE
