@@ -65,6 +65,9 @@ const CACHES := {
 	"portal": Vector2(6.5, -28.0), "meadow": Vector2(16.0, 38.0),
 }
 const CACHE_GOLD := 120
+const INVENTORY_SCENE := "res://scenes/ui/inventory.tscn"
+## Скриня вдома: біля дверей будинку героя (західний, біля Наставниці).
+const HOME_CHEST := Vector3(-13.4, 0.0, 10.6)
 const CHEST_MODEL := "res://assets/models/haven/props/Chest_Wood.gltf"
 const BATCH_GROUPS := {"Architecture": 0.0, "Nature": 40.0}
 ## Як часто перераховувати, куди веде навчання (сама стрілка рухається
@@ -95,6 +98,7 @@ var _talking: HavenNpc
 var _spots: Array[HavenSpot] = []
 var _camp_fire: Node3D
 var _bag: Label
+var _gear_button: Button
 
 var _guide_marker: Label3D
 var _guide_arrow: MeshInstance3D
@@ -127,6 +131,7 @@ func _ready() -> void:
 	_wrap_resources()
 	_build_spots()
 	_build_caches()
+	_build_home_chest()
 	_build_guide()
 	GameState.quests_changed.connect(_on_quests_changed)
 	_on_quests_changed()
@@ -301,6 +306,22 @@ func _build_caches() -> void:
 		spot.add_child(shine)
 		_add_spot(spot)
 
+## Скриня вдома: тут лежить те, що не носиш із собою.
+func _build_home_chest() -> void:
+	var spot := HavenSpot.new()
+	spot.id = "home"
+	spot.kind = "stash"
+	spot.label = "Скриня вдома"
+	spot.radius = 2.2
+	add_child(spot)
+	spot.global_position = Vector3(HOME_CHEST.x, HavenLayout.height(HOME_CHEST.x, HOME_CHEST.z), HOME_CHEST.z)
+	spot.rotation.y = PI * 0.5
+	var chest: Node3D = (load(CHEST_MODEL) as PackedScene).instantiate()
+	chest.scale = Vector3.ONE * 1.4
+	spot.add_child(chest)
+	HavenLite.apply(chest, PerfSettings.quality == PerfSettings.Quality.LOW)
+	_add_spot(spot)
+
 func _add_spot(spot: HavenSpot) -> void:
 	spot.set_player(player)
 	spot.player_near.connect(_on_near)
@@ -320,6 +341,10 @@ func _refresh_spots() -> void:
 	_refresh_action()
 
 func _use_spot(spot: HavenSpot) -> void:
+	if spot.kind == "stash":
+		GameState.set_meta(&"inventory_stash", true)
+		open_screen(INVENTORY_SCENE)
+		return
 	if spot.kind == "cache":
 		_open_cache(spot)
 		return
@@ -441,6 +466,31 @@ func _build_hud() -> void:
 	menu.offset_bottom = 64.0
 	UiTheme.art_button(menu, MENU_BUTTON_ART, 54, 23, "", 14)
 	menu.pressed.connect(_on_menu_pressed)
+
+	# Спорядження — кругла кнопка під меню.
+	var gear := Button.new()
+	gear.anchor_left = 1.0
+	gear.anchor_right = 1.0
+	gear.offset_left = -84.0
+	gear.offset_right = -16.0
+	gear.offset_top = 74.0
+	gear.offset_bottom = 142.0
+	gear.flat = true
+	gear.focus_mode = Control.FOCUS_NONE
+	gear.icon = ArtSlots.kit_icon("menu_heroes")
+	gear.expand_icon = true
+	for state: String in ["normal", "hover", "pressed"]:
+		var box := StyleBoxTexture.new()
+		box.texture = load(UiTheme.KIT_DIR + "btn_round.png")
+		box.content_margin_left = 14
+		box.content_margin_right = 14
+		box.content_margin_top = 14
+		box.content_margin_bottom = 14
+		gear.add_theme_stylebox_override(state, box)
+	gear.tooltip_text = "Спорядження"
+	gear.pressed.connect(func() -> void: open_screen(INVENTORY_SCENE))
+	hud.add_child(gear)
+	_gear_button = gear
 	hud.add_child(menu)
 
 	# Кнопка дії — поверх джойстика.
@@ -593,6 +643,9 @@ func _on_dialog_choice(choice: String) -> void:
 		_gold_badge.set_amount(GameState.gold)
 		_gems_badge.set_amount(GameState.gems)
 		var boon := String(reward.get("boon", ""))
+		var items: Array = reward.get("items", [])
+		if not items.is_empty():
+			_pulse_gear_button()
 		if boon != "":
 			_show_toast("Відкрито: %s — %s" % [Boons.BOONS[boon].title, Boons.BOONS[boon].effect], UiTheme.GOLD)
 		else:
@@ -664,6 +717,10 @@ static func _arrow_texture() -> Texture2D:
 
 ## Мета навчання: перший незавершений квест — до кого чи до чого йти.
 func _guide_goal() -> Array:
+	# Є що вдягти в порожній слот — спершу це (новий герой починає голим).
+	for item: Dictionary in GameState.inventory:
+		if ItemDb.can_equip(item) and not GameState.equipment.has(ItemDb.slot_of(item)):
+			return [player.global_position + Vector3.UP * 2.6, "Вдягни нові речі — кнопка спорядження праворуч угорі"]
 	for quest: Dictionary in QuestBook.active_quests():
 		if QuestBook.state_of(quest.id) == "ready":
 			return _npc_goal(quest.giver, "Завдання виконано — повернись %s" % HavenNpc.ROLES[quest.giver].to)
@@ -796,6 +853,16 @@ func _exit_tree() -> void:
 		GameState.overlay_host = null
 	if has_screen():
 		_screen_layer.queue_free()
+
+## Нова річ у торбі — кнопка спорядження "підстрибує".
+func _pulse_gear_button() -> void:
+	if _gear_button == null:
+		return
+	_gear_button.pivot_offset = _gear_button.size * 0.5
+	var tween := _gear_button.create_tween().set_loops(3)
+	tween.tween_property(_gear_button, "scale", Vector2.ONE * 1.25, 0.18)
+	tween.tween_property(_gear_button, "scale", Vector2.ONE, 0.18)
+	_show_toast("Нові речі в торбі! Відкрий спорядження", UiTheme.GOLD)
 
 # --- данж і меню ---
 

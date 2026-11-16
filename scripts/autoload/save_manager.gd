@@ -143,6 +143,11 @@ func save_game() -> void:
 		"quests": GameState.quests,
 		"haven": GameState.haven,
 		"character": GameState.character,
+		"inventory": GameState.inventory,
+		"equipped_store": GameState.equipped_store,
+		"equipment": GameState.equipment,
+		"stash": GameState.stash,
+		"hero_level": GameState.hero_level,
 	}
 	var path := _save_path()
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -202,6 +207,27 @@ func _load_file(path: String) -> void:
 		boons[id] = int(boons[id])
 	GameState.haven = haven
 	GameState.character = data.get("character", {})
+	GameState.inventory = _items_from_json(data.get("inventory", []))
+	GameState.equipped_store = _items_from_json(data.get("equipped_store", []))
+	GameState.equipment = data.get("equipment", {})
+	GameState.stash = _items_from_json(data.get("stash", []))
+	GameState.hero_level = int(data.get("hero_level", 1))
+	# Сейв із часів до спорядження (давній гравець): він уже пройшов
+	# стартові квести, тож не голий — у простому одязі й з мечем.
+	if not data.has("inventory") and int(data.get("completed_runs", 0)) > 0:
+		for base: String in ["peasant_shirt", "peasant_pants", "peasant_shoes", "iron_sword"]:
+			var item := ItemDb.roll(base, "common")
+			GameState.equipped_store.append(item)
+			GameState.equipment[ItemDb.slot_of(item)] = item.uid
+
+## JSON читає числа як float — характеристики речей тримаємо цілими.
+func _items_from_json(list: Array) -> Array:
+	for item: Dictionary in list:
+		var stats: Dictionary = item.get("stats", {})
+		for stat: String in stats:
+			stats[stat] = int(stats[stat])
+		item["level"] = int(item.get("level", 1))
+	return list
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає
 ## сейв у форматі наступної, тому старі сейви ніколи не ламаються.

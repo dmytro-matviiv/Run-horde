@@ -38,20 +38,26 @@ const QUESTS := [
 			{"kind": "talk", "target": &"smith", "count": 1, "label": "Поговори з Ковалем"},
 			{"kind": "talk", "target": &"sage", "count": 1, "label": "Поговори з Мудрецем"},
 			{"kind": "talk", "target": &"merchant", "count": 1, "label": "Поговори з Торговкою"},
-		], "reward": 150},
+		], "reward": 150, "items": [["peasant_shirt", "common"], ["peasant_pants", "common"]]},
+	{"id": "first_sword", "giver": &"smith", "after": "welcome", "title": "Меч для новачка",
+		"text": "Голими руками в підземелля не ходять. Принеси дві колоди з гаю — і я викую тобі перший меч.",
+		"done_text": "Тримай. Простий, зате чесний. Вдягни його у спорядженні — і шануй.",
+		"objectives": [{"kind": "wood", "count": 2, "label": "Нарубай дерев для руків'я"}], "reward": 50,
+		"items": [["iron_sword", "common"]]},
 	{"id": "firewood", "giver": &"elder", "after": "welcome", "title": "Згасле багаття",
 		"text": "Багаття в таборі біля стежки згасло, і мандрівникам ніде перепочити. Нарубай дров у гаю на схід від площі — розпалимо його знову.",
 		"done_text": "Горить! Відтепер перед походом можеш повечеряти біля багаття в таборі: ситий воїн витримує більше ударів. Перша вечеря — від мене.",
-		"objectives": [{"kind": "wood", "count": 3, "label": "Нарубай дерев у гаю"}], "reward": 200, "boon": "meal"},
+		"objectives": [{"kind": "wood", "count": 3, "label": "Нарубай дерев у гаю"}], "reward": 200, "boon": "meal", "items": [["peasant_shoes", "common"]]},
 	{"id": "herbs", "giver": &"sage", "after": "firewood", "title": "Порожній казан",
 		"text": "Мій казан порожній. Принеси трав із пагорба на заході й пару каменів із рунами — і я навчу тебе варити зілля, що рятує життя.",
 		"done_text": "Тримай перше зілля: воно саме вип'ється, коли в бою стане зовсім скрутно. Захочеш іще — принось трави до мого казана.",
 		"objectives": [{"kind": "herb", "count": 3, "label": "Збери трави на західному пагорбі"},
-			{"kind": "stone", "count": 2, "label": "Добудь каменю там же"}], "reward": 250, "boon": "potion"},
+			{"kind": "stone", "count": 2, "label": "Добудь каменю там же"}], "reward": 250, "boon": "potion", "items": [["mage_hood", "uncommon"]]},
 	{"id": "first_dive", "giver": &"elder", "after": "herbs", "title": "Перший похід",
 		"text": "Портал на верхній терасі веде в підземелля. Повечеряй біля багаття, візьми зілля — і пройди перший рівень.",
 		"done_text": "Ти повернувся! Прихисток пишається тобою. Відтепер у мене щодня буде для тебе доручення.",
-		"objectives": [{"kind": "clear", "count": 1, "label": "Пройди рівень данжу (портал на півночі)"}], "reward": 400},
+		"objectives": [{"kind": "clear", "count": 1, "label": "Пройди рівень данжу (портал на півночі)"}], "reward": 400,
+		"items": [["ranger_pants", "uncommon"]]},
 	{"id": "caches", "giver": &"merchant", "after": "welcome", "title": "Загублений крам",
 		"text": "Буря розкидала мої скрині по всій долині. Знайдеш — вміст твій, мені аби знати, що не пропали. Шукай за возом, на пагорбі, в гаю, за порталом — вони поблискують.",
 		"done_text": "Усі п'ять! Та ти справжній слідопит. Тримай — це не золото, це краще.",
@@ -59,7 +65,7 @@ const QUESTS := [
 	{"id": "smith_stone", "giver": &"smith", "after": "herbs", "title": "Тріснутий горн",
 		"text": "Горн тріснув, і точило стоїть без діла. Принеси п'ять каменів із західного пагорба — полагоджу, і зможеш гострити зброю перед походом.",
 		"done_text": "Горн палає, точило крутиться! Перше гостріння — за мій рахунок: у наступному поході битимеш сильніше.",
-		"objectives": [{"kind": "stone", "count": 5, "label": "Добудь каменю на західному пагорбі"}], "reward": 300, "boon": "sharp"},
+		"objectives": [{"kind": "stone", "count": 5, "label": "Добудь каменю на західному пагорбі"}], "reward": 300, "boon": "sharp", "items": [["ranger_jacket", "uncommon"]]},
 	{"id": "tested", "giver": &"sage", "after": "first_dive", "title": "Перевірено боєм",
 		"text": "Зілля — не прикраса на поясі. Візьми одне в похід і дай йому врятувати тебе — тоді й поговоримо про справжню алхімію.",
 		"done_text": "Відчув, як воно підхопило тебе на краю? Тепер знаєш, навіщо збирати трави.",
@@ -71,7 +77,7 @@ const QUESTS := [
 	{"id": "deeper", "giver": &"elder", "after": "first_dive", "title": "Глибше в темряву",
 		"text": "Темрява під землею не спить. Пройди ще три рівні — і світ стане трохи безпечнішим.",
 		"done_text": "Неймовірно. Про тебе вже співають біля багаття.",
-		"objectives": [{"kind": "clear", "count": 3, "label": "Пройди рівні данжу"}], "reward": 800, "gems": 5},
+		"objectives": [{"kind": "clear", "count": 3, "label": "Пройди рівні данжу"}], "reward": 800, "gems": 5, "items": [["ranger_pauldron", "rare"]]},
 	{"id": "lumber", "giver": &"smith", "after": "smith_stone", "title": "Деревина для руків'їв",
 		"text": "Мені потрібне міцне дерево для руків'їв. Нарубай ще п'ять дерев — а я не поскуплюсь.",
 		"done_text": "Добра деревина. Дякую, друже.",
@@ -178,6 +184,13 @@ static func complete(id: String) -> Dictionary:
 		GameState.add_gems(result.gems)
 	if result.boon != "":
 		Boons.grant(result.boon)
+	# Речі — у торбу (вдягаються в спорядженні).
+	var given := []
+	for entry: Array in quest.get("items", []):
+		var item := ItemDb.roll(String(entry[0]), String(entry[1]), maxi(GameState.hero_level, 1))
+		ItemDb.give(item)
+		given.append(ItemDb.title_of(item))
+	result["items"] = given
 	GameState.quests_changed.emit()
 	SaveManager.save_game()
 	return result
@@ -189,6 +202,8 @@ static func reward_text(quest: Dictionary) -> String:
 		parts.append("+%d золота" % int(quest.reward))
 	if int(quest.get("gems", 0)) > 0:
 		parts.append("+%d гемів" % int(quest.gems))
+	for entry: Array in quest.get("items", []):
+		parts.append(String(ItemDb.BASES.get(entry[0], {}).get("title", "річ")))
 	return ", ".join(parts)
 
 ## Подія гри: поговорив, нарубав, зібрав, пройшов рівень, переміг ворога,

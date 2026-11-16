@@ -599,6 +599,13 @@ func _apply_loadout() -> void:
 	if weapon_def != null:
 		_damage *= weapon_def.damage_mult_3d
 		_attack_speed = weapon_def.speed_mult_3d
+	# Надіте спорядження (ItemDb): здоров'я, шкода, швидкість.
+	var gear := ItemDb.total_stats()
+	max_hp += float(gear.get("hp", 0))
+	current_hp = max_hp
+	_damage *= 1.0 + float(gear.get("damage", 0)) / 100.0
+	_attack_speed *= 1.0 + float(gear.get("attack_speed", 0)) / 100.0
+	_speed_bonus += float(gear.get("move_speed", 0)) / 100.0
 
 ## Світло, яке герой носить із собою. Це найдешевший спосіб освітити
 ## підземелля: одне джерело замість десятків по стінах.

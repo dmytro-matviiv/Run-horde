@@ -371,6 +371,15 @@ signal quests_changed
 ## Хто цей персонаж: {"name", "look"} (look — для CharacterBuilder).
 var character: Dictionary = {}
 
+## СПОРЯДЖЕННЯ (див. ItemDb): торба, надіті речі (і які в якому слоті),
+## скриня вдома. Рівень героя — 1..30 (досвід — етап 4).
+var inventory: Array = []
+var equipped_store: Array = []
+var equipment: Dictionary = {}
+var stash: Array = []
+var hero_level := 1
+signal equipment_changed
+
 ## Прогрес персонажа — до початкового стану (новий персонаж, перемикання).
 ## Те, що належить акаунту (геми, покупки), не чіпаємо.
 func reset_progress() -> void:
@@ -390,6 +399,11 @@ func reset_progress() -> void:
 	quests = {}
 	haven = {}
 	character = {}
+	inventory = []
+	equipped_store = []
+	equipment = {}
+	stash = []
+	hero_level = 1
 
 func add_resource(id: String, amount: int = 1) -> void:
 	resources[id] = int(resources.get(id, 0)) + amount

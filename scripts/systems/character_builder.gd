@@ -28,17 +28,6 @@ const EYE_COLORS := [Color(0.45, 0.28, 0.15), Color(0.25, 0.5, 0.85), Color(0.3,
 
 const DEFAULT_LOOK := {"gender": "male", "skin": 1, "hair": 1, "hair_color": 1, "beard": false, "eyes": 0}
 
-## Яку ділянку тіла закриває частина броні (за закінченням назви).
-const PART_REGIONS := {"_Body": "torso", "_Arms": "arms", "_Legs": "legs", "_Feet": "feet", "_Head_Hood": "head"}
-## Кістки кожної ділянки (скелет UBC — як в Unreal).
-const REGION_BONES := {
-	"torso": ["spine_01", "spine_02", "spine_03", "clavicle_l", "clavicle_r"],
-	"arms": ["upperarm_l", "upperarm_r", "lowerarm_l", "lowerarm_r"],
-	"legs": ["pelvis", "thigh_l", "thigh_r", "calf_l", "calf_r"],
-	"feet": ["foot_l", "foot_r", "ball_l", "ball_r", "ball_leaf_l", "ball_leaf_r"],
-	"head": [],
-}
-
 ## Кольори рідкості: на що "фарбується" річ (множення кольору).
 const RARITY_TINTS := {
 	"common": Color(0.82, 0.8, 0.78),
@@ -58,25 +47,20 @@ static func build(look: Dictionary, gear: Dictionary = {}) -> Node3D:
 	root.name = "Character"
 	var skeleton: Skeleton3D = root.find_children("*", "Skeleton3D", true, false)[0]
 
-	# Які ділянки закриті бронею.
-	var covered := {}
 	var hidden_hair := false
 	for slot: String in gear:
 		for part: String in (gear[slot] as Dictionary).get("parts", []):
-			for suffix: String in PART_REGIONS:
-				if part.contains(suffix):
-					covered[PART_REGIONS[suffix]] = true
 			if part.contains("Head") or slot == "helmet":
 				hidden_hair = true
 
+	var body: MeshInstance3D = null
 	for node in skeleton.get_children():
 		var mesh := node as MeshInstance3D
 		if mesh == null:
 			continue
 		if mesh.name.begins_with("Super"):
+			body = mesh
 			_paint_skin(mesh, SKIN_TONES[clampi(int(look.get("skin", 1)), 0, SKIN_TONES.size() - 1)])
-			if not covered.is_empty():
-				mesh.mesh = _masked_body(gender, mesh, skeleton, covered.keys())
 		elif mesh.name == "Eyes":
 			_tint(mesh, EYE_COLORS[clampi(int(look.get("eyes", 0)), 0, EYE_COLORS.size() - 1)])
 
@@ -91,13 +75,20 @@ static func build(look: Dictionary, gear: Dictionary = {}) -> Node3D:
 			_tint(mesh as MeshInstance3D, hair_color)
 
 	var prefix := "Female_" if gender == "female" else "Male_"
+	var garments: Array[MeshInstance3D] = []
+	var part_names := []
 	for slot: String in gear:
 		var item: Dictionary = gear[slot]
 		var tint: Color = item.get("tint", RARITY_TINTS.get(item.get("rarity", "common"), Color.WHITE))
 		for part: String in item.get("parts", []):
 			var path := OUTFITS + prefix + _gender_part(part, gender) + ".gltf"
 			if ResourceLoader.exists(path):
-				_attach(path, skeleton, tint, item.get("rarity", "common"))
+				garments.append_array(_attach(path, skeleton, tint, item.get("rarity", "common")))
+				part_names.append(part)
+	# Шкіра під одягом ховається (інакше м'язисте тіло проступає крізь нього).
+	if body != null and not garments.is_empty():
+		part_names.sort()
+		body.mesh = _masked_body(gender + "|" + ",".join(part_names), body, skeleton, garments)
 	return root
 
 ## Деякі частини в чоловічому й жіночому варіанті звуться трохи інакше.
@@ -106,14 +97,17 @@ static func _gender_part(part: String, gender: String) -> String:
 		return part.replace("Feet_Boots", "Feet").replace("Acc_Pauldron", "Acc_Pauldrons")
 	return part
 
-static func _attach(path: String, skeleton: Skeleton3D, tint: Color, rarity: String = "") -> void:
+static func _attach(path: String, skeleton: Skeleton3D, tint: Color, rarity: String = "") -> Array[MeshInstance3D]:
 	var scene: Node3D = load(path).instantiate()
+	var added: Array[MeshInstance3D] = []
 	for mesh: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 		mesh.get_parent().remove_child(mesh)
 		skeleton.add_child(mesh)
 		mesh.skeleton = NodePath("..")
 		_tint(mesh, tint, rarity)
+		added.append(mesh)
 	scene.free()
+	return added
 
 ## Перефарбувати всі матеріали меша (копії — оригінал спільний).
 static func _tint(mesh: MeshInstance3D, tint: Color, rarity: String = "") -> void:
@@ -147,20 +141,45 @@ static func _paint_skin(mesh: MeshInstance3D, tone: Color) -> void:
 		material.albedo_color = source.albedo_color * tone
 		mesh.set_surface_override_material(surface, material)
 
-## Тіло без ділянок, закритих бронею (кешується).
-static func _masked_body(gender: String, mesh: MeshInstance3D, skeleton: Skeleton3D, regions: Array) -> ArrayMesh:
-	regions.sort()
-	var key := gender + "|" + ",".join(regions)
+## Наскільки близько до одягу має бути шкіра, щоб сховатись (метри).
+const COVER_RADIUS := 0.035
+const HASH_CELL := 0.06
+
+## Тіло без шкіри, закритої одягом (кешується за набором частин).
+## Геометрично: вершина тіла ховається, якщо поруч (у позі спокою) є
+## трикутник одягу. Так короткі штани не "з'їдають" гомілку, а довгий
+## рукав ховає всю руку.
+static func _masked_body(key: String, mesh: MeshInstance3D, skeleton: Skeleton3D, garments: Array[MeshInstance3D]) -> ArrayMesh:
 	if _masked.has(key):
 		return _masked[key]
-	var hide := {}
-	for region: String in regions:
-		for bone_name: String in REGION_BONES.get(region, []):
-			var index := skeleton.find_bone(bone_name)
-			if index >= 0:
-				hide[index] = true
+	# Трикутники одягу в позі спокою, розкладені по клітинках простору.
+	var grid := {}
+	var tris := PackedVector3Array()
+	for garment in garments:
+		for surface in garment.mesh.get_surface_count():
+			var arrays := garment.mesh.surface_get_arrays(surface)
+			var points := _rest_points(arrays, garment.skin, skeleton)
+			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			for t in range(0, indices.size(), 3):
+				var a := points[indices[t]]
+				var b := points[indices[t + 1]]
+				var c := points[indices[t + 2]]
+				var id := tris.size() / 3
+				tris.append(a)
+				tris.append(b)
+				tris.append(c)
+				var lo := (a.min(b).min(c) - Vector3.ONE * COVER_RADIUS) / HASH_CELL
+				var hi := (a.max(b).max(c) + Vector3.ONE * COVER_RADIUS) / HASH_CELL
+				for x in range(floori(lo.x), floori(hi.x) + 1):
+					for y in range(floori(lo.y), floori(hi.y) + 1):
+						for z in range(floori(lo.z), floori(hi.z) + 1):
+							var cell := Vector3i(x, y, z)
+							if not grid.has(cell):
+								grid[cell] = PackedInt32Array()
+							var list: PackedInt32Array = grid[cell]
+							list.append(id)
+							grid[cell] = list
 	var source := mesh.mesh
-	var skin := mesh.skin
 	var result := ArrayMesh.new()
 	# Морф-цілі обличчя (у жіночого тіла) мусять бути й у новій сітці.
 	result.blend_shape_mode = (source as ArrayMesh).blend_shape_mode if source is ArrayMesh else Mesh.BLEND_SHAPE_MODE_NORMALIZED
@@ -168,25 +187,20 @@ static func _masked_body(gender: String, mesh: MeshInstance3D, skeleton: Skeleto
 		result.add_blend_shape(source.get_blend_shape_name(shape))
 	for surface in source.get_surface_count():
 		var arrays := source.surface_get_arrays(surface)
-		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
-		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
 		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-		var count := (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
-		var per := bones.size() / maxi(count, 1)
-		# Головна кістка вершини (через Skin: індекс прив'язки -> кістка).
+		var points := _rest_points(arrays, mesh.skin, skeleton)
 		var covered := PackedByteArray()
-		covered.resize(count)
-		for v in count:
-			var best := 0
-			var best_w := -1.0
-			for k in per:
-				if weights[v * per + k] > best_w:
-					best_w = weights[v * per + k]
-					best = bones[v * per + k]
-			var bone := skin.get_bind_bone(best) if skin != null and best < skin.get_bind_count() else best
-			if skin != null and bone < 0:
-				bone = skeleton.find_bone(skin.get_bind_name(best))
-			covered[v] = 1 if hide.has(bone) else 0
+		covered.resize(points.size())
+		for v in points.size():
+			var p := points[v]
+			var cell := Vector3i(floori(p.x / HASH_CELL), floori(p.y / HASH_CELL), floori(p.z / HASH_CELL))
+			if not grid.has(cell):
+				continue
+			for id: int in grid[cell]:
+				var closest := _closest_on_triangle(p, tris[id * 3], tris[id * 3 + 1], tris[id * 3 + 2])
+				if p.distance_squared_to(closest) < COVER_RADIUS * COVER_RADIUS:
+					covered[v] = 1
+					break
 		var kept := PackedInt32Array()
 		for t in range(0, indices.size(), 3):
 			if covered[indices[t]] and covered[indices[t + 1]] and covered[indices[t + 2]]:
@@ -207,3 +221,61 @@ static func _masked_body(gender: String, mesh: MeshInstance3D, skeleton: Skeleto
 		result.surface_set_material(surface, source.surface_get_material(surface))
 	_masked[key] = result
 	return result
+
+## Вершини меша в позі спокою скелета (як їх і малює гра без анімації).
+static func _rest_points(arrays: Array, skin: Skin, skeleton: Skeleton3D) -> PackedVector3Array:
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	if skin == null or bones.is_empty():
+		return vertices
+	var out := PackedVector3Array()
+	out.resize(vertices.size())
+	var per := bones.size() / maxi(vertices.size(), 1)
+	var matrices: Array[Transform3D] = []
+	for bind in skin.get_bind_count():
+		var bone := skin.get_bind_bone(bind)
+		if bone < 0:
+			bone = skeleton.find_bone(skin.get_bind_name(bind))
+		matrices.append(skeleton.get_bone_global_rest(maxi(bone, 0)) * skin.get_bind_pose(bind))
+	for v in vertices.size():
+		var p := Vector3.ZERO
+		var total := 0.0
+		for k in per:
+			var w := weights[v * per + k]
+			if w <= 0.0:
+				continue
+			p += (matrices[bones[v * per + k]] * vertices[v]) * w
+			total += w
+		out[v] = p / total if total > 0.0 else vertices[v]
+	return out
+
+static func _closest_on_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3:
+	var ab := b - a
+	var ac := c - a
+	var ap := p - a
+	var d1 := ab.dot(ap)
+	var d2 := ac.dot(ap)
+	if d1 <= 0.0 and d2 <= 0.0:
+		return a
+	var bp := p - b
+	var d3 := ab.dot(bp)
+	var d4 := ac.dot(bp)
+	if d3 >= 0.0 and d4 <= d3:
+		return b
+	var vc := d1 * d4 - d3 * d2
+	if vc <= 0.0 and d1 >= 0.0 and d3 <= 0.0:
+		return a + ab * (d1 / (d1 - d3))
+	var cp := p - c
+	var d5 := ab.dot(cp)
+	var d6 := ac.dot(cp)
+	if d6 >= 0.0 and d5 <= d6:
+		return c
+	var vb := d5 * d2 - d1 * d6
+	if vb <= 0.0 and d2 >= 0.0 and d6 <= 0.0:
+		return a + ac * (d2 / (d2 - d6))
+	var va := d3 * d6 - d5 * d4
+	if va <= 0.0 and (d4 - d3) >= 0.0 and (d5 - d6) >= 0.0:
+		return b + (c - b) * ((d4 - d3) / ((d4 - d3) + (d5 - d6)))
+	var denom := 1.0 / (va + vb + vc)
+	return a + ab * (vb * denom) + ac * (vc * denom)
