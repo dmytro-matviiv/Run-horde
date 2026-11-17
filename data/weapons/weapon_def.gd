@@ -126,6 +126,11 @@ var style_3d: String = "sword"
 ## Посох чаклуна: стоїть у руці рівно вертикально (UprightGrip), а не
 ## повертається разом із кистю.
 @export var upright_3d := false
+## Друга річ у лівій руці (щит танка): модель, зсув, поворот, масштаб.
+@export var offhand_model: PackedScene
+@export var offhand_offset := Vector3.ZERO
+@export var offhand_rotation_deg := Vector3.ZERO
+@export var offhand_scale: float = 1.0
 
 @export_group("Статус-ефект")
 ## Порожній StringName = без ефекту. Решта — StatusEffects.POISON/BURN/SLOW.

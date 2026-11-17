@@ -12,6 +12,8 @@ const ALL_HEROES: Array[HeroDef] = [
 	preload("res://data/heroes/void_assassin.tres"),
 	# Друїд — лише для одного героя: клас дає посох друїда.
 	preload("res://data/heroes/druid.tres"),
+	preload("res://data/heroes/archer.tres"),
+	preload("res://data/heroes/guardian.tres"),
 ]
 
 static func get_def(id: StringName) -> HeroDef:

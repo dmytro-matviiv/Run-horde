@@ -48,6 +48,14 @@ static func build(style: String, accent: Color) -> Node3D:
 		"staff":
 			_add_box(root, Vector3(0.05, 1.5, 0.05), Vector3(0, 0.5, 0), WOOD)
 			_add_sphere(root, 0.13, Vector3(0, 1.32, 0), accent, true)
+		"bow":
+			# Лук: два вигнуті плечі з дерева, руків'я посередині й тятива.
+			for i in 21:
+				var angle := deg_to_rad(lerpf(-62.0, 62.0, i / 20.0))
+				var limb := Vector3(0, sin(angle) * 0.62, (1.0 - cos(angle)) * 0.62 - 0.12)
+				_add_box(root, Vector3(0.045 - absf(i - 10.0) * 0.0015, 0.09, 0.05), limb, WOOD)
+			_add_box(root, Vector3(0.012, 1.08, 0.012), Vector3(0, 0, 0.22), Color(0.92, 0.88, 0.75))
+			_add_box(root, Vector3(0.06, 0.16, 0.07), Vector3(0, 0, -0.12), accent)
 		"daggers":
 			_add_box(root, Vector3(0.03, 0.38, 0.08), Vector3(0, 0.25, 0), STEEL)
 			_add_box(root, Vector3(0.1, 0.05, 0.05), Vector3(0, 0.06, 0), accent)

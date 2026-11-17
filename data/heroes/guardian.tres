@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/heroes/hero_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"guardian"
+title = "Танк"
+description = "Меч і щит: багато здоров'я й броні, повільніший. Удар щитом оглушає, Стіна щитів робить майже невразливим."
+color = Color(0.45, 0.65, 0.95, 1)
+bonus_max_hp = 40.0
+move_speed_percent = -0.08
+skill_ids = Array[StringName]([&"shield_bash", &"fortify"])

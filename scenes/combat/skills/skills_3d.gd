@@ -27,6 +27,11 @@ const SKILLS := {
 	&"bear_charge": preload("res://scenes/combat/skills/bear_charge.gd"),
 	&"rend": preload("res://scenes/combat/skills/rend.gd"),
 	&"pounce": preload("res://scenes/combat/skills/pounce.gd"),
+	# Лучник і танк.
+	&"arrow_volley": preload("res://scenes/combat/skills/arrow_volley.gd"),
+	&"piercing_shot": preload("res://scenes/combat/skills/piercing_shot.gd"),
+	&"shield_bash": preload("res://scenes/combat/skills/shield_bash.gd"),
+	&"fortify": preload("res://scenes/combat/skills/fortify.gd"),
 }
 
 const PASSIVES := {

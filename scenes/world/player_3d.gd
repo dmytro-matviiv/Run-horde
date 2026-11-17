@@ -1205,6 +1205,8 @@ func _anim(short_name: String) -> String:
 		if short_name == "Idle":
 			if weapon_def == null:
 				return "Idle"
+			if weapon_def.offhand_model != null:
+				return "Idle_Shield"
 			return "Spell_Simple_Idle" if is_caster() else ("Pistol_Idle" if is_ranged() else "Sword_Idle")
 		var clip: String = CHARACTER_ANIMS.get(short_name, short_name)
 		var player := _model_instance.get_node_or_null("AnimationPlayer") as AnimationPlayer if _model_instance != null else null
@@ -1662,6 +1664,19 @@ func play_skill_move(skill_id: StringName) -> bool:
 	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
 	_fire("WhirlShot", moving)
 	return true
+
+## Будь-який кліп персонажа як рух прийому (удар щитом, віяло стріл).
+func play_clip(clip: String, speed: float = 1.3) -> void:
+	if form != &"" or animation_tree.tree_root == null:
+		return
+	var player: AnimationPlayer = animation_tree.get_node(animation_tree.anim_player)
+	if player == null or not player.has_animation(clip):
+		return
+	var node := (animation_tree.tree_root as AnimationNodeBlendTree).get_node(&"WhirlAnim") as AnimationNodeAnimation
+	node.animation = clip
+	animation_tree.set("parameters/WhirlScale/scale", speed)
+	_spin_left = 0.0
+	_fire("WhirlShot", Vector2(velocity.x, velocity.z).length() > 1.0)
 
 ## Вихор: якщо в зброї є справжня анімація оберту — граємо її (оберт у
 ## самому кліпі, модель кодом не крутимо); інакше — старий оберт моделі.

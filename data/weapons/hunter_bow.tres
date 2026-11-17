@@ -1,0 +1,32 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/weapons/weapon_def.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"hunter_bow"
+title = "Мисливський лук"
+description = "Тугий лук із ясена. Стріла за стрілою — поки сагайдак не спорожніє."
+hero_id = &"archer"
+cost_gold = 2500
+cost_gems = 0
+archetype = "projectile"
+damage = 12.0
+cooldown = 0.55
+color = Color(0.95, 0.85, 0.55, 1)
+projectile_speed = 600.0
+style_3d = "bow"
+ranged_3d = true
+damage_mult_3d = 1.45
+speed_mult_3d = 1.0
+knockback_mult_3d = 0.8
+reach_3d = 18.0
+arc_3d = 30.0
+fire_interval = 0.55
+magazine = 20
+reload_time = 0.9
+bullet_speed = 38.0
+bullet_spread_deg = 1.0
+bullets_per_shot = 1
+model_scale = 1.0
+muzzle_offset = Vector3(0, 0, 0.1)

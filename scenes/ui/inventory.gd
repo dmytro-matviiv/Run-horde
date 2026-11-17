@@ -219,6 +219,15 @@ func _fill_stats(equipped: Dictionary) -> void:
 	level.add_theme_font_size_override("font_size", 15)
 	level.add_theme_color_override("font_color", UiTheme.RUNE)
 	_stats_box.add_child(level)
+	# Клас вирішує зброя в руках — показуємо це прямо, щоб не дивувались,
+	# чому в латах танка з посохом немає удару щитом.
+	var weapon_class := String(ItemDb.base_of(equipped.get("weapon", {})).get("class", ""))
+	var class_label := Label.new()
+	class_label.text = ("Клас: %s (від зброї в руках)" % ItemDb.CLASSES.get(weapon_class, weapon_class)) if weapon_class != "" else "Без зброї — б'єш кулаками"
+	class_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	class_label.add_theme_font_size_override("font_size", 14)
+	class_label.add_theme_color_override("font_color", Color(0.7, 1.0, 0.6))
+	_stats_box.add_child(class_label)
 	var total := ItemDb.total_stats(equipped)
 	total["hp"] = BASE_HP + int(total.get("hp", 0))
 	for stat: String in ItemDb.STATS:

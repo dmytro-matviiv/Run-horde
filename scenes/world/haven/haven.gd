@@ -44,6 +44,7 @@ const ACTION_SCENES := {
 	"talents": "res://scenes/ui/talent_tree_screen.tscn",
 	"shop": "res://scenes/ui/shop.tscn",
 	"inventory": "res://scenes/ui/inventory.tscn",
+	"kits": "res://scenes/ui/starter_kits.tscn",
 }
 const RESOURCE_NAMES := {"wood": "Дерево", "stone": "Камінь", "herb": "Трави"}
 
@@ -635,7 +636,7 @@ func _talk(npc: HavenNpc) -> void:
 	if action != "":
 		choices.append(["open", String(_npc_button(npc)), choices.is_empty()])
 	choices.append(["bye", "До побачення", false])
-	_dialog.show_line(String(npc.info.name), text, choices)
+	_dialog.show_line(String(npc.info.name), text, choices, npc.id)
 	_action_button.visible = false
 
 func _on_dialog_choice(choice: String) -> void:
@@ -679,14 +680,14 @@ func _npc_action(npc: HavenNpc) -> String:
 	var action := String(npc.info.action)
 	if not GameState.character.is_empty():
 		if action == "heroes":
-			return "inventory"
+			return "kits"
 		if action == "weapons":
 			return ""
 	return action
 
 func _npc_button(npc: HavenNpc) -> String:
-	if _npc_action(npc) == "inventory":
-		return "Спорядження"
+	if _npc_action(npc) == "kits":
+		return "Спорядження класів"
 	return String(npc.info.button)
 
 func _on_quests_changed() -> void:

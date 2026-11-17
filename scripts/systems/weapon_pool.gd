@@ -28,6 +28,9 @@ const ALL_WEAPONS: Array[WeaponDef] = [
 
 	# Друїд: посох, що вчить обертатися на звіра.
 	preload("res://data/weapons/druid_staff.tres"),
+	# Лучник і танк (меч зі щитом).
+	preload("res://data/weapons/hunter_bow.tres"),
+	preload("res://data/weapons/guard_sword.tres"),
 
 	# Оперативник: вогнепальна зброя. Стартовий пістолет безкоштовний,
 	# решта купується за золото.

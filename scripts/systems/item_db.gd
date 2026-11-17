@@ -79,6 +79,53 @@ const BASES := {
 		"base": {"damage": 8, "mana": 10}},
 	"druid_staff": {"slot": "weapon", "title": "Посох друїда", "weapon": "druid_staff", "class": "druid",
 		"base": {"damage": 8, "hp": 10, "mana": 12}},
+	"hunter_bow": {"slot": "weapon", "title": "Мисливський лук", "weapon": "hunter_bow", "class": "archer",
+		"base": {"damage": 9, "crit": 2}},
+	"guard_sword": {"slot": "weapon", "title": "Меч і щит вартового", "weapon": "guard_sword", "class": "tank",
+		"base": {"damage": 7, "armor": 8, "hp": 15}},
+	# --- Стартові сети класів (Наставниця Дарина) ---
+	# set — назва сету (пізніше: бонуси за 2/3/4 речі), tint — свій колір
+	# сету поверх рідкості, icon — картинка з наявних, поки немає своєї.
+	"knight_hood": {"slot": "helmet", "title": "Каптур мечника", "parts": ["Ranger_Head_Hood"], "class": "knight",
+		"set": "knight", "tint": Color(1.05, 0.72, 0.66), "icon": "item_ranger_hood", "base": {"armor": 3, "hp": 6, "damage": 2}},
+	"knight_coat": {"slot": "chest", "title": "Кольчужна куртка мечника", "parts": ["Ranger_Body", "Ranger_Arms", "Ranger_Acc_Pauldron"],
+		"class": "knight", "set": "knight", "tint": Color(1.05, 0.72, 0.66), "icon": "item_ranger_pauldron", "base": {"armor": 8, "hp": 14, "damage": 3}},
+	"knight_legs": {"slot": "legs", "title": "Поножі мечника", "parts": ["Ranger_Legs"], "class": "knight",
+		"set": "knight", "tint": Color(1.05, 0.72, 0.66), "icon": "item_ranger_pants", "base": {"armor": 5, "hp": 8}},
+	"knight_boots": {"slot": "boots", "title": "Чоботи мечника", "parts": ["Ranger_Feet_Boots"], "class": "knight",
+		"set": "knight", "tint": Color(1.05, 0.72, 0.66), "icon": "item_ranger_boots", "base": {"armor": 3, "move_speed": 2, "attack_speed": 2}},
+	"tank_hood": {"slot": "helmet", "title": "Шолом-каптур вартового", "parts": ["Ranger_Head_Hood"], "class": "tank",
+		"set": "tank", "tint": Color(0.72, 0.8, 1.0), "icon": "item_ranger_hood", "base": {"armor": 5, "hp": 12}},
+	"tank_coat": {"slot": "chest", "title": "Латна куртка вартового", "parts": ["Ranger_Body", "Ranger_Arms", "Ranger_Acc_Pauldron"],
+		"class": "tank", "set": "tank", "tint": Color(0.72, 0.8, 1.0), "icon": "item_ranger_pauldron", "base": {"armor": 12, "hp": 24}},
+	"tank_legs": {"slot": "legs", "title": "Важкі поножі вартового", "parts": ["Ranger_Legs"], "class": "tank",
+		"set": "tank", "tint": Color(0.72, 0.8, 1.0), "icon": "item_ranger_pants", "base": {"armor": 8, "hp": 14}},
+	"tank_boots": {"slot": "boots", "title": "Окуті чоботи вартового", "parts": ["Ranger_Feet_Boots"], "class": "tank",
+		"set": "tank", "tint": Color(0.72, 0.8, 1.0), "icon": "item_ranger_boots", "base": {"armor": 5, "hp": 6}},
+	"mage_cowl": {"slot": "helmet", "title": "Каптур учня магії", "parts": ["Ranger_Head_Hood"], "class": "mage",
+		"set": "mage", "tint": Color(0.82, 0.68, 1.08), "icon": "item_mage_hood", "base": {"armor": 2, "mana": 14, "cooldown": 2}},
+	"mage_robe": {"slot": "chest", "title": "Мантія учня магії", "parts": ["Peasant_Body", "Ranger_Arms"], "class": "mage",
+		"set": "mage", "tint": Color(0.82, 0.68, 1.08), "icon": "item_druid_robe", "base": {"armor": 3, "mana": 16, "mana_regen": 1}},
+	"mage_pants": {"slot": "legs", "title": "Шаровари учня магії", "parts": ["Peasant_Legs"], "class": "mage",
+		"set": "mage", "tint": Color(0.82, 0.68, 1.08), "icon": "item_peasant_pants", "base": {"armor": 2, "mana": 10}},
+	"mage_shoes": {"slot": "boots", "title": "Черевики учня магії", "parts": ["Peasant_Feet"], "class": "mage",
+		"set": "mage", "tint": Color(0.82, 0.68, 1.08), "icon": "item_peasant_shoes", "base": {"armor": 1, "move_speed": 2, "mana": 6}},
+	"archer_hood": {"slot": "helmet", "title": "Каптур стрільця", "parts": ["Ranger_Head_Hood"], "class": "archer",
+		"set": "archer", "tint": Color(0.78, 1.0, 0.7), "icon": "item_ranger_hood", "base": {"armor": 3, "crit": 2}},
+	"archer_jacket": {"slot": "chest", "title": "Куртка стрільця", "parts": ["Ranger_Body", "Ranger_Arms"], "class": "archer",
+		"set": "archer", "tint": Color(0.78, 1.0, 0.7), "icon": "item_ranger_jacket", "base": {"armor": 5, "hp": 8, "attack_speed": 3}},
+	"archer_pants": {"slot": "legs", "title": "Штани стрільця", "parts": ["Ranger_Legs"], "class": "archer",
+		"set": "archer", "tint": Color(0.78, 1.0, 0.7), "icon": "item_ranger_pants", "base": {"armor": 4, "hp": 6, "move_speed": 1}},
+	"archer_boots": {"slot": "boots", "title": "Чоботи стрільця", "parts": ["Ranger_Feet_Boots"], "class": "archer",
+		"set": "archer", "tint": Color(0.78, 1.0, 0.7), "icon": "item_ranger_boots", "base": {"armor": 3, "move_speed": 3}},
+	"druid_hood": {"slot": "helmet", "title": "Каптур хранителя лісу", "parts": ["Ranger_Head_Hood"], "class": "druid",
+		"set": "druid", "tint": Color(0.92, 0.86, 0.6), "icon": "item_ranger_hood", "base": {"armor": 3, "hp": 6, "mana": 8}},
+	"druid_mantle": {"slot": "chest", "title": "Мантія хранителя лісу", "parts": ["Peasant_Body", "Ranger_Arms"], "class": "druid",
+		"set": "druid", "tint": Color(0.92, 0.86, 0.6), "icon": "item_druid_robe", "base": {"armor": 6, "hp": 12, "mana": 12}},
+	"druid_pants": {"slot": "legs", "title": "Штани хранителя лісу", "parts": ["Peasant_Legs"], "class": "druid",
+		"set": "druid", "tint": Color(0.92, 0.86, 0.6), "icon": "item_peasant_pants", "base": {"armor": 4, "hp": 8}},
+	"druid_boots": {"slot": "boots", "title": "Чоботи хранителя лісу", "parts": ["Ranger_Feet_Boots"], "class": "druid",
+		"set": "druid", "tint": Color(0.92, 0.86, 0.6), "icon": "item_ranger_boots", "base": {"armor": 2, "move_speed": 2, "regen": 1}},
 }
 
 static var _counter := 0
@@ -123,6 +170,10 @@ static func icon_of(item: Dictionary) -> Texture2D:
 	if own != null:
 		return own
 	var base := base_of(item)
+	if base.has("icon"):
+		var shared := ArtSlots.kit_icon(String(base.icon))
+		if shared != null:
+			return shared
 	if base.has("weapon"):
 		var def := WeaponPool.get_def(StringName(base.weapon))
 		if def != null:
@@ -163,6 +214,8 @@ static func gear_look(items: Dictionary = {}) -> Dictionary:
 		var base := base_of(items[slot])
 		if base.has("parts"):
 			gear[slot] = {"parts": base.parts, "rarity": items[slot].rarity}
+			if base.has("tint"):
+				gear[slot]["tint"] = (base.tint as Color) * CharacterBuilder.RARITY_TINTS.get(items[slot].rarity, Color.WHITE)
 	return gear
 
 ## Сума характеристик усіх надітих речей.
