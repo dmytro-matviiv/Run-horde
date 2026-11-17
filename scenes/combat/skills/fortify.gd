@@ -21,7 +21,7 @@ func _init() -> void:
 func _use(player: Node) -> bool:
 	if _left <= 0.0:
 		player.set("_damage_taken_factor", float(player.get("_damage_taken_factor")) * TAKEN)
-	_left = DURATION
+	_left = DURATION + player.talent("fortify_time")
 	player.heal(float(player.get("max_hp")) * HEAL)
 	for enemy: Enemy3D in player.enemies_in_radius(PUSH_RADIUS, false):
 		var offset: Vector3 = enemy.global_position - player.global_position

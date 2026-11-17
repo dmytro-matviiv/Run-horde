@@ -43,6 +43,8 @@ func try_use(player: Node) -> bool:
 		return false
 	# Здібність "Тактика" з походу скорочує перезарядку всіх умінь.
 	_cooldown_left = cooldown * player.skill_cooldown_factor()
+	if player.has_method("skill_cd_factor"):
+		_cooldown_left *= player.skill_cd_factor(id)
 	return true
 
 func tick(player: Node, delta: float) -> void:

@@ -32,6 +32,15 @@ const SKILLS := {
 	&"piercing_shot": preload("res://scenes/combat/skills/piercing_shot.gd"),
 	&"shield_bash": preload("res://scenes/combat/skills/shield_bash.gd"),
 	&"fortify": preload("res://scenes/combat/skills/fortify.gd"),
+	# Суперздібності з дерева талантів.
+	&"leap_slam": preload("res://scenes/combat/skills/leap_slam.gd"),
+	&"battle_cry": preload("res://scenes/combat/skills/battle_cry.gd"),
+	&"ground_fissure": preload("res://scenes/combat/skills/ground_fissure.gd"),
+	&"shield_ram": preload("res://scenes/combat/skills/shield_ram.gd"),
+	&"arrow_rain": preload("res://scenes/combat/skills/arrow_rain.gd"),
+	&"hunter_trap": preload("res://scenes/combat/skills/hunter_trap.gd"),
+	&"spirit_pack": preload("res://scenes/combat/skills/spirit_pack.gd"),
+	&"moon_howl": preload("res://scenes/combat/skills/moon_howl.gd"),
 }
 
 const PASSIVES := {

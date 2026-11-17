@@ -386,6 +386,8 @@ var hero_xp := 0
 var talents: Dictionary = {}
 var talent_resets := 0
 var bonus_talent_points := 0
+## Які прийоми стоять у двох слотах: набір (клас чи звір) -> [id, id].
+var skill_loadout: Dictionary = {}
 signal talents_changed
 signal hero_leveled(level: int)
 
@@ -440,6 +442,7 @@ func reset_progress() -> void:
 	talents = {}
 	talent_resets = 0
 	bonus_talent_points = 0
+	skill_loadout = {}
 
 func add_resource(id: String, amount: int = 1) -> void:
 	resources[id] = int(resources.get(id, 0)) + amount

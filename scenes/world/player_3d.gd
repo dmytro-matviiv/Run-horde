@@ -580,6 +580,88 @@ var _armor := 0.0
 var _crit_bonus := 0.0
 var _talent_skills: Array = []
 
+## Перезарядка конкретного прийому з дерева талантів (cd_<прийом>).
+func skill_cd_factor(skill_id: StringName) -> float:
+	return maxf(0.4, 1.0 - talent("cd_" + String(skill_id)) / 100.0)
+
+# --- суперпасивки з дерева талантів ---
+const BATTLE_CRY_DAMAGE := 1.3
+const BATTLE_CRY_SPEED := 1.25
+const BLEED_TIME := 3.0
+var _battle_cry_left := 0.0
+## Кровотечі від «Кровопуску»: [ворог, шкода за тік, тіків лишилось, до тіку].
+var _bleeds: Array = []
+var _proc_lock := false
+
+func battle_cry(seconds: float) -> void:
+	if _battle_cry_left <= 0.0:
+		_attack_speed *= BATTLE_CRY_SPEED
+	_battle_cry_left = seconds
+
+func _tick_talent_effects(delta: float) -> void:
+	if _battle_cry_left > 0.0:
+		_battle_cry_left -= delta
+		if _battle_cry_left <= 0.0:
+			_attack_speed /= BATTLE_CRY_SPEED
+	for i in range(_bleeds.size() - 1, -1, -1):
+		var bleed: Array = _bleeds[i]
+		var enemy: Enemy3D = bleed[0]
+		if not is_instance_valid(enemy) or not enemy.is_alive() or int(bleed[2]) <= 0:
+			_bleeds.remove_at(i)
+			continue
+		bleed[3] = float(bleed[3]) - delta
+		if float(bleed[3]) <= 0.0:
+			bleed[3] = 0.5
+			bleed[2] = int(bleed[2]) - 1
+			enemy.take_damage(float(bleed[1]), Vector3.ZERO, false, false)
+			Fx.puff(get_parent(), enemy.global_position + Vector3.UP * enemy.target_height * 0.5, Color(0.7, 0.05, 0.05), 0.3, 0.0)
+
+## Шанси після влучання: подвійний удар, кровопуск, ланцюгова блискавка.
+func _talent_procs(enemy: Enemy3D, amount: float, crit: bool, source: StringName) -> void:
+	if _proc_lock or _talents.is_empty():
+		return
+	_proc_lock = true
+	if source == &"weapon" and not is_ranged() and not is_caster() and form == &"" \
+			and randf() * 100.0 < talent("double_strike") and enemy.is_alive():
+		deal_damage(enemy, 1.0, Vector3.ZERO, false, &"double")
+		CombatVfx.slash(get_parent(), enemy.global_position + Vector3.UP * 0.8, facing_angle() + 0.5, 1.4, 90.0,
+			Color(1.0, 0.85, 0.5), true, 0.3, 0.16)
+	if crit and talent("crit_bleed") > 0.0 and enemy.is_alive():
+		var ticks := int(BLEED_TIME / 0.5)
+		_bleeds.append([enemy, amount * talent("crit_bleed") / 100.0 / ticks, ticks, 0.5])
+	if source == &"weapon" and is_caster() and randf() * 100.0 < talent("chain_lightning"):
+		var points: Array[Vector3] = [enemy.global_position + Vector3.UP * 0.9]
+		var jumped := 0
+		for other: Enemy3D in enemies_near(enemy.global_position, 6.0):
+			if other == enemy or not other.is_alive() or jumped >= 3:
+				continue
+			deal_damage(other, 0.6, Vector3.ZERO, false, &"chain")
+			points.append(other.global_position + Vector3.UP * 0.9)
+			jumped += 1
+		if points.size() > 1:
+			CombatVfx.lightning(get_parent(), points, Color(0.6, 0.8, 1.0))
+	_proc_lock = false
+
+## Шипи (б'ють того, хто поруч) і контрудар щитом — коли герой отримав удар.
+func _on_hurt_procs() -> void:
+	if _talents.is_empty() or _proc_lock:
+		return
+	_proc_lock = true
+	if talent("thorns") > 0.0:
+		for enemy: Enemy3D in enemies_in_radius(2.4, false):
+			var push := enemy.global_position - global_position
+			push.y = 0.0
+			deal_damage(enemy, talent("thorns") / 100.0, push.normalized() * 1.5, false, &"thorns")
+			break
+	if randf() * 100.0 < talent("counter"):
+		for enemy: Enemy3D in enemies_in_radius(2.8, false):
+			var push := enemy.global_position - global_position
+			push.y = 0.0
+			deal_damage(enemy, 1.0, push.normalized() * 5.0, true, &"counter")
+			enemy.stun(1.0, true)
+		CombatVfx.shockwave(get_parent(), global_position, 2.8, Color(0.75, 0.82, 1.0), 0.3)
+	_proc_lock = false
+
 func talent(key: String) -> float:
 	return float(_talents.get(key, 0.0))
 
@@ -671,8 +753,10 @@ func _enter_form(kind: StringName) -> void:
 	form = kind
 	_pre_form = {"max_hp": max_hp, "armor": _armor, "speed": _speed_bonus, "attack_speed": _attack_speed}
 	var ratio := current_hp / maxf(max_hp, 1.0)
+	_attack_speed *= 1.0 + talent("beast_spirit") * 0.5 / 100.0
+	_speed_bonus += talent("beast_spirit") * 0.5 / 100.0
 	if kind == &"bear":
-		max_hp *= BEAR_HP
+		max_hp *= BEAR_HP + talent("bear_hp") / 100.0
 		_armor = _armor * BEAR_ARMOR + 30.0
 		_speed_bonus += BEAR_SPEED
 	else:
@@ -696,8 +780,8 @@ func _enter_form(kind: StringName) -> void:
 		if String(skill.id) == String(kind) + "_form":
 			toggle = skill
 	var form_skills: Array[HeroSkill3D] = []
-	for skill_id: StringName in FORM_SKILLS[kind]:
-		var skill := Skills3D.create_skill(skill_id)
+	for skill_id: String in TalentTree.loadout(String(kind)):
+		var skill := Skills3D.create_skill(StringName(skill_id))
 		if skill != null:
 			form_skills.append(skill)
 	if toggle != null:
@@ -867,7 +951,7 @@ func _form_attack() -> void:
 		if not bear:
 			break
 	if not bear and hit_any:
-		_form_stacks = mini(_form_stacks + 1, FENRIR_STACKS)
+		_form_stacks = mini(_form_stacks + 1, FENRIR_STACKS + int(talent("fenrir_stacks")))
 		_form_stack_left = FENRIR_STACK_TIME
 	play_form_strike(bear)
 	CombatVfx.slash(get_parent(), global_position + Vector3.UP * (0.8 if bear else 0.6), facing_angle(), reach,
@@ -921,6 +1005,18 @@ func _load_hero() -> void:
 	if _character_mode and weapon_def == null:
 		passive = null
 		_skills.clear()
+		return
+	# Свій герой: прийоми — з двох слотів класу (дерево талантів →
+	# «Здібності»). Друїд-людина лише перетворюється на звірів.
+	if _character_mode:
+		var staff := String(weapon_def.staff_skill) if weapon_def.staff_skill != &"" else ""
+		var cls := TalentTree.current_class()
+		var ids: Array = ["bear_form", "fenrir_form"] if cls == "druid" else TalentTree.loadout(cls, staff)
+		_skills.clear()
+		for skill_id: String in ids:
+			var picked := Skills3D.create_skill(StringName(skill_id))
+			if picked != null:
+				_skills.append(picked)
 		return
 	# Прийоми з дерева талантів — ще кнопки (без повторів).
 	for skill_id: String in _talent_skills:
@@ -1424,6 +1520,8 @@ func _shoot() -> void:
 	var parent := get_parent()
 	var muzzle := _muzzle_position()
 	var shots := maxi(weapon_def.bullets_per_shot, 1) + _bullets_extra
+	if randf() * 100.0 < talent("multishot"):
+		shots += 2
 	for i in shots:
 		var spread := deg_to_rad(weapon_def.bullet_spread_deg) * _spread_factor
 		# Додаткові кулі йдуть трохи вбік, щоб їх було видно як чергу.
@@ -1498,6 +1596,8 @@ func _release_spell() -> void:
 		target = _target
 		direction = (_target.global_position + Vector3.UP * _target.target_height * 0.55 - origin).normalized()
 	Spells3D.cast(self, weapon_def, origin, direction, target)
+	if talent("overload") > 0.0 and _cast_count % 5 == 0:
+		Spells3D.cast(self, weapon_def, origin, direction.rotated(Vector3.UP, 0.12), target)
 	_shake_camera(0.02)
 
 func _update_casting(delta: float) -> void:
@@ -1849,6 +1949,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
+	_tick_talent_effects(delta)
 	if _dead:
 		velocity.x = move_toward(velocity.x, 0.0, DECELERATION * delta)
 		velocity.z = move_toward(velocity.z, 0.0, DECELERATION * delta)
@@ -2320,6 +2421,16 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 			amount *= 1.0 + talent("low_hp_damage") / 100.0
 		if talent("deadeye") > 0.0 and not crit:
 			amount *= 0.85
+		amount *= 1.0 + talent("power_" + String(source)) / 100.0
+		if weapon_def != null and source == weapon_def.staff_skill:
+			amount *= 1.0 + talent("staff_power") / 100.0
+		if form != &"":
+			amount *= 1.0 + talent("beast_spirit") / 100.0
+		if talent("eagle_eye") > 0.0 and source == &"weapon" and is_ranged() \
+				and enemy.global_position.distance_to(global_position) > 7.0:
+			amount *= 1.0 + talent("eagle_eye") / 100.0
+	if _battle_cry_left > 0.0:
+		amount *= BATTLE_CRY_DAMAGE
 	if _bonus_damage_left > 0.0:
 		amount *= _bonus_damage
 	if _concealed_left > 0.0:
@@ -2342,6 +2453,7 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 		add_mana(talent("mana_on_hit"))
 	if talent("kill_heal") > 0.0 and not enemy.is_alive():
 		heal(max_hp * talent("kill_heal") / 100.0)
+	_talent_procs(enemy, amount, crit, source)
 	if passive == null:
 		return crit
 	passive.on_hit(self, enemy, amount, heavy)
@@ -2432,6 +2544,7 @@ func take_damage(amount: float) -> bool:
 	if _has_shrine(&"guard"):
 		amount *= SHRINE_GUARD_FACTOR
 	current_hp = maxf(current_hp - amount, 0.0)
+	_on_hurt_procs()
 	_invulnerable_left = HURT_INVULNERABLE
 	_combat_left = COMBAT_MEMORY
 	if passive != null:

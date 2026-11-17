@@ -33,8 +33,9 @@ func _use(player: Node) -> bool:
 	var reach := 6.0
 	if is_instance_valid(target) and target is Enemy3D:
 		reach = clampf((target as Enemy3D).global_position.distance_to(player.global_position), 1.5, 6.0)
-	for i in ARROWS:
-		var angle := deg_to_rad(lerpf(-SPREAD_DEG * 0.5, SPREAD_DEG * 0.5, float(i) / float(ARROWS - 1)))
+	var count := ARROWS + int(player.talent("volley_extra"))
+	for i in count:
+		var angle := deg_to_rad(lerpf(-SPREAD_DEG * 0.5, SPREAD_DEG * 0.5, float(i) / float(count - 1)))
 		var arrow := PlayerProjectile.create(player, DAMAGE, color, 1.6)
 		parent.add_child(arrow)
 		var flat := direction.rotated(Vector3.UP, angle)
