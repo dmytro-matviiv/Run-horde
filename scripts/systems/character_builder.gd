@@ -101,6 +101,7 @@ static func _attach(path: String, skeleton: Skeleton3D, tint: Color, rarity: Str
 	var scene: Node3D = load(path).instantiate()
 	var added: Array[MeshInstance3D] = []
 	for mesh: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
+		mesh.owner = null
 		mesh.get_parent().remove_child(mesh)
 		skeleton.add_child(mesh)
 		mesh.skeleton = NodePath("..")

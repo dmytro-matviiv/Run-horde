@@ -614,9 +614,222 @@ func _apply_talent_effects(stats: Dictionary) -> void:
 	current_hp = max_hp
 	_talent_skills = _talents.get("skills", [])
 
+
+# --- ФОРМИ ДРУЇДА (Ведмідь, Фенрір) ---
+## Друїд перетворюється на звіра: людська модель ховається, з'являється
+## модель звіра (assets/models/druid/<форма>.glb, поки її немає — проста
+## заготовка), змінюються числа, удари й кнопки прийомів. Кнопка форми
+## лишається — нею ж і повертаються в людину.
+signal skills_changed
+const FORM_SCENES := {&"bear": "res://assets/models/druid/bear.glb", &"fenrir": "res://assets/models/druid/fenrir.glb"}
+const FORM_SKILLS := {&"bear": [&"paw_swipe", &"bear_charge"], &"fenrir": [&"rend", &"pounce"]}
+const FORM_SCALE := {&"bear": 1.25, &"fenrir": 1.1}
+const BEAR_HP := 1.5
+const BEAR_ARMOR := 1.6
+const BEAR_SPEED := -0.2
+const FENRIR_SPEED := 0.35
+const FENRIR_ATTACK_SPEED := 1.2
+const BEAR_STRIKE_GAP := 0.9
+const FENRIR_STRIKE_GAP := 0.42
+const FENRIR_STACKS := 5
+const FENRIR_STACK_BONUS := 0.25
+const FENRIR_STACK_TIME := 2.2
+var form := &""
+var _form_model: Node3D
+var _form_anim: AnimationPlayer
+var _human_skills: Array[HeroSkill3D] = []
+var _pre_form := {}
+var _form_stacks := 0
+var _form_stack_left := 0.0
+var _form_strike_left := 0.0
+
+func toggle_form(kind: StringName) -> void:
+	if form == kind:
+		_exit_form()
+	else:
+		if form != &"":
+			_exit_form()
+		_enter_form(kind)
+	skills_changed.emit()
+
+func _enter_form(kind: StringName) -> void:
+	form = kind
+	_pre_form = {"max_hp": max_hp, "armor": _armor, "speed": _speed_bonus, "attack_speed": _attack_speed}
+	var ratio := current_hp / maxf(max_hp, 1.0)
+	if kind == &"bear":
+		max_hp *= BEAR_HP
+		_armor = _armor * BEAR_ARMOR + 30.0
+		_speed_bonus += BEAR_SPEED
+	else:
+		_speed_bonus += FENRIR_SPEED
+		_attack_speed *= FENRIR_ATTACK_SPEED
+	current_hp = max_hp * ratio
+	_update_health_bar()
+	health_changed.emit(current_hp, max_hp)
+	# Модель: людина ховається, звір з'являється.
+	if _model_instance != null:
+		_model_instance.visible = false
+	animation_tree.active = false
+	_form_model = _build_form_model(kind)
+	model.add_child(_form_model)
+	_form_anim = _form_model.find_children("*", "AnimationPlayer", true, false).front() if not _form_model.find_children("*", "AnimationPlayer", true, false).is_empty() else null
+	_play_form_anim(["Idle"])
+	# Кнопки: прийоми форми + та сама кнопка форми (щоб повернутись).
+	_human_skills = _skills.duplicate()
+	var toggle: HeroSkill3D = null
+	for skill in _skills:
+		if String(skill.id) == String(kind) + "_form":
+			toggle = skill
+	var form_skills: Array[HeroSkill3D] = []
+	for skill_id: StringName in FORM_SKILLS[kind]:
+		var skill := Skills3D.create_skill(skill_id)
+		if skill != null:
+			form_skills.append(skill)
+	if toggle != null:
+		form_skills.append(toggle)
+	_skills = form_skills
+	_form_stacks = 0
+	var parent := get_parent()
+	if parent != null:
+		Fx.puff(parent, global_position + Vector3.UP * 0.8, Color(0.4, 0.9, 0.55), 1.6, 0.1)
+		CombatVfx.shockwave(parent, global_position, 2.0, Color(0.4, 0.95, 0.6), 0.35)
+
+func _exit_form() -> void:
+	if form == &"":
+		return
+	var ratio := current_hp / maxf(max_hp, 1.0)
+	max_hp = float(_pre_form.get("max_hp", max_hp))
+	_armor = float(_pre_form.get("armor", _armor))
+	_speed_bonus = float(_pre_form.get("speed", _speed_bonus))
+	_attack_speed = float(_pre_form.get("attack_speed", _attack_speed))
+	current_hp = max_hp * ratio
+	_update_health_bar()
+	health_changed.emit(current_hp, max_hp)
+	if _form_model != null:
+		_form_model.queue_free()
+	_form_model = null
+	_form_anim = null
+	if _model_instance != null:
+		_model_instance.visible = true
+	animation_tree.active = true
+	if not _human_skills.is_empty():
+		_skills = _human_skills
+	form = &""
+	var parent := get_parent()
+	if parent != null:
+		Fx.puff(parent, global_position + Vector3.UP * 0.8, Color(0.4, 0.9, 0.55), 1.2, 0.1)
+
+## Модель звіра: справжня (якщо вже є файл) або проста заготовка.
+func _build_form_model(kind: StringName) -> Node3D:
+	var path: String = FORM_SCENES[kind]
+	var instance: Node3D
+	if ResourceLoader.exists(path):
+		instance = (load(path) as PackedScene).instantiate()
+	else:
+		instance = _placeholder_beast(kind)
+	instance.scale = Vector3.ONE * float(FORM_SCALE[kind])
+	return instance
+
+func _placeholder_beast(kind: StringName) -> Node3D:
+	var root := Node3D.new()
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.45, 0.3, 0.2) if kind == &"bear" else Color(0.55, 0.8, 0.75)
+	if kind == &"fenrir":
+		material.emission_enabled = true
+		material.emission = Color(0.25, 0.8, 0.6)
+		material.emission_energy_multiplier = 0.6
+	var body := MeshInstance3D.new()
+	var capsule := CapsuleMesh.new()
+	capsule.radius = 0.45 if kind == &"bear" else 0.3
+	capsule.height = 1.6 if kind == &"bear" else 1.4
+	body.mesh = capsule
+	body.rotation_degrees.x = 90.0
+	body.position = Vector3(0, 0.75 if kind == &"bear" else 0.6, 0)
+	body.material_override = material
+	root.add_child(body)
+	var head := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.32 if kind == &"bear" else 0.24
+	sphere.height = sphere.radius * 2.0
+	head.mesh = sphere
+	head.position = Vector3(0, 1.0 if kind == &"bear" else 0.8, 0.8 if kind == &"bear" else 0.75)
+	head.material_override = material
+	root.add_child(head)
+	return root
+
+## Анімація звіра: перша з назв, що є в моделі (назви в паках різні).
+func _play_form_anim(names: Array, blend := 0.2) -> void:
+	if _form_anim == null:
+		return
+	for wanted: String in names:
+		for anim_name: String in _form_anim.get_animation_list():
+			if anim_name.to_lower().contains(wanted.to_lower()):
+				if _form_anim.current_animation != anim_name:
+					_form_anim.play(anim_name, blend)
+				return
+
+## Удар звіра (звичайна атака або прийом) — анімація атаки.
+func play_form_strike(heavy: bool) -> void:
+	if form == &"":
+		return
+	_form_strike_left = 0.45
+	_play_form_anim(["Attack_Bite" if form == &"fenrir" and not heavy else "Attack", "Bite", "Attack"], 0.08)
+
+## Звичайна атака у формі: ведмідь — розмах лапою по всіх попереду,
+## Фенрір — укус, і кожен наступний поспіль сильніший (до 5).
+func _form_attack() -> void:
+	_attack_queued = false
+	var bear := form == &"bear"
+	var gap := (BEAR_STRIKE_GAP if bear else FENRIR_STRIKE_GAP) / maxf(attack_speed(), 0.1)
+	_attack_cooldown_left = gap
+	if _target != null and is_instance_valid(_target):
+		var to := (_target as Node3D).global_position - global_position
+		to.y = 0.0
+		if to.length() > 0.05:
+			face_direction(to.normalized())
+	var forward := facing_vector()
+	var reach := 2.6 if bear else 2.1
+	var hit_any := false
+	for enemy: Enemy3D in enemies_in_radius(reach + 0.4, false):
+		var offset := enemy.global_position - global_position
+		offset.y = 0.0
+		var angle := rad_to_deg(forward.angle_to(offset.normalized())) if offset.length() > 0.2 else 0.0
+		if angle > (60.0 if bear else 40.0):
+			continue
+		var mult := 1.5 if bear else 0.8 * (1.0 + FENRIR_STACK_BONUS * _form_stacks)
+		deal_damage(enemy, mult, offset.normalized() * (3.0 if bear else 0.8), bear, &"form")
+		hit_any = true
+		for skill in _skills:
+			if skill.has_method("wound"):
+				skill.call("wound", enemy)
+		if not bear:
+			break
+	if not bear and hit_any:
+		_form_stacks = mini(_form_stacks + 1, FENRIR_STACKS)
+		_form_stack_left = FENRIR_STACK_TIME
+	play_form_strike(bear)
+	CombatVfx.slash(get_parent(), global_position + Vector3.UP * (0.8 if bear else 0.6), facing_angle(), reach,
+		110.0 if bear else 70.0, Color(0.85, 0.6, 0.35) if bear else Color(0.45, 0.95, 0.8), false, -0.3, 0.2)
+
+## Анімація звіра щокадру: стоїть / іде / біжить (удар — свій).
+func _update_form(delta: float) -> void:
+	_form_stack_left -= delta
+	if _form_stack_left <= 0.0:
+		_form_stacks = 0
+	_form_strike_left -= delta
+	if _form_model == null or _form_strike_left > 0.0:
+		return
+	var flat := Vector2(velocity.x, velocity.z).length()
+	if flat > 4.0:
+		_play_form_anim(["Gallop", "Run", "Walk"])
+	elif flat > 0.4:
+		_play_form_anim(["Walk", "Run"])
+	else:
+		_play_form_anim(["Idle"])
+
 ## Чи потрібна цьому герою мана (маг, руновод, друїд).
 func uses_mana() -> bool:
-	return _character_mode and is_caster()
+	return _character_mode and weapon_def != null and weapon_def.spell != "none"
 
 func add_mana(amount: float) -> void:
 	if max_mana <= 0.0:
@@ -1070,11 +1283,11 @@ func set_move_input(direction: Vector2) -> void:
 ## й почнеться одразу, щойно закінчиться попередній.
 ## Чи в руках вогнепальна зброя.
 func is_ranged() -> bool:
-	return weapon_def != null and weapon_def.ranged_3d
+	return form == &"" and weapon_def != null and weapon_def.ranged_3d
 
 ## Чи в руках посох: чари замість ударів.
 func is_caster() -> bool:
-	return weapon_def != null and weapon_def.spell != "none"
+	return form == &"" and weapon_def != null and weapon_def.spell != "none"
 
 func attack() -> void:
 	if _dead or _knock_left > 0.0:
@@ -1298,6 +1511,11 @@ func use_skill(index: int = 0) -> void:
 	# здібність: вона сама може задати рух (ривок люті), і зачищати його
 	# після цього не можна.
 	var skill := _skills[index]
+	# Перемикач форми друїда безкоштовний — повернутись можна завжди.
+	if skill.get("free_cast") == true:
+		_abort_attacks()
+		skill.try_use(self)
+		return
 	# Магові на прийом потрібна мана.
 	if talent("blood_magic") > 0.0:
 		if current_hp <= max_hp * 0.1:
@@ -1562,6 +1780,8 @@ func _physics_process(delta: float) -> void:
 		_refresh_target()
 
 	var direction := _get_world_direction()
+	if form != &"":
+		_update_form(delta)
 	_update_attack(delta)
 	_update_ranged(delta)
 	_update_casting(delta)
@@ -1811,6 +2031,9 @@ func _update_target_marker() -> void:
 # --- удари ---
 
 func _start_attack() -> void:
+	if form != &"":
+		_form_attack()
+		return
 	var combo := _combo()
 	var step_index := (_combo_index if _combo_expire > 0.0 else 0) % combo.size()
 	var step: Dictionary = combo[step_index]

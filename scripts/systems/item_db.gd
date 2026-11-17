@@ -77,6 +77,8 @@ const BASES := {
 		"base": {"damage": 10}},
 	"oak_staff": {"slot": "weapon", "title": "Дубовий посох", "weapon": "arcane_staff", "class": "mage",
 		"base": {"damage": 8, "mana": 10}},
+	"druid_staff": {"slot": "weapon", "title": "Посох друїда", "weapon": "druid_staff", "class": "druid",
+		"base": {"damage": 8, "hp": 10, "mana": 12}},
 }
 
 static var _counter := 0

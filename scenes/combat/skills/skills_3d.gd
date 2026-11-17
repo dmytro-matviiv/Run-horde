@@ -20,6 +20,13 @@ const SKILLS := {
 	# Особливі здібності зброї Руновода.
 	&"great_seal": preload("res://scenes/combat/skills/great_seal.gd"),
 	&"card_storm": preload("res://scenes/combat/skills/card_storm.gd"),
+	# Друїд: перетворення і прийоми звірів (кнопки змінюються з формою).
+	&"bear_form": preload("res://scenes/combat/skills/bear_form.gd"),
+	&"fenrir_form": preload("res://scenes/combat/skills/fenrir_form.gd"),
+	&"paw_swipe": preload("res://scenes/combat/skills/paw_swipe.gd"),
+	&"bear_charge": preload("res://scenes/combat/skills/bear_charge.gd"),
+	&"rend": preload("res://scenes/combat/skills/rend.gd"),
+	&"pounce": preload("res://scenes/combat/skills/pounce.gd"),
 }
 
 const PASSIVES := {

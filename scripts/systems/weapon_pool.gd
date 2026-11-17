@@ -26,6 +26,9 @@ const ALL_WEAPONS: Array[WeaponDef] = [
 	preload("res://data/weapons/venom_staff.tres"),
 	preload("res://data/weapons/moon_staff.tres"),
 
+	# Друїд: посох, що вчить обертатися на звіра.
+	preload("res://data/weapons/druid_staff.tres"),
+
 	# Оперативник: вогнепальна зброя. Стартовий пістолет безкоштовний,
 	# решта купується за золото.
 	preload("res://data/weapons/pistol_basic.tres"),

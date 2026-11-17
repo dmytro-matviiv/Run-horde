@@ -47,6 +47,17 @@ func setup(player: Node) -> void:
 	_attack.released.connect(func() -> void: _player.set_attack_held(false))
 	_dodge.pressed_down.connect(func() -> void: _player.dodge())
 
+	_build_skill_buttons()
+	if _player.has_signal("skills_changed"):
+		_player.skills_changed.connect(_on_skills_changed)
+
+func _on_skills_changed() -> void:
+	for button in _skill_buttons:
+		button.queue_free()
+	_skill_buttons.clear()
+	_build_skill_buttons()
+
+func _build_skill_buttons() -> void:
 	_skills = _player.get_skills()
 	for index in _skills.size():
 		var skill: HeroSkill3D = _skills[index]
