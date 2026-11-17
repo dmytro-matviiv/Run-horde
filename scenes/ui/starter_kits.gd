@@ -86,6 +86,11 @@ func _ready() -> void:
 	column.offset_right = -18.0
 	column.offset_left = 18.0
 
+	# Контейнер на весь екран лежить поверх кнопки «назад» — без цього він
+	# перехоплював натиски. Кнопку й золото — нагору, контейнер — прозорий.
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	move_child(back, -1)
+	move_child(_gold_badge, -1)
 	_lesson = not _has_class_weapon()
 	_page = 0
 	_show_page()
