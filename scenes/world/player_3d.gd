@@ -917,6 +917,11 @@ func _load_hero() -> void:
 
 	passive = Skills3D.create_passive(hero_def.passive_id)
 	_skills = Skills3D.create_for_hero(hero_def)
+	# Без зброї в руках — жодних прийомів і рис класу: лише кулаки й перекат.
+	if _character_mode and weapon_def == null:
+		passive = null
+		_skills.clear()
+		return
 	# Прийоми з дерева талантів — ще кнопки (без повторів).
 	for skill_id: String in _talent_skills:
 		var has := false
