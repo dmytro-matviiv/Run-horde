@@ -621,9 +621,24 @@ func _apply_talent_effects(stats: Dictionary) -> void:
 ## заготовка), змінюються числа, удари й кнопки прийомів. Кнопка форми
 ## лишається — нею ж і повертаються в людину.
 signal skills_changed
+## Своя модель звіра, якщо є; інакше — вовк (Quaternius, CC0), перефарбований
+## і розтягнутий під форму (ведмідь поки «вовкоподібний»).
 const FORM_SCENES := {&"bear": "res://assets/models/druid/bear.glb", &"fenrir": "res://assets/models/druid/fenrir.glb"}
+const FORM_FALLBACK := "res://assets/models/druid/wolf.glb"
+const BEAST_SHAPE := preload("res://scenes/world/beast_shape.gd")
+## height — висота моделі в метрах; bulk — ширина/висота/довжина;
+## main/light — кольори хутра; glow — світіння; gait — темп анімацій.
+const FORM_LOOK := {
+	&"bear": {"height": 1.45, "bulk": Vector3(1.4, 1.0, 0.95), "main": Color(0.3, 0.18, 0.09),
+		"light": Color(0.42, 0.28, 0.16), "glow": Color(0, 0, 0), "gait": 0.8,
+		"bones": {"Ear*": Vector3(0.8, 0.35, 0.8), "Head": Vector3(1.25, 1.15, 1.1),
+			"Torso3": Vector3(1.2, 1.2, 1.0), "Tail*": Vector3(0.6, 0.25, 0.6),
+			"FrontShoulder.L": Vector3(1.6, 0.8, 1.6), "FrontShoulder.R": Vector3(1.6, 0.8, 1.6),
+			"BackUpperLeg.L": Vector3(1.4, 1.0, 1.4), "BackUpperLeg.R": Vector3(1.4, 1.0, 1.4)}},
+	&"fenrir": {"height": 1.45, "bulk": Vector3(1.0, 1.0, 1.05), "main": Color(0.6, 0.76, 0.84),
+		"light": Color(0.92, 0.98, 1.0), "glow": Color(0.15, 0.75, 0.7), "gait": 1.15},
+}
 const FORM_SKILLS := {&"bear": [&"paw_swipe", &"bear_charge"], &"fenrir": [&"rend", &"pounce"]}
-const FORM_SCALE := {&"bear": 1.25, &"fenrir": 1.1}
 const BEAR_HP := 1.5
 const BEAR_ARMOR := 1.6
 const BEAR_SPEED := -0.2
@@ -722,13 +737,60 @@ func _exit_form() -> void:
 ## Модель звіра: справжня (якщо вже є файл) або проста заготовка.
 func _build_form_model(kind: StringName) -> Node3D:
 	var path: String = FORM_SCENES[kind]
-	var instance: Node3D
 	if ResourceLoader.exists(path):
-		instance = (load(path) as PackedScene).instantiate()
-	else:
-		instance = _placeholder_beast(kind)
-	instance.scale = Vector3.ONE * float(FORM_SCALE[kind])
+		return (load(path) as PackedScene).instantiate()
+	if not ResourceLoader.exists(FORM_FALLBACK):
+		return _placeholder_beast(kind)
+	var look: Dictionary = FORM_LOOK[kind]
+	var instance: Node3D = (load(FORM_FALLBACK) as PackedScene).instantiate()
+	var height := 1.0
+	for mesh: MeshInstance3D in instance.find_children("*", "MeshInstance3D", true, false):
+		height = maxf(mesh.get_aabb().size.y, 0.1)
+		_recolor_beast(mesh, look)
+	instance.scale = look["bulk"] * (float(look["height"]) / height)
+	var bones: Dictionary = look.get("bones", {})
+	if not bones.is_empty():
+		for skeleton: Skeleton3D in instance.find_children("*", "Skeleton3D", true, false):
+			var shaper: SkeletonModifier3D = BEAST_SHAPE.new()
+			var shape := {}
+			for key: String in bones:
+				if key.ends_with("*"):
+					for root in BEAST_SHAPE.chain_roots(skeleton, key.trim_suffix("*")):
+						shape[root] = bones[key]
+				else:
+					shape[key] = bones[key]
+			shaper.set("shape", shape)
+			skeleton.add_child(shaper)
+	# Анімації з glTF приходять без повтору — вмикаємо для ходи й стояння.
+	for player: AnimationPlayer in instance.find_children("*", "AnimationPlayer", true, false):
+		player.speed_scale = float(look["gait"])
+		for anim_name: String in player.get_animation_list():
+			if anim_name in ["Idle", "Walk", "Gallop"]:
+				player.get_animation(anim_name).loop_mode = Animation.LOOP_LINEAR
 	return instance
+
+func _recolor_beast(mesh: MeshInstance3D, look: Dictionary) -> void:
+	for i in mesh.mesh.get_surface_count():
+		var source := mesh.mesh.surface_get_material(i) as StandardMaterial3D
+		if source == null:
+			continue
+		var material := source.duplicate() as StandardMaterial3D
+		var key := source.resource_name
+		if key == "Main":
+			material.albedo_color = look["main"]
+		elif key == "Main_Light":
+			material.albedo_color = look["light"]
+		var glow: Color = look["glow"]
+		if glow.v > 0.0 and key != "Eyes_Black" and key != "Nose":
+			material.emission_enabled = true
+			material.emission = glow
+			material.emission_energy_multiplier = 0.35
+		if key == "Eyes_Black" and glow.v > 0.0:
+			material.albedo_color = glow
+			material.emission_enabled = true
+			material.emission = glow
+			material.emission_energy_multiplier = 2.5
+		mesh.set_surface_override_material(i, material)
 
 func _placeholder_beast(kind: StringName) -> Node3D:
 	var root := Node3D.new()

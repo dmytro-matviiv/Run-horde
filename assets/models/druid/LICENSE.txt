@@ -1,0 +1,2 @@
+wolf.glb — Quaternius, Ultimate Animated Animal Pack (CC0 1.0). quaternius.com
+З нього в коді робляться Фенрір і тимчасовий ведмідь (player_3d.gd, FORM_LOOK).
