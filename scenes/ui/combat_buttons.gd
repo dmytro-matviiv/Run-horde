@@ -93,9 +93,12 @@ func _layout() -> void:
 	_place(_attack, attack_center)
 	_place(_dodge, attack_center + Vector2(-ATTACK_RADIUS - DODGE_RADIUS - 26.0, 18.0))
 	# Здібності лягають дугою над кнопкою удару — скільки б їх не було.
-	for index in _skill_buttons.size():
-		var angle := deg_to_rad(-118.0 + 46.0 * index)
-		var distance := ATTACK_RADIUS + SMALL_RADIUS + 34.0
+	# Три кнопки (звір друїда: 2 прийоми + повернення в людину) — щільніша
+	# дуга, що не заходить за правий край екрана.
+	var count := _skill_buttons.size()
+	for index in count:
+		var angle := deg_to_rad(-118.0 + 46.0 * index) if count <= 2 else deg_to_rad(-154.0 + 37.0 * index)
+		var distance := ATTACK_RADIUS + SMALL_RADIUS + (34.0 if count <= 2 else 42.0)
 		_place(_skill_buttons[index], attack_center + Vector2(cos(angle), sin(angle)) * distance)
 
 func _place(button: CombatButton, center: Vector2) -> void:

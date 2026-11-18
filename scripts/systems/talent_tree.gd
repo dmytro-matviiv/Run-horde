@@ -37,6 +37,11 @@ const CLASSES := {
 	"druid": {"title": "Друїд", "color": Color(0.35, 0.88, 0.6), "icon": "tal_branch_druid", "attribute": "spirit"},
 }
 const CLASS_ORDER := ["knight", "tank", "mage", "archer", "druid"]
+## Кругле дерево: напрям гілки (градуси) і геометрія кілець.
+const BRANCH_ANGLES := {"knight": -90.0, "tank": -18.0, "druid": 54.0, "archer": 126.0, "mage": 198.0}
+const GEO_RING_START := 250.0
+const GEO_RING_STEP := 125.0
+const GEO_MIN_GAP := 96.0
 
 ## Атрибут -> що дає одне очко атрибута.
 const ATTRIBUTES := {
@@ -166,20 +171,41 @@ const BRANCHES := {
 
 static var _cache := {}
 
-## Усі вузли: id -> {id, title, kind, max, effects, text, icon, branch, tier, index}.
+## Усі вузли: id -> {id, title, kind, max, effects, text, icon, branch,
+## tier, index, ring, angle, parents}. ring/angle/parents — для круглого
+## дерева: ярус = кільце від центру, батько — найближчий у ярусі нижче.
 static func nodes() -> Dictionary:
 	if not _cache.is_empty():
 		return _cache
 	for branch: String in BRANCHES:
 		var tiers: Array = BRANCHES[branch]
+		var center_angle: float = BRANCH_ANGLES[branch]
+		var previous := []
 		for t in tiers.size():
-			for i in tiers[t].size():
+			var radius := GEO_RING_START + GEO_RING_STEP * t
+			var count: int = tiers[t].size()
+			# Клин гілки не ширший за ±26° (між гілками 72°) — сусіди не налазять.
+			var spread := minf(maxf(10.0 + 2.6 * t, rad_to_deg((count - 1) * GEO_MIN_GAP * 0.5 / radius)), 26.0)
+			var placed := []
+			for i in count:
 				var entry: Array = tiers[t][i]
+				var offset := 0.0 if count == 1 else (float(i) / (count - 1) - 0.5)
+				var angle := center_angle + offset * spread * 2.0
 				var node := {"id": entry[0], "title": entry[1], "kind": entry[2], "max": entry[3], "effects": entry[4],
-					"text": entry[5], "icon": entry[6], "branch": branch, "tier": t, "index": i}
+					"text": entry[5], "icon": entry[6], "branch": branch, "tier": t, "index": i,
+					"ring": t + 1, "angle": angle, "parents": []}
+				if not previous.is_empty():
+					var sorted := previous.duplicate()
+					sorted.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+						return absf(a.angle - angle) < absf(b.angle - angle))
+					node.parents.append(sorted[0].id)
+					if sorted.size() > 1 and absf(sorted[1].angle - angle) < absf(sorted[0].angle - angle) + 1.5:
+						node.parents.append(sorted[1].id)
 				if node.text == "":
 					node.text = describe(node.effects) + (" за ранг" if int(node.max) > 1 else "")
 				_cache[node.id] = node
+				placed.append(node)
+			previous = placed
 	return _cache
 
 static func get_node(id: String) -> Dictionary:
@@ -240,11 +266,28 @@ static func points_free() -> int:
 static func tier_open(branch: String, tier: int) -> bool:
 	return points_spent(branch) >= int(TIER_POINTS[mini(tier, TIER_POINTS.size() - 1)])
 
+## Сусід ближче до центру вже вивчений (перше кільце — завжди).
+static func parent_learned(id: String) -> bool:
+	var node := get_node(id)
+	if int(node.get("tier", 0)) == 0:
+		return true
+	for parent: String in node.get("parents", []):
+		if is_learned(parent):
+			return true
+	return false
+
+## Можна вчити: є очко, ще не максимальний ранг, ярус відкрито очками в
+## гілці й вивчено сусіда ближче до центру.
 static func can_learn(id: String) -> bool:
 	var node := get_node(id)
 	if node.is_empty() or points_free() <= 0 or rank(id) >= int(node.max):
 		return false
-	return tier_open(String(node.branch), int(node.tier))
+	return tier_open(String(node.branch), int(node.tier)) and parent_learned(id)
+
+## Чи вузол уже досяжний (без огляду на вільні очки) — для підсвітки.
+static func is_reachable(id: String) -> bool:
+	var node := get_node(id)
+	return not node.is_empty() and tier_open(String(node.branch), int(node.tier)) and parent_learned(id)
 
 static func learn(id: String) -> bool:
 	if not can_learn(id):

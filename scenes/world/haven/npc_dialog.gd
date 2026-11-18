@@ -13,8 +13,9 @@ const PORTRAIT_DIR := "res://assets/ui/kit/portraits/"
 
 var _name: Label
 var _text: Label
-var _buttons: HBoxContainer
+var _buttons: HFlowContainer
 var _portrait: TextureRect
+var _panel: PanelContainer
 
 ## Портрет жителя (знятий із його ж 3D-моделі) у золотому медальйоні.
 static func portrait_of(npc_id: StringName) -> Texture2D:
@@ -31,6 +32,7 @@ func _init() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 	var panel := PanelContainer.new()
+	_panel = panel
 	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(UiTheme.ACCENT))
 	panel.anchor_left = 0.5
 	panel.anchor_right = 0.5
@@ -62,9 +64,11 @@ func _init() -> void:
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.custom_minimum_size = Vector2(BOX_WIDTH - 60.0 - PORTRAIT_SIZE - 16.0, 0)
 	column.add_child(_text)
-	_buttons = HBoxContainer.new()
-	_buttons.add_theme_constant_override("separation", 14)
-	_buttons.alignment = BoxContainer.ALIGNMENT_END
+	# Кнопки переносяться на новий рядок, якщо не влазять (довгі нагороди).
+	_buttons = HFlowContainer.new()
+	_buttons.add_theme_constant_override("h_separation", 14)
+	_buttons.add_theme_constant_override("v_separation", 8)
+	_buttons.alignment = FlowContainer.ALIGNMENT_END
 	column.add_child(_buttons)
 
 ## Показати репліку й кнопки: choices — [[id, напис, головна?], ...].
@@ -73,13 +77,19 @@ func show_line(speaker: String, text: String, choices: Array, npc_id: StringName
 	_portrait.visible = _portrait.texture != null
 	_name.text = speaker
 	_text.text = text
+	# Панель не ширша за екран (вузькі телефони, вікно на ПК).
+	var width := minf(BOX_WIDTH, get_viewport_rect().size.x - 32.0)
+	_panel.offset_left = -width * 0.5
+	_panel.offset_right = width * 0.5
+	var portrait_space := (PORTRAIT_SIZE + 16.0) if _portrait.visible else 0.0
+	_text.custom_minimum_size.x = width - 60.0 - portrait_space
 	for child in _buttons.get_children():
 		child.queue_free()
 	for choice: Array in choices:
 		var button := Button.new()
 		button.text = choice[1]
 		button.custom_minimum_size = Vector2(170, 52)
-		button.add_theme_font_size_override("font_size", 18)
+		button.add_theme_font_size_override("font_size", 18 if String(choice[1]).length() < 30 else 15)
 		if choice.size() > 2 and choice[2]:
 			UiTheme.art_primary(button)
 		else:
