@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "Black"
+shading_mode = 2
+albedo_color = Color(0.19394563, 0.1871225, 0.1955748, 1)
+metallic_specular = 0.3
+roughness = 0.9
+emission_enabled = true
+emission = Color(0.21820189, 0.21071392, 0.21998978, 1)
+emission_energy_multiplier = 0.0

@@ -1,9 +1,9 @@
 [gd_resource type="StandardMaterial3D" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/models/haven/props/T_Trim_Cloth_BaseColor.png" id="1_jecio"]
+[ext_resource type="Texture2D" path="res://assets/models/haven/props/T_Trim_Props_BaseColor.png" id="1_jecio"]
 
 [resource]
-resource_name = "MI_Banner"
+resource_name = "MI_Trim_Props_Vertex"
 cull_mode = 2
 shading_mode = 2
 albedo_texture = ExtResource("1_jecio")

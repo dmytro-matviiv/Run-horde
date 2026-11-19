@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" path="res://assets/models/haven/props/T_Trim_Metal_BaseColor.png" id="1_pn8mt"]
 
 [resource]
-resource_name = "MI_Trim_Metal_Vertex"
+resource_name = "MI_Trim_Metal"
 cull_mode = 2
 shading_mode = 2
 albedo_texture = ExtResource("1_pn8mt")

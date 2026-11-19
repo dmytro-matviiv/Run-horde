@@ -1140,6 +1140,7 @@ func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_el
 		orb.global_position = position + Vector3(0, DungeonBuilder.FLOOR_TOP, 0)
 	if is_boss:
 		_boss_defeated = true
+		QuestBook.report("boss")
 		if _darkness:
 			_relight(position)
 		_celebrate_boss(position)
@@ -1169,6 +1170,7 @@ func _drop_items(position: Vector3, is_boss: bool, is_elite: bool) -> void:
 
 func _on_item_picked(item: Dictionary) -> void:
 	found_items.append(item)
+	QuestBook.report("loot")
 	AudioManager.play(&"pickup")
 	_show_banner(ItemDb.title_of(item), "Знайдено — уже в торбі")
 

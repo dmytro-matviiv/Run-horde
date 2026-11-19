@@ -18,24 +18,24 @@ class_name Boons
 ## Запас лежить у GameState.haven["boons"]: id -> кількість.
 
 const BOONS := {
-	"meal": {"title": "Вечеря біля багаття", "verb": "Повечеряти", "quest": "firewood",
-		"cost": {"wood": 2}, "limit": 1, "short": "Вечеря",
+	"meal": {"title": "Вечеря в «Золотому Кабані»", "verb": "Повечеряти", "quest": "tavern",
+		"cost": {"gold": 60}, "limit": 1, "short": "Вечеря",
 		"effect": "+20% здоров'я в наступному поході",
 		"done": "Ситна вечеря! У наступному поході — на 20% більше здоров'я.",
 		"full": "Ти вже ситий — вечеря чекає наступного походу."},
-	"sharp": {"title": "Гостре лезо", "verb": "Нагострити", "quest": "smith_stone",
-		"cost": {"stone": 3}, "limit": 1, "short": "Гостре лезо",
+	"sharp": {"title": "Гостре лезо", "verb": "Нагострити", "quest": "temper",
+		"cost": {"gold": 90}, "limit": 1, "short": "Гостре лезо",
 		"effect": "+15% шкоди в наступному поході",
 		"done": "Зброя гостра як бритва! У наступному поході — на 15% більше шкоди.",
 		"full": "Зброя вже нагострена — гостріша не стане."},
-	"potion": {"title": "Зілля зцілення", "verb": "Зварити зілля", "quest": "herbs",
-		"cost": {"herb": 3}, "limit": 3, "short": "Зілля",
+	"potion": {"title": "Зілля зцілення", "verb": "Зварити зілля", "quest": "elixir",
+		"cost": {"gold": 50}, "limit": 3, "short": "Зілля",
 		"effect": "саме вип'ється, коли здоров'я впаде нижче третини",
 		"done": "Зілля готове! Воно саме вип'ється, коли в бою стане скрутно.",
 		"full": "Більше трьох зіль у торбу не влізе."},
 }
 
-const RESOURCE_TITLES := {"wood": "Дерево", "stone": "Камінь", "herb": "Трави"}
+const RESOURCE_TITLES := {"gold": "Золото", "wood": "Дерево", "stone": "Камінь", "herb": "Трави"}
 
 const MEAL_HP_FACTOR := 1.2
 const SHARP_DAMAGE_FACTOR := 1.15
@@ -69,7 +69,7 @@ static func problem(id: String) -> String:
 		return String(boon.full)
 	var cost: Dictionary = boon.cost
 	for resource: String in cost:
-		var have := int(GameState.resources.get(resource, 0))
+		var have := GameState.gold if resource == "gold" else int(GameState.resources.get(resource, 0))
 		if have < int(cost[resource]):
 			return "Потрібно: %s (у тебе %d)" % [cost_text(id), have]
 	return ""
@@ -80,7 +80,10 @@ static func craft(id: String) -> bool:
 		return false
 	var cost: Dictionary = BOONS[id].cost
 	for resource: String in cost:
-		GameState.resources[resource] = int(GameState.resources.get(resource, 0)) - int(cost[resource])
+		if resource == "gold":
+			GameState.gold -= int(cost[resource])
+		else:
+			GameState.resources[resource] = int(GameState.resources.get(resource, 0)) - int(cost[resource])
 	grant(id)
 	return true
 

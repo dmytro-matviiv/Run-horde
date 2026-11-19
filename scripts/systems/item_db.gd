@@ -384,6 +384,8 @@ static func equip(uid: String) -> void:
 	GameState.equipped_store.append(item)
 	GameState.equipment[slot] = uid
 	GameState.equipment_changed.emit()
+	if slot == "weapon" and String(base_of(item).get("class", "")) != "":
+		QuestBook.report("equip")
 	SaveManager.save_game()
 
 ## Зняти річ зі слоту в торбу.

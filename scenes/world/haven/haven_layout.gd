@@ -1,197 +1,134 @@
 extends RefCounted
 class_name HavenLayout
 
-## ПЛАН ПРИХИСТКУ — усі розміри в одному місці (метри; X — схід, Z — південь,
-## камера дивиться на північ, тобто в -Z). Будівник (haven_builder.gd) і
-## рельєф беруть цифри звідси, тож зсунути терасу чи сходи — правка тут.
+## ПЛАН МІСТА ПРИХИСТОК — середньовічне містечко (метри; X — схід,
+## Z — південь; камера дивиться на північ, тобто в -Z). Будівник
+## (dev_scripts/town/town_builder.gd) і гра беруть цифри звідси.
 ##
-##   південь  — галявина появи героя (висота 0), стежка до сходів;
-##   центр    — НИЖНЯ ТЕРАСА (висота 2): площа з бруківкою, п'ятеро NPC,
-##              будиночки; сходи на південь, схід (гай) і захід (пагорб);
-##   північ   — ВЕРХНЯ ТЕРАСА (висота 4): портал, сходи з площі;
-##   схід     — гай (дерева на зруб);
-##   захід    — кам'янистий пагорб (камінь, трави, гриби);
-##   довкола  — пагорби й ліс: краю світу не видно.
+##   південь — дорога з полів і міська брама з двома вежами;
+##   вулиця  — від брами на північ: дім героя, таверна «Золотий Кабан»;
+##   центр   — Ринкова площа з фонтаном: ратуша (Старійшина Остап) на
+##             півночі, ринок (Торговка Олеся) на сході, тренувальний
+##             двір (Наставниця Дарина) на заході;
+##   схід    — вулиця Ковалів: кузня Богдана;
+##   північний захід — вежа-бібліотека Мудреця Велимира;
+##   північ  — стара каплиця й вхід до склепів (портал у данжі);
+##   довкола — поля, кам'яний вітряк, ліс і пагорби.
 
-const SIZE := 160.0          # бік квадрата рельєфу
-const STEP := 1.0            # крок сітки рельєфу
+const SIZE := 200.0          # бік квадрата рельєфу
+const STEP := 1.0
 
-const LOW_TERRACE := Rect2(-22.0, -32.0, 44.0, 46.0)   # x, z, ширина, глибина
-const LOW_HEIGHT := 2.0
-const HIGH_TERRACE := Rect2(-9.0, -30.0, 18.0, 16.0)   # край на z = -14
-const HIGH_HEIGHT := 4.0
-## Площа з бруківкою на нижній терасі.
-const PLAZA := Rect2(-10.0, -6.0, 20.0, 16.0)
+## Місто рівне (висота 0); за еліпсом — пагорби.
+const BOWL_RADIUS := Vector2(66.0, 72.0)
+const BOWL_CENTER := Vector2(0.0, -2.0)
 
-## Сходи: [центр x, центр z, напрямок спуску (вектор XZ), висота верху, ширина].
-## Кожен марш — дві деталі по 2 м (підйом 1 м кожна).
-const STAIRS := [
-	[0.0, 14.0, Vector2(0, 1), 2.0, 4.0],      # з площі на південь, до галявини
-	[22.0, 0.0, Vector2(1, 0), 2.0, 4.0],      # на схід, до гаю
-	[-22.0, 0.0, Vector2(-1, 0), 2.0, 4.0],    # на захід, до пагорба
-	[0.0, -14.0, Vector2(0, 1), 4.0, 4.0],     # з площі вгору до порталу
-]
+const SPAWN := Vector3(0.0, 0.0, 54.0)
+const GATE := Vector3(0.0, 0.0, 40.0)
+const SQUARE := Rect2(-16.0, -16.0, 32.0, 28.0)          # x, z, ширина, глибина
+const MAIN_STREET := Rect2(-3.5, 12.0, 7.0, 30.0)
+const SMITH_STREET := Rect2(16.0, -5.5, 14.0, 7.0)
+const NORTH_LANE := Rect2(-3.0, -40.0, 6.0, 24.0)
+const FOUNTAIN := Vector3(0.0, 0.0, -1.0)
+const FOUNTAIN_RADIUS := 3.4
 
-## Чаша: за цим еліпсом земля здіймається пагорбами.
-const BOWL_RADIUS := Vector2(58.0, 60.0)
-const BOWL_CENTER := Vector2(0.0, 2.0)
-## Західний пагорб (камінь і трави) — плавний горб.
-const WEST_HILL := [Vector2(-40.0, 4.0), Vector2(11.0, 15.0), 1.8]
-
-const SPAWN := Vector3(0.0, 0.0, 34.0)
-const PORTAL := Vector3(0.0, HIGH_HEIGHT, -24.0)
-## Арка порталу (масштаб моделі дверної рами) і де стоять стовпчики з вогнем.
+const PORTAL := Vector3(0.0, 0.0, -42.0)
 const PORTAL_ARCH_SCALE := 1.75
 const PORTAL_FIRE_X := 3.6
 
-## Місця NPC (на площі, висота нижньої тераси) і куди вони дивляться (кут
-## навколо Y; 0 — на південь, до камери).
+## NPC: [місце, кут (0 — обличчям на південь, до камери)].
 const NPCS := {
-	&"elder": [Vector3(0.0, LOW_HEIGHT, 7.6), 0.0],
-	&"mentor": [Vector3(-12.5, LOW_HEIGHT, 4.0), 0.9],
-	&"smith": [Vector3(12.5, LOW_HEIGHT, 4.0), -0.9],
-	&"sage": [Vector3(-12.5, LOW_HEIGHT, -12.0), 0.7],
-	&"merchant": [Vector3(12.5, LOW_HEIGHT, -12.0), -0.7],
+	&"elder": [Vector3(0.0, 0.0, -11.5), 0.0],
+	&"mentor": [Vector3(-13.0, 0.0, -1.0), 1.2],
+	&"smith": [Vector3(20.5, 0.0, -0.5), -0.6],
+	&"sage": [Vector3(-16.0, 0.0, -14.5), 0.8],
+	&"merchant": [Vector3(12.0, 0.0, -3.0), -1.2],
 }
-## Центр площі: клумба з великим деревом.
-const PLAZA_TREE := Vector3(0.0, LOW_HEIGHT, 2.0)
-const PLAZA_TREE_RADIUS := 3.2
 
-## Стежки (ламані) для маски ґрунту.
-const PATHS := [
-	[Vector2(0, 50), Vector2(0, 40), Vector2(-2, 30), Vector2(0, 22), Vector2(0, 18)],
-	[Vector2(26, 0), Vector2(32, 3), Vector2(38, 8), Vector2(42, 16)],
-	[Vector2(-26, 0), Vector2(-32, -2), Vector2(-38, 2), Vector2(-42, 10)],
-	[Vector2(0, 14), Vector2(0, 11)],
+## Місця переваг перед походом: вечеря в таверні, точило в кузні,
+## казан Мудреця; скриня вдома.
+const TAVERN_TABLE := Vector3(6.4, 0.0, 26.0)
+const ANVIL := Vector3(22.5, 0.0, 1.8)
+const CAULDRON := Vector3(-13.6, 0.0, -16.6)
+const HOME_CHEST := Vector3(-6.6, 0.0, 30.5)
+const WELL := Vector3(-6.0, 0.0, 21.0)
+## Ліхтарні стовпи вздовж вулиць (з вогнем).
+const LAMPS := [Vector3(4.4, 0, 34.0), Vector3(-4.4, 0, 24.0), Vector3(4.4, 0, 14.0), Vector3(-17.0, 0, -15.0),
+	Vector3(17.0, 0, 12.5), Vector3(3.6, 0, -30.0)]
+
+## Будинки: [ім'я, центр XZ, поворот (0 — фасад на південь), spec для HouseKit].
+## Поворот 90 — фасад на схід (+X), -90 — на захід.
+const HOUSES := [
+	# Біля брами.
+	["home", Vector2(-9.0, 30.0), 90.0, {"w": 2, "d": 2, "floors": 2, "base": "brick", "door": 0, "chimney": true, "seed": 11}],
+	["house_w1", Vector2(-9.5, 19.5), 90.0, {"w": 2, "d": 3, "floors": 3, "base": "plaster", "door": 1, "seed": 12}],
+	["tavern", Vector2(11.0, 26.0), -90.0, {"w": 3, "d": 3, "floors": 2, "base": "brick", "door": 1, "chimney": true, "balcony": true, "seed": 13}],
+	["house_e1", Vector2(10.0, 15.5), -90.0, {"w": 2, "d": 2, "floors": 3, "base": "brick", "door": 0, "seed": 14}],
+	# Площа.
+	["townhall", Vector2(0.0, -23.0), 0.0, {"w": 4, "d": 4, "floors": 3, "base": "brick", "door": 1, "balcony": true, "chimney": true, "seed": 15}],
+	["house_n1", Vector2(-11.0, -31.0), 0.0, {"w": 2, "d": 2, "floors": 2, "base": "brick", "door": 1, "seed": 16}],
+	["house_n2", Vector2(11.5, -23.5), 0.0, {"w": 3, "d": 2, "floors": 2, "base": "plaster", "door": 1, "chimney": true, "seed": 17}],
+	["market_house", Vector2(22.0, -14.0), -90.0, {"w": 2, "d": 3, "floors": 2, "base": "brick", "door": 1, "seed": 18}],
+	["barracks", Vector2(-24.0, -8.0), 90.0, {"w": 2, "d": 4, "floors": 2, "base": "brick", "door": 2, "windows": "few", "seed": 19}],
+	["house_sw", Vector2(-21.0, 8.0), 90.0, {"w": 2, "d": 2, "floors": 2, "base": "plaster", "door": 0, "chimney": true, "seed": 20}],
+	["house_se", Vector2(21.0, 9.0), -90.0, {"w": 2, "d": 2, "floors": 2, "base": "brick", "door": 1, "seed": 21}],
+	# Кузня й бібліотека.
+	["smithy", Vector2(27.0, -2.0), -90.0, {"w": 2, "d": 3, "floors": 1, "base": "brick", "door": 1, "chimney": true, "seed": 22}],
+	["library", Vector2(-22.0, -22.0), 45.0, {"w": 2, "d": 2, "floors": 3, "base": "brick", "upper": "brick", "door": 0, "tower": true, "seed": 23}],
+	# Друга лінія й закутки — щоб місто було щільним.
+	["house_w2", Vector2(-17.0, 27.0), 90.0, {"w": 2, "d": 2, "floors": 2, "base": "brick", "door": 0, "chimney": true, "seed": 31}],
+	["house_w3", Vector2(-25.5, 24.0), 90.0, {"w": 2, "d": 3, "floors": 2, "base": "plaster", "door": 1, "seed": 32}],
+	["house_e2", Vector2(19.0, 25.0), -90.0, {"w": 2, "d": 2, "floors": 3, "base": "brick", "door": 1, "seed": 33}],
+	["house_e3", Vector2(26.5, 18.0), -90.0, {"w": 2, "d": 2, "floors": 2, "base": "plaster", "door": 0, "chimney": true, "seed": 34}],
+	["house_n3", Vector2(22.0, -27.0), 0.0, {"w": 2, "d": 2, "floors": 3, "base": "brick", "door": 0, "seed": 35}],
+	["house_nw", Vector2(-29.5, -16.0), 90.0, {"w": 2, "d": 2, "floors": 2, "base": "brick", "door": 1, "chimney": true, "seed": 36}],
+	["house_sq_sw", Vector2(-12.5, 17.0), 180.0, {"w": 2, "d": 2, "floors": 2, "base": "brick", "door": 1, "seed": 37}],
+	["house_sq_se", Vector2(13.0, 18.0), 180.0, {"w": 2, "d": 2, "floors": 2, "base": "plaster", "door": 0, "chimney": true, "seed": 38}],
+	# Брама: дві вежі.
+	["gate_w", Vector2(-5.0, 40.0), 0.0, {"w": 2, "d": 2, "floors": 3, "base": "brick", "upper": "brick", "door": -1, "windows": "few", "tower": true, "seed": 24}],
+	["gate_e", Vector2(5.0, 40.0), 0.0, {"w": 2, "d": 2, "floors": 3, "base": "brick", "upper": "brick", "door": -1, "windows": "few", "tower": true, "seed": 25}],
 ]
 
-# --- рельєф ---
-
-## На скільки земля під сходами нижча за підніжжя (її закривають сходинки
-## й поміст) і на скільки схил тераси захований углиб підпірної стіни.
-const STAIR_SINK := 0.35
-const EDGE_TUCK := 0.22
-
-## Висота для ФІЗИКИ: земля + рівні пандуси під сходами (герой іде по
-## пандусу, а бачить сходинки).
+## Висота землі: у місті рівно, за краєм — пагорби.
 static func height(x: float, z: float) -> float:
-	var h := ground(x, z)
-	for s: Array in STAIRS:
-		h = maxf(h, _ramp(x, z, s))
-	return h
+	return ground(x, z)
 
-## Земля без пандусів: чаша з горбиками, пагорб, тераси.
 static func ground(x: float, z: float) -> float:
-	var h := _bowl(x, z) + _bumps(x, z)
-	var hill: Array = WEST_HILL
-	var c: Vector2 = hill[0]
-	var r: Vector2 = hill[1]
-	var d := Vector2((x - c.x) / r.x, (z - c.y) / r.y).length()
-	h = maxf(h, float(hill[2]) * (1.0 - smoothstep(0.35, 1.0, d)) + _bumps(x, z))
-	# Біля підніжжя сходів земля рівна — щоб перша сходинка не тонула в
-	# горбику й не висіла над ямкою.
-	for s: Array in STAIRS:
-		if not is_equal_approx(float(s[3]), LOW_HEIGHT):
-			continue
-		var from := Vector2(s[0], s[1]) + (s[2] as Vector2) * 1.0
-		var to := Vector2(s[0], s[1]) + (s[2] as Vector2) * 6.0
-		var near := Geometry2D.get_closest_point_to_segment(Vector2(x, z), from, to).distance_to(Vector2(x, z))
-		h = lerpf(h, float(s[3]) - 2.0, 1.0 - smoothstep(2.6, 5.2, near))
-	h = maxf(h, _terrace(x, z, LOW_TERRACE, LOW_HEIGHT))
-	h = maxf(h, _terrace(x, z, HIGH_TERRACE, HIGH_HEIGHT))
-	return h
-
-## Де стоїть вершина ВИДИМОЇ землі для вузла сітки (x, z). Від фізики
-## відрізняється у двох місцях:
-##  - під сходами земля опущена — інакше схил накривав би сходинки, а їхні
-##    краї мерехтіли б крізь нього;
-##  - кільце вершин одразу за краєм тераси підсунуте під підпірну стіну —
-##    крутий схил ховається в товщі стіни, і стіну видно на всю висоту.
-static func visual_vertex(x: float, z: float) -> Vector3:
-	var p := Vector2(x, z)
-	for s: Array in STAIRS:
-		var rel := p - Vector2(s[0], s[1])
-		var dir: Vector2 = s[2]
-		var along := rel.dot(dir)
-		var side := absf(rel.dot(Vector2(-dir.y, dir.x)))
-		if side < float(s[4]) * 0.5 - 0.01 and along > 0.01 and along < 3.99:
-			return Vector3(x, float(s[3]) - 2.0 - STAIR_SINK, z)
-	var out := Vector3(x, ground(x, z), z)
-	for rect: Rect2 in [HIGH_TERRACE, LOW_TERRACE]:
-		var dx := maxf(rect.position.x - x, x - rect.end.x)
-		var dz := maxf(rect.position.y - z, z - rect.end.y)
-		var d := maxf(dx, dz)
-		if d > 0.01 and d < 1.01:
-			var cx := clampf(x, rect.position.x, rect.end.x)
-			var cz := clampf(z, rect.position.y, rect.end.y)
-			if dx > 0.01:
-				out.x = cx + signf(x - cx) * EDGE_TUCK
-			if dz > 0.01:
-				out.z = cz + signf(z - cz) * EDGE_TUCK
-			break
-	return out
-
-## Чаша довкола: рівно в середині, за краєм — пагорби вгору.
-static func _bowl(x: float, z: float) -> float:
 	var p := Vector2((x - BOWL_CENTER.x) / BOWL_RADIUS.x, (z - BOWL_CENTER.y) / BOWL_RADIUS.y)
 	var a := atan2(p.y, p.x)
-	var wobble := 1.0 + 0.08 * sin(a * 3.0 + 0.7) + 0.05 * sin(a * 7.0 + 2.1)
+	var wobble := 1.0 + 0.07 * sin(a * 3.0 + 0.7) + 0.05 * sin(a * 7.0 + 2.1)
 	var e := p.length() * wobble
+	var bumps := 0.12 * sin(x * 0.21 + z * 0.13) + 0.1 * sin(x * 0.07 - z * 0.19 + 1.3)
+	if e <= 0.82:
+		return 0.0
+	# Луки за містом — легкі горбики; далі — пагорби.
+	var meadow := smoothstep(0.82, 1.0, e) * bumps * 4.0
 	if e <= 1.0:
-		return 0.0
-	return minf(pow((e - 1.0) * 3.2, 1.4) * 9.0, 22.0)
+		return maxf(meadow, 0.0)
+	return maxf(meadow, 0.0) + minf(pow((e - 1.0) * 3.0, 1.4) * 10.0, 26.0)
 
-## Легкі горбики на траві (не на терасах — там рівно).
-static func _bumps(x: float, z: float) -> float:
-	return 0.18 * sin(x * 0.21 + z * 0.13) + 0.14 * sin(x * 0.07 - z * 0.19 + 1.3) \
-		+ 0.1 * sin(x * 0.43 + 2.0) * sin(z * 0.37)
+static func visual_vertex(x: float, z: float) -> Vector3:
+	return Vector3(x, ground(x, z), z)
 
-## Тераса: рівний верх, по краю — крутий схил 0.8 м (його ховає стіна).
-static func _terrace(x: float, z: float, rect: Rect2, top: float) -> float:
-	var dx := maxf(rect.position.x - x, x - rect.end.x)
-	var dz := maxf(rect.position.y - z, z - rect.end.y)
-	var d := maxf(dx, dz)
-	return top * (1.0 - smoothstep(0.0, 0.8, d))
+static func in_rect(x: float, z: float, rect: Rect2, margin: float = 0.0) -> bool:
+	return x > rect.position.x - margin and x < rect.end.x + margin and z > rect.position.y - margin and z < rect.end.y + margin
 
-## Пандус під сходами: від висоти верху до верх-2 на 4 м спуску.
-static func _ramp(x: float, z: float, stair: Array) -> float:
-	var center := Vector2(stair[0], stair[1])
-	var dir: Vector2 = stair[2]
-	var top: float = stair[3]
-	var width: float = stair[4]
-	var rel := Vector2(x, z) - center
-	var along := rel.dot(dir)          # 0 — початок спуску, +4 — низ
-	var side := absf(rel.dot(Vector2(-dir.y, dir.x)))
-	if side > width * 0.5 + 0.3 or along < -0.2 or along > 4.2:
-		return 0.0
-	return top - 2.0 * clampf(along / 4.0, 0.0, 1.0)
-
-# --- маски для шейдера землі (колір вершини) ---
-
-## r — стежка, g — камінь, b — тінь.
+## Маска землі для шейдера: r — утоптана земля, g — бруківка, b — тінь.
+## У місті під ногами земля з острівцями трави, вулиці й площа — бруківка
+## з нерівним краєм; за мурами — луки й ґрунтові дороги.
+const COBBLE_RECTS := [SQUARE, MAIN_STREET, SMITH_STREET, NORTH_LANE, Rect2(-3.5, 36.0, 7.0, 8.0)]
 static func mask(x: float, z: float, h: float) -> Color:
-	var path := 0.0
-	for line: Array in PATHS:
-		for i in line.size() - 1:
-			var a: Vector2 = line[i]
-			var b: Vector2 = line[i + 1]
-			var d := Geometry2D.get_closest_point_to_segment(Vector2(x, z), a, b).distance_to(Vector2(x, z))
-			path = maxf(path, 1.0 - smoothstep(1.0, 2.2, d))
-	var rock := 0.0
-	if h > 3.0 and not _inside(x, z, LOW_TERRACE, 0.5):
-		rock = clampf((h - 3.0) / 6.0, 0.0, 1.0) * (0.5 + 0.5 * sin(x * 0.3) * sin(z * 0.27))
-	var hill: Array = WEST_HILL
-	var hd := Vector2((x - hill[0].x) / hill[1].x, (z - hill[0].y) / hill[1].y).length()
-	rock = maxf(rock, (1.0 - smoothstep(0.2, 0.75, hd)) * 0.55)
-	# Тінь біля підніжжя терас.
-	var shade := 0.0
-	for rect: Rect2 in [LOW_TERRACE, HIGH_TERRACE]:
+	var wobble := 0.22 * sin(x * 0.9 + z * 0.4) + 0.16 * sin(z * 1.3 - x * 0.6)
+	var cobble := 0.0
+	for rect: Rect2 in COBBLE_RECTS:
 		var dx := maxf(rect.position.x - x, x - rect.end.x)
 		var dz := maxf(rect.position.y - z, z - rect.end.y)
-		var d := maxf(dx, dz)
-		if d > 0.0:
-			shade = maxf(shade, 1.0 - smoothstep(0.6, 2.6, d))
-	return Color(path, rock, shade * 0.8)
-
-static func _inside(x: float, z: float, rect: Rect2, margin: float) -> bool:
-	return x > rect.position.x - margin and x < rect.end.x + margin and z > rect.position.y - margin and z < rect.end.y + margin
+		cobble = maxf(cobble, 1.0 - smoothstep(-0.6, 0.6, maxf(dx, dz) + wobble))
+	var town := x > -33.0 and x < 33.0 and z > -50.0 and z < 39.0
+	var patches := 0.5 + 0.5 * sin(x * 0.23 + 1.7) * sin(z * 0.19 - 0.6) + 0.25 * sin(x * 0.61 - z * 0.47)
+	var dirt := clampf(0.35 + patches * 0.6, 0.0, 1.0) if town else 0.0
+	for line: Array in [[Vector2(0, 90), Vector2(0, 58), Vector2(0, 42)], [Vector2(30, 0), Vector2(44, 6), Vector2(58, 18)],
+			[Vector2(0, -40), Vector2(-2, -52)]]:
+		for i in line.size() - 1:
+			var d := Geometry2D.get_closest_point_to_segment(Vector2(x, z), line[i], line[i + 1]).distance_to(Vector2(x, z))
+			dirt = maxf(dirt, 1.0 - smoothstep(1.4, 3.0, d))
+	return Color(dirt, cobble, 0.0)

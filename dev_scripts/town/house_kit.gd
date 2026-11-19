@@ -90,7 +90,8 @@ static func _wall(root: Node3D, style: String, kind: String, pos: Vector3, yaw: 
 		"door":
 			_put(root, prefix + "Door_Round", pos, yaw)
 			_put(root, "DoorFrame_Round_Brick" if style == "brick" else "DoorFrame_Round_WoodDark", pos, yaw)
-			_put(root, "Door_1_Round", pos, yaw)
+			# Модель дверей має початок на завісі (0..1.07 м) — центруємо в прорізі.
+			_put(root, "Door_1_Round", pos + Basis(Vector3.UP, deg_to_rad(yaw)) * Vector3(-0.51, 0, 0), yaw)
 		"window":
 			var round := rng.randf() < 0.5
 			_put(root, prefix + ("Window_Wide_Round" if round else "Window_Wide_Flat"), pos, yaw)

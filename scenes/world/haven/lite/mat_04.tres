@@ -1,11 +1,10 @@
 [gd_resource type="StandardMaterial3D" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/models/haven/village/T_Brick_BaseColor.png" id="1_al3ni"]
-
 [resource]
-resource_name = "MI_Brick"
+resource_name = "MI_WindowGlass"
+transparency = 4
 cull_mode = 2
 shading_mode = 2
-albedo_texture = ExtResource("1_al3ni")
+albedo_color = Color(0.9063318, 0.9063318, 0.9063318, 0.095454514)
 metallic_specular = 0.3
 roughness = 0.9

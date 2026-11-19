@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "DarkGrey"
+shading_mode = 2
+albedo_color = Color(0.45679015, 0.45679015, 0.45679015, 1)
+metallic_specular = 0.3
+roughness = 0.9
+emission_enabled = true
+emission = Color(0.50665694, 0.50665694, 0.50665694, 1)
+emission_energy_multiplier = 0.0

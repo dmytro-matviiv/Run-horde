@@ -1,179 +1,209 @@
 [gd_scene format=3]
 
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_camp.res" id="1_rhme5"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_plaza.res" id="2_thd12"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_upper.res" id="3_qrtx8"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_1.res" id="4_julpw"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_2.res" id="5_uesog"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_3.res" id="6_so5m6"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_0_4.res" id="7_wsxcn"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_0.res" id="8_o2yc6"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_1.res" id="9_0ecs8"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_2.res" id="10_8n0gv"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_3.res" id="11_qr3rn"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_4.res" id="12_4irlm"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_5.res" id="13_qk2s1"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_0.res" id="14_ihpi2"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_1.res" id="15_klrj2"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_2.res" id="16_yseqm"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_3.res" id="17_380kt"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_4.res" id="18_8848h"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_5.res" id="19_evw33"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_0.res" id="20_u40fv"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_1.res" id="21_5jh6u"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_2.res" id="22_m5gve"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_3.res" id="23_ovv7o"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_4.res" id="24_k5j1a"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_5.res" id="25_c86g2"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_0.res" id="26_lgg0y"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_1.res" id="27_hm6av"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_2.res" id="28_dm8qm"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_3.res" id="29_0v6mt"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_4.res" id="30_1impl"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_5.res" id="31_v3e8q"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_1.res" id="32_7t6hv"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_2.res" id="33_dadk1"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_3.res" id="34_tyr2h"]
-[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_4.res" id="35_v05n8"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_gate.res" id="1_wsxcn"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_north.res" id="2_o2yc6"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_square_0.res" id="3_0ecs8"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/arch_square_1.res" id="4_8n0gv"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_1.res" id="5_qr3rn"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_2.res" id="6_4irlm"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_3.res" id="7_qk2s1"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_4.res" id="8_ihpi2"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_5.res" id="9_klrj2"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_1_6.res" id="10_yseqm"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_1.res" id="11_380kt"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_2.res" id="12_8848h"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_3.res" id="13_evw33"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_4.res" id="14_u40fv"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_5.res" id="15_5jh6u"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_2_6.res" id="16_m5gve"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_0.res" id="17_ovv7o"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_1.res" id="18_k5j1a"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_2.res" id="19_c86g2"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_3.res" id="20_lgg0y"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_4.res" id="21_hm6av"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_5.res" id="22_dm8qm"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_3_6.res" id="23_0v6mt"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_1.res" id="24_1impl"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_2.res" id="25_v3e8q"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_3.res" id="26_7t6hv"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_4.res" id="27_dadk1"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_5.res" id="28_tyr2h"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_4_6.res" id="29_v05n8"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_1.res" id="30_o16lj"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_2.res" id="31_ac0gg"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_3.res" id="32_by2e8"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_4.res" id="33_1scvo"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_5.res" id="34_6usk1"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_5_6.res" id="35_7ocbu"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_6_1.res" id="36_unrcj"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_6_2.res" id="37_cxc84"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_6_3.res" id="38_gxhn5"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_6_4.res" id="39_fs5i5"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_6_5.res" id="40_botkl"]
+[ext_resource type="ArrayMesh" path="res://scenes/world/haven/lite/nature_6_6.res" id="41_pi8sy"]
 
-[node name="Lite" type="Node3D" unique_id=1348209703]
+[node name="Lite" type="Node3D" unique_id=1191533621]
 
-[node name="ArchCamp" type="MeshInstance3D" parent="." unique_id=748115045]
+[node name="ArchGate" type="MeshInstance3D" parent="." unique_id=1148424898]
 cast_shadow = 0
-mesh = ExtResource("1_rhme5")
+mesh = ExtResource("1_wsxcn")
 
-[node name="ArchPlaza" type="MeshInstance3D" parent="." unique_id=531320877]
+[node name="ArchNorth" type="MeshInstance3D" parent="." unique_id=370640562]
 cast_shadow = 0
-mesh = ExtResource("2_thd12")
+mesh = ExtResource("2_o2yc6")
 
-[node name="ArchUpper" type="MeshInstance3D" parent="." unique_id=1951594033]
+[node name="ArchSquare0" type="MeshInstance3D" parent="." unique_id=902007665]
 cast_shadow = 0
-mesh = ExtResource("3_qrtx8")
+mesh = ExtResource("3_0ecs8")
 
-[node name="Nature01" type="MeshInstance3D" parent="." unique_id=2116774547]
+[node name="ArchSquare1" type="MeshInstance3D" parent="." unique_id=486460072]
 cast_shadow = 0
-mesh = ExtResource("4_julpw")
+mesh = ExtResource("4_8n0gv")
 
-[node name="Nature02" type="MeshInstance3D" parent="." unique_id=1776105722]
+[node name="Nature11" type="MeshInstance3D" parent="." unique_id=952967201]
 cast_shadow = 0
-mesh = ExtResource("5_uesog")
+mesh = ExtResource("5_qr3rn")
 
-[node name="Nature03" type="MeshInstance3D" parent="." unique_id=1921300400]
+[node name="Nature12" type="MeshInstance3D" parent="." unique_id=1074979677]
 cast_shadow = 0
-mesh = ExtResource("6_so5m6")
+mesh = ExtResource("6_4irlm")
 
-[node name="Nature04" type="MeshInstance3D" parent="." unique_id=2095824038]
+[node name="Nature13" type="MeshInstance3D" parent="." unique_id=1554604133]
 cast_shadow = 0
-mesh = ExtResource("7_wsxcn")
+mesh = ExtResource("7_qk2s1")
 
-[node name="Nature10" type="MeshInstance3D" parent="." unique_id=846826922]
+[node name="Nature14" type="MeshInstance3D" parent="." unique_id=900906077]
 cast_shadow = 0
-mesh = ExtResource("8_o2yc6")
+mesh = ExtResource("8_ihpi2")
 
-[node name="Nature11" type="MeshInstance3D" parent="." unique_id=218419721]
+[node name="Nature15" type="MeshInstance3D" parent="." unique_id=1143696048]
 cast_shadow = 0
-mesh = ExtResource("9_0ecs8")
+mesh = ExtResource("9_klrj2")
 
-[node name="Nature12" type="MeshInstance3D" parent="." unique_id=1358121801]
+[node name="Nature16" type="MeshInstance3D" parent="." unique_id=453178607]
 cast_shadow = 0
-mesh = ExtResource("10_8n0gv")
+mesh = ExtResource("10_yseqm")
 
-[node name="Nature13" type="MeshInstance3D" parent="." unique_id=339218557]
+[node name="Nature21" type="MeshInstance3D" parent="." unique_id=1411477211]
 cast_shadow = 0
-mesh = ExtResource("11_qr3rn")
+mesh = ExtResource("11_380kt")
 
-[node name="Nature14" type="MeshInstance3D" parent="." unique_id=692519592]
+[node name="Nature22" type="MeshInstance3D" parent="." unique_id=972535261]
 cast_shadow = 0
-mesh = ExtResource("12_4irlm")
+mesh = ExtResource("12_8848h")
 
-[node name="Nature15" type="MeshInstance3D" parent="." unique_id=1939378085]
+[node name="Nature23" type="MeshInstance3D" parent="." unique_id=239834356]
 cast_shadow = 0
-mesh = ExtResource("13_qk2s1")
+mesh = ExtResource("13_evw33")
 
-[node name="Nature20" type="MeshInstance3D" parent="." unique_id=319671269]
+[node name="Nature24" type="MeshInstance3D" parent="." unique_id=1796484936]
 cast_shadow = 0
-mesh = ExtResource("14_ihpi2")
+mesh = ExtResource("14_u40fv")
 
-[node name="Nature21" type="MeshInstance3D" parent="." unique_id=1627561416]
+[node name="Nature25" type="MeshInstance3D" parent="." unique_id=49703306]
 cast_shadow = 0
-mesh = ExtResource("15_klrj2")
+mesh = ExtResource("15_5jh6u")
 
-[node name="Nature22" type="MeshInstance3D" parent="." unique_id=270285558]
+[node name="Nature26" type="MeshInstance3D" parent="." unique_id=840991690]
 cast_shadow = 0
-mesh = ExtResource("16_yseqm")
+mesh = ExtResource("16_m5gve")
 
-[node name="Nature23" type="MeshInstance3D" parent="." unique_id=877881418]
+[node name="Nature30" type="MeshInstance3D" parent="." unique_id=879477998]
 cast_shadow = 0
-mesh = ExtResource("17_380kt")
+mesh = ExtResource("17_ovv7o")
 
-[node name="Nature24" type="MeshInstance3D" parent="." unique_id=990583426]
+[node name="Nature31" type="MeshInstance3D" parent="." unique_id=536158133]
 cast_shadow = 0
-mesh = ExtResource("18_8848h")
+mesh = ExtResource("18_k5j1a")
 
-[node name="Nature25" type="MeshInstance3D" parent="." unique_id=1228163541]
+[node name="Nature32" type="MeshInstance3D" parent="." unique_id=94916197]
 cast_shadow = 0
-mesh = ExtResource("19_evw33")
+mesh = ExtResource("19_c86g2")
 
-[node name="Nature30" type="MeshInstance3D" parent="." unique_id=1689913716]
+[node name="Nature33" type="MeshInstance3D" parent="." unique_id=590956062]
 cast_shadow = 0
-mesh = ExtResource("20_u40fv")
+mesh = ExtResource("20_lgg0y")
 
-[node name="Nature31" type="MeshInstance3D" parent="." unique_id=319744435]
+[node name="Nature34" type="MeshInstance3D" parent="." unique_id=757172948]
 cast_shadow = 0
-mesh = ExtResource("21_5jh6u")
+mesh = ExtResource("21_hm6av")
 
-[node name="Nature32" type="MeshInstance3D" parent="." unique_id=2014504657]
+[node name="Nature35" type="MeshInstance3D" parent="." unique_id=2010354459]
 cast_shadow = 0
-mesh = ExtResource("22_m5gve")
+mesh = ExtResource("22_dm8qm")
 
-[node name="Nature33" type="MeshInstance3D" parent="." unique_id=294722648]
+[node name="Nature36" type="MeshInstance3D" parent="." unique_id=898295541]
 cast_shadow = 0
-mesh = ExtResource("23_ovv7o")
+mesh = ExtResource("23_0v6mt")
 
-[node name="Nature34" type="MeshInstance3D" parent="." unique_id=1671953377]
+[node name="Nature41" type="MeshInstance3D" parent="." unique_id=1576333950]
 cast_shadow = 0
-mesh = ExtResource("24_k5j1a")
+mesh = ExtResource("24_1impl")
 
-[node name="Nature35" type="MeshInstance3D" parent="." unique_id=1187667653]
+[node name="Nature42" type="MeshInstance3D" parent="." unique_id=335947242]
 cast_shadow = 0
-mesh = ExtResource("25_c86g2")
+mesh = ExtResource("25_v3e8q")
 
-[node name="Nature40" type="MeshInstance3D" parent="." unique_id=508422598]
+[node name="Nature43" type="MeshInstance3D" parent="." unique_id=1311642051]
 cast_shadow = 0
-mesh = ExtResource("26_lgg0y")
+mesh = ExtResource("26_7t6hv")
 
-[node name="Nature41" type="MeshInstance3D" parent="." unique_id=251921330]
+[node name="Nature44" type="MeshInstance3D" parent="." unique_id=1270641301]
 cast_shadow = 0
-mesh = ExtResource("27_hm6av")
+mesh = ExtResource("27_dadk1")
 
-[node name="Nature42" type="MeshInstance3D" parent="." unique_id=1628738533]
+[node name="Nature45" type="MeshInstance3D" parent="." unique_id=662614315]
 cast_shadow = 0
-mesh = ExtResource("28_dm8qm")
+mesh = ExtResource("28_tyr2h")
 
-[node name="Nature43" type="MeshInstance3D" parent="." unique_id=1998650490]
+[node name="Nature46" type="MeshInstance3D" parent="." unique_id=199895840]
 cast_shadow = 0
-mesh = ExtResource("29_0v6mt")
+mesh = ExtResource("29_v05n8")
 
-[node name="Nature44" type="MeshInstance3D" parent="." unique_id=1340862653]
+[node name="Nature51" type="MeshInstance3D" parent="." unique_id=1362684107]
 cast_shadow = 0
-mesh = ExtResource("30_1impl")
+mesh = ExtResource("30_o16lj")
 
-[node name="Nature45" type="MeshInstance3D" parent="." unique_id=1998662681]
+[node name="Nature52" type="MeshInstance3D" parent="." unique_id=45374197]
 cast_shadow = 0
-mesh = ExtResource("31_v3e8q")
+mesh = ExtResource("31_ac0gg")
 
-[node name="Nature51" type="MeshInstance3D" parent="." unique_id=2060454803]
+[node name="Nature53" type="MeshInstance3D" parent="." unique_id=282597868]
 cast_shadow = 0
-mesh = ExtResource("32_7t6hv")
+mesh = ExtResource("32_by2e8")
 
-[node name="Nature52" type="MeshInstance3D" parent="." unique_id=1612645184]
+[node name="Nature54" type="MeshInstance3D" parent="." unique_id=755482282]
 cast_shadow = 0
-mesh = ExtResource("33_dadk1")
+mesh = ExtResource("33_1scvo")
 
-[node name="Nature53" type="MeshInstance3D" parent="." unique_id=1995104877]
+[node name="Nature55" type="MeshInstance3D" parent="." unique_id=13510293]
 cast_shadow = 0
-mesh = ExtResource("34_tyr2h")
+mesh = ExtResource("34_6usk1")
 
-[node name="Nature54" type="MeshInstance3D" parent="." unique_id=1442967938]
+[node name="Nature56" type="MeshInstance3D" parent="." unique_id=1698270253]
 cast_shadow = 0
-mesh = ExtResource("35_v05n8")
+mesh = ExtResource("35_7ocbu")
+
+[node name="Nature61" type="MeshInstance3D" parent="." unique_id=1163911383]
+cast_shadow = 0
+mesh = ExtResource("36_unrcj")
+
+[node name="Nature62" type="MeshInstance3D" parent="." unique_id=895610702]
+cast_shadow = 0
+mesh = ExtResource("37_cxc84")
+
+[node name="Nature63" type="MeshInstance3D" parent="." unique_id=759634275]
+cast_shadow = 0
+mesh = ExtResource("38_gxhn5")
+
+[node name="Nature64" type="MeshInstance3D" parent="." unique_id=939483025]
+cast_shadow = 0
+mesh = ExtResource("39_fs5i5")
+
+[node name="Nature65" type="MeshInstance3D" parent="." unique_id=138457217]
+cast_shadow = 0
+mesh = ExtResource("40_botkl")
+
+[node name="Nature66" type="MeshInstance3D" parent="." unique_id=640305612]
+cast_shadow = 0
+mesh = ExtResource("41_pi8sy")

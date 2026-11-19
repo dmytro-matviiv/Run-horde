@@ -1,14 +1,11 @@
 [gd_resource type="StandardMaterial3D" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/models/haven/nature/Bark_NormalTree.png" id="1_vucjo"]
-
 [resource]
-resource_name = "Bark_NormalTree"
-transparency = 2
-alpha_scissor_threshold = 0.2
-alpha_antialiasing_mode = 0
-cull_mode = 2
+resource_name = "DarkGrey"
 shading_mode = 2
-albedo_texture = ExtResource("1_vucjo")
+albedo_color = Color(0.3778175, 0.3778175, 0.3778175, 1)
 metallic_specular = 0.3
 roughness = 0.9
+emission_enabled = true
+emission = Color(0.41998947, 0.41998947, 0.41998947, 1)
+emission_energy_multiplier = 0.0

@@ -1,14 +1,15 @@
 [gd_resource type="StandardMaterial3D" format=3]
 
-[ext_resource type="Texture2D" path="res://assets/models/haven/nature/Flowers.png" id="1_l0gts"]
+[ext_resource type="Texture2D" path="res://assets/models/haven/village/T_VineLeaf_png.png" id="1_l0gts"]
 
 [resource]
-resource_name = "Flowers"
+resource_name = "MI_Vine"
 transparency = 2
-alpha_scissor_threshold = 0.2
+alpha_scissor_threshold = 0.5
 alpha_antialiasing_mode = 0
 cull_mode = 2
 shading_mode = 2
+albedo_color = Color(0.35313797, 0.62507975, 0, 1)
 albedo_texture = ExtResource("1_l0gts")
 metallic_specular = 0.3
 roughness = 0.9

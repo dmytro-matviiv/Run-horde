@@ -59,7 +59,7 @@ const LITE_SCENE := "res://scenes/world/haven/haven_lite.tscn"
 ## Місця підготовки до походу: id переваги (Boons) -> де стоїть.
 ## Багаття — у таборі біля місця появи; точило — ковадло Коваля; казан —
 ## у Мудреця (так само, як їх ставить будівник).
-const CAMP_FIRE := Vector3(4.5, 0.0, 31.0)
+const CAMP_FIRE := HavenLayout.TAVERN_TABLE
 ## Загублені скрині Торговки: за возом, на західному пагорбі, на краю гаю,
 ## за порталом, на південно-східній галявині.
 const CACHES := {
@@ -69,7 +69,7 @@ const CACHES := {
 const CACHE_GOLD := 120
 const INVENTORY_SCENE := "res://scenes/ui/inventory.tscn"
 ## Скриня вдома: біля дверей будинку героя (західний, біля Наставниці).
-const HOME_CHEST := Vector3(-13.4, 0.0, 10.6)
+const HOME_CHEST := HavenLayout.HOME_CHEST
 const CHEST_MODEL := "res://assets/models/haven/props/Chest_Wood.gltf"
 const BATCH_GROUPS := {"Architecture": 0.0, "Nature": 40.0}
 ## Як часто перераховувати, куди веде навчання (сама стрілка рухається
@@ -132,13 +132,13 @@ func _ready() -> void:
 	_spawn_portal()
 	_wrap_resources()
 	_build_spots()
-	_build_caches()
 	_build_home_chest()
 	_build_guide()
 	GameState.quests_changed.connect(_on_quests_changed)
 	_on_quests_changed()
 
 	_light_fires()
+	_start_fountain()
 	_refresh_spots()
 	GameState.overlay_host = self
 	await get_tree().process_frame
@@ -157,6 +157,7 @@ func _load_detail() -> void:
 	_detail_lite = lite
 	_detail = (load(LITE_SCENE if lite else DETAIL_SCENE) as PackedScene).instantiate()
 	add_child(_detail)
+	_fade_near_camera(_detail)
 	if not lite:
 		for group: String in BATCH_GROUPS:
 			if _detail.has_node(group):
@@ -164,6 +165,29 @@ func _load_detail() -> void:
 	# Дерева на зруб, каміння й трави — окремі вузли: їм легкі матеріали.
 	if has_node("Resources"):
 		HavenLite.apply($Resources, lite)
+
+## Будинки й дерева між камерою та героєм розчиняються (дизеринг за
+## відстанню до камери): дах ніколи не закриває героя. Герой — за ~11.5 м.
+const FADE_NEAR := 5.0
+const FADE_FAR := 8.5
+func _fade_near_camera(root: Node) -> void:
+	var done := {}
+	for group: String in ["Architecture", "Nature/BigTrees", "Nature/Forest", "Lite"]:
+		var holder := root.get_node_or_null(group) if group != "Lite" else (root if root.name == "Lite" else null)
+		if holder == null:
+			continue
+		for node in holder.find_children("*", "MeshInstance3D", true, false):
+			var visual := node as MeshInstance3D
+			if visual.mesh == null:
+				continue
+			for s in visual.mesh.get_surface_count():
+				var material := visual.get_active_material(s) as BaseMaterial3D
+				if material == null or done.has(material):
+					continue
+				done[material] = true
+				material.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_DITHER
+				material.distance_fade_min_distance = FADE_NEAR
+				material.distance_fade_max_distance = FADE_FAR
 
 ## Гра сама опустила якість посеред локації (телефон не встигав) —
 ## міняємо деталі на легкий варіант.
@@ -235,6 +259,34 @@ func _wrap_resources() -> void:
 
 ## Вогонь у багатті й на стовпцях біля сходів: язики полум'я й теплий
 ## відсвіт — без справжнього світла (телефону його не рахувати).
+## Бризки фонтана: краплі злітають із маківки й падають у чаші.
+func _start_fountain() -> void:
+	var spray := get_node_or_null("Water/Spray") as Node3D
+	if spray == null:
+		return
+	var drops := CPUParticles3D.new()
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.05
+	mesh.height = 0.1
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.75, 0.92, 1.0, 0.85)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh.material = material
+	drops.mesh = mesh
+	drops.amount = PerfSettings.scaled_count(40)
+	drops.lifetime = 1.1
+	drops.direction = Vector3.UP
+	drops.spread = 70.0
+	drops.initial_velocity_min = 1.6
+	drops.initial_velocity_max = 2.4
+	drops.gravity = Vector3(0, -6.0, 0)
+	drops.scale_amount_min = 0.6
+	drops.scale_amount_max = 1.2
+	spray.add_child(drops)
+
 func _light_fires() -> void:
 	if not has_node("Effects"):
 		return
@@ -260,9 +312,9 @@ func _boon_position(id: String) -> Vector3:
 		"meal":
 			return Vector3(CAMP_FIRE.x, HavenLayout.height(CAMP_FIRE.x, CAMP_FIRE.z), CAMP_FIRE.z)
 		"sharp":
-			return _station_point(&"smith", Vector3(0.0, 0, 1.4))
+			return HavenLayout.ANVIL
 		_:
-			return _station_point(&"sage", Vector3(-2.4, 0, -1.0))
+			return HavenLayout.CAULDRON
 
 func _station_point(npc: StringName, local: Vector3) -> Vector3:
 	var info: Array = HavenLayout.NPCS[npc]
@@ -385,8 +437,6 @@ func _refresh_bag() -> void:
 	if _bag == null:
 		return
 	var parts := PackedStringArray()
-	for resource: String in Boons.RESOURCE_TITLES:
-		parts.append("%s %d" % [Boons.RESOURCE_TITLES[resource], int(GameState.resources.get(resource, 0))])
 	var text := "  ".join(parts)
 	if not GameState.character.is_empty():
 		var need := GameState.xp_for(GameState.hero_level)

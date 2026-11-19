@@ -1,0 +1,11 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "DarkBrown"
+shading_mode = 2
+albedo_color = Color(0.41426635, 0.34165692, 0.24530047, 1)
+metallic_specular = 0.3
+roughness = 0.9
+emission_enabled = true
+emission = Color(0.45998973, 0.38030553, 0.27456054, 1)
+emission_energy_multiplier = 0.0

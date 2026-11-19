@@ -63,7 +63,6 @@ func _ready() -> void:
 	_build_environment()
 	_build_houses()
 	_build_town_wall()
-	_build_paving()
 	_build_fountain()
 	_build_market()
 	_build_training_yard()
@@ -110,7 +109,7 @@ func _build_environment() -> void:
 	e.tonemap_white = 5.5
 	e.fog_enabled = false
 	e.adjustment_enabled = true
-	e.adjustment_saturation = 1.18
+	e.adjustment_saturation = 1.06
 	e.adjustment_contrast = 1.06
 	e.adjustment_brightness = 1.03
 	env.environment = e
@@ -206,171 +205,20 @@ func _build_town_wall() -> void:
 
 # --- бруківка: плитки 2×2 м ---
 
-func _build_paving() -> void:
-	var tiles := {}
-	for rect: Rect2 in [L.SQUARE, L.MAIN_STREET, L.SMITH_STREET, L.NORTH_LANE, Rect2(-3.0, 36.0, 6.0, 8.0)]:
-		var x := rect.position.x
-		while x < rect.end.x - 0.01:
-			var z := rect.position.y
-			while z < rect.end.y - 0.01:
-				tiles[Vector2i(roundi(x + 1.0), roundi(z + 1.0))] = true
-				z += 2.0
-			x += 2.0
-	var kinds := ["Floor_UnevenBrick.gltf", "Floor_UnevenBrick.gltf", "Floor_Brick.gltf"]
-	for cell: Vector2i in tiles:
-		var kind: String = kinds[0] if not L.in_rect(cell.x, cell.y, L.SQUARE) else kinds[_rng.randi() % kinds.size()]
-		_place(V + kind, "Architecture/Paving", Vector3(cell.x, 0.02, cell.y), PI * 0.5 * (_rng.randi() % 4))
-
 # --- фонтан посеред площі ---
 
-func _build_fountain() -> void:
-	var at := L.FOUNTAIN
-	var stone := StandardMaterial3D.new()
-	stone.albedo_texture = load(V + "T_UnevenBrick_BaseColor.png") if ResourceLoader.exists(V + "T_UnevenBrick_BaseColor.png") else null
-	stone.albedo_color = Color(0.92, 0.9, 0.86)
-	stone.uv1_scale = Vector3(3.0, 1.0, 1.0)
-	stone.roughness = 0.9
-	var rim := CylinderMesh.new()
-	rim.top_radius = L.FOUNTAIN_RADIUS
-	rim.bottom_radius = L.FOUNTAIN_RADIUS + 0.15
-	rim.height = 0.8
-	rim.radial_segments = 28
-	rim.material = stone
-	_place_mesh(rim, "Architecture/Fountain", at + Vector3(0, 0.4, 0), 0.0, Vector3.ONE)
-	var water := CylinderMesh.new()
-	water.top_radius = L.FOUNTAIN_RADIUS - 0.25
-	water.bottom_radius = L.FOUNTAIN_RADIUS - 0.25
-	water.height = 0.05
-	water.radial_segments = 28
-	var water_mat := StandardMaterial3D.new()
-	water_mat.albedo_color = Color(0.25, 0.55, 0.72)
-	water_mat.roughness = 0.08
-	water_mat.metallic_specular = 0.9
-	water_mat.emission_enabled = true
-	water_mat.emission = Color(0.05, 0.16, 0.22)
-	water.material = water_mat
-	_place_mesh(water, "Architecture/Fountain", at + Vector3(0, 0.76, 0), 0.0, Vector3.ONE)
-	var column := CylinderMesh.new()
-	column.top_radius = 0.45
-	column.bottom_radius = 0.7
-	column.height = 2.2
-	column.radial_segments = 14
-	column.material = stone
-	_place_mesh(column, "Architecture/Fountain", at + Vector3(0, 1.1, 0), 0.0, Vector3.ONE)
-	var bowl := CylinderMesh.new()
-	bowl.top_radius = 1.35
-	bowl.bottom_radius = 0.55
-	bowl.height = 0.45
-	bowl.radial_segments = 20
-	bowl.material = stone
-	_place_mesh(bowl, "Architecture/Fountain", at + Vector3(0, 2.3, 0), 0.0, Vector3.ONE)
-	var top_water := CylinderMesh.new()
-	top_water.top_radius = 1.2
-	top_water.bottom_radius = 1.2
-	top_water.height = 0.04
-	top_water.radial_segments = 20
-	top_water.material = water_mat
-	_place_mesh(top_water, "Architecture/Fountain", at + Vector3(0, 2.5, 0), 0.0, Vector3.ONE)
-	_place(P + "Vase_4.gltf", "Architecture/Fountain", at + Vector3(0, 2.52, 0), 0.0, Vector3.ONE * 1.5)
-	_boxes.append([at + Vector3(0, 1.0, 0), Vector3(L.FOUNTAIN_RADIUS * 1.6, 2.0, L.FOUNTAIN_RADIUS * 1.6)])
-	_fountain_marker = at + Vector3(0, 2.7, 0)
-	# Лавки довкола.
-	for a: float in [0.35, 2.8, 3.5, 5.9]:
-		var p := at + Vector3(sin(a), 0, cos(a)) * (L.FOUNTAIN_RADIUS + 2.2)
-		_place(P + "Bench.gltf", "Architecture/Props", p, a + PI)
-	# Дерева в кутах площі.
-	for corner: Vector2 in [Vector2(-13.5, 9.0), Vector2(13.5, 9.0)]:
-		_place(N + "CommonTree_%d.gltf" % (1 + _rng.randi() % 3), "Nature/BigTrees", Vector3(corner.x, 0, corner.y), _rng.randf() * TAU, Vector3.ONE * 0.9)
-		_shade.append([corner, 3.0])
-
-var _fountain_marker := Vector3.ZERO
 
 # --- ринок (Торговка Олеся) ---
 
-func _build_market() -> void:
-	var stalls := [[Vector3(14.0, 0, -9.0), -PI * 0.5], [Vector3(14.0, 0, 3.0), -PI * 0.5], [Vector3(8.0, 0, -12.5), 0.0]]
-	var goods := ["FarmCrate_Apple.gltf", "FarmCrate_Carrot.gltf", "Barrel_Apples.gltf", "Crate_Wooden.gltf", "Bag.gltf"]
-	for s: Array in stalls:
-		_place(P + "Stall_Empty.gltf", "Architecture/Stalls", s[0], s[1])
-		for k in 3:
-			var off := Basis(Vector3.UP, float(s[1])) * Vector3(-1.2 + k * 1.2, 0, 1.6)
-			_place(P + goods[_rng.randi() % goods.size()], "Architecture/Props", s[0] + off, _rng.randf() * TAU)
-	_place(P + "Stall_Cart_Empty.gltf", "Architecture/Stalls", Vector3(14.5, 0, -3.0), -PI * 0.5)
-	_place(P + "Barrel.gltf", "Architecture/Props", Vector3(15.5, 0, -0.6), 0.3)
-	_place(P + "Crate_Wooden.gltf", "Architecture/Props", Vector3(15.6, 0, 0.4), 0.8)
-	_place(V + "Prop_Wagon.gltf", "Architecture/Props", Vector3(6.5, 0, 34.5), 0.3)
-
 # --- тренувальний двір (Наставниця Дарина) ---
-
-func _build_training_yard() -> void:
-	var yard := Rect2(-22.0, -4.0, 6.0, 8.0)
-	# Опудала й стійки.
-	for p: Vector3 in [Vector3(-19.5, 0, -2.5), Vector3(-19.5, 0, 0.5), Vector3(-19.5, 0, 3.5)]:
-		_place(P + "Dummy.gltf", "Architecture/Props", p, PI * 0.5, Vector3.ONE * 1.25)
-	_place(P + "WeaponStand.gltf", "Architecture/Props", Vector3(-15.8, 0, -5.2), PI * 0.5)
-	_place(P + "Shield_Wooden.gltf", "Architecture/Props", Vector3(-16.6, 0.6, -5.6), 0.3)
-	_place(P + "Barrel_Holder.gltf", "Architecture/Props", Vector3(-16.2, 0, 5.0), 0.0)
-	# Огорожа з трьох боків.
-	var fence := V + "Prop_WoodenFence_Single.gltf"
-	for i in 4:
-		_place(fence, "Architecture/Fences", Vector3(yard.position.x + 1.0 + i * 2.0 - 1.0, 0, yard.position.y - 1.0), 0.0)
-		_place(fence, "Architecture/Fences", Vector3(yard.position.x + 1.0 + i * 2.0 - 1.0, 0, yard.end.y + 1.0), 0.0)
-	_place(K + "flag-wide.glb", "Architecture/Decor", Vector3(-15.5, 0, 6.0), PI * 0.5, Vector3.ONE * 1.6)
 
 # --- кузня (Коваль Богдан) ---
 
-func _build_smithy() -> void:
-	var a := L.ANVIL
-	_place(P + "Anvil_Log.gltf", "Architecture/Props", a, 0.2, Vector3.ONE * 1.3)
-	_place(P + "Workbench.gltf", "Architecture/Props", a + Vector3(1.6, 0, -2.6), -PI * 0.5)
-	_place(P + "Whetstone.gltf", "Architecture/Props", a + Vector3(-1.8, 0, 1.0), 0.5)
-	_place(P + "WeaponStand.gltf", "Architecture/Props", a + Vector3(-1.2, 0, -3.8), -PI * 0.5)
-	_place(P + "Crate_Metal.gltf", "Architecture/Props", a + Vector3(1.6, 0, 1.8), 0.2)
-	_place(P + "Barrel.gltf", "Architecture/Props", a + Vector3(2.2, 0, 2.4), 0.0)
-	_place(P + "Bucket_Metal.gltf", "Architecture/Props", a + Vector3(-0.8, 0, 2.0), 0.0)
-	# Навіс над ковадлом: стовпи й дерев'яний дах.
-	for p: Vector3 in [Vector3(-1.4, 0, -1.6), Vector3(-1.4, 0, 2.4)]:
-		_place(V + "Prop_Support.gltf", "Architecture/Decor", a + p, -PI * 0.5)
-	# Горно: жар у кам'яній кладці.
-	_place(V + "Prop_Chimney.gltf", "Architecture/Props", a + Vector3(2.2, 0, -0.6), 0.0, Vector3(1.1, 0.7, 1.1))
-	_fire_marker(a + Vector3(2.2, 2.3, -0.6))
-
 # --- таверна «Золотий Кабан» ---
-
-func _build_tavern() -> void:
-	var t := L.TAVERN_TABLE
-	for p: Vector3 in [t, t + Vector3(0, 0, -4.0)]:
-		_place(P + "Table_Large.gltf", "Architecture/Props", p, PI * 0.5)
-		_place(P + "Bench.gltf", "Architecture/Props", p + Vector3(-1.0, 0, 0), PI * 0.5)
-		_place(P + "Bench.gltf", "Architecture/Props", p + Vector3(1.0, 0, 0), -PI * 0.5)
-		_place(P + "Mug.gltf", "Architecture/Props", p + Vector3(0.1, 0.9, 0.3), 0.0)
-	_place(P + "Barrel.gltf", "Architecture/Props", t + Vector3(1.6, 0, 3.0), 0.0)
-	_place(P + "Barrel.gltf", "Architecture/Props", t + Vector3(1.4, 0, 4.0), 0.7)
-	_place(K + "flag-banner-short.glb", "Architecture/Decor", Vector3(7.6, 2.6, 28.5), -PI * 0.5, Vector3.ONE * 1.5)
-	_place(P + "Torch_Metal.gltf", "Architecture/Props", t + Vector3(-1.4, 0, 2.2), 0.0, Vector3.ONE * 1.3)
-	_fire_marker(t + Vector3(-1.4, 1.95, 2.2))
 
 # --- бібліотека-вежа (Мудрець Велимир) ---
 
-func _build_library() -> void:
-	var c := L.CAULDRON
-	_place(P + "Cauldron.gltf", "Architecture/Props", c, 0.0, Vector3.ONE * 1.3)
-	_fire_marker(c + Vector3(0, 0.25, 0))
-	_place(P + "BookStand.gltf", "Architecture/Props", c + Vector3(2.2, 0, -1.2), 0.4)
-	_place(P + "CandleStick_Stand.gltf", "Architecture/Props", c + Vector3(-1.5, 0, 1.0), 0.0)
-	_place(P + "Bookcase_2.gltf", "Architecture/Props", c + Vector3(-2.4, 0, -2.0), PI * 0.25)
-	_place(P + "Shelf_Small_Bottles.gltf", "Architecture/Props", c + Vector3(1.0, 0, -2.6), 0.0)
-
 # --- ратуша й площа (Старійшина Остап) ---
-
-func _build_townhall_square() -> void:
-	for x: float in [-3.0, 3.0]:
-		_place(P + "Banner_1_Cloth.gltf", "Architecture/Decor", Vector3(x, 3.2, -18.6), 0.0, Vector3.ONE * 1.3)
-	for x: float in [-5.0, 5.0]:
-		_place(P + "Torch_Metal.gltf", "Architecture/Props", Vector3(x, 0, -14.6), 0.0, Vector3.ONE * 1.4)
-		_fire_marker(Vector3(x, 2.1, -14.6))
-	_place(P + "Barrel.gltf", "Architecture/Props", Vector3(-9.0, 0, -15.0), 0.4)
-	_place(P + "Crate_Wooden.gltf", "Architecture/Props", Vector3(-8.2, 0, -15.4), 0.1)
 
 # --- північ: стара каплиця й вхід до склепів ---
 
@@ -624,7 +472,9 @@ func _build_terrain() -> void:
 		for i in count:
 			heights[j * count + i] = L.height(-half + i * L.STEP, -half + j * L.STEP)
 	var material := ShaderMaterial.new()
-	material.shader = load(OUT_DIR + "haven_terrain.gdshader")
+	material.shader = load(OUT_DIR + "town_ground.gdshader")
+	for key: String in ["grass", "dirt", "cobble"]:
+		material.set_shader_parameter(key + "_tex", load("res://assets/textures/town/%s.png" % key))
 	material.set_shader_parameter(&"detail", load("res://assets/textures/town/town_noise.png"))
 	var body := StaticBody3D.new()
 	body.name = "Terrain"
@@ -875,3 +725,233 @@ func _lite_material(source: Material) -> Material:
 	_lite_materials[key] = load(path)
 	return _lite_materials[key]
 
+
+## Куток жителя: предмети в локальних координатах відносно точки й кута
+## (локальне +Z — куди дивиться житель, -Z — за ним).
+func _cluster(origin: Vector3, yaw: float, items: Array, group: String = "Architecture/Props") -> void:
+	var basis := Basis(Vector3.UP, yaw)
+	for item: Array in items:
+		var path: String = item[0] if String(item[0]).begins_with("res://") else P + String(item[0]) + ".gltf"
+		var scale: float = item[3] if item.size() > 3 else 1.0
+		_place(path, group, origin + basis * (item[1] as Vector3), yaw + float(item[2]), Vector3.ONE * scale)
+
+# --- ринок (Торговка Олеся) ---
+
+func _build_market() -> void:
+	var m: Vector3 = L.NPCS[&"merchant"][0]
+	_cluster(m, -PI * 0.5, [
+		["Stall_Empty", Vector3(-3.0, 0, -1.6), 0.0], ["Stall_Empty", Vector3(3.0, 0, -1.6), 0.0],
+		["Stall_Cart_Empty", Vector3(0.0, 0, -2.2), 0.0],
+		["FarmCrate_Apple", Vector3(-3.6, 0, -0.4), 0.2], ["FarmCrate_Carrot", Vector3(-2.4, 0, -0.4), -0.2],
+		["Barrel_Apples", Vector3(2.2, 0, -0.3), 0.0], ["Bag", Vector3(3.6, 0, -0.2), 0.6], ["Bag", Vector3(4.2, 0, -0.9), 1.2],
+		["Table_Large", Vector3(0.0, 0, 1.4), PI * 0.5],
+		["Coin_Pile", Vector3(-0.2, 0.92, 1.2), 0.0], ["Pouch_Large", Vector3(0.3, 0.92, 1.7), 0.4],
+		["Vase_2", Vector3(-0.1, 0.92, 2.1), 0.0], ["Chalice", Vector3(0.25, 0.92, 0.8), 0.0],
+		["Potion_2", Vector3(-0.3, 0.92, 0.7), 0.0],
+		["Crate_Wooden", Vector3(-4.8, 0, -1.8), 0.3], ["Crate_Wooden", Vector3(-4.7, 0.75, -1.7), 0.9, 0.8],
+		["Barrel", Vector3(4.9, 0, -2.0), 0.0], ["Pot_1", Vector3(1.4, 0, 1.0), 0.0], ["Vase_4", Vector3(-1.4, 0, 1.1), 0.0],
+		["Banner_2_Cloth", Vector3(-5.6, 0, -0.5), 0.0, 1.2],
+	])
+	_place(V + "Prop_Wagon.gltf", "Architecture/Props", Vector3(6.5, 0, 34.5), 0.3)
+	_place("res://assets/models/haven/farm/Well.fbx", "Architecture/Props", L.WELL, 0.4, Vector3.ONE * 1.5)
+	for lamp: Vector3 in L.LAMPS:
+		_place(P + "Torch_Metal.gltf", "Architecture/Props", lamp, 0.0, Vector3.ONE * 1.4)
+		_fire_marker(lamp + Vector3(0, 2.1, 0))
+	for spot: Vector3 in [Vector3(-6.0, 0, 15.5), Vector3(7.2, 0, 21.0), Vector3(17.5, 0, -20.0),
+			Vector3(-20.0, 0, 13.0), Vector3(24.0, 0, -8.0)]:
+		_place(P + "Crate_Wooden.gltf", "Architecture/Props", spot, _rng.randf() * TAU)
+		_place(P + "Barrel.gltf", "Architecture/Props", spot + Vector3(0.9, 0, 0.5), 0.0)
+
+# --- тренувальний двір (Наставниця Дарина) ---
+
+func _build_training_yard() -> void:
+	for p: Vector3 in [Vector3(-19.5, 0, -2.5), Vector3(-19.5, 0, 0.5), Vector3(-19.5, 0, 3.5)]:
+		_place(P + "Dummy.gltf", "Architecture/Props", p, PI * 0.5, Vector3.ONE * 1.25)
+	var fence := V + "Prop_WoodenFence_Single.gltf"
+	for i in 4:
+		_place(fence, "Architecture/Fences", Vector3(-22.0 + i * 2.0, 0, -5.0), 0.0)
+		_place(fence, "Architecture/Fences", Vector3(-22.0 + i * 2.0, 0, 5.0), 0.0)
+	var d: Vector3 = L.NPCS[&"mentor"][0]
+	_cluster(d, PI * 0.5, [
+		["WeaponStand", Vector3(-2.4, 0, -2.2), 0.0], ["WeaponStand", Vector3(2.4, 0, -2.2), 0.0],
+		["Table_Large", Vector3(0.0, 0, -2.4), 0.0],
+		["Sword_Bronze", Vector3(-0.4, 0.95, -2.4), 0.3], ["Axe_Bronze", Vector3(0.5, 0.95, -2.3), -0.4],
+		["Shield_Wooden", Vector3(0.0, 0.95, -2.7), 0.0],
+		["Peg_Rack", Vector3(-3.6, 0, -0.6), PI * 0.5], ["Shield_Wooden", Vector3(-3.7, 1.2, -0.6), PI * 0.5],
+		["Chest_Wood", Vector3(3.4, 0, -0.6), -PI * 0.5], ["Barrel_Holder", Vector3(3.6, 0, 1.2), 0.0],
+		["Bench", Vector3(-3.4, 0, 2.0), PI * 0.5], ["Bucket_Wooden_1", Vector3(2.8, 0, 2.4), 0.0],
+		["Banner_2_Cloth", Vector3(0.0, 0, -3.6), 0.0, 1.3],
+	])
+
+# --- кузня (Коваль Богдан) ---
+
+func _build_smithy() -> void:
+	var a := L.ANVIL
+	_place(P + "Anvil_Log.gltf", "Architecture/Props", a, 0.2, Vector3.ONE * 1.3)
+	_place(V + "Prop_Chimney.gltf", "Architecture/Props", a + Vector3(2.2, 0, -0.6), 0.0, Vector3(1.1, 0.7, 1.1))
+	_fire_marker(a + Vector3(2.2, 2.3, -0.6))
+	var s: Vector3 = L.NPCS[&"smith"][0]
+	_cluster(s, -PI * 0.5, [
+		["Workbench", Vector3(-2.6, 0, -2.4), 0.0], ["Workbench_Drawers", Vector3(2.8, 0, -2.6), 0.0],
+		["Sword_Bronze", Vector3(-2.8, 0.95, -2.4), 0.5], ["Pickaxe_Bronze", Vector3(-2.2, 0.95, -2.5), -0.3],
+		["WeaponStand", Vector3(-4.2, 0, -0.6), PI * 0.5], ["Peg_Rack", Vector3(4.4, 0, -0.8), -PI * 0.5],
+		["Shield_Wooden", Vector3(4.5, 1.2, -0.8), -PI * 0.5],
+		["Whetstone", Vector3(-3.4, 0, 1.6), 0.4], ["Chain_Coil", Vector3(1.0, 0, -3.0), 0.0],
+		["Crate_Metal", Vector3(3.6, 0, 1.6), 0.2], ["Crate_Metal", Vector3(3.5, 0.7, 1.5), 0.9, 0.8],
+		["Bucket_Metal", Vector3(-1.2, 0, 1.4), 0.0], ["Barrel", Vector3(4.6, 0, 2.6), 0.0], ["Rope_2", Vector3(-4.0, 0, 2.6), 0.0],
+	])
+
+# --- таверна «Золотий Кабан» ---
+
+func _build_tavern() -> void:
+	var t := L.TAVERN_TABLE
+	for p: Vector3 in [t, t + Vector3(0, 0, -4.0)]:
+		_cluster(p, PI * 0.5, [
+			["Table_Large", Vector3.ZERO, 0.0], ["Bench", Vector3(0, 0, 1.0), 0.0], ["Bench", Vector3(0, 0, -1.0), PI],
+			["Mug", Vector3(0.3, 0.9, 0.1), 0.0], ["Mug", Vector3(-0.4, 0.9, -0.2), 0.0], ["Table_Plate", Vector3(0.0, 0.9, 0.25), 0.0],
+		])
+	_cluster(t, 0.0, [
+		["Barrel", Vector3(1.6, 0, 3.0), 0.0], ["Barrel", Vector3(1.4, 0, 4.0), 0.7], ["Barrel", Vector3(1.5, 0.95, 3.5), PI * 0.5, 0.9],
+		["Torch_Metal", Vector3(-1.4, 0, 2.2), 0.0, 1.3], ["Chair_1", Vector3(-1.6, 0, -6.0), 0.5], ["Crate_Wooden", Vector3(1.7, 0, -6.4), 0.2],
+	])
+	_fire_marker(t + Vector3(-1.4, 1.95, 2.2))
+	_place(K + "flag-banner-short.glb", "Architecture/Decor", Vector3(7.6, 2.6, 28.5), -PI * 0.5, Vector3.ONE * 1.5)
+
+# --- бібліотека-вежа (Мудрець Велимир) ---
+
+func _build_library() -> void:
+	var c := L.CAULDRON
+	_place(P + "Cauldron.gltf", "Architecture/Props", c, 0.0, Vector3.ONE * 1.3)
+	_fire_marker(c + Vector3(0, 0.25, 0))
+	var v: Vector3 = L.NPCS[&"sage"][0]
+	_cluster(v, float(L.NPCS[&"sage"][1]), [
+		["Bookcase_2", Vector3(-2.2, 0, -2.4), 0.0], ["Bookcase_2", Vector3(-0.6, 0, -2.6), 0.0],
+		["Table_Large", Vector3(2.0, 0, -1.6), 0.0],
+		["Potion_1", Vector3(1.6, 0.95, -1.5), 0.0], ["Potion_2", Vector3(1.9, 0.95, -1.8), 0.0], ["Potion_4", Vector3(2.3, 0.95, -1.4), 0.0],
+		["SmallBottles_1", Vector3(2.6, 0.95, -1.8), 0.0], ["Scroll_2", Vector3(1.6, 0.95, -1.9), 0.4],
+		["CandleStick_Triple", Vector3(2.5, 0.95, -1.3), 0.0], ["Book_Stack_2", Vector3(1.4, 0.95, -1.4), 0.2],
+		["BookStand", Vector3(-2.6, 0, 0.4), 0.6], ["CandleStick_Stand", Vector3(-3.0, 0, -1.0), 0.0],
+		["Chest_Wood", Vector3(3.4, 0, 0.2), -0.6], ["Shelf_Small_Bottles", Vector3(0.9, 0, -3.0), 0.0],
+		["Cage_Small", Vector3(3.6, 0, -2.6), 0.3], ["Book_Stack_1", Vector3(-1.6, 0, 0.6), 0.0],
+	])
+
+# --- ратуша й площа (Старійшина Остап) ---
+
+func _build_townhall_square() -> void:
+	for x: float in [-3.0, 3.0]:
+		_place(P + "Banner_1_Cloth.gltf", "Architecture/Decor", Vector3(x, 3.2, -18.6), 0.0, Vector3.ONE * 1.3)
+	for x: float in [-5.0, 5.0]:
+		_place(P + "Torch_Metal.gltf", "Architecture/Props", Vector3(x, 0, -14.6), 0.0, Vector3.ONE * 1.4)
+		_fire_marker(Vector3(x, 2.1, -14.6))
+	var e: Vector3 = L.NPCS[&"elder"][0]
+	_cluster(e, 0.0, [
+		["Table_Large", Vector3(-2.6, 0, -1.4), PI * 0.5], ["Chair_1", Vector3(-2.6, 0, -2.6), 0.0],
+		["Scroll_1", Vector3(-2.8, 0.95, -1.2), 0.3], ["Scroll_2", Vector3(-2.3, 0.95, -1.6), -0.5],
+		["Book_Stack_1", Vector3(-2.5, 0.95, -0.8), 0.0], ["CandleStick_Triple", Vector3(-2.9, 0.95, -1.8), 0.0],
+		["Key_Gold", Vector3(-2.2, 0.95, -1.1), 0.7],
+		["Chest_Wood", Vector3(2.6, 0, -1.8), 0.0], ["Coin_Pile_2", Vector3(2.6, 0.62, -1.8), 0.0],
+		["Vase_2", Vector3(-4.2, 0, -2.4), 0.0], ["Vase_2", Vector3(4.2, 0, -2.4), 0.0],
+		["Bench", Vector3(-5.6, 0, 0.6), PI * 0.5], ["Bench", Vector3(5.6, 0, 0.6), -PI * 0.5],
+		["Banner_2_Cloth", Vector3(3.8, 0, -0.8), 0.0, 1.2],
+	])
+	for p: Vector3 in [e + Vector3(-4.2, 0, -2.4), e + Vector3(4.2, 0, -2.4)]:
+		_place(N + "Flower_4_Group.gltf", "Nature/Flowers", p + Vector3(0, 0.55, 0), 0.0, Vector3.ONE * 0.55)
+
+## ФОНТАН: восьмикутний, дворівневий, світлий мармур із темною облямівкою
+## (контраст із темно-синьою бруківкою), жива вода й бризки, довкола —
+## квіткові вазони й лавки.
+func _stone(color: Color, texture: String = "T_RockTrim_BaseColor.png", scale: float = 2.0) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	if ResourceLoader.exists(V + texture):
+		m.albedo_texture = load(V + texture)
+	m.albedo_color = color
+	m.uv1_scale = Vector3(scale, 1.0, 1.0)
+	m.roughness = 0.75
+	return m
+
+func _cyl(top: float, bottom: float, height: float, sides: int, material: Material, at: Vector3, group: String) -> void:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = top
+	mesh.bottom_radius = bottom
+	mesh.height = height
+	mesh.radial_segments = sides
+	mesh.rings = 1
+	mesh.material = material
+	_place_mesh(mesh, group, at + Vector3(0, height * 0.5, 0), PI / sides, Vector3.ONE)
+
+func _water_material() -> ShaderMaterial:
+	var shader := Shader.new()
+	shader.code = """shader_type spatial;
+render_mode specular_schlick_ggx, cull_back;
+uniform vec3 deep : source_color = vec3(0.05, 0.32, 0.42);
+uniform vec3 shallow : source_color = vec3(0.32, 0.72, 0.78);
+void fragment() {
+	vec2 p = UV * 7.0;
+	float w = sin(p.x * 2.3 + TIME * 1.6) * sin(p.y * 2.1 - TIME * 1.3) + 0.5 * sin((p.x + p.y) * 3.7 + TIME * 2.2);
+	ALBEDO = mix(deep, shallow, 0.45 + 0.25 * w);
+	ROUGHNESS = 0.06;
+	SPECULAR = 0.9;
+	EMISSION = ALBEDO * 0.18;
+}"""
+	var material := ShaderMaterial.new()
+	material.shader = shader
+	return material
+
+func _build_fountain() -> void:
+	var at := L.FOUNTAIN
+	var marble := _stone(Color(0.97, 0.94, 0.88))
+	var slate := _stone(Color(0.42, 0.47, 0.58), "T_Brick_BaseColor.png", 3.0)
+	var trim := _stone(Color(0.95, 0.82, 0.55))
+	var gold := StandardMaterial3D.new()
+	gold.albedo_color = Color(1.0, 0.78, 0.32)
+	gold.metallic = 0.8
+	gold.roughness = 0.3
+	var g := "Architecture/Fountain"
+	# Сходинка-основа й чаша.
+	_cyl(4.5, 4.7, 0.22, 8, slate, at, g)
+	_cyl(3.6, 3.75, 0.85, 8, marble, at + Vector3(0, 0.22, 0), g)
+	_cyl(3.82, 3.82, 0.14, 8, trim, at + Vector3(0, 1.0, 0), g)
+	# Центральна колона, середня чаша, верхня колонка, мала чаша, золота маківка.
+	_cyl(0.55, 0.75, 1.9, 8, marble, at + Vector3(0, 0.22, 0), g)
+	_cyl(1.7, 0.6, 0.5, 8, marble, at + Vector3(0, 2.0, 0), g)
+	_cyl(1.78, 1.78, 0.1, 8, trim, at + Vector3(0, 2.48, 0), g)
+	_cyl(0.28, 0.36, 1.0, 8, marble, at + Vector3(0, 2.5, 0), g)
+	_cyl(0.75, 0.3, 0.32, 8, marble, at + Vector3(0, 3.45, 0), g)
+	var finial := SphereMesh.new()
+	finial.radius = 0.24
+	finial.height = 0.48
+	finial.material = gold
+	_place_mesh(finial, g, at + Vector3(0, 3.98, 0), 0.0, Vector3.ONE)
+	# Вода — в основі сцени (жива, не запікається в легку версію).
+	var water := _water_material()
+	for w: Array in [[3.45, 0.98], [1.58, 2.46], [0.66, 3.74]]:
+		var disk := CylinderMesh.new()
+		disk.top_radius = w[0]
+		disk.bottom_radius = w[0]
+		disk.height = 0.03
+		disk.radial_segments = 24
+		disk.material = water
+		var node := MeshInstance3D.new()
+		node.mesh = disk
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_group("Water").add_child(node)
+		node.position = at + Vector3(0, float(w[1]), 0)
+	# Мітка для бризок (їх оживляє haven.gd, як і вогонь).
+	var spray := Marker3D.new()
+	spray.name = "Spray"
+	_group("Water").add_child(spray)
+	spray.position = at + Vector3(0, 3.9, 0)
+	_boxes.append([at + Vector3(0, 1.0, 0), Vector3(7.4, 2.0, 7.4)])
+	# Вазони з квітами по діагоналях і лавки на чотири боки.
+	for i in 4:
+		var a := PI * 0.25 + i * PI * 0.5
+		var p := at + Vector3(sin(a), 0, cos(a)) * 5.6
+		_place(P + "Pot_1.gltf", "Architecture/Props", p, 0.0, Vector3.ONE * 2.2)
+		_place(N + ["Flower_4_Group", "Flower_3_Group", "Bush_Common_Flowers"][i % 3] + ".gltf", "Nature/Flowers", p + Vector3(0, 0.7, 0), a, Vector3.ONE * 0.7)
+	for i in 4:
+		var a := i * PI * 0.5
+		var p := at + Vector3(sin(a), 0, cos(a)) * 6.2
+		_place(P + "Bench.gltf", "Architecture/Props", p, a + PI)
+	for corner: Vector2 in [Vector2(-13.5, 9.0), Vector2(13.5, 9.0)]:
+		_place(N + "CommonTree_%d.gltf" % (1 + _rng.randi() % 3), "Nature/BigTrees", Vector3(corner.x, 0, corner.y), _rng.randf() * TAU, Vector3.ONE * 0.9)
+		_shade.append([corner, 3.0])
