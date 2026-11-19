@@ -72,17 +72,102 @@ const BASES := {
 		"class": "archer", "base": {"armor": 3, "crit": 2}},
 	"mage_hood": {"slot": "helmet", "title": "Каптур чарівника", "parts": ["Ranger_Head_Hood"],
 		"class": "mage", "base": {"armor": 2, "mana": 14, "cooldown": 2}},
-	# Зброя: weapon — id з WeaponPool (модель і бій беруться звідти).
-	"iron_sword": {"slot": "weapon", "title": "Залізний меч", "weapon": "war_blade", "class": "knight",
-		"base": {"damage": 10}},
-	"oak_staff": {"slot": "weapon", "title": "Дубовий посох", "weapon": "arcane_staff", "class": "mage",
-		"base": {"damage": 8, "mana": 10}},
-	"druid_staff": {"slot": "weapon", "title": "Посох друїда", "weapon": "druid_staff", "class": "druid",
-		"base": {"damage": 8, "hp": 10, "mana": 12}},
-	"hunter_bow": {"slot": "weapon", "title": "Мисливський лук", "weapon": "hunter_bow", "class": "archer",
-		"base": {"damage": 9, "crit": 2}},
-	"guard_sword": {"slot": "weapon", "title": "Меч і щит вартового", "weapon": "guard_sword", "class": "tank",
-		"base": {"damage": 7, "armor": 8, "hp": 15}},
+	# --- ЗБРОЯ: у кожної своя рідкість (rarity) і з синьої — своє вміння
+	# (unique: ефекти бою, ті самі ключі, що в талантах). weapon — шаблон
+	# бою з WeaponPool (анімації, стиль); model — модель із
+	# assets/models/weapons/items/<model>.scn; offhand — щит у ліву руку.
+	# Мечник.
+	"iron_sword": {"slot": "weapon", "title": "Залізний меч", "weapon": "war_blade", "model": "iron_sword", "class": "knight",
+		"rarity": "common", "base": {"damage": 10}},
+	"woodcutter_axe": {"slot": "weapon", "title": "Сокира лісоруба", "weapon": "war_blade", "model": "woodcutter_axe", "class": "knight",
+		"rarity": "common", "base": {"damage": 11, "attack_speed": 2}},
+	"steel_blade": {"slot": "weapon", "title": "Сталевий клинок", "weapon": "war_blade", "model": "steel_blade", "class": "knight",
+		"rarity": "uncommon", "base": {"damage": 12, "crit": 2}},
+	"talwar": {"slot": "weapon", "title": "Тальвар", "weapon": "talwar", "model": "talwar_blade", "class": "knight",
+		"rarity": "uncommon", "base": {"damage": 12, "attack_speed": 3}},
+	"battle_axe": {"slot": "weapon", "title": "Бойова сокира", "weapon": "battle_axe", "model": "battle_axe_m", "class": "knight",
+		"rarity": "rare", "base": {"damage": 15}, "unique": {"double_strike": 8},
+		"unique_text": "Шанс 8%, що удар влучить двічі."},
+	"cleaver": {"slot": "weapon", "title": "Різник", "weapon": "cleaver", "model": "cleaver_m", "class": "knight",
+		"rarity": "rare", "base": {"damage": 15, "crit": 2}, "unique": {"crit_bleed": 30},
+		"unique_text": "Критичний удар відкриває рану: ворог втрачає ще 30% цієї шкоди за 3 с."},
+	"great_sword": {"slot": "weapon", "title": "Дворучний меч героя", "weapon": "war_blade", "model": "great_sword", "class": "knight",
+		"rarity": "rare", "base": {"damage": 16, "hp": 10}, "unique": {"first_strike": 30},
+		"unique_text": "Удар по ворогу з повним здоров'ям сильніший на 30%."},
+	"harpoon_glaive": {"slot": "weapon", "title": "Гарпун-глефа", "weapon": "harpoon_glaive", "model": "glaive_m", "class": "knight",
+		"rarity": "epic", "base": {"damage": 18, "attack_speed": 3}, "unique": {"lifesteal": 5},
+		"unique_text": "5% завданої шкоди повертається здоров'ям."},
+	"twin_daggers": {"slot": "weapon", "title": "Парні клинки", "weapon": "twin_daggers", "model": "dagger_m", "class": "knight",
+		"rarity": "epic", "base": {"damage": 16, "attack_speed": 6}, "unique": {"double_strike": 15},
+		"unique_text": "Шанс 15% вдарити двічі."},
+	"war_axe": {"slot": "weapon", "title": "Сокира Кривавого Місяця", "weapon": "war_blade", "model": "war_axe", "class": "knight",
+		"rarity": "epic", "base": {"damage": 20}, "unique": {"low_hp_damage": 35, "crit_bleed": 25},
+		"unique_text": "Нижче 35% здоров'я удари сильніші на 35%; крит відкриває рану."},
+	"devils_axe": {"slot": "weapon", "title": "Диявольська сокира", "weapon": "devils_axe", "model": "devils_axe_m", "class": "knight",
+		"rarity": "legendary", "base": {"damage": 24, "hp": 15}, "unique": {"lifesteal": 6, "double_strike": 12},
+		"unique_text": "6% шкоди повертається здоров'ям, шанс 12% вдарити двічі."},
+	"blade_storm": {"slot": "weapon", "title": "Буря клинків", "weapon": "blade_storm", "model": "blade_storm_m", "class": "knight",
+		"rarity": "legendary", "base": {"damage": 22, "attack_speed": 8}, "unique": {"crit": 6, "crit_bleed": 40},
+		"unique_text": "+6% криту; крит відкриває глибоку рану (40% шкоди за 3 с)."},
+	# Танк (зброя + щит).
+	"guard_sword": {"slot": "weapon", "title": "Меч і щит вартового", "weapon": "guard_sword", "model": "guard_blade", "offhand": "Shield_Wooden",
+		"class": "tank", "rarity": "common", "base": {"damage": 7, "armor": 8, "hp": 15}},
+	"guard_mace": {"slot": "weapon", "title": "Булава й гербовий щит", "weapon": "guard_sword", "model": "guard_mace", "offhand": "shield_kite",
+		"class": "tank", "rarity": "uncommon", "base": {"damage": 8, "armor": 10, "hp": 18}},
+	"tower_hammer": {"slot": "weapon", "title": "Молот і баштовий щит", "weapon": "guard_sword", "model": "tower_hammer", "offhand": "shield_tower",
+		"class": "tank", "rarity": "rare", "base": {"damage": 9, "armor": 14, "hp": 24}, "unique": {"thorns": 40},
+		"unique_text": "Коли тебе б'ють, найближчий ворог отримує 40% твоєї шкоди."},
+	"knight_aegis": {"slot": "weapon", "title": "Клинок і Егіда лицаря", "weapon": "guard_sword", "model": "aegis_blade", "offhand": "shield_heraldic",
+		"class": "tank", "rarity": "epic", "base": {"damage": 10, "armor": 18, "hp": 30}, "unique": {"counter": 12, "damage_reduction": 5},
+		"unique_text": "Шанс 12% відповісти ударом щита всім поруч; −5% отриманої шкоди."},
+	"mountain_bulwark": {"slot": "weapon", "title": "Молот Гори й Сонячний щит", "weapon": "guard_sword", "model": "bulwark_hammer", "offhand": "shield_round",
+		"class": "tank", "rarity": "legendary", "base": {"damage": 12, "armor": 24, "hp": 40}, "unique": {"thorns": 60, "damage_reduction": 8, "kill_heal": 2},
+		"unique_text": "Шипи 60%, −8% отриманої шкоди, кожна перемога лікує 2%."},
+	# Маг.
+	"apprentice_wand": {"slot": "weapon", "title": "Жезл учня", "weapon": "arcane_staff", "model": "apprentice_wand", "class": "mage",
+		"rarity": "common", "base": {"damage": 7, "mana": 8}},
+	"oak_staff": {"slot": "weapon", "title": "Дубовий посох", "weapon": "arcane_staff", "model": "oak_staff", "class": "mage",
+		"rarity": "common", "base": {"damage": 8, "mana": 10}},
+	"sapphire_staff": {"slot": "weapon", "title": "Сапфіровий посох", "weapon": "arcane_staff", "model": "sapphire_staff", "class": "mage",
+		"rarity": "rare", "base": {"damage": 11, "mana": 16}, "unique": {"chain_lightning": 8},
+		"unique_text": "Шанс 8%, що закляття перескочить блискавкою ще на 3 ворогів."},
+	"ice_staff": {"slot": "weapon", "title": "Крижаний посох", "weapon": "ice_staff", "model": "ice_staff_m", "class": "mage",
+		"rarity": "rare", "base": {"damage": 11, "mana": 14, "cooldown": 4}, "unique": {"cooldown": 8},
+		"unique_text": "Прийоми перезаряджаються на 8% швидше."},
+	"venom_staff": {"slot": "weapon", "title": "Посох трясовини", "weapon": "venom_staff", "model": "venom_staff_m", "class": "mage",
+		"rarity": "epic", "base": {"damage": 13, "mana": 18}, "unique": {"overload": 1},
+		"unique_text": "Кожне п'яте закляття вилітає подвійним."},
+	"moon_staff": {"slot": "weapon", "title": "Місячний посох", "weapon": "moon_staff", "model": "moon_staff_m", "class": "mage",
+		"rarity": "legendary", "base": {"damage": 16, "mana": 24}, "unique": {"chain_lightning": 12, "crit_damage": 30},
+		"unique_text": "Ланцюгова блискавка 12%, критичні чари сильніші на 30%."},
+	# Лучник.
+	"hunter_bow": {"slot": "weapon", "title": "Мисливський лук", "weapon": "hunter_bow", "model": "hunter_bow", "class": "archer",
+		"rarity": "common", "base": {"damage": 9, "crit": 2}},
+	"ash_bow": {"slot": "weapon", "title": "Ясеневий лук", "weapon": "hunter_bow", "model": "ash_bow", "class": "archer",
+		"rarity": "uncommon", "base": {"damage": 10, "crit": 4}},
+	"hawk_bow": {"slot": "weapon", "title": "Лук Яструба", "weapon": "hunter_bow", "model": "hawk_bow", "class": "archer",
+		"rarity": "rare", "base": {"damage": 12, "crit": 4}, "unique": {"multishot": 8},
+		"unique_text": "Шанс 8%, що вилетить одразу три стріли."},
+	"storm_bow": {"slot": "weapon", "title": "Грозовий лук", "weapon": "hunter_bow", "model": "storm_bow", "class": "archer",
+		"rarity": "epic", "base": {"damage": 14, "attack_speed": 5}, "unique": {"multishot": 12, "eagle_eye": 20},
+		"unique_text": "Мультипостріл 12%; постріли далі за 7 м сильніші на 20%."},
+	"dragon_bow": {"slot": "weapon", "title": "Лук Драконячого Вогню", "weapon": "hunter_bow", "model": "dragon_bow", "class": "archer",
+		"rarity": "legendary", "base": {"damage": 17, "attack_speed": 8, "crit": 4}, "unique": {"multishot": 15, "crit_bleed": 30},
+		"unique_text": "Мультипостріл 15%; крит підпалює рану (30% шкоди за 3 с)."},
+	# Друїд.
+	"grove_staff": {"slot": "weapon", "title": "Посох гаю", "weapon": "druid_staff", "model": "grove_staff", "class": "druid",
+		"rarity": "common", "base": {"damage": 7, "hp": 8, "mana": 10}},
+	"druid_staff": {"slot": "weapon", "title": "Посох друїда", "weapon": "druid_staff", "model": "venom_staff_m", "class": "druid",
+		"rarity": "uncommon", "base": {"damage": 8, "hp": 10, "mana": 12}},
+	"thorn_staff": {"slot": "weapon", "title": "Терновий посох", "weapon": "druid_staff", "model": "thorn_staff", "class": "druid",
+		"rarity": "rare", "base": {"damage": 10, "hp": 14, "mana": 14}, "unique": {"beast_spirit": 10},
+		"unique_text": "У звірячій подобі +10% шкоди й +5% швидкості."},
+	"moonwolf_staff": {"slot": "weapon", "title": "Посох Місячного Вовка", "weapon": "druid_staff", "model": "moonwolf_staff", "class": "druid",
+		"rarity": "epic", "base": {"damage": 12, "hp": 18, "mana": 18}, "unique": {"fenrir_stacks": 2, "beast_spirit": 10},
+		"unique_text": "Серія укусів Фенріра довша на 2; дух звіра +10%."},
+	"world_tree_staff": {"slot": "weapon", "title": "Посох Світового Дерева", "weapon": "druid_staff", "model": "world_tree_staff", "class": "druid",
+		"rarity": "legendary", "base": {"damage": 15, "hp": 25, "mana": 24}, "unique": {"beast_spirit": 20, "lifesteal": 5, "bear_hp": 15},
+		"unique_text": "Дух звіра +20%, вампіризм 5%, ведмідь міцніший на 15%."},
 	# --- Стартові сети класів (Наставниця Дарина) ---
 	# set — назва сету (пізніше: бонуси за 2/3/4 речі), tint — свій колір
 	# сету поверх рідкості, icon — картинка з наявних, поки немає своєї.
@@ -133,6 +218,8 @@ static var _counter := 0
 ## Нова річ заготовки base потрібної рідкості (числа — випадкові в межах).
 static func roll(base_id: String, rarity: String = "common", level: int = 1) -> Dictionary:
 	var base: Dictionary = BASES[base_id]
+	# У зброї рідкість своя, назавжди.
+	rarity = String(base.get("rarity", rarity))
 	var power: float = RARITY_POWER.get(rarity, 1.0) * (1.0 + 0.08 * (level - 1))
 	var stats := {}
 	for stat: String in base.base:
@@ -149,6 +236,53 @@ static func roll(base_id: String, rarity: String = "common", level: int = 1) -> 
 		extra -= 1
 	_counter += 1
 	return {"uid": "i%d%d" % [Time.get_ticks_msec(), _counter], "base": base_id, "rarity": rarity, "stats": stats, "level": level}
+
+## Унікальне вміння речі (зброя з синьої рідкості): ефекти бою.
+static func unique_effects(item: Dictionary) -> Dictionary:
+	return base_of(item).get("unique", {})
+
+const WEAPON_ITEM_DIR := "res://assets/models/weapons/items/"
+const OFFHAND_PROPS := "res://assets/models/haven/props/"
+static var _weapon_defs := {}
+const STAFF_GRIP := Vector3(90, 30, 0)
+
+## Бойовий опис зброї для речі: шаблон із WeaponPool (анімації, бій) +
+## своя модель і щит. Кешується за заготовкою.
+static func weapon_def(item: Dictionary) -> WeaponDef:
+	var base := base_of(item)
+	if not base.has("weapon"):
+		return null
+	var key := String(item.get("base", ""))
+	if _weapon_defs.has(key):
+		return _weapon_defs[key]
+	var template := WeaponPool.get_def(StringName(base.weapon))
+	if template == null:
+		return null
+	var def := template
+	if base.has("model") or base.has("offhand"):
+		def = template.duplicate() as WeaponDef
+		if base.has("model"):
+			var path := WEAPON_ITEM_DIR + String(base.model) + ".scn"
+			if ResourceLoader.exists(path):
+				def.model_scene = load(path)
+				def.model_scale = 1.0
+				def.grip_rotation_deg = Vector3.ZERO
+				def.grip_offset = Vector3.ZERO
+				# Посох у кулаці, рівно вгору збоку героя (без «вертикального
+				# хвату», що на новому тілі ховав посох за спину).
+				if def.upright_3d:
+					def.upright_3d = false
+					def.grip_rotation_deg = STAFF_GRIP
+		if base.has("offhand"):
+			var shield := WEAPON_ITEM_DIR + String(base.offhand) + ".scn"
+			if not ResourceLoader.exists(shield):
+				shield = OFFHAND_PROPS + String(base.offhand) + ".gltf"
+			if ResourceLoader.exists(shield):
+				def.offhand_model = load(shield)
+				def.offhand_rotation_deg = Vector3(0, -90, 0)
+				def.offhand_scale = 1.0
+	_weapon_defs[key] = def
+	return def
 
 static func base_of(item: Dictionary) -> Dictionary:
 	return BASES.get(String(item.get("base", "")), {})

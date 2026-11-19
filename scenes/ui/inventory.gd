@@ -199,8 +199,7 @@ func _refresh() -> void:
 		_style_cell(_slot_buttons[slot], equipped.get(slot, {}), ItemDb.slot_icon(slot), locked)
 		if locked:
 			(_slot_buttons[slot] as Button).tooltip_text = "Відкриється з %d рівня" % ItemDb.JEWELRY_LEVEL
-	var weapon_id := String(ItemDb.base_of(equipped.get("weapon", {})).get("weapon", ""))
-	var weapon: WeaponDef = WeaponPool.get_def(StringName(weapon_id)) if weapon_id != "" else null
+	var weapon: WeaponDef = ItemDb.weapon_def(equipped.get("weapon", {})) if equipped.has("weapon") else null
 	_preview.show_character(GameState.character.get("look", {}), ItemDb.gear_look(equipped), "", weapon)
 	_fill_stats(equipped)
 	_fill_bag()
@@ -343,6 +342,13 @@ func _show_item(item: Dictionary, in_stash: bool, is_equipped: bool = false) -> 
 				arrow.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 			row.add_child(arrow)
 		dialog.body.add_child(row)
+	# Унікальне вміння зброї — окремим рядком кольору рідкості.
+	var unique_text := String(ItemDb.base_of(item).get("unique_text", ""))
+	if unique_text != "":
+		dialog.add_text("★ " + unique_text, 16, ItemDb.color_of(item))
+	var weapon_class := String(ItemDb.base_of(item).get("class", ""))
+	if ItemDb.slot_of(item) == "weapon" and weapon_class != "":
+		dialog.add_text("Клас у руках: %s" % ItemDb.CLASSES.get(weapon_class, weapon_class), 14, UiTheme.TEXT_DIM)
 	if has_current:
 		dialog.add_text("Стрілки — порівняння з тим, що зараз надіто.", 14, UiTheme.TEXT_DIM)
 	elif not is_equipped:

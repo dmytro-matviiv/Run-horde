@@ -989,8 +989,7 @@ func _load_hero() -> void:
 	if _character_mode:
 		# Хто ти — вирішує зброя в руці.
 		var weapon_item: Dictionary = ItemDb.equipped_items().get("weapon", {})
-		var weapon_id := String(ItemDb.base_of(weapon_item).get("weapon", ""))
-		weapon_def = WeaponPool.get_def(StringName(weapon_id)) if weapon_id != "" else null
+		weapon_def = ItemDb.weapon_def(weapon_item) if not weapon_item.is_empty() else null
 		hero_def = HeroPool.get_def(weapon_def.hero_id if weapon_def != null else &"blade_warden")
 	else:
 		hero_def = HeroPool.get_def(GameState.selected_hero_id)
@@ -1090,6 +1089,11 @@ func _apply_loadout() -> void:
 	# Надіте спорядження (ItemDb) + вивчені таланти (TalentTree).
 	var gear := ItemDb.total_stats()
 	_talents = TalentTree.total_effects() if _character_mode else {}
+	# Унікальне вміння зброї в руках додається до талантів.
+	if _character_mode:
+		var unique := ItemDb.unique_effects(ItemDb.equipped_items().get("weapon", {}))
+		for key: String in unique:
+			_talents[key] = float(_talents.get(key, 0.0)) + float(unique[key])
 	for key: String in _talents:
 		if ItemDb.STATS.has(key):
 			gear[key] = float(gear.get(key, 0)) + float(_talents[key])

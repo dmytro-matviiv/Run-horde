@@ -22,6 +22,10 @@ static var _materials: Dictionary = {}
 ## підсвічуються камінь у руків'ї та кромка леза, тож кожна зброя
 ## впізнавана навіть заглушкою.
 static func build(style: String, accent: Color) -> Node3D:
+	# Справжні моделі замість заглушок із брусків (меч і лук).
+	var real: String = {"bow": "hunter_bow", "axe": "woodcutter_axe", "staff": "oak_staff", "pistol": "", "rifle": ""}.get(style, "iron_sword")
+	if real != "" and ResourceLoader.exists("res://assets/models/weapons/items/%s.scn" % real):
+		return (load("res://assets/models/weapons/items/%s.scn" % real) as PackedScene).instantiate()
 	var root := Node3D.new()
 	root.name = "WeaponModel"
 	match style:

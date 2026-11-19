@@ -1,0 +1,12 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/axe2hand_DefaultMaterial_BaseColor.png" id="1_lf4vm"]
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/axe2hand_DefaultMaterial_Normal.png" id="2_iibcc"]
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/axe2hand_DefaultMaterial_Roughness.png" id="3_3n8n5"]
+
+[resource]
+albedo_texture = ExtResource("1_lf4vm")
+metallic = 0.2
+roughness_texture = ExtResource("3_3n8n5")
+normal_enabled = true
+normal_texture = ExtResource("2_iibcc")

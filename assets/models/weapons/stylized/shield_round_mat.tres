@@ -1,0 +1,12 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/shield_round_DefaultMaterial_BaseColor.png" id="1_8cuky"]
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/shield_round_DefaultMaterial_Normal.png" id="2_kxqc2"]
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/shield_round_DefaultMaterial_Roughness.png" id="3_sncnu"]
+
+[resource]
+albedo_texture = ExtResource("1_8cuky")
+metallic = 0.2
+roughness_texture = ExtResource("3_sncnu")
+normal_enabled = true
+normal_texture = ExtResource("2_kxqc2")

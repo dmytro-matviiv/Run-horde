@@ -1,0 +1,12 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/sword_sword_BaseColor.png" id="1_gp311"]
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/sword_sword_Normal.png" id="2_oybqq"]
+[ext_resource type="Texture2D" path="res://assets/models/weapons/stylized/sword_sword_Roughness.png" id="3_a8v8x"]
+
+[resource]
+albedo_texture = ExtResource("1_gp311")
+metallic = 0.2
+roughness_texture = ExtResource("3_a8v8x")
+normal_enabled = true
+normal_texture = ExtResource("2_oybqq")

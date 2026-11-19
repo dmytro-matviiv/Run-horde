@@ -1132,6 +1132,7 @@ func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_el
 	var pieces := 12 if is_boss else (8 if is_elite else clampi(gold / 3, 1, 4))
 	_loot.burst(position, LootSwarm.Kind.GOLD, gold, pieces)
 	_loot.burst(position, LootSwarm.Kind.XP, xp_reward, 6 if is_boss or is_elite else clampi(xp_reward, 1, 3))
+	_drop_items(position, is_boss, is_elite)
 	if not is_boss and randf() < (HEALTH_ORB_ELITE_CHANCE if is_elite else HEALTH_ORB_CHANCE):
 		var orb := HealthOrb.new()
 		orb.setup(player)
@@ -1152,6 +1153,24 @@ func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_el
 	else:
 		CombatVfx.hitstop(get_tree(), KILL_HITSTOP)
 	_update_status()
+
+## Здобич: речі падають на підлогу (LootTable) — у свого героя.
+var found_items: Array = []
+func _drop_items(position: Vector3, is_boss: bool, is_elite: bool) -> void:
+	if GameState.character.is_empty():
+		return
+	var drops := LootTable.roll_drop(_level_index, is_boss, is_elite)
+	for i in drops.size():
+		var dropped := DroppedItem.create(drops[i], player)
+		add_child(dropped)
+		var spread := Vector3(cos(i * 2.4), 0, sin(i * 2.4)) * (0.0 if drops.size() == 1 else 1.3)
+		dropped.global_position = position + spread + Vector3(0, DungeonBuilder.FLOOR_TOP, 0)
+		dropped.picked.connect(_on_item_picked)
+
+func _on_item_picked(item: Dictionary) -> void:
+	found_items.append(item)
+	AudioManager.play(&"pickup")
+	_show_banner(ItemDb.title_of(item), "Знайдено — уже в торбі")
 
 func _on_loot_collected(kind: int, amount: int) -> void:
 	if kind == LootSwarm.Kind.GOLD:
