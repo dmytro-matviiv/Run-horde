@@ -342,6 +342,15 @@ func _show_item(item: Dictionary, in_stash: bool, is_equipped: bool = false) -> 
 				arrow.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
 			row.add_child(arrow)
 		dialog.body.add_child(row)
+	# Сет: назва, скільки надіто, бонуси (активні — яскраво).
+	var set_id := String(ItemDb.base_of(item).get("set", ""))
+	if set_id != "" and ItemDb.SETS.has(set_id):
+		var set_info: Dictionary = ItemDb.SETS[set_id]
+		var worn := int(ItemDb.worn_sets().get(set_id, 0))
+		dialog.add_text("%s (надіто %d з 4)" % [set_info.title, worn], 16, ItemDb.RARITY_COLORS.get(set_info.rarity, Color.WHITE))
+		for need: int in set_info.bonus:
+			dialog.add_text("%d речі: %s" % [need, ItemDb.describe_effects(set_info.bonus[need])], 14,
+				Color(0.6, 1.0, 0.55) if worn >= need else UiTheme.TEXT_DIM)
 	# Унікальне вміння зброї — окремим рядком кольору рідкості.
 	var unique_text := String(ItemDb.base_of(item).get("unique_text", ""))
 	if unique_text != "":
@@ -376,10 +385,9 @@ func _show_item(item: Dictionary, in_stash: bool, is_equipped: bool = false) -> 
 				GameState.stash.append(item)
 				_saved()
 				dialog.close(), 170.0)
-		var price: int = SELL_PRICE.get(item.rarity, 10)
+		var price := ItemDb.sell_price(item)
 		dialog.add_button("Продати +%d" % price, false, func() -> void:
-			GameState.inventory.erase(item)
-			GameState.add_gold(price)
+			ItemDb.sell(String(item.uid))
 			_saved()
 			dialog.close(), 170.0)
 	add_child(dialog)

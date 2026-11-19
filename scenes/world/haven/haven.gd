@@ -45,6 +45,7 @@ const ACTION_SCENES := {
 	"shop": "res://scenes/ui/shop.tscn",
 	"inventory": "res://scenes/ui/inventory.tscn",
 	"kits": "res://scenes/ui/starter_kits.tscn",
+	"forge": "res://scenes/ui/forge.tscn",
 }
 const RESOURCE_NAMES := {"wood": "Дерево", "stone": "Камінь", "herb": "Трави"}
 
@@ -732,12 +733,14 @@ func _npc_action(npc: HavenNpc) -> String:
 		if action == "heroes":
 			return "kits"
 		if action == "weapons":
-			return ""
+			return "forge"
 	return action
 
 func _npc_button(npc: HavenNpc) -> String:
 	if _npc_action(npc) == "kits":
 		return "Спорядження класів"
+	if _npc_action(npc) == "forge":
+		return "Кузня"
 	return String(npc.info.button)
 
 func _on_quests_changed() -> void:

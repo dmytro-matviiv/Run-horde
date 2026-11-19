@@ -1097,6 +1097,14 @@ func _apply_loadout() -> void:
 	# Надіте спорядження (ItemDb) + вивчені таланти (TalentTree).
 	var gear := ItemDb.total_stats()
 	_talents = TalentTree.total_effects() if _character_mode else {}
+	# Бонуси надітих сетів: числа — до спорядження, решта — до талантів.
+	if _character_mode:
+		var set_fx := ItemDb.set_effects()
+		for key: String in set_fx:
+			if ItemDb.STATS.has(key):
+				gear[key] = float(gear.get(key, 0)) + float(set_fx[key])
+			else:
+				_talents[key] = float(_talents.get(key, 0.0)) + float(set_fx[key])
 	# Унікальне вміння зброї в руках додається до талантів.
 	if _character_mode:
 		var unique := ItemDb.unique_effects(ItemDb.equipped_items().get("weapon", {}))

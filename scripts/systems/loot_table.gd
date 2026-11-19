@@ -72,7 +72,8 @@ static func _pick_base(rarity: String) -> String:
 		var is_weapon := String(base.slot) == "weapon"
 		if is_weapon != want_weapon or String(base.slot) in ["amulet", "ring1", "ring2"]:
 			continue
-		if is_weapon and String(base.get("rarity", "common")) != rarity:
+		# Зброя й сетові речі мають свою рідкість — беремо лише відповідні.
+		if base.has("rarity") and String(base.rarity) != rarity:
 			continue
 		fallback.append(id)
 		if not prefer_class or String(base.get("class", "any")) in [cls, "any"]:

@@ -377,6 +377,8 @@ var inventory: Array = []
 var equipped_store: Array = []
 var equipment: Dictionary = {}
 var stash: Array = []
+## Заготовки речей, що хоч раз потрапляли до героя (кузня їх продає).
+var discovered: Dictionary = {}
 var hero_level := 1
 signal equipment_changed
 
@@ -437,6 +439,7 @@ func reset_progress() -> void:
 	equipped_store = []
 	equipment = {}
 	stash = []
+	discovered = {}
 	hero_level = 1
 	hero_xp = 0
 	talents = {}
