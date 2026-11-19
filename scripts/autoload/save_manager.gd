@@ -231,6 +231,25 @@ func _load_file(path: String) -> void:
 			GameState.equipment[ItemDb.slot_of(item)] = item.uid
 
 ## JSON читає числа як float — характеристики речей тримаємо цілими.
+## Що надіто на героя id (слот -> річ) — прямо з його файлу, не
+## перемикаючи активного героя (для екрана вибору).
+func equipped_of(id: String) -> Dictionary:
+	var path := _char_path(id)
+	if not FileAccess.file_exists(path):
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	var data: Variant = JSON.parse_string(file.get_as_text())
+	if not data is Dictionary:
+		return {}
+	var store := _items_from_json((data as Dictionary).get("equipped_store", []))
+	var result := {}
+	var equipment: Dictionary = (data as Dictionary).get("equipment", {})
+	for slot: String in equipment:
+		for item: Dictionary in store:
+			if String(item.get("uid", "")) == String(equipment[slot]):
+				result[slot] = item
+	return result
+
 func _items_from_json(list: Array) -> Array:
 	for item: Dictionary in list:
 		var stats: Dictionary = item.get("stats", {})

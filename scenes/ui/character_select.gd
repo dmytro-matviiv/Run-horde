@@ -122,7 +122,10 @@ func _rebuild() -> void:
 		_list.add_child(add)
 	var entry := _entry(_selected)
 	_name_label.text = String(entry.get("name", ""))
-	_preview.show_character(entry.get("look", {}))
+	# Герой — у тому, що на ньому надіто (броня й зброя з його сейву).
+	var worn := SaveManager.equipped_of(_selected)
+	var weapon: WeaponDef = ItemDb.weapon_def(worn.weapon) if worn.has("weapon") else null
+	_preview.show_character(entry.get("look", {}), ItemDb.gear_look(worn), "", weapon)
 
 func _entry(id: String) -> Dictionary:
 	for entry: Dictionary in SaveManager.characters():
