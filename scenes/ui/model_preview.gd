@@ -138,10 +138,12 @@ func show_character(look: Dictionary, gear: Dictionary = {}, anim: String = "", 
 	var instance := CharacterBuilder.build(look, gear)
 	_pivot.add_child(instance)
 	if weapon != null:
-		HeroBuilder.attach_weapon(instance, HeroPool.get_def(weapon.hero_id), weapon, &"hand_r", &"hand_l", HeroBuilder.character_grip(weapon, true))
+		HeroBuilder.attach_weapon(instance, HeroPool.get_def(weapon.hero_id), weapon, &"hand_r", &"hand_l",
+			HeroBuilder.character_grip(weapon, true), HeroBuilder.character_left_hand(weapon))
+		HeroBuilder.setup_character_hands(instance, weapon, true)
 	if anim == "":
 		# Спокійна поза: зброя в опущеній руці (бойова стійка — лише в данжі).
-		anim = "Idle"
+		anim = "Idle_Torch" if HeroBuilder.character_left_hand(weapon) else "Idle"
 	play_character_anim(anim)
 	var player := instance.get_node_or_null("Anim") as AnimationPlayer
 	if player != null and old_anim_time > 0.0:

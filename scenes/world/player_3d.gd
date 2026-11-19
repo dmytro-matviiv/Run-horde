@@ -1072,7 +1072,9 @@ func _equip_weapon() -> void:
 	if _model_instance != null and _character_mode:
 		# У місті (Прихисток не воює) — спокійний хват, у данжі — бойовий.
 		var relaxed := _relaxed_pose()
-		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def, &"hand_r", &"hand_l", HeroBuilder.character_grip(weapon_def, relaxed))
+		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def, &"hand_r", &"hand_l",
+			HeroBuilder.character_grip(weapon_def, relaxed), HeroBuilder.character_left_hand(weapon_def))
+		HeroBuilder.setup_character_hands(_model_instance, weapon_def, relaxed)
 	elif _model_instance != null:
 		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def)
 	if is_ranged():
@@ -1192,7 +1194,9 @@ func _build_animation_tree() -> void:
 	move.max_space = Vector2(1, 1)
 	# Зі стволом у руках герой і стоїть інакше, і стріляє, а не махає.
 	var ranged := is_ranged()
-	move.add_blend_point(_animation_node("Idle_Gun" if ranged else "Idle", ["Idle"]), Vector2(0, 0), -1, &"idle")
+	# У місті лучник стоїть спокійно (лук в опущеній руці), а не цілиться.
+	var gun_idle := ranged and not (_character_mode and _relaxed_pose())
+	move.add_blend_point(_animation_node("Idle_Gun" if gun_idle else "Idle", ["Idle"]), Vector2(0, 0), -1, &"idle")
 	move.add_blend_point(_animation_node("Walk"), Vector2(0, 0.48), -1, &"walk")
 	move.add_blend_point(_animation_node("Run"), Vector2(0, 1), -1, &"run")
 	move.add_blend_point(_animation_node("Run_Back", ["Walk", "Run"]), Vector2(0, -1), -1, &"back")
@@ -1314,8 +1318,11 @@ func _collect_upper_body_tracks(animation: Animation) -> Array[NodePath]:
 func _anim(short_name: String) -> String:
 	if _character_mode:
 		if short_name == "Idle":
-			if weapon_def == null or _relaxed_pose():
+			if weapon_def == null:
 				return "Idle"
+			if _relaxed_pose():
+				# Посох — як маг на картинах: рука зігнута, посох рівно до землі.
+				return "Idle_Torch" if HeroBuilder.character_left_hand(weapon_def) else "Idle"
 			if weapon_def.offhand_model != null:
 				return "Idle_Shield"
 			return "Spell_Simple_Idle" if is_caster() else ("Pistol_Idle" if is_ranged() else "Sword_Idle")

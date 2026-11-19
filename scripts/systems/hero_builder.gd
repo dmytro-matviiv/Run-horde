@@ -52,26 +52,37 @@ static func tint(instance: Node3D, color: Color) -> void:
 ## до вказівного — +Z, долоня — у -X). Руків'я йде вздовж кулака (+Z),
 ## лезо виходить з боку вказівного пальця, ребро леза — за кісточками (+Y);
 ## точка хвату — посеред зігнутих пальців.
-static var CHARACTER_GRIP_FIX := Transform3D(Basis(Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0)), Vector3(-0.035, 0.075, 0.0))
-## Спокійна поза (місто, спорядження): клинок униз і трохи вперед.
-static var CHARACTER_GRIP_RELAXED := Transform3D(Basis(Vector3(1, 0, 0), Vector3(0, 0.92, 0.39), Vector3(0, -0.39, 0.92)), Vector3(-0.035, 0.075, 0.0))
-## Посох і лук — завжди вертикально, верхівкою вгору (від кисті до ліктя).
-static var CHARACTER_GRIP_UPRIGHT := Transform3D(Basis(Vector3(-1, 0, 0), Vector3(0, -1, 0), Vector3(0, 0, 1)), Vector3(-0.035, 0.075, 0.0))
+static var CHARACTER_GRIP_FIX := Transform3D(Basis(Vector3(0.0102, 0.9615, -0.2733), Vector3(-0.0358, 0.2736, 0.9612),
+	Vector3(0.999, 0.0, 0.0372)), Vector3(-0.0314, 0.098, 0.003))
 
-## Хват для власного героя: посох і лук — вертикально; клинок — бойовий
-## (у данжі) або спокійний (місто, спорядження).
-static var STAFF_TILT_DEG := -25.0
-static func character_grip(weapon: WeaponDef, relaxed: bool) -> Transform3D:
-	if weapon != null and weapon.ranged_3d and not relaxed:
-		return CHARACTER_GRIP_FIX   # лук у пострілі — уздовж кулака, як руків'я
-	if weapon != null and (weapon.style_3d in ["staff", "book", "cards", "bow"] or weapon.ranged_3d):
-		# Передпліччя в позі нахилене — вирівнюємо посох до вертикалі.
-		var upright := CHARACTER_GRIP_UPRIGHT
-		return Transform3D(Basis(Vector3.RIGHT, deg_to_rad(STAFF_TILT_DEG)) * upright.basis, upright.origin)
-	return CHARACTER_GRIP_RELAXED if relaxed else CHARACTER_GRIP_FIX
+## Посох — у лівій руці (права вільна для чарів); рука в позі смолоскипа
+## (GripFist.torch_arm): кисть біля грудей, посох рівно до землі — хват
+## опущено на STAFF_DROP уздовж посоха.
+const STAFF_DROP := 0.55
+## Нахил кисті в спокої (місто, спорядження): клинок і лук — униз-вперед.
+static var WRIST_TILT := -40.0
+
+static func character_left_hand(weapon: WeaponDef) -> bool:
+	return weapon != null and weapon.style_3d == "staff"
+
+## Хват — точно в кулаці (центр кільця пальців, руків'я вздовж кулака).
+static func character_grip(weapon: WeaponDef, _relaxed: bool = false) -> Transform3D:
+	var fist := CHARACTER_GRIP_FIX
+	if character_left_hand(weapon):
+		return Transform3D(fist.basis, fist.origin - fist.basis.y * STAFF_DROP)
+	return fist
+
+## Руки свого героя після того, як зброю вдягнено: нахил кисті в спокої,
+## поза смолоскипа для руки з посохом.
+static func setup_character_hands(model: Node3D, weapon: WeaponDef, relaxed: bool) -> void:
+	for fist: GripFist in model.find_children("GripFist*", "", true, false):
+		if fist.side == "_l" and character_left_hand(weapon):
+			fist.torch_arm = true
+		elif fist.side == "_r" and relaxed and not character_left_hand(weapon):
+			fist.wrist_tilt = WRIST_TILT
 
 static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef, bone_override: StringName = &"",
-		offhand_override: StringName = &"", grip_fix: Transform3D = Transform3D.IDENTITY) -> Node3D:
+		offhand_override: StringName = &"", grip_fix: Transform3D = Transform3D.IDENTITY, left_hand: bool = false) -> Node3D:
 	var scene: PackedScene = null
 	if weapon != null:
 		scene = ArtSlots.weapon_model(weapon.id, weapon.model_scene)
@@ -102,10 +113,16 @@ static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef, bone_
 		var holder := UprightGrip.wrap(_make_weapon(scene, weapon), model, weapon.model_scale / maxf(bone_scale, 0.0001))
 		_hold(skeleton, bone, holder, Transform3D.IDENTITY)
 		return holder.get_child(0) as Node3D
+	# Зброя в лівій руці (посох): той самий хват, віддзеркалений.
+	if left_hand:
+		var left := skeleton.find_bone(String(offhand_override if offhand_override != &"" else hero.offhand_bone))
+		if left >= 0:
+			grip = _mirrored_grip(skeleton, bone, left, grip)
+			bone = left
 	var weapon_node := _hold(skeleton, bone, _make_weapon(scene, weapon), grip)
 	# Свій герой: пальці стискаються в кулак навколо руків'я.
 	if bone_override != &"":
-		_add_fist(skeleton, "_r")
+		_add_fist(skeleton, "_l" if left_hand else "_r")
 		if weapon.dual_wield or weapon.offhand_model != null:
 			_add_fist(skeleton, "_l")
 	if weapon.offhand_model != null:

@@ -272,6 +272,8 @@ static func weapon_def(item: Dictionary) -> WeaponDef:
 				# хвату», що на новому тілі ховав посох за спину).
 				if def.upright_3d:
 					def.upright_3d = false
+				if def.style_3d == "staff":
+					def.muzzle_offset = Vector3(0, _model_top(def.model_scene) * 0.95, 0)
 		if base.has("offhand"):
 			var shield := WEAPON_ITEM_DIR + String(base.offhand) + ".scn"
 			if not ResourceLoader.exists(shield):
@@ -282,6 +284,20 @@ static func weapon_def(item: Dictionary) -> WeaponDef:
 				def.offhand_scale = 1.0
 	_weapon_defs[key] = def
 	return def
+
+## Верхня точка моделі (м) — звідки летять чари посоха.
+static func _model_top(scene: PackedScene) -> float:
+	var node: Node3D = scene.instantiate()
+	var top := 0.0
+	for mesh: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+		var xf := Transform3D.IDENTITY
+		var n: Node = mesh
+		while n != null and n != node:
+			xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		top = maxf(top, (xf * mesh.get_aabb()).end.y)
+	node.free()
+	return top
 
 static func base_of(item: Dictionary) -> Dictionary:
 	return BASES.get(String(item.get("base", "")), {})
