@@ -272,7 +272,6 @@ static func weapon_def(item: Dictionary) -> WeaponDef:
 				# хвату», що на новому тілі ховав посох за спину).
 				if def.upright_3d:
 					def.upright_3d = false
-					def.grip_rotation_deg = STAFF_GRIP
 		if base.has("offhand"):
 			var shield := WEAPON_ITEM_DIR + String(base.offhand) + ".scn"
 			if not ResourceLoader.exists(shield):

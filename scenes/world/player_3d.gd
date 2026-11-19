@@ -1064,9 +1064,15 @@ func _build_model() -> void:
 		return
 	model.add_child(_model_instance)
 
+## Місто (Прихисток не воює): спокійна поза й хват — зброя в опущеній руці.
+func _relaxed_pose() -> bool:
+	return get_parent() != null and get_parent().has_method("open_screen")
+
 func _equip_weapon() -> void:
 	if _model_instance != null and _character_mode:
-		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def, &"hand_r", &"hand_l", HeroBuilder.CHARACTER_GRIP_FIX)
+		# У місті (Прихисток не воює) — спокійний хват, у данжі — бойовий.
+		var relaxed := _relaxed_pose()
+		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def, &"hand_r", &"hand_l", HeroBuilder.character_grip(weapon_def, relaxed))
 	elif _model_instance != null:
 		_weapon_node = HeroBuilder.attach_weapon(_model_instance, hero_def, weapon_def)
 	if is_ranged():
@@ -1308,7 +1314,7 @@ func _collect_upper_body_tracks(animation: Animation) -> Array[NodePath]:
 func _anim(short_name: String) -> String:
 	if _character_mode:
 		if short_name == "Idle":
-			if weapon_def == null:
+			if weapon_def == null or _relaxed_pose():
 				return "Idle"
 			if weapon_def.offhand_model != null:
 				return "Idle_Shield"
