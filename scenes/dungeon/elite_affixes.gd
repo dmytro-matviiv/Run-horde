@@ -8,8 +8,9 @@ class_name EliteAffixes
 ##   Вибуховий   — упавши, за мить вибухає (червоне коло — тікай);
 ##   Щитоносець  — спереду тримає щит: 70% шкоди мимо. Бий збоку, ззаду
 ##                 або ногою — сильний удар ламає щит на кілька секунд;
-##   Цілитель    — раз на кілька секунд лікує ворогів довкола: його
-##                 треба вбити першим.
+##   Цілитель    — раз на кілька секунд лікує ворогів довкола (себе —
+##                 лише наполовину). Удар по ньому збиває лікування: б'єш
+##                 цілителя без упину — він не лікує зовсім.
 ## Дає вчетверо більше досвіду й утричі більше золота.
 ##
 ## Вузол висить на самому ворогові (Enemy3D.elite) і сам малює свої
@@ -32,7 +33,9 @@ const SHIELD_BREAK := 3.0
 ## Цілитель: як часто, кого й скільки лікує.
 const MEND_INTERVAL := 3.5
 const MEND_RADIUS := 6.0
-const MEND_SHARE := 0.12
+const MEND_SHARE := 0.07
+## Удар по цілителю відкладає лікування щонайменше на стільки секунд.
+const MEND_INTERRUPT := 2.0
 ## Вибуховий: скільки часу тікати і як далеко б'є.
 const BLAST_DELAY := 0.9
 const BLAST_RADIUS := 3.0
@@ -97,6 +100,8 @@ func attach(enemy: Enemy3D, player: Node3D) -> void:
 ## У скільки разів змінити шкоду по цьому ворогу. Щит тримає лише
 ## спереду; сильний удар його ламає.
 func damage_factor(heavy: bool) -> float:
+	if has(Affix.MENDER):
+		_mend_left = maxf(_mend_left, MEND_INTERRUPT)
 	if not has(Affix.SHIELDED) or _shield_broken_left > 0.0 or _player == null:
 		return 1.0
 	if heavy:
@@ -139,7 +144,7 @@ func _mend() -> void:
 		if other == null or not other.is_aim_target():
 			continue
 		if other.global_position.distance_to(_enemy.global_position) <= MEND_RADIUS:
-			other.heal(other.max_hp * MEND_SHARE)
+			other.heal(other.max_hp * MEND_SHARE * (0.5 if other == _enemy else 1.0))
 
 ## Ворог упав. Вибуховий — за мить рветься на місці смерті: коло на
 ## підлозі заповнюється, хто лишився всередині — отримує.
