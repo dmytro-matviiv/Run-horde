@@ -1189,6 +1189,21 @@ func _celebrate_boss(position: Vector3) -> void:
 	CombatVfx.impact(self, position + Vector3.UP * 1.6, Color(1.0, 0.85, 0.45), true)
 	player.shake_camera(0.35)
 
+## Мімік вкрав золото з походу: повертає, скільки справді забрав.
+func steal_gold(amount: int) -> int:
+	var taken := mini(amount, _run_gold)
+	if taken <= 0:
+		return 0
+	_run_gold -= taken
+	GameState.gold = maxi(GameState.gold - taken, 0)
+	_update_status()
+	return taken
+
+## Золото фонтаном на підлозі (мімік віддає вкрадене з лишком).
+func drop_gold(position: Vector3, amount: int) -> void:
+	if amount > 0:
+		_loot.burst(position, LootSwarm.Kind.GOLD, amount, clampi(amount / 10, 3, 12))
+
 ## Золото з походу. Талант "Приріст золота" множить здобич, а
 ## зараховується вона одразу — щоб прогрес не пропав, якщо гравець
 ## загине на виході.

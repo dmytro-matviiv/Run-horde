@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Gold"]
+albedo_color = Color(1, 0.78, 0.3, 1)
+metallic = 0.85
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.55, 0.38, 0.08, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="CylinderMesh" id="Bar"]
+top_radius = 0.09
+bottom_radius = 0.11
+height = 2.2
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Tip"]
+top_radius = 0.0
+bottom_radius = 0.16
+height = 0.35
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Foot"]
+top_radius = 0.18
+bottom_radius = 0.22
+height = 0.18
+radial_segments = 6
+rings = 1
+
+[node name="GoldBar" type="Node3D"]
+
+[node name="Bar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
+mesh = SubResource("Bar")
+surface_material_override/0 = SubResource("Gold")
+
+[node name="Tip" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.37, 0)
+mesh = SubResource("Tip")
+surface_material_override/0 = SubResource("Gold")
+
+[node name="Foot" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.09, 0)
+mesh = SubResource("Foot")
+surface_material_override/0 = SubResource("Gold")

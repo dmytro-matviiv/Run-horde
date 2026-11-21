@@ -788,34 +788,58 @@ const LEVELS := [
 			"decor": "vault",
 		},
 		"enemies": {
+			# Вартовий-статуя — "Завмри": поки герой рухається, мчить на нього;
+			# герой стоїть — кам'яніє й отримує подвійну шкоду.
 			"m": [
-				{"name": "Вартовий скарбниці", "model": "res://assets/models/monsters/Ninja.glb", "kind": "melee", "hp": 48.0, "damage": 13.0, "speed": 3.6, "height": 1.7, "xp": 6,
-					"tint": Color(0.9, 0.78, 0.35), "glow": Color(0.3, 0.22, 0.05)},
+				{"name": "Вартовий-статуя", "model": "res://assets/models/monsters/vault/statue.glb", "kind": "melee",
+					"hp": 55.0, "damage": 15.0, "speed": 2.6, "height": 1.95, "xp": 7, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "freeze_tag", "rush": 1.9, "still": 0.4, "frozen_factor": 2.0}]},
 			],
+			# Лихвар — кидає монети й накладає "борг": 5 с не вдарив його — стягне.
 			"r": [
-				{"name": "Золотий страж", "model": "res://assets/models/monsters/Squidle.glb", "kind": "ranged", "hp": 34.0, "damage": 10.0, "speed": 2.4, "height": 1.5, "hover": 0.6, "xp": 7,
-					"tint": Color(1.0, 0.85, 0.4), "projectile": {"color": Color(1.0, 0.85, 0.3), "speed": 10.0, "volley": 2}},
+				{"name": "Лихвар", "model": "res://assets/models/monsters/vault/lykhvar.glb", "kind": "ranged",
+					"hp": 34.0, "damage": 10.0, "speed": 2.4, "height": 1.5, "xp": 7, "attack_anims": ["Weapon"],
+					"projectile": {"color": Color(1.0, 0.85, 0.3), "speed": 10.0, "volley": 1},
+					"special_anims": {"debt": ["Cast"]},
+					"abilities": [{"id": "debt", "cooldown": 11.0, "first": 2.5, "time": 5.0, "damage": 2.5}]},
 			],
+			# Золоті оси — рій; кожне жало — шар золотого пилу (+6% шкоди по героєві).
 			"w": [
-				{"name": "Золота оса", "model": "res://assets/models/monsters/Armabee Evolved.glb", "kind": "melee", "hp": 15.0, "damage": 7.0, "speed": 5.0, "height": 0.7, "hover": 0.8, "xp": 1, "group": 4,
-					"tint": Color(1.0, 0.82, 0.3), "attack_range": 1.3, "cooldown": 0.7},
+				{"name": "Золота оса", "model": "res://assets/models/monsters/vault/osa.glb", "kind": "melee",
+					"hp": 15.0, "damage": 6.0, "speed": 5.0, "height": 0.75, "hover": 0.8, "xp": 1, "group": 4,
+					"attack_range": 1.3, "cooldown": 0.7,
+					"abilities": [{"id": "gold_dust", "stacks": 5, "time": 4.0}]},
 			],
+			# Мімік — скриня серед скринь; укус краде золото, смерть повертає вдвічі.
 			"x": [
-				{"name": "Скарбний привид", "model": "res://assets/models/monsters/Ghost Skull.glb", "kind": "exploder", "blast_color": Color(0.7, 0.45, 1.0, 0.9), "hp": 26.0, "damage": 32.0, "speed": 4.3, "height": 1.3, "hover": 0.6, "xp": 4,
-					"tint": Color(1.0, 0.9, 0.5), "glow": Color(0.4, 0.3, 0.05)},
+				{"name": "Мімік", "model": "res://assets/models/monsters/vault/mimic.glb", "kind": "melee",
+					"hp": 48.0, "damage": 13.0, "speed": 3.2, "height": 1.1, "xp": 6, "attack_anims": ["Weapon"],
+					"dormant": {"wake": 2.4, "stone": false, "anim": "Dormant", "spin_radius": 2.0, "spin_damage": 1.0,
+						"color": Color(1.0, 0.8, 0.3)},
+					"abilities": [{"id": "greedy_bite", "share": 0.08, "min": 5, "refund": 2.0}]},
 			],
+			# Ваги розплати — шкода по будь-кому поруч ділиться між усіма.
 			"t": [
-				{"name": "Вартовий-голем", "model": "res://assets/models/monsters/Goleling Evolved.glb", "kind": "totem", "hp": 80.0, "damage": 0.0, "speed": 0.0, "height": 2.0, "hover": 0.2, "xp": 5,
-					"tint": Color(0.85, 0.72, 0.4), "glow": Color(0.3, 0.22, 0.05), "no_elite": true,
-					"abilities": [{"id": "ward", "factor": 0.2, "range": 7.0, "links": 2}]},
+				{"name": "Ваги розплати", "model": "res://assets/models/monsters/vault/vagy.glb", "kind": "totem",
+					"hp": 70.0, "damage": 0.0, "speed": 0.0, "height": 2.0, "xp": 5, "no_elite": true,
+					"abilities": [{"id": "fate_scale", "range": 7.0}]},
 			],
 		},
-		"boss": {"name": "Володар Скарбниці", "model": "res://assets/models/monsters/Demon-LnfIziKv4o.glb",
-			"hp": 650.0, "damage": 24.0, "speed": 2.9, "height": 4.0, "xp": 100,
-			"tint": Color(1.0, 0.82, 0.35), "glow": Color(0.45, 0.32, 0.05),
+		# Золотий Скупар: золота клітка довкола героя (зламай прут і вийди),
+		# скрині-приманки (одна лікує, решта — міміки), котяться монети.
+		"boss": {"name": "Золотий Скупар", "model": "res://assets/models/monsters/vault/boss.glb", "style": "gold_miser",
+			"hp": 680.0, "damage": 24.0, "speed": 2.7, "height": 4.0, "xp": 100,
+			"attack_anims": ["Weapon"],
+			"special_anims": {"gold_cage": ["Cast"], "decoy_chests": ["Slam"], "rolling_coins": ["Slam"]},
 			"abilities": [
-				{"id": "pylons", "cooldown": 1.0, "first": 3.0, "count": 3, "pylon": {"name": "Золотий пілон", "model": "res://assets/models/monsters/Squidle.glb", "kind": "totem", "hp": 45.0, "damage": 0.0, "speed": 0.0, "height": 1.3, "xp": 2, "tint": Color(1.0, 0.85, 0.4), "glow": Color(0.5, 0.35, 0.05), "no_elite": true, "abilities": [{"id": "ward", "factor": 0.0, "range": 9.0, "links": 1, "target": "boss"}]}},
-				{"id": "radial_volley", "cooldown": 7.0, "first": 5.0, "count": 16, "speed": 8.5, "color": Color(1.0, 0.85, 0.3)},
+				{"id": "gold_cage", "cooldown": 16.0, "first": 6.0, "radius": 1.5, "bars": 8, "time": 3.5, "bar_hp": 18.0, "damage": 2.2},
+				{"id": "rolling_coins", "cooldown": 10.0, "first": 3.0, "count": 3, "speed": 9.0, "damage": 0.9},
+				{"id": "decoy_chests", "cooldown": 22.0, "first": 12.0, "count": 3, "heal": 0.2, "gold": 40, "mimic":
+					{"name": "Мімік", "model": "res://assets/models/monsters/vault/mimic.glb", "kind": "melee",
+						"hp": 40.0, "damage": 12.0, "speed": 3.2, "height": 1.1, "attack_anims": ["Weapon"],
+						"dormant": {"wake": 2.0, "stone": false, "anim": "Dormant", "spin_radius": 2.0, "spin_damage": 1.0,
+							"color": Color(1.0, 0.8, 0.3)},
+						"abilities": [{"id": "greedy_bite", "share": 0.08, "min": 5, "refund": 2.0}]}},
 			]},
 		"map": [
 			"##############################################",

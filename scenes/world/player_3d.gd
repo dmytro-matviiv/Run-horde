@@ -2052,6 +2052,12 @@ func _tick_timers(delta: float) -> void:
 	_roll_left = maxf(_roll_left - delta, 0.0)
 	if _attack_step < 0:
 		_combo_expire = maxf(_combo_expire - delta, 0.0)
+	if _gold_dust > 0:
+		_gold_dust_left -= delta
+		if _gold_dust_left <= 0.0:
+			_gold_dust = 0
+			if _gold_dust_fx != null:
+				_gold_dust_fx.emitting = false
 
 func _update_velocity(direction: Vector3, delta: float) -> void:
 	velocity.x -= _pull_applied.x
@@ -2556,6 +2562,8 @@ func take_damage(amount: float) -> bool:
 			_on_perfect_dodge()
 		return false
 	amount *= _damage_taken_factor
+	# Золотий пил (оси Скарбниці): кожен шар — більше шкоди.
+	amount *= 1.0 + GOLD_DUST_STEP * _gold_dust
 	if _armor > 0.0:
 		var armor := _armor
 		if talent("last_stand") > 0.0 and current_hp < max_hp * 0.35:
@@ -2662,6 +2670,28 @@ func knock_down(push: Vector3, seconds: float) -> void:
 	_abort_attacks()
 	_fire("HitShot")
 	CombatVfx.shockwave(get_parent(), global_position, 1.2, Color(0.9, 0.85, 0.7, 0.8), 0.3)
+
+## Золотий пил (жало золотої оси): +GOLD_DUST_STEP отриманої шкоди за
+## шар, до max_stacks; кожне нове жало оновлює seconds.
+const GOLD_DUST_STEP := 0.06
+var _gold_dust := 0
+var _gold_dust_left := 0.0
+var _gold_dust_fx: CPUParticles3D
+
+func add_gold_dust(max_stacks: int, seconds: float) -> void:
+	if _dead:
+		return
+	_gold_dust = mini(_gold_dust + 1, max_stacks)
+	_gold_dust_left = seconds
+	if _gold_dust_fx == null:
+		_gold_dust_fx = CombatVfx.make_motes(Color(1.0, 0.85, 0.3), 12, 0.5, 0.6, 0.06)
+		add_child(_gold_dust_fx)
+		_gold_dust_fx.position = Vector3.UP * 1.0
+	_gold_dust_fx.emitting = true
+	_gold_dust_fx.amount = 6 + _gold_dust * 4
+
+func gold_dust() -> int:
+	return _gold_dust
 
 ## Схопили (кістяні руки чаклуна): seconds секунд на місці — ні кроку, ні
 ## перекату, бити можна. Перекат, що вже йде, рятує. true — схопили.

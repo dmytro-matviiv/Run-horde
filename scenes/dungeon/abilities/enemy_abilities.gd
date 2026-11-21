@@ -33,6 +33,13 @@ class_name EnemyAbilities
 ##   overheat     — голем: розжарений (міцний, сліди) / перегрітий (вразливий);
 ##   forge_blades, magnet, molten_channels, forge_core — Володар Горна.
 ##   (рикошет Гартувальника — "bounces" у "projectile" опису ворога.)
+## Скарбниця Тіней (7-й данж):
+##   greedy_bite  — мімік-скриня: укус краде золото, смерть повертає вдвічі;
+##   debt         — Лихвар: "борг" над героєм, не вдарив за 5 с — стягує;
+##   gold_dust    — оса: шари золотого пилу (герой отримує більше шкоди);
+##   freeze_tag   — статуя: мчить, поки герой рухається; стоїть — кам'яніє;
+##   fate_scale   — ваги: шкода ділиться між усіма пов'язаними ворогами;
+##   gold_cage, decoy_chests (+ treasure), rolling_coins — Золотий Скупар.
 
 const SCRIPTS := {
 	"blink": preload("res://scenes/dungeon/abilities/blink_ability.gd"),
@@ -90,6 +97,15 @@ const SCRIPTS := {
 	"magnet": preload("res://scenes/dungeon/abilities/magnet_ability.gd"),
 	"molten_channels": preload("res://scenes/dungeon/abilities/molten_channels_ability.gd"),
 	"forge_core": preload("res://scenes/dungeon/abilities/forge_core_ability.gd"),
+	"greedy_bite": preload("res://scenes/dungeon/abilities/greedy_bite_ability.gd"),
+	"debt": preload("res://scenes/dungeon/abilities/debt_ability.gd"),
+	"gold_dust": preload("res://scenes/dungeon/abilities/gold_dust_ability.gd"),
+	"freeze_tag": preload("res://scenes/dungeon/abilities/freeze_tag_ability.gd"),
+	"fate_scale": preload("res://scenes/dungeon/abilities/fate_scale_ability.gd"),
+	"gold_cage": preload("res://scenes/dungeon/abilities/gold_cage_ability.gd"),
+	"decoy_chests": preload("res://scenes/dungeon/abilities/decoy_chests_ability.gd"),
+	"treasure": preload("res://scenes/dungeon/abilities/treasure_ability.gd"),
+	"rolling_coins": preload("res://scenes/dungeon/abilities/rolling_coins_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

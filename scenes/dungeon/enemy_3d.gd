@@ -154,6 +154,10 @@ var _pack_factor := 1.0
 var _pack_left := 0.0
 ## Здібності (EnemyAbility): мерехтіння, кидки, павутина, тотем...
 var abilities: Array[EnemyAbility] = []
+## Чи влучив останній звичайний удар (для on_strike здібностей).
+var strike_landed := false
+## Ваги розплати: шкода ділиться між пов'язаними ворогами (FateScaleAbility).
+var fate_scale: EnemyAbility
 ## Тотем: стоїть на місці й сам не б'є.
 var stationary := false
 ## Скільки живих істот, яких покликав цей ворог.
@@ -390,7 +394,7 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 	var players := _model.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		_animation = players[0]
-		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying", "Turn", "Fly", "Spin", "Unlock", "Charge", "Stunned", "Idle_Rage", "Channel", "Down"])
+		_loop(["Idle", "Walk", "Run", "Flying_Idle", "Fast_Flying", "Turn", "Fly", "Spin", "Unlock", "Charge", "Stunned", "Idle_Rage", "Channel", "Down", "Dormant"])
 		# Анімацію крутимо самі (див. _process): так її можна оновлювати
 		# рідше або ставити на паузу, коли ворога не видно.
 		_animation.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
@@ -1310,8 +1314,9 @@ func _resolve_attack() -> void:
 		var rig := get_tree().get_first_node_in_group(&"camera_rig")
 		if rig != null:
 			rig.shake(0.12)
+		strike_landed = false
 		if _zone_covers(_player.global_position, true):
-			_player.take_damage(damage * 1.5)
+			strike_landed = _player.take_damage(damage * 1.5)
 		else:
 			_check_late_dodge(true)
 		for ability in abilities:
@@ -1320,9 +1325,11 @@ func _resolve_attack() -> void:
 	# Звичайний удар влучає, лише якщо герой досі в червоній зоні.
 	if _zone_covers(_player.global_position, false) and _has_line_of_sight():
 		# Холодний дотик ("chill"): влучив — удари героя повільніші.
-		if _player.take_damage(damage) and definition.has("chill") and _player.has_method("chill_attacks"):
+		strike_landed = _player.take_damage(damage)
+		if strike_landed and definition.has("chill") and _player.has_method("chill_attacks"):
 			_player.chill_attacks(float(definition.chill.get("factor", 0.7)), float(definition.chill.get("seconds", 3.0)))
 	else:
+		strike_landed = false
 		_check_late_dodge(false)
 	for ability in abilities:
 		ability.on_strike()
@@ -1770,6 +1777,8 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 	# Здібності, що міняють шкоду (ковадло-щит спереду, перегрів голема).
 	for ability in abilities:
 		amount = ability.filter_damage(amount, heavy)
+	if fate_scale != null and is_instance_valid(fate_scale.enemy) and fate_scale.enemy.is_alive():
+		amount = fate_scale.call("share", self, amount)
 	if amount <= 0.0:
 		last_hit_source = &""
 		return
@@ -1970,7 +1979,7 @@ func _wake() -> void:
 	if _visor != null:
 		_visor.queue_free()
 		_visor = null
-	var color := Color(0.45, 0.9, 1.0)
+	var color: Color = definition.get("dormant", {}).get("color", Color(0.45, 0.9, 1.0))
 	CombatVfx.shockwave(get_parent(), global_position, 3.0, color, 0.4)
 	CombatVfx.impact(get_parent(), global_position + Vector3.UP * target_height * 0.8, color, true)
 	_play_once(["Wake", "Weapon"])
@@ -1990,6 +1999,12 @@ func _make_dormant() -> void:
 	if _aggro or hunting:
 		return
 	_dormant = true
+	var dormant_def: Dictionary = definition.dormant
+	# Мімік: не кам'яніє й без візора — просто скриня (своя поза "anim").
+	if not bool(dormant_def.get("stone", true)):
+		if _animation != null and _animation.has_animation(String(dormant_def.get("anim", "Dormant"))):
+			_animation.play(String(dormant_def.get("anim", "Dormant")))
+		return
 	var stone := StandardMaterial3D.new()
 	stone.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	stone.albedo_color = Color(0.72, 0.8, 0.88, 0.78)

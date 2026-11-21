@@ -37,6 +37,7 @@ const STYLES := {
 	"keeper": {"color": Color(1.0, 0.7, 0.3), "rage": "відмикає саркофаги", "frenzy": "гасить факели"},
 	"frost_dragon": {"color": Color(0.55, 0.9, 1.0), "rage": "злітає в небо", "frenzy": "кличе вічну зиму"},
 	"bone_lord": {"color": Color(0.45, 1.0, 0.5), "rage": "кличе армію мертвих", "frenzy": "стає вічним"},
+	"gold_miser": {"color": Color(1.0, 0.82, 0.3), "rage": "трусить мішком золота", "frenzy": "божеволіє від жадоби"},
 	"forge_lord": {"color": Color(1.0, 0.5, 0.12), "rage": "відкриває горно", "frenzy": "плавиться від люті"},
 }
 
