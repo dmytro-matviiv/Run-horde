@@ -316,7 +316,7 @@ func configure(source: Dictionary, hp_scale: float, damage_scale: float) -> void
 		"tank":
 			kind = Kind.MELEE
 			tank = true
-			slam_every = 3
+			slam_every = int(definition.get("slam_every", 3))
 			attack_range = 2.6
 		"boss":
 			kind = Kind.BOSS
@@ -1254,6 +1254,7 @@ func _begin_windup() -> void:
 		# Снаряд "набухає" в руці — це і є попередження для гравця.
 		_charging_shot = EnemyProjectile.create(damage, projectile_color, projectile_speed)
 		_charging_shot.shape = String(definition.get("projectile", {}).get("shape", ""))
+		_charging_shot.bounces = int(definition.get("projectile", {}).get("bounces", 0))
 		add_child(_charging_shot)
 		_charging_shot.position = Vector3(0, target_height * 0.7, 0) + _model_forward() * 0.6
 		return
@@ -1362,6 +1363,7 @@ func _release_shot() -> void:
 func _spawn_shot(origin: Vector3, direction: Vector3) -> void:
 	var extra := EnemyProjectile.create(damage, projectile_color, projectile_speed)
 	extra.shape = String(definition.get("projectile", {}).get("shape", ""))
+	extra.bounces = int(definition.get("projectile", {}).get("bounces", 0))
 	get_parent().add_child(extra)
 	extra.global_position = origin
 	extra.set_charge(1.0)
@@ -1765,6 +1767,12 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 		if _shield_hp > 0.0:
 			_break_shield(true)
 	amount *= _damage_taken
+	# Здібності, що міняють шкоду (ковадло-щит спереду, перегрів голема).
+	for ability in abilities:
+		amount = ability.filter_damage(amount, heavy)
+	if amount <= 0.0:
+		last_hit_source = &""
+		return
 	# Протаранив стіну — подвійна шкода ("stun_damage" у "charge").
 	if _wall_stunned:
 		amount *= float(definition.get("charge", {}).get("stun_damage", 1.0))
@@ -2047,6 +2055,9 @@ func _sink() -> void:
 	tween.tween_callback(queue_free)
 
 # --- поворот і анімації ---
+
+func model_forward() -> Vector3:
+	return _model_forward()
 
 func _model_forward() -> Vector3:
 	var angle := _model.rotation.y

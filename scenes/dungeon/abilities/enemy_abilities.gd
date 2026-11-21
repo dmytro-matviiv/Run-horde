@@ -26,6 +26,13 @@ class_name EnemyAbilities
 ##   empower      — тотем: союзники б'ють сильніше й лікуються;
 ##   scythe_sweep, scythe_throw, army_of_dead, eternal_lord, bone_spikes —
 ##                  прийоми Кістяного Володаря.
+## Кузня Присмерку (6-й данж):
+##   hook         — гном кидає гак-ланцюг і підтягує героя до себе;
+##   merge        — три іскри, що злиплись, стають Полум'яним ядром;
+##   anvil_slam   — ковадло-щит спереду (стріли відбиває) і гупання ним;
+##   overheat     — голем: розжарений (міцний, сліди) / перегрітий (вразливий);
+##   forge_blades, magnet, molten_channels, forge_core — Володар Горна.
+##   (рикошет Гартувальника — "bounces" у "projectile" опису ворога.)
 
 const SCRIPTS := {
 	"blink": preload("res://scenes/dungeon/abilities/blink_ability.gd"),
@@ -75,6 +82,14 @@ const SCRIPTS := {
 	"army_of_dead": preload("res://scenes/dungeon/abilities/army_of_dead_ability.gd"),
 	"eternal_lord": preload("res://scenes/dungeon/abilities/eternal_lord_ability.gd"),
 	"bone_spikes": preload("res://scenes/dungeon/abilities/bone_spikes_ability.gd"),
+	"hook": preload("res://scenes/dungeon/abilities/hook_ability.gd"),
+	"merge": preload("res://scenes/dungeon/abilities/merge_ability.gd"),
+	"anvil_slam": preload("res://scenes/dungeon/abilities/anvil_guard_ability.gd"),
+	"overheat": preload("res://scenes/dungeon/abilities/overheat_ability.gd"),
+	"forge_blades": preload("res://scenes/dungeon/abilities/forge_blades_ability.gd"),
+	"magnet": preload("res://scenes/dungeon/abilities/magnet_ability.gd"),
+	"molten_channels": preload("res://scenes/dungeon/abilities/molten_channels_ability.gd"),
+	"forge_core": preload("res://scenes/dungeon/abilities/forge_core_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

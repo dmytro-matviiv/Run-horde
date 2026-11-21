@@ -32,6 +32,9 @@ var on_hit: Callable
 ## "blade" — метальний ніж/кунай: звичайна сталь, без магічного ореолу
 ## й сліду; влучання — іскри, а не вибух.
 var shape := ""
+## Скільки разів відскакує від стін (Гартувальник: розпечені заклепки
+## рикошетять — сховатись за колоною вже не досить).
+var bounces := 0
 
 ## Колір і швидкість — свої в кожного стрільця: отруйні плювки в
 ## печерах повільні й зелені, крижані стріли в цитаделі швидкі й сині.
@@ -98,6 +101,9 @@ func _physics_process(delta: float) -> void:
 	query.collision_mask = 1
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
+		if bounces > 0:
+			_ricochet(hit)
+			return
 		_burst(hit.position)
 		return
 	global_position = to
@@ -114,6 +120,21 @@ func _physics_process(delta: float) -> void:
 	_life -= delta
 	if _life <= 0.0:
 		queue_free()
+
+func _ricochet(hit: Dictionary) -> void:
+	bounces -= 1
+	var normal: Vector3 = hit.normal
+	normal.y = 0.0
+	if normal.length() < 0.1:
+		_burst(hit.position)
+		return
+	normal = normal.normalized()
+	_velocity = _velocity.bounce(normal)
+	_velocity.y = 0.0
+	_velocity = _velocity.normalized() * speed
+	global_position = hit.position + normal * 0.08
+	_life = maxf(_life, LIFETIME * 0.6)
+	CombatVfx.impact(get_parent(), hit.position, color, false)
 
 func _burst(position: Vector3) -> void:
 	if shape == "blade":

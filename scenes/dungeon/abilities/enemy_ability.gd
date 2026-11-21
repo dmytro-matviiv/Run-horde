@@ -74,6 +74,11 @@ func on_damaged() -> void:
 func on_lethal() -> bool:
 	return false
 
+## Удар по ворогу ще не врахований: повернути, скільки шкоди пройде
+## (0 — удар повністю відбито).
+func filter_damage(amount: float, _heavy: bool) -> float:
+	return amount
+
 ## Звичайний удар ворога щойно впав (влучив чи ні).
 func on_strike() -> void:
 	pass

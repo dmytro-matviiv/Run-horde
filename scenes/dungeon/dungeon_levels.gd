@@ -667,34 +667,59 @@ const LEVELS := [
 			"decor": "forge",
 		},
 		"enemies": {
+			# Гном-клепальник — кидає гак-ланцюг (смуга на підлозі), зачепив —
+			# підтягує героя до себе, і наступний удар молотом сильніший.
 			"m": [
-				{"name": "Коваль-раб", "model": "res://assets/models/monsters/Orc Enemy.glb", "kind": "melee", "hp": 42.0, "damage": 12.0, "speed": 2.9, "height": 1.8, "xp": 5,
-					"tint": Color(0.6, 0.5, 0.48), "glow": Color(0.3, 0.1, 0.05)},
+				{"name": "Гном-клепальник", "model": "res://assets/models/monsters/forge/gnom.glb", "kind": "melee",
+					"hp": 46.0, "damage": 12.0, "speed": 2.8, "height": 1.55, "xp": 6,
+					"attack_anims": ["Weapon"], "special_anims": {"hook": ["Throw"]},
+					"abilities": [{"id": "hook", "cooldown": 7.0, "first": 0.3, "min": 2.5, "max": 8.0, "damage": 0.5}]},
 			],
+			# Гартувальник — кидає розпечені заклепки, що двічі рикошетять від стін.
 			"r": [
-				{"name": "Вогняний біс", "model": "res://assets/models/monsters/Blue Demon.glb", "kind": "ranged", "hp": 30.0, "damage": 9.0, "speed": 2.5, "height": 1.6, "xp": 6,
-					"tint": Color(1.0, 0.55, 0.3), "glow": Color(0.4, 0.1, 0.02), "projectile": {"color": Color(1.0, 0.5, 0.15), "speed": 9.5, "volley": 1},
-					"abilities": [{"id": "lob", "cooldown": 6.0, "first": 4.0, "radius": 1.8, "pool": 3.0, "color": Color(1.0, 0.45, 0.1)}]},
+				{"name": "Гартувальник", "model": "res://assets/models/monsters/forge/gartuvalnyk.glb", "kind": "ranged",
+					"hp": 32.0, "damage": 9.0, "speed": 2.6, "height": 1.55, "xp": 6, "attack_anims": ["Weapon"],
+					"projectile": {"color": Color(1.0, 0.5, 0.15), "speed": 10.0, "volley": 1, "bounces": 2}},
 			],
+			# Розпечені іскри — рій; три, що злиплись на 1.5 с, стають Полум'яним ядром.
 			"w": [
-				{"name": "Розпечена іскра", "model": "res://assets/models/monsters/Green Spiky Blob.glb", "kind": "melee", "hp": 13.0, "damage": 6.0, "speed": 4.8, "height": 0.8, "xp": 1, "group": 4,
-					"tint": Color(1.0, 0.6, 0.2), "glow": Color(0.5, 0.15, 0.0), "attack_range": 1.3, "cooldown": 0.7},
+				{"name": "Розпечена іскра", "model": "res://assets/models/monsters/forge/iskra.glb", "kind": "melee",
+					"hp": 13.0, "damage": 6.0, "speed": 4.6, "height": 0.75, "hover": 0.25, "xp": 1, "group": 4,
+					"attack_range": 1.3, "cooldown": 0.7,
+					"abilities": [{"id": "merge", "radius": 1.8, "hold": 1.5, "into":
+						{"name": "Полум'яне ядро", "model": "res://assets/models/monsters/forge/iskra.glb", "kind": "tank",
+							"hp": 60.0, "damage": 14.0, "speed": 1.9, "height": 1.7, "hover": 0.3, "xp": 5, "no_elite": true,
+							"slam_every": 1, "tint": Color(0.75, 0.45, 0.35), "glow": Color(0.6, 0.15, 0.0)}}]},
 			],
+			# Залізний голем-заготовка — таран; розжарений (половина шкоди, сліди
+			# металу) / перегрівся (3 с пари, подвійна шкода).
 			"c": [
-				{"name": "Залізний таран", "model": "res://assets/models/monsters/Yeti.glb", "kind": "charger", "hp": 90.0, "damage": 19.0, "speed": 2.9, "height": 2.1, "xp": 8,
-					"tint": Color(0.35, 0.32, 0.3)},
+				{"name": "Залізний голем", "model": "res://assets/models/monsters/forge/golem.glb", "kind": "charger",
+					"hp": 95.0, "damage": 19.0, "speed": 2.7, "height": 2.3, "xp": 9, "attack_anims": ["Weapon"],
+					"charge": {"cooldown": 7.0, "windup": 0.9, "wall_stun": 1.5, "knockdown": 0.5, "push": 9.0, "anim": "Charge", "windup_anim": "Idle"},
+					"abilities": [{"id": "overheat", "hot": 8.0, "vent": 3.0, "hot_factor": 0.5, "vent_factor": 2.0}]},
 			],
+			# Ковадлоносець — ковадло-щит спереду (стріли відбиває), гупає ним об
+			# землю і 2.5 с стоїть відкритий.
 			"x": [
-				{"name": "Вибуховий дух горна", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "blast_color": Color(1.0, 0.55, 0.15, 0.9), "hp": 24.0, "damage": 30.0, "speed": 4.6, "height": 1.2, "hover": 0.5, "xp": 4,
-					"tint": Color(1.0, 0.4, 0.15), "glow": Color(0.5, 0.1, 0.02)},
+				{"name": "Ковадлоносець", "model": "res://assets/models/monsters/forge/kovadlonosets.glb", "kind": "tank",
+					"hp": 85.0, "damage": 15.0, "speed": 1.9, "height": 1.95, "xp": 8, "no_elite": true,
+					"attack_anims": ["Weapon"], "special_anims": {"anvil_slam": ["Slam"]},
+					"abilities": [{"id": "anvil_slam", "cooldown": 8.0, "first": 5.0, "radius": 2.6, "damage": 1.2, "open": 2.5}]},
 			],
 		},
-		"boss": {"name": "Володар Горна", "model": "res://assets/models/monsters/Glub Evolved.glb",
-			"hp": 520.0, "damage": 22.0, "speed": 3.2, "height": 3.8, "xp": 85,
-			"tint": Color(1.0, 0.35, 0.15), "glow": Color(0.6, 0.15, 0.02),
+		# Володар Горна: кує мечі, що полюють на героя; магнітом тягне до
+		# палаючого горна; заливає залу жолобами металу; з половини здоров'я
+		# горно в грудях відкрите — швидший, але вразливіший.
+		"boss": {"name": "Володар Горна", "model": "res://assets/models/monsters/forge/boss.glb", "style": "forge_lord",
+			"hp": 560.0, "damage": 22.0, "speed": 3.0, "height": 3.8, "xp": 85,
+			"attack_anims": ["Weapon"],
+			"special_anims": {"forge_blades": ["Slam"], "molten_channels": ["Weapon"], "magnet": ["Cast"]},
 			"abilities": [
-				{"id": "lob", "cooldown": 5.5, "first": 2.5, "radius": 2.2, "damage": 1.3, "pool": 3.5, "color": Color(1.0, 0.4, 0.1), "count": 3},
-				{"id": "leap", "cooldown": 8.0, "first": 6.0, "radius_mult": 1.3},
+				{"id": "forge_blades", "cooldown": 13.0, "first": 3.0, "count": 3, "hunt": 4.0, "stuck": 5.0, "damage": 0.5},
+				{"id": "magnet", "cooldown": 15.0, "first": 9.0, "time": 3.0, "pull": 3.2, "radius": 2.8, "damage": 1.0, "uninterruptible": true},
+				{"id": "molten_channels", "cooldown": 11.0, "first": 6.0, "count": 4, "damage": 1.0},
+				{"id": "forge_core", "factor": 1.5},
 			]},
 		"map": [
 			"############################################",
