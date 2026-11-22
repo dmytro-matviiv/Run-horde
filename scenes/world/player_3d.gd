@@ -1711,6 +1711,10 @@ func get_skills() -> Array[HeroSkill3D]:
 func use_skill(index: int = 0) -> void:
 	if _dead or _knock_left > 0.0 or _roll_left > 0.0 or index < 0 or index >= _skills.size():
 		return
+	# Коло мовчання Рунного писаря: здібності не застосовуються.
+	if _silenced_left > 0.0:
+		CombatVfx.shockwave(get_parent(), global_position, 0.9, Color(0.35, 0.9, 1.0, 0.8), 0.2)
+		return
 	# Спершу скидаємо удар, який герой робив, і лише потім застосовуємо
 	# здібність: вона сама може задати рух (ривок люті), і зачищати його
 	# після цього не можна.
@@ -2143,10 +2147,13 @@ func apply_pull(step: Vector3) -> void:
 ## ЕКРАНА, а рухатись треба відносно камери.
 func _get_world_direction() -> Vector3:
 	var input := _input_direction
+	# Подих плутанини (дракон Безодні): керування навиворіт.
+	if _confused_left > 0.0:
+		input = -input
 	# "Вгору" на клавіатурі = вперед від камери.
 	var keyboard := Input.get_vector("ui_left", "ui_right", "ui_down", "ui_up")
 	if keyboard != Vector2.ZERO:
-		input = keyboard
+		input = -keyboard if _confused_left > 0.0 else keyboard
 	if input == Vector2.ZERO:
 		return Vector3.ZERO
 	# "Вперед" для камери — це -Z (так влаштований Godot).
@@ -2767,7 +2774,58 @@ func tangle(seconds: float, slow: float) -> void:
 func can_roll() -> bool:
 	return _bola_left <= 0.0
 
+## Безодня Рун: мовчання (без здібностей), плутанина (керування
+## навиворіт), висмоктування мани (імпи).
+var _silenced_left := 0.0
+var _confused_left := 0.0
+var _abyss_marker: Node3D
+
+func silence(seconds: float) -> void:
+	if _dead:
+		return
+	_silenced_left = maxf(_silenced_left, seconds)
+	_abyss_mark(Color(0.35, 0.9, 1.0))
+
+func is_silenced() -> bool:
+	return _silenced_left > 0.0
+
+func confuse(seconds: float) -> void:
+	if _dead:
+		return
+	_confused_left = maxf(_confused_left, seconds)
+	_abyss_mark(Color(0.8, 0.35, 1.0))
+
+func is_confused() -> bool:
+	return _confused_left > 0.0
+
+func drain_mana(amount: float) -> float:
+	var taken := minf(amount, mana)
+	mana -= taken
+	add_mana(0.0)
+	return taken
+
+func _abyss_mark(color: Color) -> void:
+	if _abyss_marker == null:
+		_abyss_marker = MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.28
+		torus.outer_radius = 0.34
+		torus.rings = 16
+		torus.ring_segments = 4
+		(_abyss_marker as MeshInstance3D).mesh = torus
+		(_abyss_marker as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_abyss_marker)
+		_abyss_marker.position = Vector3.UP * 2.15
+	(_abyss_marker as MeshInstance3D).material_override = CombatVfx.get_glow_material(color)
+	_abyss_marker.visible = true
+
 func _tick_village_effects(delta: float) -> void:
+	if _silenced_left > 0.0 or _confused_left > 0.0:
+		_silenced_left = maxf(_silenced_left - delta, 0.0)
+		_confused_left = maxf(_confused_left - delta, 0.0)
+		if _abyss_marker != null:
+			_abyss_marker.rotation.y += delta * 4.0
+			_abyss_marker.visible = _silenced_left > 0.0 or _confused_left > 0.0
 	if _burn_left > 0.0:
 		_burn_left -= delta
 		_burn_tick -= delta

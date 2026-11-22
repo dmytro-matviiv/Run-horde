@@ -416,6 +416,10 @@ func setup(player: Node3D, model_scene: PackedScene) -> void:
 		_make_dormant()
 	if definition.has("lifetime"):
 		_life_left = float(definition.lifetime)
+	# Перешкода, яку не розбити (стіни порожнечі Володаря Рун).
+	if bool(definition.get("invulnerable", false)):
+		invulnerable = true
+		untargetable = true
 	if phasing:
 		collision_mask = 0
 		_grounded = true
@@ -894,6 +898,7 @@ func _physics_process(delta: float) -> void:
 	if _life_left > 0.0:
 		_life_left -= delta
 		if _life_left <= 0.0:
+			invulnerable = false
 			take_damage(1.0e9)
 			return
 	if definition.has("bone_shield"):

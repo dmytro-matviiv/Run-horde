@@ -1025,36 +1025,52 @@ const LEVELS := [
 			"decor": "abyss",
 		},
 		"enemies": {
+			# Демон-перевертень — міняється з героєм місцями й одразу б'є.
 			"m": [
-				{"name": "Демон Безодні", "model": "res://assets/models/monsters/Demon-LnfIziKv4o.glb", "kind": "melee", "hp": 75.0, "damage": 20.0, "speed": 3.3, "height": 2.2, "xp": 9,
-					"tint": Color(0.55, 0.3, 0.75), "glow": Color(0.25, 0.05, 0.4)},
+				{"name": "Демон-перевертень", "model": "res://assets/models/monsters/abyss/demon.glb", "kind": "melee",
+					"hp": 78.0, "damage": 20.0, "speed": 3.4, "height": 2.0, "xp": 9, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "swap", "cooldown": 9.0, "first": 0.3, "min": 3.5, "max": 11.0}]},
 			],
+			# Рунний писар — коло мовчання під героєм (без здібностей).
 			"r": [
-				{"name": "Рунний чаклун", "model": "res://assets/models/monsters/Wizard.glb", "kind": "ranged", "hp": 45.0, "damage": 14.0, "speed": 2.5, "height": 1.9, "xp": 9,
-					"tint": Color(0.45, 0.3, 0.7), "glow": Color(0.2, 0.05, 0.35), "projectile": {"color": Color(0.7, 0.3, 1.0), "speed": 11.0, "volley": 2},
-					"abilities": [{"id": "lob", "cooldown": 6.5, "first": 5.0, "radius": 2.0, "pool": 3.0, "color": Color(0.6, 0.2, 0.9)}]},
+				{"name": "Рунний писар", "model": "res://assets/models/monsters/abyss/scribe.glb", "kind": "ranged",
+					"hp": 46.0, "damage": 14.0, "speed": 2.5, "height": 1.95, "xp": 9, "attack_anims": ["Weapon"],
+					"projectile": {"color": Color(0.35, 0.9, 1.0), "speed": 11.0, "volley": 1},
+					"special_anims": {"silence_rune": ["Cast"]},
+					"abilities": [{"id": "silence_rune", "cooldown": 10.0, "first": 2.0, "radius": 2.6, "time": 5.0}]},
 			],
+			# Імпи Безодні — рій; кожен укус висмоктує ману.
 			"w": [
-				{"name": "Тіньова оса", "model": "res://assets/models/monsters/Armabee Evolved.glb", "kind": "melee", "hp": 18.0, "damage": 8.0, "speed": 5.2, "height": 0.7, "hover": 0.8, "xp": 1, "group": 4,
-					"tint": Color(0.5, 0.25, 0.7), "glow": Color(0.25, 0.05, 0.4), "attack_range": 1.3, "cooldown": 0.65},
+				{"name": "Імп Безодні", "model": "res://assets/models/monsters/abyss/imp.glb", "kind": "melee",
+					"hp": 18.0, "damage": 8.0, "speed": 5.2, "height": 0.75, "hover": 0.7, "xp": 1, "group": 4,
+					"attack_range": 1.3, "cooldown": 0.65,
+					"abilities": [{"id": "mana_bite", "amount": 8.0}]},
 			],
+			# Малий дракон Безодні — таран; подих плутанини (керування навиворіт).
 			"c": [
-				{"name": "Малий Дракон Безодні", "model": "res://assets/models/monsters/Dragon Evolved.glb", "kind": "charger", "hp": 140.0, "damage": 26.0, "speed": 3.4, "height": 2.8, "hover": 0.5, "xp": 12,
-					"tint": Color(0.3, 0.15, 0.4), "glow": Color(0.35, 0.1, 0.55)},
+				{"name": "Малий дракон Безодні", "model": "res://assets/models/monsters/abyss/drake.glb", "kind": "charger",
+					"hp": 140.0, "damage": 26.0, "speed": 3.4, "height": 2.2, "hover": 0.6, "xp": 12, "attack_anims": ["Weapon"],
+					"charge": {"cooldown": 7.0, "windup": 0.9, "wall_stun": 1.5, "knockdown": 0.5, "push": 9.0, "anim": "Run", "windup_anim": "Idle"},
+					"special_anims": {"confusion_breath": ["Breath"]},
+					"abilities": [{"id": "confusion_breath", "cooldown": 10.0, "first": 0.6, "range": 6.0, "arc": 50.0, "time": 3.0}]},
 			],
+			# Рунний обеліск — воскрешає ворогів, що впали поруч (раз кожного).
 			"t": [
-				{"name": "Спалене Серце", "model": "res://assets/models/monsters/Mushroom King.glb", "kind": "totem", "hp": 110.0, "damage": 0.0, "speed": 0.0, "height": 2.4, "xp": 6,
-					"tint": Color(0.4, 0.2, 0.55), "glow": Color(0.3, 0.08, 0.45), "no_elite": true,
-					"abilities": [{"id": "ward", "factor": 0.25, "range": 8.0, "links": 3}]},
+				{"name": "Рунний обеліск", "model": "res://assets/models/monsters/abyss/obelisk.glb", "kind": "totem",
+					"hp": 110.0, "damage": 0.0, "speed": 0.0, "height": 2.4, "xp": 6, "no_elite": true,
+					"abilities": [{"id": "revive", "range": 7.0, "delay": 3.0, "hp": 0.6}]},
 			],
 		},
-		"boss": {"name": "Володар Рун", "model": "res://assets/models/monsters/Goleling Evolved.glb",
-			"hp": 1000.0, "damage": 30.0, "speed": 2.8, "height": 4.4, "hover": 0.3, "xp": 180,
-			"tint": Color(0.45, 0.22, 0.6), "glow": Color(0.5, 0.15, 0.8),
+		# Володар Рун: рунна послідовність (стань на руни в показаному порядку),
+		# стіни порожнечі хрестом через залу, відлуння — тінь біжить слідом героя.
+		"boss": {"name": "Володар Рун", "model": "res://assets/models/monsters/abyss/boss.glb", "style": "rune_lord",
+			"hp": 1050.0, "damage": 30.0, "speed": 2.8, "height": 4.4, "xp": 180,
+			"attack_anims": ["Weapon"],
+			"special_anims": {"rune_sequence": ["Cast"], "void_walls": ["Slam"], "echo": ["Cast"]},
 			"abilities": [
-				{"id": "beams", "cooldown": 11.0, "first": 3.0, "count": 3, "length": 13.0, "time": 3.5, "turn": 1.1, "color": Color(0.8, 0.3, 1.0)},
-				{"id": "ring_slam", "cooldown": 8.5, "first": 6.0, "radius": 13.0, "speed": 8.0, "color": Color(0.7, 0.25, 1.0)},
-				{"id": "radial_volley", "cooldown": 9.0, "first": 9.0, "phase": 2, "count": 18, "speed": 9.0, "color": Color(0.75, 0.3, 1.0)},
+				{"id": "rune_sequence", "cooldown": 20.0, "first": 4.0, "count": 4, "show": 0.6, "time": 6.0, "damage": 1.8, "stun": 3.0, "uninterruptible": true},
+				{"id": "void_walls", "cooldown": 18.0, "first": 11.0, "length": 10.0, "step": 1.8, "time": 6.0},
+				{"id": "echo", "cooldown": 16.0, "first": 8.0, "time": 8.0, "delay": 1.2, "damage": 0.9},
 			]},
 		"map": [
 			"################################################",

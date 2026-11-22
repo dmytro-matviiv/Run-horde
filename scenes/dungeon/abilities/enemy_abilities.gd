@@ -47,6 +47,13 @@ class_name EnemyAbilities
 ##   boar_rage    — вепр: кожен удар по ньому лютить (швидший і сильніший);
 ##   smoke_bomb   — димар: вороги в диму не обираються ціллю;
 ##   fire_ring, bola, riposte — Ватажок розбійників.
+## Безодня Рун (9-й данж):
+##   swap         — демон міняється з героєм місцями;
+##   silence_rune — писар: коло мовчання (без здібностей);
+##   mana_bite    — імпи висмоктують ману;
+##   confusion_breath — дракон: керування навиворіт;
+##   revive       — обеліск воскрешає ворогів, що впали поруч;
+##   rune_sequence, void_walls, echo — Володар Рун.
 
 const SCRIPTS := {
 	"blink": preload("res://scenes/dungeon/abilities/blink_ability.gd"),
@@ -121,6 +128,14 @@ const SCRIPTS := {
 	"fire_ring": preload("res://scenes/dungeon/abilities/fire_ring_ability.gd"),
 	"bola": preload("res://scenes/dungeon/abilities/bola_ability.gd"),
 	"riposte": preload("res://scenes/dungeon/abilities/riposte_ability.gd"),
+	"swap": preload("res://scenes/dungeon/abilities/swap_ability.gd"),
+	"silence_rune": preload("res://scenes/dungeon/abilities/silence_rune_ability.gd"),
+	"mana_bite": preload("res://scenes/dungeon/abilities/mana_bite_ability.gd"),
+	"confusion_breath": preload("res://scenes/dungeon/abilities/confusion_breath_ability.gd"),
+	"revive": preload("res://scenes/dungeon/abilities/revive_obelisk_ability.gd"),
+	"rune_sequence": preload("res://scenes/dungeon/abilities/rune_sequence_ability.gd"),
+	"void_walls": preload("res://scenes/dungeon/abilities/void_walls_ability.gd"),
+	"echo": preload("res://scenes/dungeon/abilities/echo_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).
