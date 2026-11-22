@@ -2015,6 +2015,7 @@ func _physics_process(delta: float) -> void:
 			and not is_ranged() and not is_caster() and (_attack_queued or (_attack_held and _target != null)):
 		_start_attack()
 	_update_velocity(direction, delta)
+	_apply_leash()
 
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
@@ -2486,6 +2487,8 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 		amount *= _concealed_damage
 	if _has_shrine(&"fury"):
 		amount *= SHRINE_FURY_DAMAGE
+	if _weak_left > 0.0:
+		amount *= _weak_factor
 	if passive != null:
 		amount = passive.modify_damage(self, enemy, amount)
 	enemy.last_hit_source = source
@@ -2772,7 +2775,7 @@ func tangle(seconds: float, slow: float) -> void:
 	_bola_marker.visible = true
 
 func can_roll() -> bool:
-	return _bola_left <= 0.0
+	return _bola_left <= 0.0 and not _swallowed
 
 ## Безодня Рун: мовчання (без здібностей), плутанина (керування
 ## навиворіт), висмоктування мани (імпи).
@@ -2820,6 +2823,7 @@ func _abyss_mark(color: Color) -> void:
 	_abyss_marker.visible = true
 
 func _tick_village_effects(delta: float) -> void:
+	_tick_swamp_effects(delta)
 	if _silenced_left > 0.0 or _confused_left > 0.0:
 		_silenced_left = maxf(_silenced_left - delta, 0.0)
 		_confused_left = maxf(_confused_left - delta, 0.0)
@@ -2844,6 +2848,107 @@ func _tick_village_effects(delta: float) -> void:
 		_bola_left -= delta
 		if _bola_left <= 0.0 and _bola_marker != null:
 			_bola_marker.visible = false
+
+## Потонулі Сади: слабкість (язик жаби — удари героя слабші), лоза-
+## прив'язь (корч — далі radius метрів від кілка не відійти), поглинання
+## (Королева Трясовини — героя не видно, ні кроку, ні перекату).
+var _weak_factor := 1.0
+var _weak_left := 0.0
+var _weak_fx: CPUParticles3D
+var _leash_anchor := Vector3.INF
+var _leash_radius := 0.0
+var _leash_left := 0.0
+var _leash_vine: MeshInstance3D
+var _swallowed := false
+
+func weaken(factor: float, seconds: float) -> void:
+	if _dead:
+		return
+	_weak_factor = minf(factor, _weak_factor if _weak_left > 0.0 else 1.0)
+	_weak_left = maxf(_weak_left, seconds)
+	if _weak_fx == null:
+		_weak_fx = CombatVfx.make_motes(Color(0.95, 0.45, 0.7), 10, 0.45, 0.5, 0.05)
+		add_child(_weak_fx)
+		_weak_fx.position = Vector3.UP * 0.6
+	_weak_fx.emitting = true
+
+func weakness() -> float:
+	return _weak_factor if _weak_left > 0.0 else 1.0
+
+func leash(anchor: Vector3, radius: float, seconds: float) -> void:
+	if _dead:
+		return
+	_leash_anchor = anchor
+	_leash_radius = radius
+	_leash_left = seconds
+	if _leash_vine == null:
+		_leash_vine = MeshInstance3D.new()
+		var box := BoxMesh.new()
+		box.size = Vector3(0.09, 0.09, 1.0)
+		_leash_vine.mesh = box
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.25, 0.45, 0.15)
+		mat.emission_enabled = true
+		mat.emission = Color(0.2, 0.5, 0.1)
+		mat.emission_energy_multiplier = 0.4
+		_leash_vine.material_override = mat
+		_leash_vine.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_leash_vine.top_level = true
+		add_child(_leash_vine)
+	_leash_vine.visible = true
+
+func is_leashed() -> bool:
+	return _leash_left > 0.0
+
+func set_swallowed(value: bool) -> void:
+	_swallowed = value
+	if model != null:
+		model.visible = not value
+	if _health_bar != null:
+		_health_bar.visible = not value
+	if value:
+		_roll_left = 0.0
+		_attack_step = -1
+		_abort_attacks()
+
+func is_swallowed() -> bool:
+	return _swallowed
+
+## Прив'язь: що далі за радіус — назад до кілка (і перекатом не вирватись).
+func _apply_leash() -> void:
+	if _leash_left <= 0.0:
+		return
+	var offset := global_position - _leash_anchor
+	offset.y = 0.0
+	if offset.length() <= _leash_radius:
+		return
+	var out := offset.normalized()
+	var along := velocity.x * out.x + velocity.z * out.z
+	if along > 0.0:
+		velocity.x -= out.x * along
+		velocity.z -= out.z * along
+	var back := (offset.length() - _leash_radius) * 6.0
+	velocity.x -= out.x * back
+	velocity.z -= out.z * back
+
+func _tick_swamp_effects(delta: float) -> void:
+	if _weak_left > 0.0:
+		_weak_left -= delta
+		if _weak_left <= 0.0:
+			_weak_factor = 1.0
+			if _weak_fx != null:
+				_weak_fx.emitting = false
+	if _leash_left > 0.0:
+		_leash_left -= delta
+		if _leash_vine != null:
+			var from := _leash_anchor + Vector3.UP * 0.3
+			var to := global_position + Vector3.UP * 0.7
+			var length := maxf(from.distance_to(to), 0.05)
+			_leash_vine.global_position = (from + to) * 0.5
+			if length > 0.06:
+				_leash_vine.look_at_from_position((from + to) * 0.5, to, Vector3.UP if absf((to - from).normalized().y) < 0.95 else Vector3.RIGHT)
+			_leash_vine.scale = Vector3(1.0, 1.0, length)
+			_leash_vine.visible = _leash_left > 0.0
 
 func add_gold_dust(max_stacks: int, seconds: float) -> void:
 	if _dead:

@@ -35,6 +35,11 @@ var shape := ""
 ## Скільки разів відскакує від стін (Гартувальник: розпечені заклепки
 ## рикошетять — сховатись за колоною вже не досить).
 var bounces := 0
+## Скільки метрів летить (0 — до стіни). Квітка-пастка: насіння падає
+## на підлогу трохи за героєм.
+var reach := 0.0
+## Промах (упав на підлогу чи вдарився в стіну): on_miss(position).
+var on_miss: Callable
 
 ## Колір і швидкість — свої в кожного стрільця: отруйні плювки в
 ## печерах повільні й зелені, крижані стріли в цитаделі швидкі й сині.
@@ -89,6 +94,8 @@ func launch(direction: Vector3, target: Node3D, world: Node) -> void:
 	reparent(world, true)
 	scale = Vector3.ONE
 	_launched = true
+	if reach > 0.0:
+		_life = reach / maxf(speed, 0.1)
 	if (shape == "spear" or shape == "blade") and _velocity.length() > 0.01:
 		look_at(global_position + _velocity, Vector3.UP)
 
@@ -104,6 +111,7 @@ func _physics_process(delta: float) -> void:
 		if bounces > 0:
 			_ricochet(hit)
 			return
+		_missed(hit.position - _velocity.normalized() * 0.4)
 		_burst(hit.position)
 		return
 	global_position = to
@@ -119,6 +127,7 @@ func _physics_process(delta: float) -> void:
 
 	_life -= delta
 	if _life <= 0.0:
+		_missed(global_position)
 		queue_free()
 
 func _ricochet(hit: Dictionary) -> void:
@@ -135,6 +144,11 @@ func _ricochet(hit: Dictionary) -> void:
 	global_position = hit.position + normal * 0.08
 	_life = maxf(_life, LIFETIME * 0.6)
 	CombatVfx.impact(get_parent(), hit.position, color, false)
+
+func _missed(position: Vector3) -> void:
+	if on_miss.is_valid():
+		on_miss.call(position)
+		on_miss = Callable()
 
 func _burst(position: Vector3) -> void:
 	if shape == "blade":

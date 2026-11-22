@@ -1066,7 +1066,7 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	enemies_root.add_child(enemy)
 	enemy.global_position = _clear_spot(position) + Vector3(0, 0.2, 0)
 	enemy.setup(player, _model(definition.model))
-	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null))
+	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null, bool(definition.get("no_loot", false))))
 	enemy.spawn_requested.connect(_on_spawn_requested)
 	enemy.ward_broken.connect(_on_ward_broken.bind(enemy))
 	if is_boss:
@@ -1119,8 +1119,12 @@ func _on_spawn_requested(position: Vector3, definition: Dictionary, source: Enem
 func _on_ward_broken(boss: Enemy3D) -> void:
 	_show_banner("%s знесилений!" % boss.display_name, "б'є щосили")
 
-func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_elite: bool) -> void:
+func _on_enemy_died(position: Vector3, xp_reward: int, kind: Enemy3D.Kind, is_elite: bool, no_loot := false) -> void:
 	_alive_enemies -= 1
+	# Кущі з насіння, порожні панцирі — без здобичі (інакше їх фармили б).
+	if no_loot:
+		_update_status()
+		return
 	QuestBook.report("kill")
 	# Досвід героя (рівні 1..30, таланти): за кожного переможеного.
 	GameState.add_hero_xp((80 if kind == Enemy3D.Kind.BOSS else 3) + GameState.dungeon_level, false)

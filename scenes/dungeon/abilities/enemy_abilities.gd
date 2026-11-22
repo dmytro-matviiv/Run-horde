@@ -136,6 +136,15 @@ const SCRIPTS := {
 	"rune_sequence": preload("res://scenes/dungeon/abilities/rune_sequence_ability.gd"),
 	"void_walls": preload("res://scenes/dungeon/abilities/void_walls_ability.gd"),
 	"echo": preload("res://scenes/dungeon/abilities/echo_ability.gd"),
+	"sticky_tongue": preload("res://scenes/dungeon/abilities/sticky_tongue_ability.gd"),
+	"leech": preload("res://scenes/dungeon/abilities/leech_ability.gd"),
+	"seed_sprout": preload("res://scenes/dungeon/abilities/seed_sprout_ability.gd"),
+	"thorns": preload("res://scenes/dungeon/abilities/thorns_ability.gd"),
+	"vine_leash": preload("res://scenes/dungeon/abilities/vine_leash_ability.gd"),
+	"molt": preload("res://scenes/dungeon/abilities/molt_ability.gd"),
+	"flood": preload("res://scenes/dungeon/abilities/flood_ability.gd"),
+	"swallow": preload("res://scenes/dungeon/abilities/swallow_ability.gd"),
+	"undertow": preload("res://scenes/dungeon/abilities/undertow_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

@@ -1374,12 +1374,25 @@ func _release_shot() -> void:
 		target += Vector3(run.x, 0.0, run.z) * flight * lead
 	var direction := target - shot.global_position
 	var origin := shot.global_position
+	_arm_shot(shot)
 	shot.launch(direction, _player, get_parent())
 	# Залп: ще кілька снарядів віялом навколо основного.
 	for i in range(1, volley):
 		var side := 1.0 if i % 2 == 1 else -1.0
 		var angle := side * deg_to_rad(11.0) * ceilf(i / 2.0)
 		_spawn_shot(origin, direction.rotated(Vector3.UP, angle))
+
+## Дальність ("reach" у "projectile") і промах — для здібностей
+## (насіння Квітки-пастки проростає там, де впало).
+func _arm_shot(shot: EnemyProjectile) -> void:
+	shot.reach = float(definition.get("projectile", {}).get("reach", 0.0))
+	shot.on_miss = _on_shot_missed
+
+func _on_shot_missed(position: Vector3) -> void:
+	if _dying:
+		return
+	for ability in abilities:
+		ability.on_shot_missed(position)
 
 func _spawn_shot(origin: Vector3, direction: Vector3) -> void:
 	var extra := EnemyProjectile.create(damage, projectile_color, projectile_speed)
@@ -1388,6 +1401,7 @@ func _spawn_shot(origin: Vector3, direction: Vector3) -> void:
 	get_parent().add_child(extra)
 	extra.global_position = origin
 	extra.set_charge(1.0)
+	_arm_shot(extra)
 	extra.launch(direction, _player, get_parent())
 
 ## Залп Дракона: віяло снарядів із пащі.
