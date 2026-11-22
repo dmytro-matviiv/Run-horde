@@ -774,7 +774,10 @@ func emerge(seconds: float) -> void:
 ## Вибухова бочка — "ворог" лише для ударів, переслідувати її не треба;
 ## ворога під землею не видно.
 func is_aim_target() -> bool:
-	return not _dying and not _hidden and not untargetable
+	return not _dying and not _hidden and not untargetable and Time.get_ticks_msec() >= smoke_until
+
+## Димова завіса (Димар): до цього часу (мс) ворога не обрати ціллю.
+var smoke_until := 0
 
 ## Смужка висить трохи вище за голову й ширшає разом із розміром ворога.
 func _add_health_bar() -> void:
@@ -1358,6 +1361,12 @@ func _release_shot() -> void:
 	var shot := _charging_shot
 	_charging_shot = null
 	var target := _player.global_position + Vector3.UP * 1.0
+	# Мисливець ("lead" у "projectile") цілить туди, де герой БУДЕ.
+	var lead := float(definition.get("projectile", {}).get("lead", 0.0))
+	if lead > 0.0 and _player is CharacterBody3D:
+		var flight := shot.global_position.distance_to(target) / maxf(projectile_speed, 1.0)
+		var run := (_player as CharacterBody3D).velocity
+		target += Vector3(run.x, 0.0, run.z) * flight * lead
 	var direction := target - shot.global_position
 	var origin := shot.global_position
 	shot.launch(direction, _player, get_parent())

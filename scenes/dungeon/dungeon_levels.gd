@@ -910,33 +910,51 @@ const LEVELS := [
 			"decor": "village",
 		},
 		"enemies": {
+			# Розбійник-палій — удар смолоскипом підпалює героя (гасне перекатом).
 			"m": [
-				{"name": "Розбійник", "model": "res://assets/models/monsters/Orc Enemy.glb", "kind": "melee", "hp": 55.0, "damage": 15.0, "speed": 3.4, "height": 1.8, "xp": 7,
-					"tint": Color(0.55, 0.42, 0.3), "abilities": [{"id": "leap", "cooldown": 7.0, "first": 4.0, "radius_mult": 0.8}]},
+				{"name": "Розбійник-палій", "model": "res://assets/models/monsters/village/palii.glb", "kind": "melee",
+					"hp": 58.0, "damage": 15.0, "speed": 3.3, "height": 1.75, "xp": 7, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "ignite", "tick": 0.18, "time": 6.0}]},
 			],
+			# Мисливець — стріли на випередження; підійшов близько — відскакує й стріляє.
 			"r": [
-				{"name": "Розбійник-лучник", "model": "res://assets/models/monsters/Ninja.glb", "kind": "ranged", "hp": 36.0, "damage": 11.0, "speed": 2.7, "height": 1.6, "xp": 7,
-					"tint": Color(0.3, 0.4, 0.28), "projectile": {"color": Color(0.78, 0.8, 0.86), "speed": 11.0, "volley": 1, "shape": "blade"}},
+				{"name": "Мисливець", "model": "res://assets/models/monsters/village/luchnyk.glb", "kind": "ranged",
+					"hp": 38.0, "damage": 11.0, "speed": 2.9, "height": 1.7, "xp": 7, "attack_anims": ["Weapon"],
+					"projectile": {"color": Color(0.78, 0.8, 0.86), "speed": 12.0, "volley": 1, "shape": "blade", "lead": 0.9},
+					"abilities": [{"id": "disengage", "cooldown": 5.0, "first": 0.5, "near": 3.0, "distance": 4.0}]},
 			],
+			# Ворони — зграя; клюють в очі: край екрана темніє.
 			"w": [
-				{"name": "Здичавілий щур", "model": "res://assets/models/monsters/Green Spiky Blob.glb", "kind": "melee", "hp": 14.0, "damage": 6.0, "speed": 5.2, "height": 0.7, "xp": 1, "group": 5,
-					"tint": Color(0.4, 0.35, 0.3), "attack_range": 1.2, "cooldown": 0.6},
+				{"name": "Ворон", "model": "res://assets/models/monsters/village/voron.glb", "kind": "melee",
+					"hp": 14.0, "damage": 6.0, "speed": 5.4, "height": 0.8, "hover": 0.9, "xp": 1, "group": 4,
+					"attack_range": 1.3, "cooldown": 0.7,
+					"abilities": [{"id": "blind_peck", "amount": 0.22, "time": 3.0}]},
 			],
+			# Дикий вепр — таран; кожен удар по ньому лютить його.
 			"c": [
-				{"name": "Дикий вепр", "model": "res://assets/models/monsters/Yeti.glb", "kind": "charger", "hp": 100.0, "damage": 21.0, "speed": 3.1, "height": 1.6, "xp": 9,
-					"tint": Color(0.5, 0.35, 0.22)},
+				{"name": "Дикий вепр", "model": "res://assets/models/monsters/village/vepr.glb", "kind": "charger",
+					"hp": 100.0, "damage": 20.0, "speed": 3.0, "height": 1.4, "xp": 9, "attack_anims": ["Weapon"],
+					"charge": {"cooldown": 6.0, "windup": 0.8, "wall_stun": 1.5, "knockdown": 0.5, "push": 10.0, "anim": "Run", "windup_anim": "Idle"},
+					"abilities": [{"id": "boar_rage", "stacks": 6, "speed": 0.08, "power": 0.1, "calm": 4.0}]},
 			],
+			# Димар — димові бомби: вороги в диму не обираються ціллю.
 			"x": [
-				{"name": "Вороняча зграя", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "blast_color": Color(0.35, 0.33, 0.38, 0.9), "hp": 26.0, "damage": 33.0, "speed": 4.9, "height": 1.1, "hover": 0.6, "xp": 4,
-					"tint": Color(0.2, 0.2, 0.22)},
+				{"name": "Димар", "model": "res://assets/models/monsters/village/dymar.glb", "kind": "melee",
+					"hp": 40.0, "damage": 10.0, "speed": 3.0, "height": 1.55, "xp": 6, "attack_anims": ["Weapon"],
+					"special_anims": {"smoke_bomb": ["Throw"]},
+					"abilities": [{"id": "smoke_bomb", "cooldown": 12.0, "first": 1.5, "radius": 3.0, "time": 6.0}]},
 			],
 		},
-		"boss": {"name": "Ватажок розбійників", "model": "res://assets/models/monsters/Blue Demon.glb",
-			"hp": 800.0, "damage": 27.0, "speed": 3.3, "height": 3.6, "xp": 130,
-			"tint": Color(0.5, 0.15, 0.15), "glow": Color(0.3, 0.05, 0.05),
+		# Ватажок розбійників: палаючий круг, що звужується; болас (без
+		# перекату); стійка-контратака (б'єш у стійку — отримуєш удар).
+		"boss": {"name": "Ватажок розбійників", "model": "res://assets/models/monsters/village/boss.glb", "style": "warlord",
+			"hp": 820.0, "damage": 27.0, "speed": 3.2, "height": 3.6, "xp": 130,
+			"attack_anims": ["Weapon"],
+			"special_anims": {"fire_ring": ["Cast"], "bola": ["Throw"]},
 			"abilities": [
-				{"id": "blink", "cooldown": 7.0, "first": 4.0},
-				{"id": "web", "cooldown": 6.5, "first": 6.0, "count": 3, "slow": 0.45, "slow_time": 3.0},
+				{"id": "fire_ring", "cooldown": 24.0, "first": 5.0, "start": 11.0, "finish": 3.5, "shrink": 8.0, "hold": 2.5, "damage": 1.0, "uninterruptible": true},
+				{"id": "bola", "cooldown": 9.0, "first": 2.5, "time": 3.0, "slow": 0.7, "damage": 0.6},
+				{"id": "riposte", "cooldown": 11.0, "first": 8.0, "time": 1.8, "damage": 1.6},
 			]},
 		"map": [
 			"##############################################",

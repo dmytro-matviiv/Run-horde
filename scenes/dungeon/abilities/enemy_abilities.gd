@@ -40,6 +40,13 @@ class_name EnemyAbilities
 ##   freeze_tag   — статуя: мчить, поки герой рухається; стоїть — кам'яніє;
 ##   fate_scale   — ваги: шкода ділиться між усіма пов'язаними ворогами;
 ##   gold_cage, decoy_chests (+ treasure), rolling_coins — Золотий Скупар.
+## Спустошене Село (8-й данж):
+##   ignite       — палій: удар підпалює героя (гасне перекатом);
+##   disengage    — мисливець відскакує й стріляє (стріли — на випередження);
+##   blind_peck   — ворони: клюють в очі, край екрана темніє;
+##   boar_rage    — вепр: кожен удар по ньому лютить (швидший і сильніший);
+##   smoke_bomb   — димар: вороги в диму не обираються ціллю;
+##   fire_ring, bola, riposte — Ватажок розбійників.
 
 const SCRIPTS := {
 	"blink": preload("res://scenes/dungeon/abilities/blink_ability.gd"),
@@ -106,6 +113,14 @@ const SCRIPTS := {
 	"decoy_chests": preload("res://scenes/dungeon/abilities/decoy_chests_ability.gd"),
 	"treasure": preload("res://scenes/dungeon/abilities/treasure_ability.gd"),
 	"rolling_coins": preload("res://scenes/dungeon/abilities/rolling_coins_ability.gd"),
+	"ignite": preload("res://scenes/dungeon/abilities/ignite_ability.gd"),
+	"disengage": preload("res://scenes/dungeon/abilities/disengage_ability.gd"),
+	"blind_peck": preload("res://scenes/dungeon/abilities/blind_peck_ability.gd"),
+	"boar_rage": preload("res://scenes/dungeon/abilities/boar_rage_ability.gd"),
+	"smoke_bomb": preload("res://scenes/dungeon/abilities/smoke_bomb_ability.gd"),
+	"fire_ring": preload("res://scenes/dungeon/abilities/fire_ring_ability.gd"),
+	"bola": preload("res://scenes/dungeon/abilities/bola_ability.gd"),
+	"riposte": preload("res://scenes/dungeon/abilities/riposte_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

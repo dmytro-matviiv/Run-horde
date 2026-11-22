@@ -1672,6 +1672,16 @@ func set_attack_held(held: bool) -> void:
 func dodge() -> void:
 	if _dead or _rooted_left > 0.0 or _knock_left > 0.0 or _dodge_cooldown_left > 0.0 or _roll_left > 0.0:
 		return
+	# Болас Ватажка сплутав ноги — перекату нема.
+	if _bola_left > 0.0:
+		CombatVfx.shockwave(get_parent(), global_position, 0.8, Color(0.6, 0.45, 0.3, 0.8), 0.2)
+		return
+	# Перекат по землі гасить вогонь (смолоскип палія).
+	if _burn_left > 0.0:
+		_burn_left = 0.0
+		if _burn_fx != null:
+			_burn_fx.emitting = false
+		CombatVfx.smoke_puff(get_parent(), global_position + Vector3.UP * 0.5, Color(0.5, 0.5, 0.5, 0.7), 1.0)
 	var direction := _get_world_direction()
 	if direction.length() < 0.1:
 		# Стоїть на місці — перекат назад, геть від ворога.
@@ -2052,6 +2062,7 @@ func _tick_timers(delta: float) -> void:
 	_roll_left = maxf(_roll_left - delta, 0.0)
 	if _attack_step < 0:
 		_combo_expire = maxf(_combo_expire - delta, 0.0)
+	_tick_village_effects(delta)
 	if _gold_dust > 0:
 		_gold_dust_left -= delta
 		if _gold_dust_left <= 0.0:
@@ -2677,6 +2688,104 @@ const GOLD_DUST_STEP := 0.06
 var _gold_dust := 0
 var _gold_dust_left := 0.0
 var _gold_dust_fx: CPUParticles3D
+
+## Спустошене Село:
+##   горить (смолоскип палія) — burn_damage щопів секунди, доки не минуть
+##     seconds або герой не зробить перекат;
+##   засліплений (ворони) — темніє край екрана, більше ворон — темніше;
+##   болас (Ватажок) — seconds без перекату й повільніше.
+var _burn_left := 0.0
+var _burn_damage := 0.0
+var _burn_tick := 0.0
+var _burn_fx: CPUParticles3D
+var _blind := 0.0
+var _blind_left := 0.0
+var _blind_rect: ColorRect
+var _bola_left := 0.0
+var _bola_marker: MeshInstance3D
+
+func ignite(damage_per_tick: float, seconds: float) -> void:
+	if _dead:
+		return
+	_burn_left = maxf(_burn_left, seconds)
+	_burn_damage = maxf(_burn_damage if _burn_left > 0.0 else 0.0, damage_per_tick)
+	if _burn_fx == null:
+		_burn_fx = CombatVfx.make_trail(Color(1.0, 0.5, 0.15), 0.5)
+		_burn_fx.amount = 16
+		_burn_fx.direction = Vector3.UP
+		_burn_fx.gravity = Vector3(0, 2.0, 0)
+		_burn_fx.emission_sphere_radius = 0.35
+		add_child(_burn_fx)
+		_burn_fx.position = Vector3.UP * 0.9
+	_burn_fx.emitting = true
+
+func is_burning() -> bool:
+	return _burn_left > 0.0
+
+func blind(amount: float, seconds: float) -> void:
+	if _dead:
+		return
+	_blind = minf(_blind + amount, 0.85)
+	_blind_left = seconds
+	if _blind_rect == null:
+		var layer := CanvasLayer.new()
+		layer.layer = 5
+		add_child(layer)
+		_blind_rect = ColorRect.new()
+		_blind_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_blind_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var material := ShaderMaterial.new()
+		material.shader = Shader.new()
+		material.shader.code = """
+shader_type canvas_item;
+uniform float strength = 0.0;
+void fragment() {
+	float d = distance(UV, vec2(0.5));
+	float edge = smoothstep(0.62 - strength * 0.55, 0.75 - strength * 0.4, d);
+	COLOR = vec4(0.02, 0.01, 0.03, edge * min(1.0, strength * 1.3));
+}
+"""
+		_blind_rect.material = material
+		layer.add_child(_blind_rect)
+	(_blind_rect.material as ShaderMaterial).set_shader_parameter(&"strength", _blind)
+
+func blindness() -> float:
+	return _blind
+
+func tangle(seconds: float, slow: float) -> void:
+	if _dead:
+		return
+	_bola_left = maxf(_bola_left, seconds)
+	apply_slow(slow, seconds)
+	if _bola_marker == null:
+		_bola_marker = CombatVfx.make_ground_marker(Color(0.65, 0.45, 0.25, 0.8), 0.6)
+		CombatVfx.set_param(_bola_marker, &"progress", 1.0)
+		_bola_marker.position.y = 0.06
+		add_child(_bola_marker)
+	_bola_marker.visible = true
+
+func can_roll() -> bool:
+	return _bola_left <= 0.0
+
+func _tick_village_effects(delta: float) -> void:
+	if _burn_left > 0.0:
+		_burn_left -= delta
+		_burn_tick -= delta
+		if _burn_tick <= 0.0:
+			_burn_tick = 0.5
+			take_damage(_burn_damage)
+		if _burn_left <= 0.0 and _burn_fx != null:
+			_burn_fx.emitting = false
+	if _blind > 0.0:
+		_blind_left -= delta
+		if _blind_left <= 0.0:
+			_blind = maxf(_blind - delta * 0.6, 0.0)
+		if _blind_rect != null:
+			(_blind_rect.material as ShaderMaterial).set_shader_parameter(&"strength", _blind)
+	if _bola_left > 0.0:
+		_bola_left -= delta
+		if _bola_left <= 0.0 and _bola_marker != null:
+			_bola_marker.visible = false
 
 func add_gold_dust(max_stacks: int, seconds: float) -> void:
 	if _dead:
