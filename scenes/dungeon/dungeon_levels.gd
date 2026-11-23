@@ -1566,38 +1566,51 @@ const LEVELS := [
 			"decor": "abyss",
 		},
 		"enemies": {
+			# Кам'яний титан — хапає й шпурляє героя; об стіну — оглушення.
 			"m": [
-				{"name": "Забутий жрець", "model": "res://assets/models/monsters/Tribal.glb", "kind": "melee", "hp": 110.0, "damage": 28.0, "speed": 3.2, "height": 1.9, "xp": 12,
-					"tint": Color(0.6, 0.4, 0.75), "glow": Color(0.35, 0.1, 0.5)},
+				{"name": "Кам'яний титан", "model": "res://assets/models/monsters/gods/titan.glb", "kind": "melee",
+					"hp": 200.0, "damage": 30.0, "speed": 2.6, "height": 2.6, "xp": 14, "attack_anims": ["Weapon"],
+					"special_anims": {"hurl": ["Slam"]},
+					"abilities": [{"id": "hurl", "cooldown": 10.0, "first": 1.5, "reach": 2.4, "windup": 0.8, "power": 16.0, "stun": 1.3, "damage": 1.0}]},
 			],
+			# Безликі послушники — гурт; загиблий віддає силу решті.
 			"w": [
-				{"name": "Золотий скарабей", "model": "res://assets/models/monsters/Armabee Evolved.glb", "kind": "melee", "hp": 24.0, "damage": 10.0, "speed": 5.4, "height": 0.7, "hover": 0.8, "xp": 2, "group": 4,
-					"tint": Color(0.85, 0.7, 0.35), "glow": Color(0.5, 0.35, 0.05), "attack_range": 1.3, "cooldown": 0.6},
+				{"name": "Безликий послушник", "model": "res://assets/models/monsters/gods/acolyte.glb", "kind": "melee",
+					"hp": 40.0, "damage": 13.0, "speed": 3.6, "height": 1.5, "xp": 3, "group": 4,
+					"attack_range": 1.4, "cooldown": 0.9, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "martyr", "range": 12.0, "power": 0.3, "heal": 0.25, "grow": 0.12}]},
 			],
+			# Жрець Забутих — табу: перекотився під забороною — кара.
 			"r": [
-				{"name": "Пророк Прірви", "model": "res://assets/models/monsters/Wizard.glb", "kind": "ranged", "hp": 62.0, "damage": 19.0, "speed": 2.6, "height": 1.9, "xp": 10,
-					"tint": Color(0.55, 0.35, 0.7), "glow": Color(0.3, 0.08, 0.45),
-					"projectile": {"color": Color(0.8, 0.4, 1.0), "speed": 11.5, "volley": 2}},
+				{"name": "Жрець Забутих", "model": "res://assets/models/monsters/gods/priest.glb", "kind": "ranged",
+					"hp": 70.0, "damage": 18.0, "speed": 2.5, "height": 1.95, "xp": 10, "attack_anims": ["Weapon"],
+					"projectile": {"color": Color(1.0, 0.85, 0.45), "speed": 10.5, "volley": 1},
+					"special_anims": {"taboo": ["Cast"]},
+					"abilities": [{"id": "taboo", "cooldown": 12.0, "first": 2.0, "min": 2.5, "max": 11.0, "windup": 0.8, "time": 5.0, "stun": 1.2, "damage": 1.6}]},
 			],
+			# Привид бога — вселяється в союзника й посилює його.
 			"c": [
-				{"name": "Кам'яний бик", "model": "res://assets/models/monsters/Tribal.glb", "kind": "charger", "hp": 150.0, "damage": 30.0, "speed": 3.6, "height": 2.2, "xp": 13,
-					"tint": Color(0.45, 0.3, 0.6), "glow": Color(0.28, 0.08, 0.42)},
+				{"name": "Привид бога", "model": "res://assets/models/monsters/gods/ghost.glb", "kind": "melee",
+					"hp": 70.0, "damage": 18.0, "speed": 3.4, "height": 1.9, "hover": 0.5, "xp": 10, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "possess", "cooldown": 6.0, "first": 0.5, "range": 9.0, "power": 1.5, "haste": 1.3, "rest": 5.0}]},
 			],
+			# Око Бога — не ходить; обертовий промінь кам'янить того, хто в ньому стоїть.
 			"t": [
-				{"name": "Ідол Забуття", "model": "res://assets/models/monsters/Mushroom King.glb", "kind": "totem", "hp": 150.0, "damage": 0.0, "speed": 0.0, "height": 2.5, "xp": 8,
-					"tint": Color(0.5, 0.32, 0.6), "glow": Color(0.32, 0.1, 0.48), "no_elite": true,
-					"abilities": [{"id": "ward", "factor": 0.28, "range": 8.5, "links": 3}]},
+				{"name": "Око Бога", "model": "res://assets/models/monsters/gods/eye.glb", "kind": "totem",
+					"hp": 120.0, "damage": 14.0, "speed": 0.0, "height": 2.2, "xp": 8, "no_elite": true,
+					"abilities": [{"id": "god_gaze", "length": 9.0, "width": 1.2, "spin": 0.7, "stone": 1.2, "stun": 2.0, "damage": 1.0}]},
 			],
 		},
-		"boss": {"name": "Володарка Прірви", "model": "res://assets/models/monsters/Armabee Evolved.glb", "style": "shadow",
-			"hp": 1080.0, "damage": 48.0, "speed": 3.3, "height": 3.5, "hover": 0.8, "xp": 280,
-			"tint": Color(0.6, 0.4, 0.8), "glow": Color(0.4, 0.12, 0.6),
+		# Безликий Бог: долоні з неба (дедалі ширші), сфери вірності (хто
+		# швидший), зворотний час (розбий пісочний годинник).
+		"boss": {"name": "Безликий Бог", "model": "res://assets/models/monsters/gods/boss.glb", "style": "faceless_god",
+			"hp": 1400.0, "damage": 38.0, "speed": 2.7, "height": 4.6, "xp": 280,
+			"attack_anims": ["Weapon"],
+			"special_anims": {"god_hand": ["Slam"], "devotion_orbs": ["Cast"], "rewind": ["Cast"]},
 			"abilities": [
-				{"id": "pylons", "cooldown": 1.0, "first": 5.0, "count": 3,
-					"pylon": {"name": "Ідол Прірви", "model": "res://assets/models/monsters/Mushroom King.glb", "kind": "totem", "hp": 50.0, "damage": 0.0, "speed": 0.0, "height": 1.4, "xp": 3,
-						"tint": Color(0.6, 0.4, 0.8), "glow": Color(0.4, 0.12, 0.6), "no_elite": true,
-						"abilities": [{"id": "ward", "factor": 0.0, "range": 9.0, "links": 1, "target": "boss"}]}},
-				{"id": "radial_volley", "cooldown": 9.0, "first": 9.0, "phase": 2, "count": 16, "speed": 9.0, "color": Color(0.75, 0.4, 1.0)},
+				{"id": "god_hand", "cooldown": 13.0, "first": 3.0, "count": 3, "radius": 1.8, "grow": 0.6, "warn": 0.9, "gap": 0.35, "damage": 1.1},
+				{"id": "devotion_orbs", "cooldown": 22.0, "first": 9.0, "count": 4, "near": 4.0, "far": 7.0, "time": 10.0, "hurt": 0.04, "heal": 0.04},
+				{"id": "rewind", "cooldown": 24.0, "first": 6.0, "back": 6.0, "time": 5.0, "glass_hp": 60.0, "stun": 2.5, "uninterruptible": true},
 			]},
 		"map": [
 			"##############################################",

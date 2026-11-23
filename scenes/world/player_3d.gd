@@ -1678,6 +1678,8 @@ func dodge() -> void:
 		if _taboo_mark != null:
 			_taboo_mark.visible = false
 		taboo_broken.emit()
+		# Кара вже впала (оглушення) — перекату не буде.
+		return
 	# Болас Ватажка сплутав ноги — перекату нема.
 	if _bola_left > 0.0:
 		CombatVfx.shockwave(get_parent(), global_position, 0.8, Color(0.6, 0.45, 0.3, 0.8), 0.2)

@@ -161,6 +161,14 @@ const SCRIPTS := {
 	"checker": preload("res://scenes/dungeon/abilities/checker_ability.gd"),
 	"orbit_flames": preload("res://scenes/dungeon/abilities/orbit_flames_ability.gd"),
 	"molten_skin": preload("res://scenes/dungeon/abilities/molten_skin_ability.gd"),
+	"hurl": preload("res://scenes/dungeon/abilities/hurl_ability.gd"),
+	"taboo": preload("res://scenes/dungeon/abilities/taboo_ability.gd"),
+	"possess": preload("res://scenes/dungeon/abilities/possess_ability.gd"),
+	"god_gaze": preload("res://scenes/dungeon/abilities/god_gaze_ability.gd"),
+	"martyr": preload("res://scenes/dungeon/abilities/martyr_ability.gd"),
+	"rewind": preload("res://scenes/dungeon/abilities/rewind_ability.gd"),
+	"god_hand": preload("res://scenes/dungeon/abilities/god_hand_ability.gd"),
+	"devotion_orbs": preload("res://scenes/dungeon/abilities/devotion_orbs_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).
