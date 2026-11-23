@@ -79,6 +79,10 @@ func on_lethal() -> bool:
 func filter_damage(amount: float, _heavy: bool) -> float:
 	return amount
 
+## Звичайний постріл ворога влучив у героя.
+func on_shot_hit(_target: Node3D) -> void:
+	pass
+
 ## Постріл ворога промахнувся й упав тут (на підлогу чи біля стіни).
 func on_shot_missed(_position: Vector3) -> void:
 	pass

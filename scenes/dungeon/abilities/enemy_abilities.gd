@@ -145,6 +145,14 @@ const SCRIPTS := {
 	"flood": preload("res://scenes/dungeon/abilities/flood_ability.gd"),
 	"swallow": preload("res://scenes/dungeon/abilities/swallow_ability.gd"),
 	"undertow": preload("res://scenes/dungeon/abilities/undertow_ability.gd"),
+	"ice_slick": preload("res://scenes/dungeon/abilities/ice_slick_ability.gd"),
+	"flank": preload("res://scenes/dungeon/abilities/flank_ability.gd"),
+	"numb": preload("res://scenes/dungeon/abilities/numb_ability.gd"),
+	"snow_bury": preload("res://scenes/dungeon/abilities/snow_bury_ability.gd"),
+	"alarm_horn": preload("res://scenes/dungeon/abilities/alarm_horn_ability.gd"),
+	"glacier": preload("res://scenes/dungeon/abilities/glacier_ability.gd"),
+	"blizzard": preload("res://scenes/dungeon/abilities/blizzard_ability.gd"),
+	"crack_floor": preload("res://scenes/dungeon/abilities/crack_floor_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

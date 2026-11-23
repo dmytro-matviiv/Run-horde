@@ -1387,6 +1387,13 @@ func _release_shot() -> void:
 func _arm_shot(shot: EnemyProjectile) -> void:
 	shot.reach = float(definition.get("projectile", {}).get("reach", 0.0))
 	shot.on_miss = _on_shot_missed
+	shot.on_hit = _on_shot_hit
+
+func _on_shot_hit(target: Node3D) -> void:
+	if _dying:
+		return
+	for ability in abilities:
+		ability.on_shot_hit(target)
 
 func _on_shot_missed(position: Vector3) -> void:
 	if _dying:

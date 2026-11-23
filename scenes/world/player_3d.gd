@@ -2130,6 +2130,9 @@ func _update_velocity(direction: Vector3, delta: float) -> void:
 
 	var target_velocity := direction.normalized() * RUN_SPEED * factor * clampf(direction.length(), 0.0, 1.0)
 	var rate := ACCELERATION if direction.length() > 0.05 else DECELERATION
+	# Ожеледь: зчеплення майже нема — героя несе далі, розвертається довго.
+	if _slick_left > 0.0:
+		rate *= SLICK_GRIP
 	velocity.x = move_toward(velocity.x, target_velocity.x, rate * delta)
 	velocity.z = move_toward(velocity.z, target_velocity.z, rate * delta)
 	# Тягнення вихору додається зверху лише на цей кадр: герой і далі сам
@@ -2824,6 +2827,7 @@ func _abyss_mark(color: Color) -> void:
 
 func _tick_village_effects(delta: float) -> void:
 	_tick_swamp_effects(delta)
+	_tick_north_effects(delta)
 	if _silenced_left > 0.0 or _confused_left > 0.0:
 		_silenced_left = maxf(_silenced_left - delta, 0.0)
 		_confused_left = maxf(_confused_left - delta, 0.0)
@@ -2949,6 +2953,69 @@ func _tick_swamp_effects(delta: float) -> void:
 				_leash_vine.look_at_from_position((from + to) * 0.5, to, Vector3.UP if absf((to - from).normalized().y) < 0.95 else Vector3.RIGHT)
 			_leash_vine.scale = Vector3(1.0, 1.0, length)
 			_leash_vine.visible = _leash_left > 0.0
+
+## Зимна Цитадель Півночі: ожеледь (героя несе з інерцією), обмороження
+## (перезарядка здібностей і перекату довшає), замет (закопаний —
+## рух вириває швидше).
+const SLICK_GRIP := 0.12
+var _slick_left := 0.0
+var _bury_left := 0.0
+var _bury_mound: MeshInstance3D
+
+func set_slick(seconds: float) -> void:
+	_slick_left = maxf(_slick_left, seconds)
+
+func is_on_slick() -> bool:
+	return _slick_left > 0.0
+
+func numb(seconds: float, cap: float = 8.0) -> void:
+	if _dead:
+		return
+	for skill in _skills:
+		skill._cooldown_left = minf(skill._cooldown_left + seconds, maxf(skill.cooldown, cap))
+	_dodge_cooldown_left = minf(_dodge_cooldown_left + seconds * 0.5, cap * 0.5)
+	CombatVfx.flash_model(model, Color(0.55, 0.85, 1.0), 0.25)
+
+func bury(seconds: float) -> bool:
+	if _dead or not root(seconds):
+		return false
+	_bury_left = seconds
+	if _bury_mound == null:
+		_bury_mound = MeshInstance3D.new()
+		var dome := SphereMesh.new()
+		dome.radius = 0.6
+		dome.height = 0.9
+		dome.radial_segments = 10
+		dome.rings = 4
+		_bury_mound.mesh = dome
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.9, 0.95, 1.0)
+		mat.roughness = 0.9
+		_bury_mound.material_override = mat
+		add_child(_bury_mound)
+		_bury_mound.position = Vector3.UP * 0.3
+	_bury_mound.scale = Vector3.ONE
+	_bury_mound.visible = true
+	return true
+
+func is_buried() -> bool:
+	return _bury_left > 0.0
+
+func _tick_north_effects(delta: float) -> void:
+	_slick_left = maxf(_slick_left - delta, 0.0)
+	if _bury_left <= 0.0:
+		return
+	# Рух джойстиком — відкопується втричі швидше.
+	_bury_left -= delta * (3.0 if _input_direction.length() > 0.3 or Input.get_vector("ui_left", "ui_right", "ui_down", "ui_up") != Vector2.ZERO else 1.0)
+	if _bury_mound != null:
+		_bury_mound.scale = Vector3.ONE * clampf(0.5 + _bury_left, 0.5, 1.0)
+	if _bury_left <= 0.0:
+		_rooted_left = 0.0
+		if _root_marker != null:
+			_root_marker.visible = false
+		if _bury_mound != null:
+			_bury_mound.visible = false
+		CombatVfx.smoke_puff(get_parent(), global_position + Vector3.UP * 0.4, Color(0.9, 0.95, 1.0), 1.2)
 
 func add_gold_dust(max_stacks: int, seconds: float) -> void:
 	if _dead:

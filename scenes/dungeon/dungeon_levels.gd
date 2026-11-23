@@ -1331,30 +1331,54 @@ const LEVELS := [
 			"decor": "vault",
 		},
 		"enemies": {
+			# Берсерк Півночі — кожен удар сокирою лишає ожеледь: героя несе.
 			"m": [
-				{"name": "Мерзлий вартовий", "model": "res://assets/models/monsters/Orc Enemy.glb", "kind": "melee", "hp": 100.0, "damage": 25.0, "speed": 2.9, "height": 1.8, "xp": 10,
-					"tint": Color(0.6, 0.78, 0.95), "glow": Color(0.25, 0.4, 0.55)},
+				{"name": "Берсерк Півночі", "model": "res://assets/models/monsters/north/viking.glb", "kind": "melee",
+					"hp": 115.0, "damage": 26.0, "speed": 3.0, "height": 1.95, "xp": 11, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "ice_slick", "radius": 1.6, "life": 7.0, "max": 3}]},
 			],
-			"c": [
-				{"name": "Крижаний таран", "model": "res://assets/models/monsters/Yeti.glb", "kind": "charger", "hp": 130.0, "damage": 28.0, "speed": 3.5, "height": 2.3, "xp": 12,
-					"tint": Color(0.7, 0.85, 1.0), "glow": Color(0.3, 0.5, 0.7)},
-			],
+			# Снігові вовки — зграя; укус у спину вдвічі сильніший.
 			"w": [
-				{"name": "Метелиця", "model": "res://assets/models/monsters/Hywirl.glb", "kind": "exploder", "blast_color": Color(0.65, 0.9, 1.0, 0.9), "hp": 34.0, "damage": 30.0, "speed": 4.8, "height": 1.2, "hover": 0.6, "xp": 6,
-					"tint": Color(0.75, 0.88, 1.0), "glow": Color(0.35, 0.55, 0.75)},
+				{"name": "Сніговий вовк", "model": "res://assets/models/monsters/north/wolf.glb", "kind": "melee",
+					"hp": 42.0, "damage": 13.0, "speed": 4.6, "height": 1.5, "xp": 3, "group": 3,
+					"attack_range": 1.4, "cooldown": 0.9, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "flank", "factor": 2.0, "angle": 70.0}]},
 			],
+			# Шаман Півночі — кулі, що влучили, подовжують перезарядку здібностей.
+			"r": [
+				{"name": "Шаман Півночі", "model": "res://assets/models/monsters/north/shaman.glb", "kind": "ranged",
+					"hp": 62.0, "damage": 16.0, "speed": 2.4, "height": 1.85, "xp": 9, "attack_anims": ["Weapon"],
+					"projectile": {"color": Color(0.6, 0.85, 1.0), "speed": 10.0, "volley": 1},
+					"abilities": [{"id": "numb", "seconds": 2.5, "cap": 8.0}]},
+			],
+			# Сніговий велетень — гупає й замітає героя снігом: відкопуйся рухом.
+			"c": [
+				{"name": "Сніговий велетень", "model": "res://assets/models/monsters/north/giant.glb", "kind": "melee",
+					"hp": 230.0, "damage": 30.0, "speed": 2.3, "height": 2.8, "xp": 14, "attack_anims": ["Weapon"],
+					"special_anims": {"snow_bury": ["Slam"]},
+					"abilities": [{"id": "snow_bury", "cooldown": 9.0, "first": 1.5, "trigger": 3.0, "radius": 2.6, "windup": 1.0,
+						"time": 3.0, "damage": 0.8}]},
+			],
+			# Вартовий ріг — побачив героя: сурмить, і збігається вся зала.
 			"t": [
-				{"name": "Кригла Варта", "model": "res://assets/models/monsters/Mushroom King.glb", "kind": "totem", "hp": 140.0, "damage": 0.0, "speed": 0.0, "height": 2.4, "xp": 7,
-					"tint": Color(0.55, 0.7, 0.9), "glow": Color(0.3, 0.5, 0.7), "no_elite": true,
-					"abilities": [{"id": "ward", "factor": 0.3, "range": 8.0, "links": 3}]},
+				{"name": "Вартовий ріг", "model": "res://assets/models/monsters/north/horn.glb", "kind": "totem",
+					"hp": 90.0, "damage": 0.0, "speed": 0.0, "height": 2.2, "xp": 6, "no_elite": true,
+					"abilities": [{"id": "alarm_horn", "cooldown": 16.0, "first": 0.0, "range": 10.0, "windup": 1.8,
+						"call": 24.0, "time": 10.0, "haste": 1.35}]},
 			],
 		},
-		"boss": {"name": "Крижаний Ватажок", "model": "res://assets/models/monsters/Orc Enemy.glb", "style": "abyssal",
-			"hp": 1010.0, "damage": 45.0, "speed": 3.1, "height": 3.8, "xp": 230,
-			"tint": Color(0.65, 0.8, 1.0), "glow": Color(0.3, 0.5, 0.75),
+		# Ярл Вічної Зими: льодовик (повзуча стіна з проходом), хуртовина
+		# (грійся біля жаровень), провалля (ополонки під ногами).
+		"boss": {"name": "Ярл Вічної Зими", "model": "res://assets/models/monsters/north/boss.glb", "style": "frost_jarl",
+			"hp": 1250.0, "damage": 34.0, "speed": 2.8, "height": 4.4, "xp": 230,
+			"attack_anims": ["Weapon"],
+			"special_anims": {"glacier": ["Slam"], "blizzard": ["Cast"], "crack_floor": ["Slam"]},
 			"abilities": [
-				{"id": "leap", "cooldown": 7.0, "first": 5.0},
-				{"id": "radial_volley", "cooldown": 9.0, "first": 8.0, "count": 14, "speed": 8.5, "color": Color(0.55, 0.8, 1.0)},
+				{"id": "crack_floor", "cooldown": 15.0, "first": 3.0, "count": 5, "size": 2.2, "warn": 1.3, "time": 6.0, "stun": 0.7, "damage": 1.0},
+				{"id": "glacier", "cooldown": 18.0, "first": 8.0, "width": 24.0, "gap": 2.6, "back": 6.0, "travel": 16.0, "speed": 3.2,
+					"warn": 1.2, "damage": 1.3},
+				{"id": "blizzard", "cooldown": 28.0, "first": 13.0, "time": 12.0, "braziers": 3, "ring": 5.5, "warm": 2.2,
+					"freeze": 5.0, "stun": 1.6, "damage": 0.9, "uninterruptible": true},
 			]},
 		"map": [
 			"##########################################",
@@ -1370,11 +1394,11 @@ const LEVELS := [
 			"#####################..###################",
 			"############..................############",
 			"############..................############",
-			"############..................#.........##",
-			"############..................#.........##",
+			"############....r.............#.........##",
+			"############..................#.....t...##",
 			"############....m.......................##",
 			"############.............c..............##",
-			"############..................#...w.....##",
+			"############.........w........#...w.....##",
 			"############..................#.........##",
 			"############..................#.........##",
 			"############..................#.........##",
@@ -1384,7 +1408,7 @@ const LEVELS := [
 			"###############............###############",
 			"###############............###############",
 			"###############............###############",
-			"###############....t...m...###############",
+			"###############.r..t...m...###############",
 			"###############............###############",
 			"###############............###############",
 			"#####################..###################",

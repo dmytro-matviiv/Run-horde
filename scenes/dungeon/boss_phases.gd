@@ -37,6 +37,7 @@ const STYLES := {
 	"keeper": {"color": Color(1.0, 0.7, 0.3), "rage": "відмикає саркофаги", "frenzy": "гасить факели"},
 	"frost_dragon": {"color": Color(0.55, 0.9, 1.0), "rage": "злітає в небо", "frenzy": "кличе вічну зиму"},
 	"bone_lord": {"color": Color(0.45, 1.0, 0.5), "rage": "кличе армію мертвих", "frenzy": "стає вічним"},
+	"frost_jarl": {"color": Color(0.6, 0.85, 1.0), "rage": "кличе вічну зиму", "frenzy": "кришить кригу під ногами"},
 	"swamp_queen": {"color": Color(0.5, 1.0, 0.6), "rage": "здіймає трясовину", "frenzy": "розквітає люттю"},
 	"rune_lord": {"color": Color(0.45, 0.85, 1.0), "rage": "розколює простір", "frenzy": "переписує руни світу"},
 	"warlord": {"color": Color(1.0, 0.45, 0.15), "rage": "підпалює село", "frenzy": "б'ється як звір"},
