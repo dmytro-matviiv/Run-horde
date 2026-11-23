@@ -49,8 +49,11 @@ func _update(player: Node, delta: float) -> void:
 	_active_left = maxf(_active_left - delta, 0.0)
 	for key: int in _bleeding.keys():
 		var entry: Array = _bleeding[key]
+		if not is_instance_valid(entry[0]):
+			_bleeding.erase(key)
+			continue
 		var enemy: Enemy3D = entry[0]
-		if not is_instance_valid(enemy) or not enemy.is_alive():
+		if not enemy.is_alive():
 			_bleeding.erase(key)
 			continue
 		entry[1] = float(entry[1]) - delta

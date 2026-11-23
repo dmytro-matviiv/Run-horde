@@ -605,8 +605,13 @@ func _tick_talent_effects(delta: float) -> void:
 			_attack_speed /= BATTLE_CRY_SPEED
 	for i in range(_bleeds.size() - 1, -1, -1):
 		var bleed: Array = _bleeds[i]
+		# Ворога вже прибрано з гри — спершу перевірка, тоді присвоєння
+		# (присвоїти звільнений вузол у типізовану змінну — падіння).
+		if not is_instance_valid(bleed[0]):
+			_bleeds.remove_at(i)
+			continue
 		var enemy: Enemy3D = bleed[0]
-		if not is_instance_valid(enemy) or not enemy.is_alive() or int(bleed[2]) <= 0:
+		if not enemy.is_alive() or int(bleed[2]) <= 0:
 			_bleeds.remove_at(i)
 			continue
 		bleed[3] = float(bleed[3]) - delta
