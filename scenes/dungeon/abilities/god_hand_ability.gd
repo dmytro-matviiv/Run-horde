@@ -10,7 +10,8 @@ const COLOR := Color(1.0, 0.9, 0.55, 0.85)
 
 var _queue := 0
 var _mark: MeshInstance3D
-var _hand: MeshInstance3D
+var _hand: Node3D
+var _shadow: MeshInstance3D
 var _spot := Vector3.ZERO
 var _radius := 0.0
 var _warn_left := 0.0
@@ -43,7 +44,9 @@ func tick(delta: float) -> void:
 		if is_instance_valid(_mark):
 			CombatVfx.set_param(_mark, &"progress", t)
 		if is_instance_valid(_hand):
-			_hand.global_position = _spot + Vector3.UP * lerpf(9.0, 0.6, t * t)
+			_hand.global_position = _spot + Vector3.UP * lerpf(9.0, 0.0, t * t)
+		if is_instance_valid(_shadow):
+			(_shadow.material_override as StandardMaterial3D).albedo_color.a = 0.7 * t
 		if _warn_left <= 0.0:
 			_slam()
 		return
@@ -55,21 +58,18 @@ func tick(delta: float) -> void:
 		_queue = 0
 		return
 	_spot = Vector3(hero.global_position.x, DungeonBuilder.FLOOR_TOP, hero.global_position.z)
-	_mark = CombatVfx.make_telegraph(COLOR, _radius, PI, true)
+	_mark = CombatVfx.make_telegraph(COLOR, _radius, PI, false)
 	world().add_child(_mark)
 	_mark.global_position = _spot + Vector3.UP * 0.05
-	_hand = MeshInstance3D.new()
-	var palm := BoxMesh.new()
-	palm.size = Vector3(_radius * 1.4, 0.5, _radius * 1.8)
-	_hand.mesh = palm
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.8, 0.76, 0.66)
-	mat.emission_enabled = true
-	mat.emission = Color(0.5, 0.4, 0.15)
-	mat.emission_energy_multiplier = 0.4
-	_hand.material_override = mat
+	# Кам'яна долоня бога падає з неба; на підлозі — її тінь, що густішає.
+	_hand = BossFx.stone_hand(_radius * 1.1)
 	world().add_child(_hand)
 	_hand.global_position = _spot + Vector3.UP * 9.0
+	_hand.rotation.y = randf() * TAU
+	_shadow = Fx.make_sprite("smoke_10", Color(0.0, 0.0, 0.0, 0.0), true)
+	world().add_child(_shadow)
+	_shadow.global_position = _spot + Vector3.UP * 0.07
+	_shadow.scale = Vector3.ONE * _radius * 2.4
 	_warn_left = float(config.get("warn", 0.9))
 
 func _slam() -> void:
@@ -82,11 +82,14 @@ func _slam() -> void:
 			CombatVfx.impact(world(), hero.global_position + Vector3.UP, COLOR, true)
 	if is_instance_valid(_mark):
 		_mark.queue_free()
+	if is_instance_valid(_shadow):
+		_shadow.queue_free()
+	_shadow = null
 	if is_instance_valid(_hand):
 		var hand := _hand
 		var tween := hand.create_tween()
 		tween.tween_interval(0.25)
-		tween.tween_property(hand, "scale", Vector3(1.0, 0.05, 1.0), 0.3)
+		tween.tween_property(hand, "position:y", hand.position.y + 9.0, 0.45).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		tween.tween_callback(hand.queue_free)
 	_mark = null
 	_hand = null
@@ -100,3 +103,5 @@ func on_death() -> void:
 		_mark.queue_free()
 	if is_instance_valid(_hand):
 		_hand.queue_free()
+	if is_instance_valid(_shadow):
+		_shadow.queue_free()

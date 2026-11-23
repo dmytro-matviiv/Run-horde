@@ -9,6 +9,7 @@ const COLOR := Color(1.0, 0.4, 0.1)
 
 var _left_time := 0.0
 var _sparks: CPUParticles3D
+var _arc_left := 0.0
 
 func _init() -> void:
 	id = "magnet"
@@ -47,6 +48,12 @@ func tick(delta: float) -> void:
 		to.y = 0.0
 		if to.length() > 0.6:
 			hero.apply_pull(to.normalized() * float(config.get("pull", 3.0)))
+		# Магнітні дуги: тонкі розжарені нитки тягнуться від героя до горна.
+		_arc_left -= delta
+		if _arc_left <= 0.0:
+			_arc_left = 0.3
+			CombatVfx.lightning(world(), [hero.global_position + Vector3.UP * 1.0, enemy.global_position + Vector3.UP * enemy.target_height * 0.55],
+				Color(1.0, 0.55, 0.2), 0.08)
 	if _left_time <= 0.0:
 		_finish()
 

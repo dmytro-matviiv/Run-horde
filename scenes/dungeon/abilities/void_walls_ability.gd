@@ -13,6 +13,7 @@ var _lines: Array = []
 var _warn_left := 0.0
 var _center := Vector3.ZERO
 var _yaw := 0.0
+var _rift: Node3D
 
 func _init() -> void:
 	id = "void_walls"
@@ -32,12 +33,15 @@ func resolve() -> void:
 	var length := float(config.get("length", 10.0))
 	for k in 2:
 		var direction := Vector3(cos(_yaw + k * PI * 0.5), 0.0, sin(_yaw + k * PI * 0.5))
-		var line := CombatVfx.make_line_telegraph(COLOR, length * 2.0, 0.8, "chevrons", true)
+		# Розлом порожнечі: темна смуга, що тече, — там виростуть кристали.
+		var line := BossFx.floor_plane(BossFx.void_material(), Vector2(0.9, length * 2.0))
+		(line.material_override as ShaderMaterial).set_shader_parameter(&"alpha", 0.0)
 		world().add_child(line)
-		line.global_position = _center + Vector3.UP * 0.05
+		line.global_position = _center + Vector3.UP * 0.04
 		line.rotation.y = atan2(direction.x, direction.z)
 		_lines.append(line)
 	_warn_left = float(config.get("warn", 1.2))
+	_rift = BossFx.dark_effect(world(), BossFx.DARK_AREA, _center, 1.4, 0.0)
 
 func tick(delta: float) -> void:
 	super.tick(delta)
@@ -46,7 +50,7 @@ func tick(delta: float) -> void:
 	_warn_left -= delta
 	for line in _lines:
 		if is_instance_valid(line):
-			CombatVfx.set_param(line, &"progress", clampf(1.0 - _warn_left / float(config.get("warn", 1.2)), 0.0, 1.0))
+			((line as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter(&"alpha", clampf(1.0 - _warn_left / float(config.get("warn", 1.2)), 0.0, 1.0))
 	if _warn_left <= 0.0:
 		_raise()
 
@@ -77,7 +81,13 @@ func _raise() -> void:
 				"invulnerable": true, "blocker": Vector3(step + 0.05, 2.2, 0.6), "face_yaw": atan2(direction.x, direction.z),
 				"lifetime": time,
 			}, null)
-	CombatVfx.shockwave(world(), _center, length, COLOR, 0.5)
+	# Вихор у перехресті живе, поки стоять стіни.
+	if _rift != null and is_instance_valid(_rift):
+		var rift := _rift
+		var tween := rift.create_tween()
+		tween.tween_interval(time)
+		tween.tween_callback(BossFx.dark_close.bind(rift))
+	_rift = null
 
 func on_death() -> void:
 	for line in _lines:
@@ -85,3 +95,5 @@ func on_death() -> void:
 			line.queue_free()
 	_lines.clear()
 	_warn_left = 0.0
+	BossFx.dark_close(_rift)
+	_rift = null

@@ -43,10 +43,10 @@ func resolve() -> void:
 	for i in count:
 		var spot: Vector3 = spots[i]
 		spot.y = DungeonBuilder.FLOOR_TOP
-		var mark := CombatVfx.make_telegraph(Color(COLOR, 0.25), RUNE_RADIUS, PI, false)
+		# Руна — світний знак, що крутиться; спершу ледь видно.
+		var mark := BossFx.rune_glyph(Color(COLOR, 0.25), RUNE_RADIUS * 2.2)
 		world().add_child(mark)
 		mark.global_position = spot + Vector3.UP * 0.05
-		CombatVfx.set_param(mark, &"progress", 1.0)
 		var label := Label3D.new()
 		label.text = str(i + 1)
 		label.font_size = 110
@@ -73,8 +73,8 @@ func tick(delta: float) -> void:
 		var shown := int((show * _runes.size() - _show_left) / show)
 		for i in _runes.size():
 			(_runes[i].label as Label3D).modulate.a = 1.0 if i <= shown else 0.0
-			if i == shown:
-				CombatVfx.set_param(_runes[i].mark, &"progress", 1.0)
+			if i <= shown:
+				((_runes[i].mark as MeshInstance3D).material_override as StandardMaterial3D).albedo_color = COLOR
 		return
 	_time_left -= delta
 	var hero := player()
@@ -85,13 +85,8 @@ func tick(delta: float) -> void:
 			if offset.length() > RUNE_RADIUS:
 				continue
 			if i == _next:
-				_runes[i].mark.material_override = null
-				_runes[i].mark.queue_free()
-				var done := CombatVfx.make_telegraph(GOOD, RUNE_RADIUS, PI, false)
-				world().add_child(done)
-				done.global_position = _runes[i].spot + Vector3.UP * 0.05
-				CombatVfx.set_param(done, &"progress", 1.0)
-				_runes[i].mark = done
+				((_runes[i].mark as MeshInstance3D).material_override as StandardMaterial3D).albedo_color = GOOD
+				Fx.bloom(world(), _runes[i].spot + Vector3.UP * 0.08, "magic_04", RUNE_RADIUS * 2.6, GOOD, 0.5, true, true)
 				_next += 1
 				if _next >= _runes.size():
 					_succeed()
@@ -111,7 +106,7 @@ func _succeed() -> void:
 func _fail() -> void:
 	var hero := player()
 	for rune: Dictionary in _runes:
-		CombatVfx.shockwave(world(), rune.spot, 1.6, BAD, 0.35)
+		Fx.bloom(world(), rune.spot + Vector3.UP * 0.08, "magic_04", 3.0, BAD, 0.45, true, true)
 	if hero != null and is_instance_valid(hero):
 		hero.take_damage(damage())
 		CombatVfx.impact(world(), hero.global_position + Vector3.UP, BAD, true)

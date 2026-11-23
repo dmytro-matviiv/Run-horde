@@ -53,10 +53,9 @@ func resolve() -> void:
 			multi.set_instance_transform(n, Transform3D(Basis(), spots[n]))
 		var node := MultiMeshInstance3D.new()
 		node.multimesh = multi
-		var mat := StandardMaterial3D.new()
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.albedo_color = COLD
+		# Плита — лава (шейдер): гаряча тече й світиться, холодна — темний
+		# базальт із ледь жевріючими щілинами.
+		var mat := BossFx.lava_material(0.05, 0.9)
 		node.material_override = mat
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		world().add_child(node)
@@ -80,14 +79,16 @@ func tick(delta: float) -> void:
 	var warn := float(config.get("warn", 0.6))
 	var preview := _first_warning()
 	for k in 2:
-		var mat: StandardMaterial3D = _mats[k]
+		var mat: ShaderMaterial = _mats[k]
+		var heat := 0.05
 		if k == _parity and not preview:
 			var blink := _time_left < warn and int(_time_left * 12.0) % 2 == 0
-			mat.albedo_color = HOT.lerp(COLD, 0.6) if blink else HOT
+			heat = 0.45 if blink else 1.0
 		elif k == _parity and preview:
-			mat.albedo_color = COLD.lerp(HOT, 0.45)
-		else:
-			mat.albedo_color = COLD.lerp(HOT, 0.35) if _time_left < warn else COLD
+			heat = 0.3
+		elif _time_left < warn:
+			heat = 0.16
+		mat.set_shader_parameter(&"heat", heat)
 	var hero := player()
 	_burn_left -= delta
 	if hero != null and is_instance_valid(hero) and _burn_left <= 0.0 and not preview and _hot_under(hero.global_position):

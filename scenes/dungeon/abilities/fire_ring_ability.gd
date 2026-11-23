@@ -10,7 +10,7 @@ const TICK := 0.5
 
 var _left_time := 0.0
 var _center := Vector3.ZERO
-var _ring: MeshInstance3D
+var _ring: Node3D
 var _flames: CPUParticles3D
 var _tick_left := 0.0
 
@@ -32,29 +32,25 @@ func resolve() -> void:
 	_center = enemy.global_position
 	_center.y = DungeonBuilder.FLOOR_TOP
 	_left_time = float(config.get("shrink", 8.0)) + float(config.get("hold", 2.5))
-	_ring = MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.92
-	torus.outer_radius = 1.0
-	torus.rings = 48
-	torus.ring_segments = 4
-	_ring.mesh = torus
-	_ring.material_override = CombatVfx.get_glow_material(COLOR)
-	_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Стіна полум'я (шейдер вогню) і чорний дим палаючого села над нею.
+	_ring = Fx.make_fire_wall()
 	world().add_child(_ring)
-	_ring.global_position = _center + Vector3.UP * 0.15
-	_flames = CombatVfx.make_trail(COLOR, 0.6)
-	_flames.amount = 48
+	_ring.global_position = _center
+	_flames = Fx.make_particles("smoke_07", Color(0.12, 0.1, 0.09, 0.55), 26, 2.2, 2.2)
 	_flames.emission_shape = CPUParticles3D.EMISSION_SHAPE_RING
 	_flames.emission_ring_axis = Vector3.UP
-	_flames.emission_ring_height = 0.1
-	_flames.emission_ring_inner_radius = 0.95
+	_flames.emission_ring_height = 0.2
+	_flames.emission_ring_inner_radius = 0.97
 	_flames.emission_ring_radius = 1.0
 	_flames.direction = Vector3.UP
-	_flames.gravity = Vector3(0, 2.5, 0)
+	_flames.spread = 8.0
+	_flames.initial_velocity_min = 1.2
+	_flames.initial_velocity_max = 2.0
+	_flames.gravity = Vector3(0, 0.6, 0)
+	_flames.local_coords = true
 	_ring.add_child(_flames)
+	_flames.position.y = 1.4
 	_scale_ring()
-	CombatVfx.shockwave(world(), _center, float(config.get("start", 11.0)), COLOR, 0.6)
 
 func _radius() -> float:
 	var shrink := float(config.get("shrink", 8.0))
@@ -64,7 +60,12 @@ func _radius() -> float:
 func _scale_ring() -> void:
 	if _ring != null and is_instance_valid(_ring):
 		var r := _radius()
-		_ring.scale = Vector3(r, 1.0, r)
+		var grow := clampf((float(config.get("shrink", 8.0)) + float(config.get("hold", 2.5)) - _left_time) / 0.6, 0.0, 1.0)
+		var fade := clampf(_left_time / 0.5, 0.0, 1.0)
+		Fx.update_fire_wall(_ring, r, 1.6 * grow, grow * fade)
+		if _flames != null and is_instance_valid(_flames):
+			_flames.emission_ring_radius = r
+			_flames.emission_ring_inner_radius = r * 0.96
 
 func tick(delta: float) -> void:
 	super.tick(delta)

@@ -23,20 +23,12 @@ class Blade extends Node3D:
 	func _ready() -> void:
 		_blade = Node3D.new()
 		add_child(_blade)
-		var steel := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(0.14, 1.1, 0.04)
-		steel.mesh = box
-		steel.material_override = CombatVfx.get_glow_material(Color(1.0, 0.5, 0.15))
-		steel.position.y = -0.3
-		_blade.add_child(steel)
-		var guard := MeshInstance3D.new()
-		var cross := BoxMesh.new()
-		cross.size = Vector3(0.42, 0.07, 0.08)
-		guard.mesh = cross
-		guard.material_override = CombatVfx.get_glow_material(Color(0.4, 0.3, 0.25))
-		guard.position.y = 0.27
-		_blade.add_child(guard)
+		# Розжарений меч горна: клинок із лави, сталева гарда й руків'я.
+		# Вістрям донизу (модель — вістрям уздовж -Z, повертаємо).
+		var sword := BossFx.forge_blade()
+		sword.rotation.x = -PI * 0.5
+		sword.position.y = 0.2
+		_blade.add_child(sword)
 		var trail := CombatVfx.make_trail(Color(1.0, 0.6, 0.2), 0.4)
 		trail.amount = 10
 		_blade.add_child(trail)

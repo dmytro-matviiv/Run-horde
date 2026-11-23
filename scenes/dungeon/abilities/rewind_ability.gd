@@ -16,6 +16,7 @@ var _sample_left := 0.0
 var _glass: Enemy3D
 var _wait_left := 0.0
 var _target_hp := 0.0
+var _dial: MeshInstance3D
 
 func _init() -> void:
 	id = "rewind"
@@ -31,6 +32,7 @@ func tick(delta: float) -> void:
 		while _history.size() > keep:
 			_history.pop_front()
 	if _wait_left <= 0.0:
+		_drop_dial()
 		return
 	_wait_left -= delta
 	if _glass == null or not is_instance_valid(_glass) or not _glass.is_alive():
@@ -74,10 +76,25 @@ func resolve() -> void:
 		if other != null and other.display_name == GLASS and other.is_alive():
 			_glass = other
 	_wait_left = float(config.get("time", 5.0))
+	# Пісок сиплеться в годиннику, а під Богом — циферблат, що крутиться
+	# проти годинникової: час тече назад.
+	if _glass != null:
+		var sand := BossFx.falling_sand()
+		_glass.add_child(sand)
+		sand.position = Vector3.UP * 0.78
+	_dial = BossFx.clock_dial(2.6)
+	enemy.add_child(_dial)
+	_dial.position = Vector3.UP * 0.06
 	if hero != null and is_instance_valid(hero):
 		CombatVfx.lightning(world(), [enemy.global_position + Vector3.UP * 2.5, spot + Vector3.UP * 1.0], COLOR, 0.2)
 
+func _drop_dial() -> void:
+	if _dial != null and is_instance_valid(_dial):
+		_dial.queue_free()
+	_dial = null
+
 func on_death() -> void:
+	_drop_dial()
 	_wait_left = 0.0
 	if _glass != null and is_instance_valid(_glass) and _glass.is_alive():
 		_glass.take_damage(1.0e9)

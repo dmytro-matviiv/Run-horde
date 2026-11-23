@@ -26,20 +26,11 @@ func try_use(_distance: float) -> bool:
 
 func resolve() -> void:
 	_clear()
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.35
-	mesh.height = 0.7
-	mesh.radial_segments = 10
-	mesh.rings = 5
+	# Вогняні кулі: ядро з лави, полум'яний ореол і слід (BossFx.fireball).
 	for i in int(config.get("count", 4)):
-		var ball := MeshInstance3D.new()
-		ball.mesh = mesh
-		ball.material_override = CombatVfx.get_glow_material(COLOR)
-		ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		var trail := CombatVfx.make_trail(COLOR, 0.4)
-		trail.amount = 10
-		ball.add_child(trail)
+		var ball := BossFx.fireball(1.5)
 		world().add_child(ball)
+		ball.global_position = enemy.global_position + Vector3.UP
 		_balls.append(ball)
 	_time_left = float(config.get("time", 7.0))
 	_angle = randf() * TAU
@@ -57,7 +48,7 @@ func tick(delta: float) -> void:
 	_hit_left -= delta
 	var count := _balls.size()
 	for i in count:
-		var ball: MeshInstance3D = _balls[i]
+		var ball: Node3D = _balls[i]
 		var a := _angle + TAU * i / count
 		ball.global_position = enemy.global_position + Vector3(cos(a), 0.0, sin(a)) * radius + Vector3.UP * 1.0
 		if hero != null and is_instance_valid(hero) and _hit_left <= 0.0:

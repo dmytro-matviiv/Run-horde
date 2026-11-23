@@ -26,6 +26,7 @@ func resolve() -> void:
 	var to := hero.global_position + Vector3.UP - origin
 	var time := float(config.get("time", 3.0))
 	var slow := float(config.get("slow", 0.7))
-	enemy.spawn_shot(origin, to, COLOR, float(config.get("speed", 13.0)), damage(), func(target: Node3D) -> void:
+	var shot := enemy.spawn_shot(origin, to, COLOR, float(config.get("speed", 13.0)), damage(), func(target: Node3D) -> void:
 		if target.has_method("tangle"):
 			target.tangle(time, slow))
+	shot.set_model(BossFx.bola())

@@ -52,6 +52,14 @@ func resolve() -> void:
 		var mark := CombatVfx.make_line_telegraph(COLOR, size, size, "cracks", false)
 		world().add_child(mark)
 		mark.global_position = spot + Vector3.UP * 0.05
+		# Тріщини в кризі розповзаються від центру плити.
+		var crack := BossFx.crack_decal(Color(0.85, 0.95, 1.0, 0.95))
+		mark.add_sibling(crack)
+		crack.global_position = spot + Vector3.UP * 0.07
+		crack.rotation.y = randf() * TAU
+		crack.scale = Vector3.ONE * 0.3
+		crack.create_tween().tween_property(crack, "scale", Vector3.ONE * size * 1.3, float(config.get("warn", 1.3))).set_ease(Tween.EASE_OUT)
+		mark.set_meta("crack", crack)
 		_holes.append({"spot": spot, "mark": mark, "water": null})
 	_warn_left = float(config.get("warn", 1.3))
 	_safe = Vector3.INF
@@ -85,19 +93,14 @@ func _open() -> void:
 	var size := float(config.get("size", 2.2))
 	for hole: Dictionary in _holes:
 		if is_instance_valid(hole.mark):
+			var crack: Node = hole.mark.get_meta("crack", null)
+			if crack != null and is_instance_valid(crack):
+				crack.queue_free()
 			hole.mark.queue_free()
-		var water := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(size, 0.04, size)
-		water.mesh = box
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = WATER
-		mat.metallic = 0.6
-		mat.roughness = 0.05
-		water.material_override = mat
-		water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# Ополонка: чорна вода, крижані уламки по краю.
+		var water := BossFx.ice_hole(size)
 		world().add_child(water)
-		water.global_position = hole.spot + Vector3.UP * 0.04
+		water.global_position = hole.spot
 		hole.water = water
 		CombatVfx.smoke_puff(world(), hole.spot + Vector3.UP * 0.3, Color(0.85, 0.95, 1.0), 1.2)
 	_open_left = float(config.get("time", 6.0))
@@ -128,6 +131,9 @@ func _clear() -> void:
 	_open_left = 0.0
 	for hole: Dictionary in _holes:
 		if is_instance_valid(hole.mark):
+			var crack: Node = hole.mark.get_meta("crack", null)
+			if crack != null and is_instance_valid(crack):
+				crack.queue_free()
 			hole.mark.queue_free()
 		if hole.water != null and is_instance_valid(hole.water):
 			hole.water.queue_free()

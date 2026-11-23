@@ -49,40 +49,16 @@ func resolve() -> void:
 	_label.no_depth_test = true
 	_label.modulate = COLOR
 	world().add_child(_label)
-	_snow = CombatVfx.make_motes(Color(0.95, 0.97, 1.0), 40, 6.0, -1.5, 0.07)
+	_snow = BossFx.snowfall()
 	world().add_child(_snow)
-	CombatVfx.shockwave(world(), center, 9.0, COLOR, 0.6)
 
+## Жаровня: залізна чаша на ніжках із жаром і полум'ям (BossFx).
 func _make_brazier(spot: Vector3) -> Node3D:
-	var root := Node3D.new()
+	var root := BossFx.brazier(float(config.get("warm", 2.2)))
 	world().add_child(root)
 	root.global_position = spot
-	var bowl := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.45
-	cyl.bottom_radius = 0.25
-	cyl.height = 0.7
-	cyl.radial_segments = 8
-	cyl.rings = 1
-	bowl.mesh = cyl
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.25, 0.22, 0.2)
-	mat.metallic = 0.5
-	bowl.material_override = mat
-	bowl.position.y = 0.35
-	root.add_child(bowl)
-	var flame := CombatVfx.make_trail(FIRE, 0.6)
-	flame.amount = 18
-	flame.direction = Vector3.UP
-	flame.gravity = Vector3(0, 2.5, 0)
-	flame.emission_sphere_radius = 0.25
-	root.add_child(flame)
-	flame.position.y = 0.8
-	flame.emitting = true
-	var ring := CombatVfx.make_ground_marker(Color(FIRE, 0.4), float(config.get("warm", 2.2)))
-	CombatVfx.set_param(ring, &"progress", 1.0)
-	ring.position.y = 0.05
-	root.add_child(ring)
+	root.scale = Vector3(1.0, 0.01, 1.0)
+	root.create_tween().tween_property(root, "scale", Vector3.ONE, 0.35).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	return root
 
 func tick(delta: float) -> void:
@@ -95,7 +71,7 @@ func tick(delta: float) -> void:
 		_clear()
 		return
 	if _snow != null:
-		_snow.global_position = hero.global_position + Vector3.UP * 3.0
+		_snow.global_position = hero.global_position + Vector3(-2.0, 5.0, 0.0)
 	var warm := false
 	for brazier: Node3D in _braziers:
 		var offset := hero.global_position - brazier.global_position

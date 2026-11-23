@@ -56,26 +56,16 @@ func resolve() -> void:
 		var length := absf(outer - inner)
 		var middle := (inner + outer) * 0.5
 		var line := CombatVfx.make_line_telegraph(COLOR, length, THICK + 0.4, "chevrons", false)
+		# (смуга лишається: так видно, де прохід, ще до того, як стіна виросте)
 		world().add_child(line)
 		line.global_position = _origin + _side * middle + Vector3.UP * 0.05
 		line.rotation.y = atan2(_side.x, _side.z)
 		_lines.append(line)
-		var wall := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(THICK, HEIGHT, length)
-		wall.mesh = box
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.7, 0.88, 1.0, 0.85)
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.metallic = 0.3
-		mat.roughness = 0.1
-		mat.emission_enabled = true
-		mat.emission = Color(0.25, 0.45, 0.65)
-		mat.emission_energy_multiplier = 0.5
-		wall.material_override = mat
+		# Стіна — ряд гострих крижаних уламків (шейдер криги) з морозним
+		# туманом біля основи. Довжина — уздовж _side.
+		var wall := BossFx.ice_wall(length, HEIGHT)
 		world().add_child(wall)
-		wall.global_position = _origin + _side * middle + Vector3.UP * (HEIGHT * 0.5 - HEIGHT)
-		# Брусок довжиною вздовж _side (локальна z).
+		wall.global_position = _origin + _side * middle + Vector3.UP * (-HEIGHT)
 		wall.rotation.y = atan2(_side.x, _side.z)
 		_walls.append(wall)
 	_warn_left = float(config.get("warn", 1.2))
@@ -90,8 +80,8 @@ func tick(delta: float) -> void:
 			if is_instance_valid(line):
 				CombatVfx.set_param(line, &"progress", t)
 		# Стіна виростає з підлоги.
-		for wall: MeshInstance3D in _walls:
-			wall.global_position.y = DungeonBuilder.FLOOR_TOP + HEIGHT * 0.5 - HEIGHT * (1.0 - t)
+		for wall: Node3D in _walls:
+			wall.global_position.y = DungeonBuilder.FLOOR_TOP - HEIGHT * (1.0 - t)
 		if _warn_left <= 0.0:
 			for line in _lines:
 				if is_instance_valid(line):
@@ -103,7 +93,7 @@ func tick(delta: float) -> void:
 		return
 	var step := float(config.get("speed", 3.2)) * delta
 	_moved += step
-	for wall: MeshInstance3D in _walls:
+	for wall: Node3D in _walls:
 		wall.global_position += _dir * step
 	var hero := player()
 	if hero != null and is_instance_valid(hero) and not _hit:
@@ -132,7 +122,7 @@ func _clear() -> void:
 		if is_instance_valid(line):
 			line.queue_free()
 	_lines.clear()
-	for wall: MeshInstance3D in _walls:
+	for wall: Node3D in _walls:
 		if is_instance_valid(wall):
 			CombatVfx.smoke_puff(world(), wall.global_position, Color(0.85, 0.95, 1.0), 1.6)
 			wall.queue_free()

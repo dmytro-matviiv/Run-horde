@@ -45,7 +45,8 @@ func resolve() -> void:
 	for i in count:
 		var center := start + along * gap * i
 		center.y = DungeonBuilder.FLOOR_TOP + 0.05
-		var line := CombatVfx.make_line_telegraph(COLOR, length, width, "chevrons", true)
+		# Жолоб у підлозі: спершу тріщина ледь жевріє, тоді заливається лавою.
+		var line := BossFx.lava_strip(length, width)
 		world().add_child(line)
 		line.global_position = center
 		line.rotation.y = atan2(across.x, across.z)
@@ -70,13 +71,16 @@ func tick(delta: float) -> void:
 			continue
 		if now < float(strip.on):
 			if is_instance_valid(line):
-				CombatVfx.set_param(line, &"progress", clampf(1.0 - (float(strip.on) - now) / 1.0, 0.0, 1.0))
+				var warm := clampf(1.0 - (float(strip.on) - now) / 1.0, 0.0, 1.0)
+				BossFx.set_heat(line, 0.15 + 0.2 * warm, 0.35 + 0.5 * warm)
 			continue
 		if not strip.lit:
 			strip.lit = true
-			CombatVfx.shockwave(world(), strip.center, 1.2, COLOR, 0.3)
 			if is_instance_valid(line):
-				CombatVfx.set_param(line, &"progress", 1.0)
+				BossFx.set_heat(line, 1.0, 1.0)
+		elif is_instance_valid(line) and float(strip.off) - now < 0.5:
+			# Лава холоне перед тим, як зникнути.
+			BossFx.set_heat(line, (float(strip.off) - now) * 2.0, 1.0)
 		if hero != null and is_instance_valid(hero) and _tick_left <= 0.0:
 			var offset: Vector3 = hero.global_position - strip.center
 			if absf(offset.dot(strip.along)) <= float(strip.width) * 0.5:

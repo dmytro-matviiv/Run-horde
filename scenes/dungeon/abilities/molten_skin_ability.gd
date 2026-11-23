@@ -10,7 +10,7 @@ const COLOR := Color(1.0, 0.5, 0.1)
 
 var _hot_left := 0.0
 var _burn_left := 0.0
-var _overlay: StandardMaterial3D
+var _overlay: ShaderMaterial
 
 func _init() -> void:
 	id = "molten_skin"
@@ -26,14 +26,11 @@ func try_use(_distance: float) -> bool:
 func resolve() -> void:
 	_hot_left = float(config.get("time", 4.0))
 	if _overlay == null:
-		_overlay = StandardMaterial3D.new()
-		_overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_overlay.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-		_overlay.albedo_color = Color(1.0, 0.45, 0.05, 0.0)
+		# Розплавлена кірка поверх тіла: лава тече по шкірі Владики.
+		_overlay = BossFx.molten_overlay()
 		for node in enemy._model.find_children("*", "GeometryInstance3D", true, false):
 			(node as GeometryInstance3D).material_overlay = _overlay
-	CombatVfx.shockwave(world(), enemy.global_position, 3.0, COLOR, 0.4)
+	CombatVfx.smoke_puff(world(), enemy.global_position + Vector3.UP * enemy.target_height * 0.5, Color(0.25, 0.18, 0.15), 1.8)
 
 func tick(delta: float) -> void:
 	super.tick(delta)
@@ -42,7 +39,7 @@ func tick(delta: float) -> void:
 		return
 	_hot_left -= delta
 	if _overlay != null:
-		_overlay.albedo_color.a = 0.0 if _hot_left <= 0.0 else 0.45 + 0.15 * sin(Time.get_ticks_msec() * 0.012)
+		_overlay.set_shader_parameter(&"alpha", 0.0 if _hot_left <= 0.0 else 0.7 + 0.15 * sin(Time.get_ticks_msec() * 0.012))
 
 func is_hot() -> bool:
 	return _hot_left > 0.0
@@ -61,4 +58,4 @@ func filter_damage(amount: float, _heavy: bool) -> float:
 func on_death() -> void:
 	_hot_left = 0.0
 	if _overlay != null:
-		_overlay.albedo_color.a = 0.0
+		_overlay.set_shader_parameter(&"alpha", 0.0)

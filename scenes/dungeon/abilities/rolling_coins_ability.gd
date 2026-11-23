@@ -37,6 +37,32 @@ class Coin extends Node3D:
 		_disc.material_override = gold
 		_disc.rotation.z = PI * 0.5
 		add_child(_disc)
+		# Карбування: вищий обідок і темніший відбиток корони посередині.
+		var rim := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = 0.78
+		torus.outer_radius = 0.92
+		torus.rings = 20
+		torus.ring_segments = 4
+		rim.mesh = torus
+		rim.material_override = gold
+		rim.scale = Vector3(1.0, 2.2, 1.0)
+		_disc.add_child(rim)
+		var stamp := MeshInstance3D.new()
+		var face := CylinderMesh.new()
+		face.top_radius = 0.42
+		face.bottom_radius = 0.42
+		face.height = 0.26
+		face.radial_segments = 6
+		face.rings = 1
+		stamp.mesh = face
+		var dark := gold.duplicate() as StandardMaterial3D
+		dark.albedo_color = Color(0.75, 0.52, 0.15)
+		stamp.material_override = dark
+		_disc.add_child(stamp)
+		var shine := CombatVfx.make_trail(Color(1.0, 0.85, 0.4), 0.35)
+		shine.amount = 8
+		add_child(shine)
 
 	func _physics_process(delta: float) -> void:
 		if not _aimed:

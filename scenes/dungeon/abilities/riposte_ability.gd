@@ -27,11 +27,10 @@ func try_use(distance: float) -> bool:
 	enemy.hold_still(_left_time)
 	enemy.face_player(100.0)
 	enemy.play_loop("Block")
-	_glint = CombatVfx.make_telegraph(Color(COLOR, 0.7), 1.4, PI * 0.35, false)
+	# Зблиск на клинку: Ватажок у стійці, вдариш — відповість.
+	_glint = BossFx.glint(Color(COLOR, 0.95))
 	enemy.add_child(_glint)
-	_glint.position = Vector3.UP * 0.06
-	_glint.rotation.y = atan2(enemy.model_forward().x, enemy.model_forward().z)
-	CombatVfx.set_param(_glint, &"progress", 1.0)
+	_glint.position = Vector3.UP * enemy.target_height * 0.62 + enemy.model_forward() * 0.6
 	return true
 
 func tick(delta: float) -> void:

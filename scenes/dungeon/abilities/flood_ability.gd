@@ -12,7 +12,7 @@ const WATER := Color(0.12, 0.38, 0.32, 0.55)
 const PAD := Color(0.3, 0.62, 0.25)
 
 var _water: MeshInstance3D
-var _water_mat: StandardMaterial3D
+var _water_mat: ShaderMaterial
 var _pads: Array = []
 var _warn_left := 0.0
 var _flood_left := 0.0
@@ -36,23 +36,10 @@ func resolve() -> void:
 	_clear()
 	var center := Vector3(hero.global_position.x, DungeonBuilder.FLOOR_TOP, hero.global_position.z)
 	var area := float(config.get("area", 13.0))
-	_water = MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = area
-	disc.bottom_radius = area
-	disc.height = 0.04
-	disc.radial_segments = 28
-	disc.rings = 1
-	_water.mesh = disc
-	_water_mat = StandardMaterial3D.new()
-	_water_mat.albedo_color = Color(WATER, 0.0)
-	_water_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_water_mat.roughness = 0.1
-	_water_mat.metallic = 0.3
-	_water_mat.emission_enabled = true
-	_water_mat.emission = Color(0.05, 0.2, 0.16)
-	_water.material_override = _water_mat
-	_water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Трясовина — брижиста зелена вода (шейдер), що піднімається.
+	_water_mat = BossFx.swamp_water()
+	_water_mat.set_shader_parameter(&"alpha", 0.0)
+	_water = BossFx.floor_disc(_water_mat, area)
 	world().add_child(_water)
 	_water.global_position = center + Vector3.UP * 0.02
 	var count := int(config.get("pads", 5))
@@ -61,23 +48,11 @@ func resolve() -> void:
 	for i in count:
 		var angle := start + TAU * i / count + randf_range(-0.25, 0.25)
 		var spot := center + Vector3(cos(angle), 0.0, sin(angle)) * randf_range(float(config.get("near", 2.2)), float(config.get("far", 5.0)))
-		var pad := MeshInstance3D.new()
-		var leaf := CylinderMesh.new()
-		leaf.top_radius = radius
-		leaf.bottom_radius = radius * 0.95
-		leaf.height = 0.08
-		leaf.radial_segments = 14
-		leaf.rings = 1
-		pad.mesh = leaf
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = PAD
-		mat.emission_enabled = true
-		mat.emission = PAD * 0.25
-		pad.material_override = mat
-		pad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var pad := BossFx.lily_pad(radius, i % 2 == 0)
+		pad.rotation.y = randf() * TAU
 		world().add_child(pad)
 		pad.global_position = spot + Vector3.UP * 0.1
-		_pads.append({"node": pad, "spot": spot, "weight": 0.0, "mat": mat})
+		_pads.append({"node": pad, "spot": spot, "weight": 0.0})
 	_warn_left = float(config.get("warn", 1.6))
 
 func tick(delta: float) -> void:
@@ -86,7 +61,7 @@ func tick(delta: float) -> void:
 		_warn_left -= delta
 		var warn := float(config.get("warn", 1.6))
 		if _water_mat != null:
-			_water_mat.albedo_color.a = WATER.a * clampf(1.0 - _warn_left / warn, 0.0, 1.0)
+			_water_mat.set_shader_parameter(&"alpha", clampf(1.0 - _warn_left / warn, 0.0, 1.0))
 			_water.global_position.y = DungeonBuilder.FLOOR_TOP + 0.02 + 0.1 * clampf(1.0 - _warn_left / warn, 0.0, 1.0)
 		if _warn_left <= 0.0:
 			_flood_left = float(config.get("time", 7.0))
@@ -110,7 +85,8 @@ func tick(delta: float) -> void:
 			continue
 		on_pad = true
 		pad.weight += delta
-		(pad.mat as StandardMaterial3D).albedo_color = PAD.lerp(Color(0.55, 0.45, 0.15), clampf(pad.weight / sink, 0.0, 1.0))
+		# Латаття осідає й хитається під вагою.
+		(pad.node as Node3D).rotation.z = sin(pad.weight * 14.0) * 0.06 * clampf(pad.weight / sink, 0.0, 1.0)
 		(pad.node as Node3D).global_position.y = DungeonBuilder.FLOOR_TOP + 0.1 - 0.12 * clampf(pad.weight / sink, 0.0, 1.0)
 		if pad.weight >= sink:
 			_sink(i)
@@ -149,7 +125,7 @@ func _clear() -> void:
 	if _water != null and is_instance_valid(_water):
 		var water := _water
 		var tween := water.create_tween()
-		tween.tween_property(_water_mat, "albedo_color:a", 0.0, 0.5)
+		tween.tween_method(func(v: float) -> void: water.material_override.set_shader_parameter(&"alpha", v), 1.0, 0.0, 0.5)
 		tween.tween_callback(water.queue_free)
 	_water = null
 	_water_mat = null

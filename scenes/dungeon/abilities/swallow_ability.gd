@@ -14,6 +14,7 @@ var _inside_left := 0.0
 var _digest_left := 0.0
 var _dealt := 0.0
 var _mark: MeshInstance3D
+var _jaws: Node3D
 
 func _init() -> void:
 	id = "swallow"
@@ -29,6 +30,11 @@ func try_use(distance: float) -> bool:
 	enemy.add_child(_mark)
 	_mark.position = Vector3.UP * 0.06
 	_mark.rotation.y = enemy.facing_angle() - enemy.rotation.y
+	# Щелепи: два ряди кістяних зубів по краях пащі виростають із підлоги.
+	_jaws = BossFx.jaws(reach, deg_to_rad(float(config.get("arc", 70.0))) * 0.5)
+	enemy.add_child(_jaws)
+	_jaws.rotation.y = _mark.rotation.y
+	BossFx.set_jaws(_jaws, 0.0, 0.0, deg_to_rad(float(config.get("arc", 70.0))) * 0.5)
 	enemy.begin_special(id, float(config.get("windup", 1.0)), Color(COLOR, 0.0), 0.1)
 	return true
 
@@ -38,6 +44,8 @@ func tick(delta: float) -> void:
 		var progress := float(_mark.get_meta("p", 0.0)) + delta / float(config.get("windup", 1.0))
 		_mark.set_meta("p", progress)
 		CombatVfx.set_param(_mark, &"progress", clampf(progress, 0.0, 1.0))
+		if _jaws != null and is_instance_valid(_jaws):
+			BossFx.set_jaws(_jaws, clampf(progress * 1.4, 0.0, 1.0), 0.0, deg_to_rad(float(config.get("arc", 70.0))) * 0.5)
 		if progress > 1.8:
 			_clear_mark()
 	if _inside_left <= 0.0:
@@ -120,3 +128,13 @@ func _clear_mark() -> void:
 	if _mark != null and is_instance_valid(_mark):
 		_mark.queue_free()
 	_mark = null
+	# Щелепи змикаються (клац!) і ховаються під землю.
+	if _jaws != null and is_instance_valid(_jaws):
+		var jaws := _jaws
+		var half := deg_to_rad(float(config.get("arc", 70.0))) * 0.5
+		var tween := jaws.create_tween()
+		tween.tween_method(func(v: float) -> void: BossFx.set_jaws(jaws, 1.0, v, half), 0.0, 1.0, 0.12)
+		tween.tween_interval(0.25)
+		tween.tween_method(func(v: float) -> void: BossFx.set_jaws(jaws, v, 1.0, half), 1.0, 0.0, 0.3)
+		tween.tween_callback(jaws.queue_free)
+	_jaws = null
