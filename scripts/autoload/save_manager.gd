@@ -262,6 +262,7 @@ func _items_from_json(list: Array) -> Array:
 		for stat: String in stats:
 			stats[stat] = int(stats[stat])
 		item["level"] = int(item.get("level", 1))
+		ItemDb.rebalance_v2(item)
 	return list
 
 ## Міграція між версіями схеми сейву — кожна пройдена версія лишає

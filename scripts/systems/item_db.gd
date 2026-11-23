@@ -24,7 +24,54 @@ const RARITIES := ["common", "uncommon", "rare", "epic", "legendary"]
 const RARITY_TITLES := {"common": "Звичайна", "uncommon": "Незвичайна", "rare": "Рідкісна", "epic": "Епічна", "legendary": "Легендарна"}
 const RARITY_COLORS := {"common": Color(0.75, 0.75, 0.75), "uncommon": Color(0.45, 0.9, 0.4), "rare": Color(0.35, 0.65, 1.0),
 	"epic": Color(0.75, 0.45, 1.0), "legendary": Color(1.0, 0.72, 0.2)}
-const RARITY_POWER := {"common": 1.0, "uncommon": 1.25, "rare": 1.55, "epic": 1.9, "legendary": 2.4}
+## Сила рідкості (множник чисел речі).
+const RARITY_POWER := {"common": 1.0, "uncommon": 1.7, "rare": 2.8, "epic": 4.5, "legendary": 7.0}
+## Рівень речі = номер данжу, де її здобуто (куплено — найдальший
+## пройдений): кожен рівень +LEVEL_STEP до чисел.
+const LEVEL_STEP := 0.04
+## Захисні числа (здоров'я, броня) ростуть повільніше за шкоду (степінь
+## від сили): інакше герой у легендарному став би невразливим, а вороги
+## дальніх данжів мають лишатись важчими, ніж перший данж на старті.
+## Як швидко росте кожне число від сили (степінь): на повну — лише шкода
+## ЗБРОЇ; захист і шкода на броні — повільніше; швидкість, крит, рух,
+## перезарядка — ще повільніше (вони перемножуються й розганяють силу).
+const CURVE_WEAPON_DAMAGE := 0.9
+const CURVE_DEFENSE := 0.37
+const CURVE_ARMOR_DAMAGE := 0.45
+const CURVE_UTILITY := 0.3
+const DEFENSIVE := ["hp", "armor", "regen", "mana"]
+
+static func stat_power(stat: String, power: float, weapon := false) -> float:
+	if stat == "damage":
+		return pow(power, CURVE_WEAPON_DAMAGE if weapon else CURVE_ARMOR_DAMAGE)
+	if stat in DEFENSIVE:
+		return pow(power, CURVE_DEFENSE)
+	return pow(power, CURVE_UTILITY)
+
+## Речі зі старого балансу (до 2026-11-23): числа перераховуються один раз
+## — множник нової сили до старої (рідкість, рівень, покращення).
+const OLD_RARITY_POWER := {"common": 1.0, "uncommon": 1.25, "rare": 1.55, "epic": 1.9, "legendary": 2.4}
+static func rebalance_v2(item: Dictionary) -> void:
+	if int(item.get("balance", 1)) >= 2:
+		return
+	item["balance"] = 2
+	var rarity := String(item.get("rarity", "common"))
+	var level := int(item.get("level", 1))
+	var plus := int(item.get("plus", 0))
+	var old_power: float = OLD_RARITY_POWER.get(rarity, 1.0) * (1.0 + 0.08 * (level - 1))
+	var new_power: float = RARITY_POWER.get(rarity, 1.0) * (1.0 + LEVEL_STEP * (level - 1))
+	var old_plus := 1.0 + 0.08 * plus
+	var new_plus := 1.0 + PLUS_STEP * plus
+	var weapon := String(BASES.get(String(item.get("base", "")), {}).get("slot", "")) == "weapon"
+	for key in ["raw", "stats"]:
+		if not item.has(key):
+			continue
+		var stats: Dictionary = item[key]
+		for stat: String in stats:
+			var ratio := stat_power(stat, new_power, weapon) / old_power
+			if key == "stats":
+				ratio *= stat_power(stat, new_plus, weapon) / old_plus
+			stats[stat] = maxi(1, roundi(float(stats[stat]) * ratio))
 const RARITY_AFFIXES := {"common": 0, "uncommon": 1, "rare": 2, "epic": 3, "legendary": 4}
 
 ## Характеристики: назва, одиниця, наскільки "добре" більше значення.
@@ -435,10 +482,11 @@ static func roll(base_id: String, rarity: String = "common", level: int = 1) -> 
 	var base: Dictionary = BASES[base_id]
 	# У зброї рідкість своя, назавжди.
 	rarity = String(base.get("rarity", rarity))
-	var power: float = RARITY_POWER.get(rarity, 1.0) * (1.0 + 0.08 * (level - 1))
+	var power: float = RARITY_POWER.get(rarity, 1.0) * (1.0 + LEVEL_STEP * (level - 1))
+	var is_weapon := String(base.get("slot", "")) == "weapon"
 	var stats := {}
 	for stat: String in base.base:
-		stats[stat] = maxi(1, roundi(float(base.base[stat]) * power * randf_range(0.9, 1.1)))
+		stats[stat] = maxi(1, roundi(float(base.base[stat]) * stat_power(stat, power, is_weapon) * randf_range(0.9, 1.1)))
 	var pool := AFFIX_RANGES.keys()
 	pool.shuffle()
 	var extra: int = RARITY_AFFIXES.get(rarity, 0)
@@ -446,11 +494,11 @@ static func roll(base_id: String, rarity: String = "common", level: int = 1) -> 
 		if extra <= 0:
 			break
 		var range_: Array = AFFIX_RANGES[stat]
-		var value := roundi(randf_range(range_[0], range_[1]) * power)
+		var value := roundi(randf_range(range_[0], range_[1]) * stat_power(stat, power, false))
 		stats[stat] = int(stats.get(stat, 0)) + maxi(1, value)
 		extra -= 1
 	_counter += 1
-	return {"uid": "i%d%d" % [Time.get_ticks_msec(), _counter], "base": base_id, "rarity": rarity, "stats": stats, "level": level}
+	return {"uid": "i%d%d" % [Time.get_ticks_msec(), _counter], "base": base_id, "rarity": rarity, "stats": stats, "level": level, "balance": 2}
 
 ## Унікальне вміння речі (зброя з синьої рідкості): ефекти бою.
 static func unique_effects(item: Dictionary) -> Dictionary:
@@ -655,8 +703,9 @@ static func is_discovered(base_id: String) -> bool:
 
 const BUY_PRICE := {"common": 120, "uncommon": 350, "rare": 900, "epic": 2200, "legendary": 5000}
 const MAX_PLUS := 10
-## Кожен рівень покращення: +8% до всіх чисел речі.
-const PLUS_STEP := 0.08
+## Кожен рівень покращення: +15% до чисел речі (+10 — у 2,5 раза;
+## захисні — повільніше, за DEFENSE_CURVE).
+const PLUS_STEP := 0.15
 
 static func rarity_of_base(base_id: String) -> String:
 	return String(BASES.get(base_id, {}).get("rarity", "common"))
@@ -702,7 +751,7 @@ static func upgrade(uid: String) -> bool:
 	var raw: Dictionary = item.raw
 	var stats := {}
 	for stat: String in raw:
-		stats[stat] = maxi(int(raw[stat]) + 1, roundi(float(raw[stat]) * (1.0 + PLUS_STEP * item.plus)))
+		stats[stat] = maxi(int(raw[stat]) + 1, roundi(float(raw[stat]) * stat_power(stat, 1.0 + PLUS_STEP * item.plus, slot_of(item) == "weapon")))
 	item["stats"] = stats
 	GameState.equipment_changed.emit()
 	SaveManager.save_game()
@@ -716,9 +765,13 @@ static func buy(base_id: String) -> Dictionary:
 	if GameState.gold < price:
 		return {}
 	GameState.gold -= price
-	var item := roll(base_id, rarity_of_base(base_id), 1)
+	var item := roll(base_id, rarity_of_base(base_id), item_level())
 	give(item)
 	return item
+
+## Рівень нової речі в Коваля й за доручення: найдальший пройдений данж.
+static func item_level() -> int:
+	return clampi(GameState.max_dungeon_level + 1, 1, DungeonLevels.get_level_count())
 
 static func sell(uid: String) -> int:
 	var item := find(uid)

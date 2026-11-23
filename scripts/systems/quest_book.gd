@@ -176,7 +176,7 @@ static func complete(id: String) -> Dictionary:
 	# Речі — у торбу (вдягаються в спорядженні).
 	var given := []
 	for entry: Array in quest.get("items", []):
-		var item := ItemDb.roll(String(entry[0]), String(entry[1]), maxi(GameState.hero_level, 1))
+		var item := ItemDb.roll(String(entry[0]), String(entry[1]), ItemDb.item_level())
 		ItemDb.give(item)
 		given.append(ItemDb.title_of(item))
 	result["items"] = given

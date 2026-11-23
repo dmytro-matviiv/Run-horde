@@ -572,11 +572,12 @@ func _detail_buy(base_id: String) -> void:
 		_extras(body, base, rarity)
 		_action("Не знайдено", "grey", false, func() -> void: pass)
 		return
-	var power: float = ItemDb.RARITY_POWER.get(rarity, 1.0)
+	var level := ItemDb.item_level()
+	var power: float = ItemDb.RARITY_POWER.get(rarity, 1.0) * (1.0 + ItemDb.LEVEL_STEP * (level - 1))
 	for stat: String in base.base:
-		_stat_line(body, stat, roundi(float(base.base[stat]) * power))
+		_stat_line(body, stat, roundi(float(base.base[stat]) * ItemDb.stat_power(stat, power, String(base.get("slot", "")) == "weapon")))
 	_extras(body, base, rarity)
-	_text(body, "Нова річ 1-го рівня, без покращень.", 12, UiTheme.TEXT_DIM)
+	_text(body, "Нова річ %d-го рівня (за найдальшим данжем), без покращень." % level, 12, UiTheme.TEXT_DIM)
 	var price := ItemDb.buy_price(base_id)
 	var rich := GameState.gold >= price
 	_action("Купити · %s" % UiTheme.format_amount(price) if rich else "Бракує золота · %s" % UiTheme.format_amount(price),
