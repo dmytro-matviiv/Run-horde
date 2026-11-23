@@ -1330,7 +1330,7 @@ func _anim(short_name: String) -> String:
 				return "Idle"
 			if _relaxed_pose():
 				# Посох — як маг на картинах: рука зігнута, посох рівно до землі.
-				return "Idle_Torch" if HeroBuilder.character_left_hand(weapon_def) else "Idle"
+				return "Idle"
 			if weapon_def.offhand_model != null:
 				return "Idle_Shield"
 			return "Spell_Simple_Idle" if is_caster() else ("Pistol_Idle" if is_ranged() else "Sword_Idle")

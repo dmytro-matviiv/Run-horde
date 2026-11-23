@@ -76,8 +76,10 @@ static func character_grip(weapon: WeaponDef, _relaxed: bool = false) -> Transfo
 ## поза смолоскипа для руки з посохом.
 static func setup_character_hands(model: Node3D, weapon: WeaponDef, relaxed: bool) -> void:
 	for fist: GripFist in model.find_children("GripFist*", "", true, false):
+		# Посох стоїть сам (UprightGrip) — руку лишаємо анімації, кулак
+		# стиснутий; поза смолоскипа більше не потрібна.
 		if fist.side == "_l" and character_left_hand(weapon):
-			fist.torch_arm = true
+			fist.torch_arm = false
 		elif fist.side == "_r" and relaxed and not character_left_hand(weapon):
 			fist.wrist_tilt = WRIST_TILT
 
@@ -111,7 +113,13 @@ static func attach_weapon(model: Node3D, hero: HeroDef, weapon: WeaponDef, bone_
 	if weapon.upright_3d:
 		# Посох чаклуна — рівно вертикально, рука лише тримає (UprightGrip).
 		var holder := UprightGrip.wrap(_make_weapon(scene, weapon), model, weapon.model_scale / maxf(bone_scale, 0.0001))
-		_hold(skeleton, bone, holder, Transform3D.IDENTITY)
+		var hold_bone := bone
+		if left_hand:
+			var left_bone := skeleton.find_bone(String(offhand_override if offhand_override != &"" else hero.offhand_bone))
+			if left_bone >= 0:
+				hold_bone = left_bone
+				holder.fingers = 0.075
+		_hold(skeleton, hold_bone, holder, Transform3D.IDENTITY)
 		return holder.get_child(0) as Node3D
 	# Зброя в лівій руці (посох): той самий хват, віддзеркалений.
 	if left_hand:

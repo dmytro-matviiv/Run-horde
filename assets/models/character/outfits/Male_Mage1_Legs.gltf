@@ -1340,20 +1340,6 @@
 				"metallicFactor":0,
 				"roughnessFactor":0.800000011920929
 			}
-		},
-		{
-			"name":"Material_0",
-			"normalTexture":{
-				"index":1
-			},
-			"pbrMetallicRoughness":{
-				"baseColorTexture":{
-					"index":2
-				},
-				"metallicRoughnessTexture":{
-					"index":3
-				}
-			}
 		}
 	],
 	"meshes":[
@@ -1374,21 +1360,6 @@
 					},
 					"indices":9,
 					"material":0
-				},
-				{
-					"attributes":{
-						"POSITION":10,
-						"NORMAL":11,
-						"TEXCOORD_0":12,
-						"TEXCOORD_1":13,
-						"COLOR_0":14,
-						"COLOR_1":15,
-						"COLOR_2":16,
-						"JOINTS_0":17,
-						"WEIGHTS_0":18
-					},
-					"indices":19,
-					"material":1
 				}
 			]
 		}
@@ -1397,18 +1368,6 @@
 		{
 			"sampler":0,
 			"source":0
-		},
-		{
-			"sampler":0,
-			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
-		},
-		{
-			"sampler":0,
-			"source":3
 		}
 	],
 	"images":[
@@ -1416,26 +1375,11 @@
 			"mimeType":"image/png",
 			"name":"Male_Mage1_Legs_shell",
 			"uri":"Male_Mage1_Legs_shell.png"
-		},
-		{
-			"mimeType":"image/jpeg",
-			"name":"Male_Mage1_Legs_normal",
-			"uri":"Male_Mage1_Legs_normal.jpg"
-		},
-		{
-			"mimeType":"image/jpeg",
-			"name":"Male_Mage1_Legs_diffuse",
-			"uri":"Male_Mage1_Legs_diffuse.jpg"
-		},
-		{
-			"mimeType":"image/jpeg",
-			"name":"Male_Mage1_Legs_orm",
-			"uri":"Male_Mage1_Legs_orm.jpg"
 		}
 	],
 	"skins":[
 		{
-			"inverseBindMatrices":20,
+			"inverseBindMatrices":10,
 			"joints":[
 				64,
 				63,
@@ -1510,15 +1454,15 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":1328,
+			"count":1510,
 			"max":[
 				0.20714931190013885,
-				1.1647173166275024,
-				0.11887034773826599
+				1.2099689245224,
+				0.11951899528503418
 			],
 			"min":[
 				-0.20714931190013885,
-				0.07349815964698792,
+				0.05595303699374199,
 				-0.1724347621202469
 			],
 			"type":"VEC3"
@@ -1526,135 +1470,62 @@
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":1328,
+			"count":1510,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":1328,
+			"count":1510,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5126,
-			"count":1328,
+			"count":1510,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":4,
 			"componentType":5121,
-			"count":1328,
+			"count":1510,
 			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":1328,
+			"count":1510,
 			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":6,
 			"componentType":5123,
-			"count":1328,
+			"count":1510,
 			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":7,
 			"componentType":5121,
-			"count":1328,
+			"count":1510,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":8,
 			"componentType":5126,
-			"count":1328,
+			"count":1510,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":9,
 			"componentType":5123,
-			"count":7056,
+			"count":7830,
 			"type":"SCALAR"
 		},
 		{
 			"bufferView":10,
-			"componentType":5126,
-			"count":533,
-			"max":[
-				0.20805011689662933,
-				1.1063120365142822,
-				0.09671635925769806
-			],
-			"min":[
-				-0.20561790466308594,
-				0.08443019539117813,
-				-0.1795719861984253
-			],
-			"type":"VEC3"
-		},
-		{
-			"bufferView":11,
-			"componentType":5126,
-			"count":533,
-			"type":"VEC3"
-		},
-		{
-			"bufferView":12,
-			"componentType":5126,
-			"count":533,
-			"type":"VEC2"
-		},
-		{
-			"bufferView":13,
-			"componentType":5126,
-			"count":533,
-			"type":"VEC2"
-		},
-		{
-			"bufferView":14,
-			"componentType":5121,
-			"count":533,
-			"normalized":true,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":15,
-			"componentType":5123,
-			"count":533,
-			"normalized":true,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":16,
-			"componentType":5123,
-			"count":533,
-			"normalized":true,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":17,
-			"componentType":5121,
-			"count":533,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":18,
-			"componentType":5126,
-			"count":533,
-			"type":"VEC4"
-		},
-		{
-			"bufferView":19,
-			"componentType":5123,
-			"count":1650,
-			"type":"SCALAR"
-		},
-		{
-			"bufferView":20,
 			"componentType":5126,
 			"count":65,
 			"type":"MAT4"
@@ -1663,128 +1534,68 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":15936,
+			"byteLength":18120,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":15936,
-			"byteOffset":15936,
+			"byteLength":18120,
+			"byteOffset":18120,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":10624,
-			"byteOffset":31872,
+			"byteLength":12080,
+			"byteOffset":36240,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":10624,
-			"byteOffset":42496,
+			"byteLength":12080,
+			"byteOffset":48320,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":5312,
-			"byteOffset":53120,
+			"byteLength":6040,
+			"byteOffset":60400,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":10624,
-			"byteOffset":58432,
+			"byteLength":12080,
+			"byteOffset":66440,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":10624,
-			"byteOffset":69056,
+			"byteLength":12080,
+			"byteOffset":78520,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":5312,
-			"byteOffset":79680,
+			"byteLength":6040,
+			"byteOffset":90600,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":21248,
-			"byteOffset":84992,
+			"byteLength":24160,
+			"byteOffset":96640,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":14112,
-			"byteOffset":106240,
-			"target":34963
-		},
-		{
-			"buffer":0,
-			"byteLength":6396,
-			"byteOffset":120352,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":6396,
-			"byteOffset":126748,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":4264,
-			"byteOffset":133144,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":4264,
-			"byteOffset":137408,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":2132,
-			"byteOffset":141672,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":4264,
-			"byteOffset":143804,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":4264,
-			"byteOffset":148068,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":2132,
-			"byteOffset":152332,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":8528,
-			"byteOffset":154464,
-			"target":34962
-		},
-		{
-			"buffer":0,
-			"byteLength":3300,
-			"byteOffset":162992,
+			"byteLength":15660,
+			"byteOffset":120800,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":166292
+			"byteOffset":136460
 		}
 	],
 	"samplers":[
@@ -1795,7 +1606,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":170452,
+			"byteLength":140620,
 			"uri":"Male_Mage1_Legs.bin"
 		}
 	]

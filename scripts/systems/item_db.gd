@@ -483,10 +483,10 @@ static func weapon_def(item: Dictionary) -> WeaponDef:
 				def.model_scale = 1.0
 				def.grip_rotation_deg = Vector3.ZERO
 				def.grip_offset = Vector3.ZERO
-				# Посох у кулаці, рівно вгору збоку героя (без «вертикального
-				# хвату», що на новому тілі ховав посох за спину).
-				if def.upright_3d:
-					def.upright_3d = false
+				# Посох — рівно вертикально в кулаці лівої руки, збоку героя
+				# (UprightGrip; відсуває від тіла в бік РУКИ, що тримає).
+				if def.style_3d == "staff":
+					def.upright_3d = true
 				if def.style_3d == "staff":
 					def.muzzle_offset = Vector3(0, _model_top(def.model_scene) * 0.95, 0)
 		if base.has("offhand"):
