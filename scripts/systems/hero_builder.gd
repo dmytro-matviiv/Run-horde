@@ -80,6 +80,7 @@ static func setup_character_hands(model: Node3D, weapon: WeaponDef, relaxed: boo
 		# стиснутий; поза смолоскипа більше не потрібна.
 		if fist.side == "_l" and character_left_hand(weapon):
 			fist.torch_arm = false
+			fist.staff_upright = true
 		elif fist.side == "_r" and relaxed and not character_left_hand(weapon):
 			fist.wrist_tilt = WRIST_TILT
 

@@ -19,6 +19,10 @@ static var MIRROR := Vector4(1, -1, -1, 1)
 var side := "_r"
 var wrist_tilt := 0.0
 var torch_arm := false
+## Рука тримає вертикальний посох (UprightGrip): кисть доповертаємо так,
+## щоб вісь кулака (уздовж руків'я, +Z кисті) йшла рівно вгору — тоді
+## пальці справді обхоплюють держак, а не встромлені в нього.
+var staff_upright := false
 
 ## Сторона -> {кістка: поворот} (кулак) і рука смолоскипа (лише ліва).
 static var _fists := {}
@@ -87,3 +91,15 @@ func _process_modification_with_delta(_delta: float) -> void:
 	if wrist_tilt != 0.0 and _hand >= 0:
 		var q := skeleton.get_bone_pose_rotation(_hand)
 		skeleton.set_bone_pose_rotation(_hand, q * Quaternion(Vector3.RIGHT, deg_to_rad(wrist_tilt)))
+	if staff_upright and _hand >= 0:
+		var parent := skeleton.get_bone_parent(_hand)
+		var gp := skeleton.get_bone_global_pose(_hand)
+		var axis := (gp.basis * Vector3(0, 0, 1)).normalized()
+		var up := (skeleton.global_transform.basis.inverse() * Vector3.UP).normalized()
+		if axis.dot(up) < 0.0:
+			axis = -axis
+		var turn := Quaternion(axis, up)
+		var target := Basis(turn) * gp.basis.orthonormalized()
+		var pg := skeleton.get_bone_global_pose(parent) if parent >= 0 else Transform3D.IDENTITY
+		var local := (pg.basis.orthonormalized().inverse() * target).get_rotation_quaternion()
+		skeleton.set_bone_pose_rotation(_hand, local)

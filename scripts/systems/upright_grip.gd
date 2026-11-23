@@ -28,6 +28,7 @@ var hold_point := Vector3.ZERO
 ## Посох — крізь кулак: на стільки метрів від зап'ястя вздовж пальців
 ## (0 — у зап'ясті, як у старих героїв).
 var fingers := 0.0
+var _finger_bones: Array[int] = []
 
 ## Обгортає вже зібрану модель посоха.
 static func wrap(staff: Node3D, model_root: Node3D, ratio: float) -> UprightGrip:
@@ -61,10 +62,21 @@ func _place() -> void:
 	if attachment != null and attachment.get_parent() is Skeleton3D:
 		var skeleton := attachment.get_parent() as Skeleton3D
 		var pose := skeleton.get_bone_global_pose(attachment.bone_idx)
-		# Центр кулака: уздовж пальців (+Y кисті) і трохи в бік долоні.
-		var inv := 1.0 / maxf(skeleton.global_transform.basis.get_scale().x, 0.0001)
-		var palm := 0.03 if String(skeleton.get_bone_name(attachment.bone_idx)).ends_with("_l") else -0.03
-		at = skeleton.global_transform * (pose.origin + (pose.basis.y.normalized() * fingers + pose.basis.x.normalized() * palm) * inv)
+		at = skeleton.global_transform * pose.origin
+		if fingers != 0.0:
+			# Свій герой: центр кільця пальців (середнє суглобів пальців) —
+			# посох іде саме крізь кулак.
+			if _finger_bones.is_empty():
+				var suffix := String(skeleton.get_bone_name(attachment.bone_idx)).right(2)
+				for f in ["index_01", "middle_01", "ring_01", "pinky_01", "index_03", "middle_03", "ring_03", "pinky_03", "thumb_03"]:
+					var b := skeleton.find_bone(f + suffix)
+					if b >= 0:
+						_finger_bones.append(b)
+			if not _finger_bones.is_empty():
+				var center := Vector3.ZERO
+				for b: int in _finger_bones:
+					center += skeleton.get_bone_global_pose(b).origin
+				at = skeleton.global_transform * (center / _finger_bones.size())
 	# Відстань від осі тіла (по горизонталі). Замало — відсуваємо назовні,
 	# змішуючи напрямок руки з правим боком героя.
 	var axis := body.global_position
