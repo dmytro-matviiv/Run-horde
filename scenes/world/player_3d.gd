@@ -1672,6 +1672,12 @@ func set_attack_held(held: bool) -> void:
 func dodge() -> void:
 	if _dead or _rooted_left > 0.0 or _knock_left > 0.0 or _dodge_cooldown_left > 0.0 or _roll_left > 0.0:
 		return
+	# Табу Жерця Забутих: перекат заборонено — порушив, і кара.
+	if taboo_left > 0.0:
+		taboo_left = 0.0
+		if _taboo_mark != null:
+			_taboo_mark.visible = false
+		taboo_broken.emit()
 	# Болас Ватажка сплутав ноги — перекату нема.
 	if _bola_left > 0.0:
 		CombatVfx.shockwave(get_parent(), global_position, 0.8, Color(0.6, 0.45, 0.3, 0.8), 0.2)
@@ -1912,7 +1918,7 @@ func apply_boons(hp_factor: float, damage_factor: float, potions: int) -> void:
 
 ## Здоров'я впало нижче третини — герой сам випиває зілля.
 func _try_potion() -> void:
-	if _potions <= 0 or current_hp <= 0.0 or current_hp > max_hp * Boons.POTION_THRESHOLD:
+	if _sear_left > 0.0 or _potions <= 0 or current_hp <= 0.0 or current_hp > max_hp * Boons.POTION_THRESHOLD:
 		return
 	_potions -= 1
 	Boons.spend_potion()
@@ -1922,6 +1928,9 @@ func _try_potion() -> void:
 	potion_used.emit(_potions)
 
 func heal(amount: float) -> void:
+	# Опік пекельного пса: рана не гоїться.
+	if _sear_left > 0.0:
+		return
 	current_hp = minf(current_hp + amount, max_hp)
 	_update_health_bar()
 	health_changed.emit(current_hp, max_hp)
@@ -2025,7 +2034,7 @@ func _physics_process(delta: float) -> void:
 	if _mana_regen > 0.0 and mana < max_mana and not _dead:
 		mana = minf(mana + _mana_regen * delta, max_mana)
 		mana_changed.emit(mana, max_mana)
-	if _regen_per_second > 0.0 and current_hp < max_hp:
+	if _regen_per_second > 0.0 and current_hp < max_hp and _sear_left <= 0.0:
 		current_hp = minf(current_hp + _regen_per_second * delta, max_hp)
 		_update_health_bar()
 		health_changed.emit(current_hp, max_hp)
@@ -2464,6 +2473,10 @@ func deal_damage(enemy: Enemy3D, multiplier: float, knockback: Vector3, heavy: b
 		source: StringName = &"weapon") -> bool:
 	if enemy == null or not is_instance_valid(enemy) or not enemy.is_alive():
 		return false
+	# Сірчаний чад: удар іде повз.
+	if _smog_left > 0.0 and randf() < _smog_miss:
+		CombatVfx.smoke_puff(get_parent(), enemy.global_position + Vector3.UP, Color(0.75, 0.75, 0.3, 0.6), 0.6)
+		return false
 	var hp_before := enemy.current_hp
 	var crit := randf() < _crit_chance or _perfect_crit_left > 0.0
 	var amount := _damage * multiplier * ((CRIT_MULTIPLIER + _crit_bonus) if crit else 1.0)
@@ -2828,6 +2841,7 @@ func _abyss_mark(color: Color) -> void:
 func _tick_village_effects(delta: float) -> void:
 	_tick_swamp_effects(delta)
 	_tick_north_effects(delta)
+	_tick_deep_effects(delta)
 	if _silenced_left > 0.0 or _confused_left > 0.0:
 		_silenced_left = maxf(_silenced_left - delta, 0.0)
 		_confused_left = maxf(_confused_left - delta, 0.0)
@@ -3016,6 +3030,65 @@ func _tick_north_effects(delta: float) -> void:
 		if _bury_mound != null:
 			_bury_mound.visible = false
 		CombatVfx.smoke_puff(get_parent(), global_position + Vector3.UP * 0.4, Color(0.9, 0.95, 1.0), 1.2)
+
+## Пекельна Кузня Глибин: опік (рана пече — лікування не діє), сірчаний
+## чад (удари героя промахуються). Прірва Забутих Богів: табу (перекат
+## заборонено — порушив, і кара).
+signal taboo_broken
+var _sear_left := 0.0
+var _sear_fx: CPUParticles3D
+var _smog_left := 0.0
+var _smog_miss := 0.0
+var taboo_left := 0.0
+var _taboo_mark: Label3D
+
+func sear(seconds: float) -> void:
+	if _dead:
+		return
+	_sear_left = maxf(_sear_left, seconds)
+	if _sear_fx == null:
+		_sear_fx = CombatVfx.make_motes(Color(1.0, 0.3, 0.1), 10, 0.35, 0.8, 0.05)
+		add_child(_sear_fx)
+		_sear_fx.position = Vector3.UP * 0.8
+	_sear_fx.emitting = true
+
+func is_seared() -> bool:
+	return _sear_left > 0.0
+
+func set_smog(seconds: float, miss: float) -> void:
+	_smog_left = maxf(_smog_left, seconds)
+	_smog_miss = miss
+
+func smog_miss() -> float:
+	return _smog_miss if _smog_left > 0.0 else 0.0
+
+func set_taboo(seconds: float) -> void:
+	if _dead:
+		return
+	taboo_left = seconds
+	if _taboo_mark == null:
+		_taboo_mark = Label3D.new()
+		_taboo_mark.text = "НЕ УХИЛЯЙСЯ"
+		_taboo_mark.font_size = 64
+		_taboo_mark.pixel_size = 0.005
+		_taboo_mark.outline_size = 14
+		_taboo_mark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_taboo_mark.no_depth_test = true
+		_taboo_mark.modulate = Color(1.0, 0.85, 0.4)
+		add_child(_taboo_mark)
+		_taboo_mark.position = Vector3.UP * 2.5
+	_taboo_mark.visible = true
+
+func _tick_deep_effects(delta: float) -> void:
+	_smog_left = maxf(_smog_left - delta, 0.0)
+	if _sear_left > 0.0:
+		_sear_left -= delta
+		if _sear_left <= 0.0 and _sear_fx != null:
+			_sear_fx.emitting = false
+	if taboo_left > 0.0:
+		taboo_left -= delta
+		if taboo_left <= 0.0 and _taboo_mark != null:
+			_taboo_mark.visible = false
 
 func add_gold_dust(max_stacks: int, seconds: float) -> void:
 	if _dead:

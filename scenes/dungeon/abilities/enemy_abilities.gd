@@ -153,6 +153,14 @@ const SCRIPTS := {
 	"glacier": preload("res://scenes/dungeon/abilities/glacier_ability.gd"),
 	"blizzard": preload("res://scenes/dungeon/abilities/blizzard_ability.gd"),
 	"crack_floor": preload("res://scenes/dungeon/abilities/crack_floor_ability.gd"),
+	"harden": preload("res://scenes/dungeon/abilities/harden_ability.gd"),
+	"sear": preload("res://scenes/dungeon/abilities/sear_ability.gd"),
+	"execute": preload("res://scenes/dungeon/abilities/execute_ability.gd"),
+	"fire_tether": preload("res://scenes/dungeon/abilities/fire_tether_ability.gd"),
+	"sulfur_smog": preload("res://scenes/dungeon/abilities/sulfur_smog_ability.gd"),
+	"checker": preload("res://scenes/dungeon/abilities/checker_ability.gd"),
+	"orbit_flames": preload("res://scenes/dungeon/abilities/orbit_flames_ability.gd"),
+	"molten_skin": preload("res://scenes/dungeon/abilities/molten_skin_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

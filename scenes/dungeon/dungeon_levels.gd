@@ -1449,27 +1449,51 @@ const LEVELS := [
 			"decor": "forge",
 		},
 		"enemies": {
+			# Демон-кат — пораненого героя б'є вдвічі сильніше.
 			"m": [
-				{"name": "Розпечений кат", "model": "res://assets/models/monsters/Tribal.glb", "kind": "melee", "hp": 105.0, "damage": 27.0, "speed": 3.1, "height": 1.9, "xp": 11,
-					"tint": Color(0.9, 0.4, 0.2), "glow": Color(0.5, 0.15, 0.02)},
+				{"name": "Демон-кат", "model": "res://assets/models/monsters/hell/executioner.glb", "kind": "melee",
+					"hp": 125.0, "damage": 28.0, "speed": 3.0, "height": 2.1, "xp": 12, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "execute", "below": 0.35, "factor": 2.0}]},
 			],
-			"x": [
-				{"name": "Вугільна оса", "model": "res://assets/models/monsters/Armabee Evolved.glb", "kind": "exploder", "blast_color": Color(1.0, 0.45, 0.1, 0.9), "hp": 46.0, "damage": 34.0, "speed": 4.4, "height": 0.8, "hover": 0.7, "xp": 8,
-					"tint": Color(0.85, 0.35, 0.15), "glow": Color(0.55, 0.15, 0.02)},
+			# Пекельні пси — зграя; укус пече рану: 5 с ніщо не лікує.
+			"w": [
+				{"name": "Пекельний пес", "model": "res://assets/models/monsters/hell/hound.glb", "kind": "melee",
+					"hp": 46.0, "damage": 14.0, "speed": 4.8, "height": 1.5, "xp": 3, "group": 3,
+					"attack_range": 1.4, "cooldown": 0.9, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "sear", "time": 5.0}]},
 			],
+			# Жерці Полум'я — парами; між ними ланцюг вогню.
 			"r": [
-				{"name": "Кузняр-піроман", "model": "res://assets/models/monsters/Wizard.glb", "kind": "ranged", "hp": 58.0, "damage": 18.0, "speed": 2.5, "height": 1.8, "xp": 9,
-					"tint": Color(0.9, 0.4, 0.15), "glow": Color(0.55, 0.15, 0.0),
-					"projectile": {"color": Color(1.0, 0.5, 0.1), "speed": 11.0, "volley": 2},
-					"abilities": [{"id": "lob", "cooldown": 6.0, "first": 5.0, "radius": 2.0, "pool": 3.0, "color": Color(1.0, 0.45, 0.1)}]},
+				{"name": "Жрець Полум'я", "model": "res://assets/models/monsters/hell/priest.glb", "kind": "ranged",
+					"hp": 66.0, "damage": 17.0, "speed": 2.6, "height": 1.9, "xp": 9, "group": 2, "attack_anims": ["Weapon"],
+					"projectile": {"color": Color(1.0, 0.5, 0.1), "speed": 10.0, "volley": 1},
+					"abilities": [{"id": "fire_tether", "range": 10.0, "width": 0.55, "every": 0.4, "damage": 0.5}]},
+			],
+			# Обсидіановий голем — твердне від кожного удару; бий серіями з паузами.
+			"c": [
+				{"name": "Обсидіановий голем", "model": "res://assets/models/monsters/hell/golem.glb", "kind": "melee",
+					"hp": 240.0, "damage": 32.0, "speed": 2.3, "height": 2.4, "xp": 14, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "harden", "step": 0.12, "max": 0.7, "calm": 1.4}]},
+			],
+			# Сірчаний котел — не ходить; пускає чад, у якому удари промахуються.
+			"t": [
+				{"name": "Сірчаний котел", "model": "res://assets/models/monsters/hell/cauldron.glb", "kind": "totem",
+					"hp": 100.0, "damage": 0.0, "speed": 0.0, "height": 1.5, "xp": 6, "no_elite": true,
+					"abilities": [{"id": "sulfur_smog", "cooldown": 7.0, "first": 1.0, "radius": 2.6, "speed": 1.1, "time": 9.0,
+						"miss": 0.45, "range": 12.0}]},
 			],
 		},
-		"boss": {"name": "Архімаг Горна", "model": "res://assets/models/monsters/Wizard.glb", "style": "doom",
-			"hp": 1040.0, "damage": 46.0, "speed": 2.9, "height": 3.6, "xp": 250,
-			"tint": Color(1.0, 0.42, 0.12), "glow": Color(0.6, 0.15, 0.02),
+		# Владика Магми: шахівниця гарячих плит, коловерть вогняних куль,
+		# розпечена шкіра (обпікає у відповідь).
+		"boss": {"name": "Владика Магми", "model": "res://assets/models/monsters/hell/boss.glb", "style": "magma_lord",
+			"hp": 1320.0, "damage": 36.0, "speed": 2.8, "height": 4.4, "xp": 250,
+			"attack_anims": ["Weapon"],
+			"special_anims": {"checker": ["Slam"], "orbit_flames": ["Cast"], "molten_skin": ["Cast"]},
 			"abilities": [
-				{"id": "lob", "cooldown": 5.5, "first": 4.0, "radius": 2.4, "pool": 3.5, "color": Color(1.0, 0.5, 0.1)},
-				{"id": "beams", "cooldown": 10.0, "first": 7.0, "count": 3, "length": 12.0, "time": 3.2, "turn": 1.1, "color": Color(1.0, 0.5, 0.15)},
+				{"id": "orbit_flames", "cooldown": 14.0, "first": 3.0, "count": 4, "inner": 1.6, "outer": 7.5, "spin": 1.7, "time": 7.0, "damage": 0.8},
+				{"id": "checker", "cooldown": 22.0, "first": 8.0, "size": 2.0, "cells": 7, "swap": 2.2, "rounds": 4, "warn": 0.6,
+					"every": 0.5, "damage": 0.45, "uninterruptible": true},
+				{"id": "molten_skin", "cooldown": 15.0, "first": 12.0, "time": 4.0, "reflect": 0.35, "cap": 0.6},
 			]},
 		"map": [
 			"############################################",
@@ -1488,8 +1512,8 @@ const LEVELS := [
 			"#############...................#..........#",
 			"#############...................#..........#",
 			"#############....m.........................#",
-			"#############..............x...............#",
-			"#############...................#....r.....#",
+			"#############..............w.......c.......#",
+			"#############......c............#....r..t..#",
 			"#############...................#..........#",
 			"#############...................#..........#",
 			"#############...................#..........#",
@@ -1500,7 +1524,7 @@ const LEVELS := [
 			"################............################",
 			"################............################",
 			"################......m.....################",
-			"################...m....r...################",
+			"################.t.m....r...################",
 			"################............################",
 			"################............################",
 			"######################..####################",
