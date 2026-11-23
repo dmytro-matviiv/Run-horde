@@ -187,6 +187,14 @@ var max_dungeon_level := 0
 ## ГРИ — постав false.
 const DEV_UNLOCK_ALL_DUNGEONS := true
 
+## ЛИШЕ ДЛЯ ПЕРЕВІРКИ: у тестовій (debug) збірці в Коваля відкриті ВСІ
+## зброя й броня і коштують 0 — щоб переглянути всі моделі. Сейв не
+## змінюється. У релізній збірці не діє. ПЕРЕД ВИПУСКОМ ГРИ — постав false.
+const DEV_UNLOCK_ALL_GEAR := true
+
+func dev_all_gear() -> bool:
+	return DEV_UNLOCK_ALL_GEAR and OS.is_debug_build()
+
 ## Найдальший рівень, куди вже можна зайти (з урахуванням перемикача вище).
 func get_unlocked_dungeon_level() -> int:
 	if DEV_UNLOCK_ALL_DUNGEONS and OS.is_debug_build():

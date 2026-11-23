@@ -647,7 +647,7 @@ static func discover(base_id: String) -> void:
 		GameState.discovered[base_id] = true
 
 static func is_discovered(base_id: String) -> bool:
-	return GameState.discovered.has(base_id)
+	return GameState.discovered.has(base_id) or (GameState.dev_all_gear() and BASES.has(base_id))
 
 const BUY_PRICE := {"common": 120, "uncommon": 350, "rare": 900, "epic": 2200, "legendary": 5000}
 const MAX_PLUS := 10
@@ -659,6 +659,8 @@ static func rarity_of_base(base_id: String) -> String:
 
 ## Ціна в Коваля (зброя дорожча за броню на третину).
 static func buy_price(base_id: String) -> int:
+	if GameState.dev_all_gear():
+		return 0
 	var price: int = BUY_PRICE.get(rarity_of_base(base_id), 120)
 	if String(BASES.get(base_id, {}).get("slot", "")) == "weapon":
 		price = int(price * 1.3)
