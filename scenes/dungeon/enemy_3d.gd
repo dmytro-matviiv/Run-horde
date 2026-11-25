@@ -50,7 +50,7 @@ const HIT_COLOR := Color(1.0, 0.95, 0.8)
 const HEAVY_HIT_COLOR := Color(1.0, 0.65, 0.25)
 ## ЕЛІТА (EliteAffixes): у скільки разів більше здоров'я, шкоди, зросту
 ## й досвіду; смужка здоров'я золота.
-const ELITE_HP := 2.2
+const ELITE_HP := 1.8
 const ELITE_DAMAGE := 1.25
 const ELITE_SIZE := 1.25
 const ELITE_XP := 4
@@ -280,6 +280,15 @@ const FLEE_LOOK := 2.5
 const CHARGE_AIM_SPEED := 2.6
 const CHARGE_LOCK := 0.25
 var _stagger_left := 0.0
+## Удар не смикає й не зупиняє (тік кровотечі, отрути, вогню): ставить
+## той, хто б'є, перед take_damage. Скидається після удару.
+var quiet_next := false
+## Між реакціями на звичайні удари — пауза: інакше часті постріли чи тіки
+## тримали б ворога на місці («можна стояти й стріляти»).
+const REACT_GAP := 0.7
+var _react_left := 0.0
+## Тимчасова перешкода/виклик зникає тихо: без цифри, без здобичі.
+var _expiring := false
 var _slow_factor := 1.0
 var _slow_left := 0.0
 var _frozen_left := 0.0
@@ -898,8 +907,7 @@ func _physics_process(delta: float) -> void:
 	if _life_left > 0.0:
 		_life_left -= delta
 		if _life_left <= 0.0:
-			invulnerable = false
-			take_damage(1.0e9)
+			expire()
 			return
 	if definition.has("bone_shield"):
 		_tick_bone_shield(delta)
@@ -924,6 +932,7 @@ func _physics_process(delta: float) -> void:
 	_repath_left -= delta
 	_sight_left -= delta
 	_stagger_left = maxf(_stagger_left - delta, 0.0)
+	_react_left -= delta
 	_tick_status(delta)
 	_check_stranded(delta)
 	_charge_cooldown_left -= delta
@@ -1847,7 +1856,8 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 			CombatVfx.impact(get_parent(), global_position + Vector3.UP * target_height * 0.5, Color(0.45, 1.0, 0.5), true)
 	# Бос із "phase_lock": удар не перескакує фазу — здоров'я зупиняється на
 	# порозі наступної фази, решта шкоди згорає.
-	if phases != null and definition.get("phase_lock", false):
+	# Тепер — у всіх босів (можна вимкнути "phase_lock": false).
+	if phases != null and definition.get("phase_lock", true):
 		var thresholds: Array = definition.get("phase_thresholds", BossPhases.THRESHOLDS)
 		if phases.phase - 1 < thresholds.size():
 			var floor_hp := max_hp * float(thresholds[phases.phase - 1])
@@ -1867,7 +1877,10 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 		_health_bar.flash()
 
 	var parent := get_parent()
-	CombatVfx.damage_number(parent, global_position + Vector3.UP * (target_height + 0.35), amount, crit)
+	if not _expiring:
+		CombatVfx.damage_number(parent, global_position + Vector3.UP * (target_height + 0.35), amount, crit)
+	var quiet := quiet_next or _expiring
+	quiet_next = false
 
 	# Бос і голем важкі: їх майже не зрушити й лише сильним ударом збити
 	# замах. Таран, що мчить, не зупинити нічим.
@@ -1882,11 +1895,16 @@ func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = 
 	var by_skill := not String(last_hit_source) in ["", "weapon", "death_mark", "phoenix", "rage", "rune_charge"]
 	if by_skill and _windup_left > 0.0 and _can_interrupt(true):
 		_cancel_windup()
-	if (heavy or not is_boss) and _windup_left <= 0.0:
+	# Реакція на удар: лише сильний удар, або звичайний не частіше за
+	# REACT_GAP; тіки шкоди за часом — ніколи; бос — лише від сильного.
+	var react := not quiet and (heavy or (not is_boss and _react_left <= 0.0))
+	if react and _windup_left <= 0.0:
 		_stagger_left = maxf(_stagger_left, (0.45 if heavy else 0.15) * (0.5 if is_boss else 1.0))
+		if not heavy:
+			_react_left = REACT_GAP
 	last_hit_source = &""
 
-	if _windup_left <= 0.0 and not _wall_stunned:
+	if react and _windup_left <= 0.0 and not _wall_stunned:
 		_play_once(["Block", "HitReact"] if blocked else ["HitReact", "HitRecieve"])
 	if current_hp <= 0.0:
 		# Здібність може не дати впасти (Кістяний Володар розсипається й
@@ -2063,6 +2081,17 @@ func _make_dormant() -> void:
 
 func is_dormant() -> bool:
 	return _dormant
+
+## Тимчасове (кущ, прут клітки, кристал стіни, двійник) — його час минув:
+## зникає тихо — без цифри шкоди, без здобичі, лише клуб пилу.
+func expire() -> void:
+	if _dying:
+		return
+	_expiring = true
+	invulnerable = false
+	set_meta("expired", true)
+	current_hp = 0.0
+	_die()
 
 func _die() -> void:
 	if elite != null:

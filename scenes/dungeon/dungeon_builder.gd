@@ -1091,6 +1091,16 @@ static func _build_layout(map_rows: Array, decor: Dictionary) -> Dictionary:
 		var e := not _is_walkable(map_rows, cell.x + 1, cell.y)
 		if int(n) + int(s) + int(w) + int(e) != 2 or n == s or w == e:
 			continue
+		# Справжній кут зали — дві суцільні стіни (у квадраті 3x3 щонайменше
+		# 5 глухих клітинок), а не окрема колона посеред зали: біля колони
+		# скриня "в'їжджала" в неї.
+		var blocked := 0
+		for dy in range(-1, 2):
+			for dx in range(-1, 2):
+				if (dx != 0 or dy != 0) and not _is_walkable(map_rows, cell.x + dx, cell.y + dy):
+					blocked += 1
+		if blocked < 5:
+			continue
 		var corner := Vector2i(-1 if w else 1, -1 if n else 1)
 		if _hash01(cell.x, cell.y, 41) < chest_chance:
 			layout.chests[cell] = corner
@@ -1350,7 +1360,7 @@ static func _add_layout_items(batcher: MeshBatcher, layout: Dictionary, cell: Ve
 		var scene: PackedScene = chests[int(_hash01(cell.x, cell.y, 42) * chests.size()) % chests.size()]
 		# Скриня в куті, лицем по діагоналі в залу.
 		var yaw := atan2(-float(corner.x), -float(corner.y))
-		batcher.add(scene, Transform3D(Basis(Vector3.UP, yaw), position + Vector3(corner.x, 0.0, corner.y) * 0.3))
+		batcher.add(scene, Transform3D(Basis(Vector3.UP, yaw), position + Vector3(corner.x, 0.0, corner.y) * 0.12))
 		return true
 	if layout.stones.has(cell):
 		var stones: Dictionary = decor.stones

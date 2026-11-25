@@ -59,6 +59,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_tick_left = TICK
 	for enemy: Enemy3D in _player.enemies_near(global_position, radius):
+		enemy.quiet_next = true
 		_player.deal_damage(enemy, tick_damage, Vector3.ZERO, false, source)
 		if slow < 1.0 and enemy.is_alive():
 			enemy.apply_slow(slow, TICK + 0.3)

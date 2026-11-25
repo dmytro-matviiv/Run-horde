@@ -64,4 +64,4 @@ func _merge(mates: Array) -> void:
 	# Іскри зникають у ядрі — без досвіду (досвід дасть ядро).
 	for member: Enemy3D in group:
 		member.xp_reward = 0
-		member.take_damage(1.0e9)
+		member.expire()

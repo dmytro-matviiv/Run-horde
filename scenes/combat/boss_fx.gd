@@ -518,9 +518,11 @@ static func fireball(size: float) -> Node3D:
 
 ## Розплавлена шкіра: накладка лави на всю модель (alpha — сила).
 static func molten_overlay() -> ShaderMaterial:
-	var material := lava_material(1.0, 0.0)
-	material.set_shader_parameter(&"crust", 0.45)
-	material.set_shader_parameter(&"scale", 2.2)
+	# Розжарене тіло: помаранчевий жар по краях (обідок) і мерехтіння —
+	# не візерунок лави в світових координатах (той збігався з плитами
+	# шахівниці, й здавалось, що текстура підлоги "налазить" на боса).
+	var material := ghost_material(Color(1.0, 0.45, 0.05, 1.0), Color(1.0, 0.3, 0.0, 0.25))
+	material.set_shader_parameter(&"alpha", 0.0)
 	return material
 
 # --- Безликий Бог ---

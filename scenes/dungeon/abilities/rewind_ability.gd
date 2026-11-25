@@ -47,7 +47,7 @@ func tick(delta: float) -> void:
 		if is_instance_valid(glass) and glass.is_alive():
 			glass.invulnerable = false
 			glass.set_meta("rewound", true)
-			glass.take_damage(1.0e9)
+			glass.expire()
 		if _target_hp > enemy.current_hp:
 			enemy.heal(_target_hp - enemy.current_hp)
 			CombatVfx.shockwave(world(), enemy.global_position, 5.0, COLOR, 0.7)
@@ -97,5 +97,5 @@ func on_death() -> void:
 	_drop_dial()
 	_wait_left = 0.0
 	if _glass != null and is_instance_valid(_glass) and _glass.is_alive():
-		_glass.take_damage(1.0e9)
+		_glass.expire()
 	_glass = null

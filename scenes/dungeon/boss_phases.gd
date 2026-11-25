@@ -116,6 +116,10 @@ func _enter_phase(next: int) -> void:
 	if rig != null:
 		rig.shake(0.3)
 	AudioManager.play(&"explosion")
+	# Перехід фази не проскочити: бос оглушений (саме час бити) і кличе
+	# своїх слуг — у 2-й фазі менше, в останній більше.
+	_boss.stun_for(float(_boss.definition.get("phase_stun", 1.8)))
+	_boss.summon_requested.emit(_boss.global_position, int(_boss.definition.get("phase_summons", 2 if phase == 2 else 3)))
 	var mood: String = style.rage if phase == 2 else style.frenzy
 	phase_changed.emit(phase, "%s %s!" % [_boss.display_name, mood])
 

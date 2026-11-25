@@ -618,6 +618,7 @@ func _tick_talent_effects(delta: float) -> void:
 		if float(bleed[3]) <= 0.0:
 			bleed[3] = 0.5
 			bleed[2] = int(bleed[2]) - 1
+			enemy.quiet_next = true
 			enemy.take_damage(float(bleed[1]), Vector3.ZERO, false, false)
 			Fx.puff(get_parent(), enemy.global_position + Vector3.UP * enemy.target_height * 0.5, Color(0.7, 0.05, 0.05), 0.3, 0.0)
 

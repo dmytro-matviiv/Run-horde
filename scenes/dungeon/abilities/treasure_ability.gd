@@ -39,4 +39,4 @@ func tick(delta: float) -> void:
 	enemy.invulnerable = false
 	enemy.get_tree().create_timer(0.5, false).timeout.connect(func() -> void:
 		if is_instance_valid(enemy) and enemy.is_alive():
-			enemy.take_damage(1.0e9))
+			enemy.expire())

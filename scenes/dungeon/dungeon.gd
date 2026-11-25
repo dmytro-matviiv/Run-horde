@@ -145,6 +145,8 @@ var _alive_enemies := 0
 var _boss_defeated := false
 var _exit_position := Vector3.ZERO
 var _exit_open := false
+## Ближче за це до порталу — вихід сам, без кнопки.
+const EXIT_WALK_IN := 0.9
 var _boss_spot := Vector3.ZERO
 ## Скільки секунд триває похід (для підсумків) і чи вже воскресали.
 var _run_time := 0.0
@@ -488,14 +490,14 @@ func _open_skills_menu() -> void:
 			grid.add_child(_skill_chip(upgrade, details))
 		details = dialog.add_text("Торкнись навички — побачиш, що вона робить.", 16, Color(1, 1, 1, 0.7))
 	if _pending_picks > 0:
-		dialog.add_button("Обрати навичку", true, func() -> void:
-			_offering_ability = true
+		dialog.add_button("Обрати навичку" if _pending_picks == 1 else "Обрати навички (%d)" % _pending_picks, true, func() -> void:
 			dialog.close()
-			_pending_picks -= 1
-			_offering_ability = false
-			await _offer_ability(true)
-			_update_buffs()
-			_open_skills_menu())
+			# Усі накопичені вибори — одразу один за одним, без повернення в меню.
+			while _pending_picks > 0:
+				_pending_picks -= 1
+				_update_buffs()
+				await _offer_ability(true)
+			_update_buffs())
 	dialog.add_button("До бою", _pending_picks <= 0)
 	hud.add_child(dialog)
 
@@ -1066,7 +1068,9 @@ func _spawn_enemy(position: Vector3, definition: Dictionary, is_boss: bool) -> E
 	enemies_root.add_child(enemy)
 	enemy.global_position = _clear_spot(position) + Vector3(0, 0.2, 0)
 	enemy.setup(player, _model(definition.model))
-	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null, bool(definition.get("no_loot", false))))
+	# Тимчасове (з часом життя) — без здобичі й досвіду, як і no_loot.
+	enemy.died.connect(_on_enemy_died.bind(enemy.kind, enemy.elite != null,
+		bool(definition.get("no_loot", false)) or definition.has("lifetime") or String(definition.get("kind", "")) == "decoy"))
 	enemy.spawn_requested.connect(_on_spawn_requested)
 	enemy.ward_broken.connect(_on_ward_broken.bind(enemy))
 	if is_boss:
@@ -1086,8 +1090,20 @@ func _model(path: String) -> PackedScene:
 ## телефон — живим.
 func _on_summon_requested(position: Vector3, count: int) -> void:
 	var definition: Dictionary = _level.boss.get("summon", {})
+	# Свого виклику немає — бос кличе звичайних ворогів свого данжу (не
+	# тотеми й не здорованів), без еліти й без здобичі.
 	if definition.is_empty():
-		return
+		var pool: Array = []
+		for group: Array in (_level.get("enemies", {}) as Dictionary).values():
+			for candidate: Dictionary in group:
+				if String(candidate.get("kind", "")) in ["melee", "ranged"] and float(candidate.get("hp", 0.0)) <= 130.0:
+					pool.append(candidate)
+		if pool.is_empty():
+			return
+		definition = (pool.pick_random() as Dictionary).duplicate(true)
+		definition["no_elite"] = true
+		definition["no_loot"] = true
+		definition.erase("group")
 	for i in count:
 		if _alive_summons >= MAX_SUMMONS:
 			return
@@ -1113,7 +1129,7 @@ func _on_spawn_requested(position: Vector3, definition: Dictionary, source: Enem
 		if definition.get("kind", "") == "decoy":
 			source.died.connect(func(_p: Vector3, _xp: int) -> void:
 				if is_instance_valid(enemy) and enemy.is_alive():
-					enemy.take_damage(1.0e9))
+					enemy.expire())
 
 ## Пілони боса всі впали — він на кілька секунд відкритий для ударів.
 func _on_ward_broken(boss: Enemy3D) -> void:
@@ -1336,6 +1352,9 @@ func _process(delta: float) -> void:
 	var offset := player.global_position - _exit_position
 	offset.y = 0.0
 	exit_button.visible = _results == null and offset.length() < EXIT_REACH
+	# Зайшов просто в портал — одразу екран завершення (кнопка — запасна).
+	if _results == null and offset.length() < EXIT_WALK_IN:
+		_on_exit_pressed()
 
 func _update_shrine_label() -> void:
 	var buff: Dictionary = player.get_shrine_buff()

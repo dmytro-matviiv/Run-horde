@@ -60,6 +60,7 @@ func _update(player: Node, delta: float) -> void:
 		entry[2] = float(entry[2]) - delta
 		if float(entry[2]) <= 0.0:
 			entry[2] = TICK
+			enemy.quiet_next = true
 			player.deal_damage(enemy, BLEED_PER_TICK, Vector3.ZERO, false, id)
 			Fx.puff(player.get_parent(), enemy.global_position + Vector3.UP * enemy.target_height * 0.5, Color(0.7, 0.05, 0.05), 0.35, 0.0)
 		if float(entry[1]) <= 0.0:

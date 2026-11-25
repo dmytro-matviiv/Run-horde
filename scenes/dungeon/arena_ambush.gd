@@ -47,6 +47,10 @@ var _state := State.WAITING
 var _wave := -1
 var _queue: Array = []
 var _alive := 0
+## Вороги засідки: рахуємо живих щокроку (а не лише за сигналом смерті —
+## ворог, що зник без нього, тримав би ґратки зачиненими назавжди).
+var _tracked: Array = []
+var _stray_left := 1.0
 var _portals := 0
 var _spawn_left := 0.0
 var _next_wave_left := -1.0
@@ -150,6 +154,11 @@ func _fight(delta: float) -> void:
 		if _next_wave_left <= 0.0:
 			_start_wave(_wave + 1)
 		return
+	_alive = _count_alive()
+	_stray_left -= delta
+	if _stray_left <= 0.0:
+		_stray_left = 1.0
+		_return_strays()
 	_spawn_left -= delta
 	if not _queue.is_empty() and _spawn_left <= 0.0 and _alive + _portals < _max_alive:
 		_open_portal(_queue.pop_front())
@@ -183,8 +192,27 @@ func _emerge(position: Vector3, definition: Dictionary) -> void:
 	var enemy: Enemy3D = _spawn.call(position, definition)
 	enemy.hunting = true
 	enemy.emerge(EMERGE_TIME)
-	_alive += 1
-	enemy.died.connect(func(_position: Vector3, _xp: int) -> void: _alive -= 1)
+	_tracked.append(enemy)
+	_alive = _count_alive()
+
+func _count_alive() -> int:
+	var n := 0
+	for item in _tracked:
+		if is_instance_valid(item) and (item as Enemy3D).is_alive():
+			n += 1
+	return n
+
+## Хто опинився за ґратками (відскок, відкидання, застряг у стіні) —
+## повертається в залу: інакше засідку не закінчити.
+func _return_strays() -> void:
+	for item in _tracked:
+		if not is_instance_valid(item):
+			continue
+		var enemy := item as Enemy3D
+		if enemy.is_alive() and not contains(enemy.global_position):
+			var spot := _free_spot()
+			enemy.teleport_to(spot + Vector3(0, DungeonBuilder.FLOOR_TOP, 0))
+			CombatVfx.smoke_puff(self, spot + Vector3.UP * 0.6, PORTAL_COLOR, 1.0)
 
 ## Клітинка зали подалі від героя — для дрібноти й ватажка.
 func _free_spot() -> Vector3:
@@ -217,6 +245,14 @@ func _chest_spot() -> Vector3:
 	for z in range(_rect.position.y, _rect.end.y):
 		for x in range(_rect.position.x, _rect.end.x):
 			if not DungeonBuilder.is_walkable(_map_rows, x, z):
+				continue
+			# Скриня — на вільному місці, не впритул до колони чи стіни.
+			var open := true
+			for dz in range(-1, 2):
+				for dx in range(-1, 2):
+					if not DungeonBuilder.is_walkable(_map_rows, x + dx, z + dz):
+						open = false
+			if not open:
 				continue
 			var distance := Vector2(x - center.x, z - center.y).length()
 			if distance < best_distance:

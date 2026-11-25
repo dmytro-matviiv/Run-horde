@@ -914,7 +914,7 @@ const LEVELS := [
 			"m": [
 				{"name": "Розбійник-палій", "model": "res://assets/models/monsters/village/palii.glb", "kind": "melee",
 					"hp": 58.0, "damage": 15.0, "speed": 3.3, "height": 1.75, "xp": 7, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "ignite", "tick": 0.18, "time": 6.0}]},
+					"abilities": [{"id": "ignite", "tick": 0.08, "time": 5.0}]},
 			],
 			# Мисливець — стріли на випередження; підійшов близько — відскакує й стріляє.
 			"r": [
@@ -952,7 +952,7 @@ const LEVELS := [
 			"attack_anims": ["Weapon"],
 			"special_anims": {"fire_ring": ["Cast"], "bola": ["Throw"]},
 			"abilities": [
-				{"id": "fire_ring", "cooldown": 24.0, "first": 5.0, "start": 11.0, "finish": 3.5, "shrink": 8.0, "hold": 2.5, "damage": 1.0, "uninterruptible": true},
+				{"id": "fire_ring", "cooldown": 24.0, "first": 5.0, "start": 11.0, "finish": 3.5, "shrink": 8.0, "hold": 2.5, "damage": 1.0, "tick": 0.1, "uninterruptible": true},
 				{"id": "bola", "cooldown": 9.0, "first": 2.5, "time": 3.0, "slow": 0.7, "damage": 0.6},
 				{"id": "riposte", "cooldown": 11.0, "first": 8.0, "time": 1.8, "damage": 1.6},
 			]},
@@ -1472,8 +1472,8 @@ const LEVELS := [
 			# Обсидіановий голем — твердне від кожного удару; бий серіями з паузами.
 			"c": [
 				{"name": "Обсидіановий голем", "model": "res://assets/models/monsters/hell/golem.glb", "kind": "melee",
-					"hp": 240.0, "damage": 32.0, "speed": 2.3, "height": 2.4, "xp": 14, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "harden", "step": 0.12, "max": 0.7, "calm": 1.4}]},
+					"hp": 165.0, "damage": 32.0, "speed": 2.3, "height": 2.4, "xp": 14, "attack_anims": ["Weapon"],
+					"abilities": [{"id": "harden", "step": 0.08, "max": 0.45, "calm": 1.2}]},
 			],
 			# Сірчаний котел — не ходить; пускає чад, у якому удари промахуються.
 			"t": [
@@ -1490,9 +1490,9 @@ const LEVELS := [
 			"attack_anims": ["Weapon"],
 			"special_anims": {"checker": ["Slam"], "orbit_flames": ["Cast"], "molten_skin": ["Cast"]},
 			"abilities": [
-				{"id": "orbit_flames", "cooldown": 14.0, "first": 3.0, "count": 4, "inner": 1.6, "outer": 7.5, "spin": 1.7, "time": 7.0, "damage": 0.8},
+				{"id": "orbit_flames", "cooldown": 14.0, "first": 3.0, "count": 4, "inner": 1.6, "outer": 7.5, "spin": 1.7, "time": 7.0, "damage": 0.32},
 				{"id": "checker", "cooldown": 22.0, "first": 8.0, "size": 2.0, "cells": 7, "swap": 2.2, "rounds": 4, "warn": 0.6,
-					"every": 0.5, "damage": 0.45, "uninterruptible": true},
+					"every": 0.5, "damage": 0.28, "uninterruptible": true},
 				{"id": "molten_skin", "cooldown": 15.0, "first": 12.0, "time": 4.0, "reflect": 0.35, "cap": 0.6},
 			]},
 		"map": [

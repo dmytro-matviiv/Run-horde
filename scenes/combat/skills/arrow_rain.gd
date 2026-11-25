@@ -41,8 +41,15 @@ func _update(player: Node, delta: float) -> void:
 	_next = GAP
 	_waves_left -= 1
 	var parent: Node = player.get_parent()
+	# Стріли наведені: більшість падає просто на ворогів у зоні (інакше
+	# випадкова точка майже ніколи не влучала у вузького ворога).
+	var targets: Array = player.enemies_near(_center, RADIUS)
 	for i in PER_WAVE:
 		var spot := _center + Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).limit_length(1.0) * RADIUS
+		if not targets.is_empty() and i < PER_WAVE - 1:
+			var victim: Enemy3D = targets[i % targets.size()]
+			if is_instance_valid(victim) and victim.is_alive():
+				spot = victim.global_position + Vector3(randf_range(-0.15, 0.15), 0, randf_range(-0.15, 0.15))
 		var arrow := PlayerProjectile.create(player, DAMAGE, color, 0.5)
 		parent.add_child(arrow)
-		arrow.launch(spot + Vector3(0.6, 9.0, 0.4), Vector3(-0.06, -1.0, -0.04), 34.0)
+		arrow.launch(spot + Vector3(0.54, 9.0, 0.36), Vector3(-0.06, -1.0, -0.04), 34.0)

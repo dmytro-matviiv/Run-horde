@@ -17,6 +17,8 @@ class_name EliteAffixes
 ## ознаки — ворогові лишається кілька гачків (шкода, смерть).
 
 enum Affix {SWIFT, VOLATILE, SHIELDED, MENDER}
+const SHIELD_HITS := 5
+var _shield_hits := 0
 
 const INFO := {
 	Affix.SWIFT: {"title": "Швидкий", "color": Color(0.45, 0.95, 1.0)},
@@ -117,6 +119,12 @@ func damage_factor(heavy: bool) -> float:
 		return 1.0
 	var facing := _enemy.facing_vector()
 	if facing.dot(to_player.normalized()) >= cos(SHIELD_HALF_ARC):
+		# Щит тріскає й від серії звичайних ударів (лучник і маг не завжди
+		# можуть зайти збоку): SHIELD_HITS ударів у щит — і він ламається.
+		_shield_hits += 1
+		if _shield_hits >= SHIELD_HITS:
+			_shield_hits = 0
+			return damage_factor(true)
 		return SHIELD_PASS
 	return 1.0
 

@@ -62,6 +62,7 @@ func _update(player: Node, delta: float) -> void:
 	var radius := _radius(player)
 	var damage := TICK_DAMAGE * (1.0 + 0.15 * talent_level(player)) * _ring_power(player)
 	for enemy: Enemy3D in player.enemies_in_radius(radius):
+		enemy.quiet_next = true
 		player.deal_damage(enemy, damage, Vector3.ZERO, false, id)
 
 func _radius(player: Node) -> float:
