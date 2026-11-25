@@ -676,7 +676,13 @@ func _spawn_boss_gate() -> void:
 
 ## Ворота щойно зачинились: пауза, вступне кіно (модель боса й агресивний
 ## напис), і лише тоді бос виринає з підлоги в бій.
+var _boss_started := false
+
 func _start_boss_encounter() -> void:
+	# Лише раз: повторний сигнал воріт не має кликати другого боса.
+	if _boss_started:
+		return
+	_boss_started = true
 	var boss_def: Dictionary = _level.boss
 	if _throne != null:
 		await _throne_intro(boss_def)
