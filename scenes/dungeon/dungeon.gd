@@ -368,6 +368,34 @@ func _style_hud() -> void:
 		_mana_bar.max_value = player.max_mana
 		_mana_bar.value = player.mana
 
+	# Підпис на смужці мани — щоб її було видно й зрозуміло.
+	var mana_label := Label.new()
+	UiTheme.hud_text(mana_label, 11)
+	mana_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mana_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mana_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_mana_bar.custom_minimum_size.y = 16
+	_mana_bar.add_child(mana_label)
+	var show_mana := func(current: float, maximum: float) -> void:
+		mana_label.text = "Мана %d / %d" % [int(current), int(maximum)]
+	player.mana_changed.connect(show_mana)
+	show_mana.call(player.mana, player.max_mana)
+
+	# Витривалість — у всіх: перекат її витрачає.
+	var stamina_bar := UiTheme.make_bar(Color(0.95, 0.78, 0.25), Vector2(300, 9))
+	stamina_bar.max_value = player.MAX_STAMINA
+	stamina_bar.value = player.stamina
+	column.add_child(stamina_bar)
+	player.stamina_changed.connect(func(current: float, maximum: float) -> void:
+		if current < 0.0:
+			# Спроба перекату без сил — смужка блимає червоним.
+			var flash := stamina_bar.create_tween()
+			flash.tween_property(stamina_bar, "modulate", Color(1.0, 0.3, 0.3), 0.08)
+			flash.tween_property(stamina_bar, "modulate", Color.WHITE, 0.25)
+			return
+		stamina_bar.max_value = maximum
+		stamina_bar.value = current)
+
 	_xp_bar = UiTheme.make_bar(UiTheme.HEADING, Vector2(300, 7))
 	column.add_child(_xp_bar)
 

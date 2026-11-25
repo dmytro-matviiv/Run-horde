@@ -11,6 +11,8 @@ const BAR_SCENE := "res://scenes/dungeon/hazards/gold_bar.tscn"
 var _center := Vector3.ZERO
 var _left_time := 0.0
 var _marker: MeshInstance3D
+## Підказка над кліткою з відліком: що робити й скільки лишилось.
+var _label: Label3D
 
 func _init() -> void:
 	id = "gold_cage"
@@ -44,6 +46,15 @@ func resolve() -> void:
 	world().add_child(_marker)
 	_marker.global_position = _center + Vector3.UP * 0.05
 	CombatVfx.shockwave(world(), _center, radius + 0.5, COLOR, 0.35)
+	_label = Label3D.new()
+	_label.font_size = 72
+	_label.pixel_size = 0.005
+	_label.outline_size = 16
+	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_label.no_depth_test = true
+	_label.modulate = Color(1.0, 0.85, 0.35)
+	world().add_child(_label)
+	_label.global_position = _center + Vector3.UP * 3.0
 
 func tick(delta: float) -> void:
 	super.tick(delta)
@@ -52,6 +63,15 @@ func tick(delta: float) -> void:
 	_left_time -= delta
 	if _marker != null and is_instance_valid(_marker):
 		CombatVfx.set_param(_marker, &"progress", 1.0 - _left_time / float(config.get("time", 3.5)))
+	if _label != null and is_instance_valid(_label):
+		var hero_in := false
+		var h := player()
+		if h != null and is_instance_valid(h):
+			var off := h.global_position - _center
+			off.y = 0.0
+			hero_in = off.length() < float(config.get("radius", 1.5))
+		_label.text = ("ЗЛАМАЙ ПРУТ І ВИЙДИ!  %d" % ceili(_left_time)) if hero_in else "Вибрався!"
+		_label.modulate = Color(1.0, 0.85, 0.35) if hero_in else Color(0.5, 1.0, 0.5)
 	if _left_time <= 0.0:
 		var hero := player()
 		var radius := float(config.get("radius", 1.5))
@@ -75,3 +95,6 @@ func _clear() -> void:
 	if _marker != null and is_instance_valid(_marker):
 		_marker.queue_free()
 	_marker = null
+	if _label != null and is_instance_valid(_label):
+		_label.queue_free()
+	_label = null

@@ -49,9 +49,24 @@ func resolve() -> void:
 		if free:
 			spots.append(spot)
 	for spot: Vector3 in spots:
-		var mark := CombatVfx.make_line_telegraph(COLOR, size, size, "cracks", false)
+		# Плита криги, що тріщить: блакитна крига з білими тріщинами й
+		# інеєм, яскравішає, поки не проломиться (замість червоного квадрата).
+		var mat := StandardMaterial3D.new()
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_texture = Fx.art("se_crack_01")
+		mat.albedo_color = Color(0.75, 0.92, 1.0, 0.0)
+		var mark := BossFx.floor_plane(mat, Vector2(size * 0.96, size * 0.96))
 		world().add_child(mark)
 		mark.global_position = spot + Vector3.UP * 0.05
+		var frost := Fx.make_particles("star_04", Color(0.85, 0.95, 1.0, 0.9), 10, 0.9, 0.18, true)
+		frost.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+		frost.emission_box_extents = Vector3(size * 0.45, 0.05, size * 0.45)
+		frost.direction = Vector3.UP
+		frost.initial_velocity_min = 0.2
+		frost.initial_velocity_max = 0.6
+		frost.gravity = Vector3.ZERO
+		mark.add_child(frost)
 		# Тріщини в кризі розповзаються від центру плити.
 		var crack := BossFx.crack_decal(Color(0.85, 0.95, 1.0, 0.95))
 		mark.add_sibling(crack)
@@ -72,7 +87,11 @@ func tick(delta: float) -> void:
 		var warn := float(config.get("warn", 1.3))
 		for hole: Dictionary in _holes:
 			if is_instance_valid(hole.mark):
-				CombatVfx.set_param(hole.mark, &"progress", clampf(1.0 - _warn_left / warn, 0.0, 1.0))
+				var t := clampf(1.0 - _warn_left / warn, 0.0, 1.0)
+				var m := (hole.mark as MeshInstance3D).material_override as StandardMaterial3D
+				# Наприкінці — блимає: зараз проломиться.
+				var blink := 0.35 if t > 0.75 and int(t * 20.0) % 2 == 0 else 0.0
+				m.albedo_color = Color(0.75, 0.92, 1.0, 0.25 + 0.65 * t - blink)
 		if hero != null and is_instance_valid(hero) and _in_hole(hero.global_position) < 0:
 			_safe = hero.global_position
 		if _warn_left <= 0.0:

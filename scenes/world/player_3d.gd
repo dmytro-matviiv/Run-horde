@@ -567,6 +567,24 @@ var _character_mode := false
 ## вона відновлюється сама з часом і з кожного переможеного ворога.
 ## Броня мага/друїда дає більше мани (ItemDb: mana, mana_regen).
 signal mana_changed(current: float, maximum: float)
+signal stamina_changed(current: float, maximum: float)
+
+## Витривалість: перекат коштує ROLL_STAMINA, відновлюється після паузи.
+## Безкінечно тікати перекатами вже не вийде.
+const MAX_STAMINA := 100.0
+const ROLL_STAMINA := 34.0
+const STAMINA_REGEN := 30.0
+const STAMINA_DELAY := 0.7
+var stamina := MAX_STAMINA
+var _stamina_wait := 0.0
+
+func _tick_stamina(delta: float) -> void:
+	if _stamina_wait > 0.0:
+		_stamina_wait -= delta
+		return
+	if stamina < MAX_STAMINA:
+		stamina = minf(stamina + STAMINA_REGEN * delta, MAX_STAMINA)
+		stamina_changed.emit(stamina, MAX_STAMINA)
 const BASE_MANA := 60.0
 const BASE_MANA_REGEN := 3.0
 const SKILL_MANA_COST := 20.0
@@ -1686,6 +1704,10 @@ func dodge() -> void:
 		taboo_broken.emit()
 		# Кара вже впала (оглушення) — перекату не буде.
 		return
+	# Нема сил — нема перекату (смужка витривалості блимає).
+	if stamina < ROLL_STAMINA:
+		stamina_changed.emit(-1.0, MAX_STAMINA)
+		return
 	# Болас Ватажка сплутав ноги — перекату нема.
 	if _bola_left > 0.0:
 		CombatVfx.shockwave(get_parent(), global_position, 0.8, Color(0.6, 0.45, 0.3, 0.8), 0.2)
@@ -1708,6 +1730,9 @@ func dodge() -> void:
 	_roll_started_msec = Time.get_ticks_msec()
 	_perfect_this_roll = false
 	_dodge_cooldown_left = DODGE_COOLDOWN * _dodge_cooldown_factor
+	stamina -= ROLL_STAMINA
+	_stamina_wait = STAMINA_DELAY
+	stamina_changed.emit(stamina, MAX_STAMINA)
 	# Перекат скасовує удар: у небезпеці гравець має реагувати миттєво.
 	_attack_step = -1
 	_lunge_left = 0.0
@@ -2006,6 +2031,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	_tick_timers(delta)
 	_tick_talent_effects(delta)
+	_tick_stamina(delta)
 	if _dead:
 		velocity.x = move_toward(velocity.x, 0.0, DECELERATION * delta)
 		velocity.z = move_toward(velocity.z, 0.0, DECELERATION * delta)

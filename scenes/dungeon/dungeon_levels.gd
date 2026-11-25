@@ -1212,13 +1212,13 @@ const LEVELS := [
 			"decor": "sunken",
 		},
 		"enemies": {
-			# Жаба-язикатка — здалеку б'є липким язиком: удари героя слабшають.
+			# Жаба-язикатка — здалеку ловить язиком, ковтає й випльовує вбік.
 			"m": [
 				{"name": "Жаба-язикатка", "model": "res://assets/models/monsters/sunken/frog.glb", "kind": "melee",
 					"hp": 80.0, "damage": 20.0, "speed": 3.3, "height": 1.3, "xp": 9, "group": 2, "attack_anims": ["Weapon"],
 					"special_anims": {"sticky_tongue": ["Tongue"]},
 					"abilities": [{"id": "sticky_tongue", "cooldown": 7.0, "first": 0.8, "min": 2.2, "max": 6.0, "windup": 0.55,
-						"factor": 0.65, "time": 4.0, "damage": 0.5}]},
+						"gulp": 0.9, "spit": 9.0, "damage": 0.5}]},
 			],
 			# Болотні п'явки — рій; укус присмоктується й ссе здоров'я, поки п'явку не вб'єш.
 			"w": [
