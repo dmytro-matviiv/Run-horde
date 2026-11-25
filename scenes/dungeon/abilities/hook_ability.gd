@@ -41,9 +41,12 @@ func try_use(distance: float) -> bool:
 	_line.global_position = Vector3(enemy.global_position.x, DungeonBuilder.FLOOR_TOP + 0.05, enemy.global_position.z) + _direction * _length * 0.5
 	_line.rotation.y = atan2(_direction.x, _direction.z)
 	# Замах можуть збити — смуга сама зникне.
-	var line := _line
+	# (тримаємо лише номер вузла: якщо смугу вже прибрано, лямбда не
+	# звертається до знищеного вузла)
+	var line_id := _line.get_instance_id()
 	enemy.get_tree().create_timer(float(config.get("windup", 0.6)) + 0.4, false).timeout.connect(func() -> void:
-		if is_instance_valid(line):
+		var line := instance_from_id(line_id) as Node
+		if line != null and is_instance_valid(line):
 			line.queue_free())
 	enemy.face_point(enemy.global_position + _direction)
 	enemy.begin_special(id, float(config.get("windup", 0.6)), Color(COLOR, 0.0), 0.1)
@@ -99,8 +102,11 @@ func _place(distance: float) -> void:
 	_hook.global_position = tip
 	var span := tip - hand
 	_chain.global_position = hand + span * 0.5
+	# Майже вертикальний ланцюг — інша вісь "угору", інакше look_at не
+	# може його повернути.
 	if span.length() > 0.05:
-		_chain.look_at(tip, Vector3.UP)
+		var up := Vector3.UP if absf(span.normalized().y) < 0.95 else Vector3.FORWARD
+		_chain.look_at(tip, up)
 	_chain.scale = Vector3(1.0, 1.0, maxf(span.length(), 0.05))
 
 func _grab(hero: Node3D) -> void:

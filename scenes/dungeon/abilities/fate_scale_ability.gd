@@ -36,8 +36,13 @@ func _relink() -> void:
 			continue
 		if other.global_position.distance_to(enemy.global_position) <= radius:
 			fresh.append(other)
-	for other: Enemy3D in _linked:
-		if not fresh.has(other) and is_instance_valid(other) and other.fate_scale == self:
+	# Список може тримати вже знищених ворогів — спершу перевірка, тоді
+	# типізоване присвоєння (інакше падіння гри).
+	for item in _linked:
+		if not is_instance_valid(item):
+			continue
+		var other: Enemy3D = item
+		if not fresh.has(other) and other.fate_scale == self:
 			other.fate_scale = null
 	for other: Enemy3D in fresh:
 		other.fate_scale = self
@@ -47,7 +52,7 @@ func _relink() -> void:
 func share(target: Enemy3D, amount: float) -> float:
 	if _sharing:
 		return amount
-	var group: Array = _linked.filter(func(e: Enemy3D) -> bool: return is_instance_valid(e) and e.is_alive())
+	var group: Array = _linked.filter(func(e) -> bool: return is_instance_valid(e) and (e as Enemy3D).is_alive())
 	if group.size() <= 1 or not group.has(target):
 		return amount
 	var part := amount / group.size()
@@ -61,13 +66,14 @@ func share(target: Enemy3D, amount: float) -> float:
 func _draw_threads() -> void:
 	var top := enemy.global_position + Vector3.UP * enemy.target_height * 0.8
 	for other in _threads.keys():
-		if not _linked.has(other) or not is_instance_valid(other):
+		if not is_instance_valid(other) or not _linked.has(other):
 			if is_instance_valid(_threads[other]):
 				_threads[other].queue_free()
 			_threads.erase(other)
-	for other: Enemy3D in _linked:
-		if not is_instance_valid(other):
+	for item in _linked:
+		if not is_instance_valid(item):
 			continue
+		var other: Enemy3D = item
 		var thread: MeshInstance3D = _threads.get(other)
 		if thread == null or not is_instance_valid(thread):
 			thread = MeshInstance3D.new()
@@ -86,8 +92,11 @@ func _draw_threads() -> void:
 		thread.scale = Vector3(1.0, 1.0, maxf(span.length(), 0.05))
 
 func on_death() -> void:
-	for other: Enemy3D in _linked:
-		if is_instance_valid(other) and other.fate_scale == self:
+	for item in _linked:
+		if not is_instance_valid(item):
+			continue
+		var other: Enemy3D = item
+		if other.fate_scale == self:
 			other.fate_scale = null
 	_linked.clear()
 	for thread in _threads.values():
