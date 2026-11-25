@@ -268,6 +268,7 @@ func _ready() -> void:
 	_spawn_props()
 	_spawn_arenas()
 	_spawn_boss_gate()
+	_spawn_throne()
 	await _warm_up_rendering()
 	_update_streaming()
 	SceneLoader.release()
@@ -677,6 +678,9 @@ func _spawn_boss_gate() -> void:
 ## напис), і лише тоді бос виринає з підлоги в бій.
 func _start_boss_encounter() -> void:
 	var boss_def: Dictionary = _level.boss
+	if _throne != null:
+		await _throne_intro(boss_def)
+		return
 	if _level.get("boss_intro", true):
 		get_tree().paused = true
 		var intro := BossIntro.new()
@@ -698,6 +702,57 @@ func _start_boss_encounter() -> void:
 	CombatVfx.impact(self, boss.global_position + Vector3.UP * boss.target_height * 0.6, reveal_color, true)
 	boss.emerge(1.1)
 	player.shake_camera(0.2)
+
+## Трон фінального боса ("throne" в описі рівня): стоїть у залі з самого
+## початку. Бос сидить на ньому, поки герой не зайде й ворота не зачиняться.
+var _throne: Node3D
+
+func _spawn_throne() -> void:
+	var info: Dictionary = _level.get("throne", {})
+	if info.is_empty() or _pending_boss_position == Vector3.ZERO:
+		return
+	_throne = (load(String(info.model)) as PackedScene).instantiate()
+	add_child(_throne)
+	var height := float(info.get("height", 4.2))
+	var box := AABB()
+	for mesh: MeshInstance3D in _throne.find_children("*", "MeshInstance3D", true, false):
+		box = box.merge(mesh.get_aabb()) if box.size != Vector3.ZERO else mesh.get_aabb()
+	var size := height / maxf(box.size.y, 0.01)
+	_throne.scale = Vector3.ONE * size
+	# Спинкою до дальньої (північної) стіни, лицем до входу; трохи
+	# втоплений у підлогу — щоб сидіння було на висоті стегон боса.
+	_throne.global_position = _pending_boss_position + Vector3(0, DungeonBuilder.FLOOR_TOP - float(info.get("sink", 0.35)), -float(info.get("back", 0.45)))
+
+## Заставка: камера на троні, бос сидить — тоді пафосно встає й ричить,
+## і лише тоді починається бій. Герой тим часом стоїть.
+func _throne_intro(boss_def: Dictionary) -> void:
+	player.combat_input_enabled = false
+	player.set_move_input(Vector2.ZERO)
+	# Герой стоїть, поки йде заставка (без зеленого кола кореня).
+	player.root(5.4)
+	var marker: Node3D = player.get("_root_marker")
+	if marker != null:
+		marker.visible = false
+	hud.visible = false
+	var boss := _spawn_enemy(_pending_boss_position, boss_def, true)
+	boss.hold_still(5.2)
+	boss.face_point(boss.global_position + Vector3.BACK)
+	boss.play_loop("Sit")
+	var rig := get_tree().get_first_node_in_group(&"camera_rig")
+	if rig != null:
+		rig.set_focus(boss)
+	_show_banner(String(_level.get("boss_title", boss_def.get("name", "Бос"))), String(_level.get("boss_flavor", "")))
+	await get_tree().create_timer(1.6).timeout
+	boss.play_once(["StandUp"])
+	await get_tree().create_timer(2.3).timeout
+	boss.play_once(["Roar"])
+	CombatVfx.shockwave(self, boss.global_position, 6.0, Color(0.6, 0.3, 1.0), 0.7)
+	player.shake_camera(0.3)
+	await get_tree().create_timer(1.2).timeout
+	if rig != null:
+		rig.set_focus(null)
+	hud.visible = true
+	player.combat_input_enabled = true
 
 ## Засідки: зали, що зачиняються, щойно герой зайде, і вороги вилазять
 ## хвилями (ArenaAmbush).

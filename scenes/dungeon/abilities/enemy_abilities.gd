@@ -169,6 +169,12 @@ const SCRIPTS := {
 	"rewind": preload("res://scenes/dungeon/abilities/rewind_ability.gd"),
 	"god_hand": preload("res://scenes/dungeon/abilities/god_hand_ability.gd"),
 	"devotion_orbs": preload("res://scenes/dungeon/abilities/devotion_orbs_ability.gd"),
+	"braziers": preload("res://scenes/dungeon/abilities/braziers_ability.gd"),
+	"shadow_dash": preload("res://scenes/dungeon/abilities/shadow_dash_ability.gd"),
+	"shadow_hands": preload("res://scenes/dungeon/abilities/shadow_hands_ability.gd"),
+	"shadow_scythe": preload("res://scenes/dungeon/abilities/shadow_scythe_ability.gd"),
+	"shadow_split": preload("res://scenes/dungeon/abilities/shadow_split_ability.gd"),
+	"eclipse": preload("res://scenes/dungeon/abilities/eclipse_ability.gd"),
 }
 
 ## Здібності з опису ворога: рядок ("blink") або словник ({"id": "lob", ...}).

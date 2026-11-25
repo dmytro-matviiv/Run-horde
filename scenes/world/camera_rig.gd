@@ -86,6 +86,16 @@ func shake(strength: float) -> void:
 
 ## Миттєво стати над героєм. Коли героя переставили (повернувся з
 ## будівлі), камера інакше летіла б до нього через усе місто.
+## Заставка: камера тимчасово стежить за іншим вузлом (бос на троні).
+## null — назад до героя.
+var _home: Node3D
+func set_focus(node: Node3D) -> void:
+	if _home == null:
+		_home = _target
+	_target = node if node != null else _home
+	if node == null:
+		_home = null
+
 func snap_to_target() -> void:
 	if _target != null:
 		global_position = _target.global_position + Vector3.UP * HEIGHT_OFFSET
