@@ -2911,6 +2911,8 @@ var _leash_anchor := Vector3.INF
 var _leash_radius := 0.0
 var _leash_left := 0.0
 var _leash_vine: MeshInstance3D
+## Ліану видно (ланцюги Безодні малюють свій ланцюг).
+var _leash_show := true
 var _swallowed := false
 
 func weaken(factor: float, seconds: float) -> void:
@@ -2927,12 +2929,13 @@ func weaken(factor: float, seconds: float) -> void:
 func weakness() -> float:
 	return _weak_factor if _weak_left > 0.0 else 1.0
 
-func leash(anchor: Vector3, radius: float, seconds: float) -> void:
+func leash(anchor: Vector3, radius: float, seconds: float, show_vine := true) -> void:
 	if _dead:
 		return
 	_leash_anchor = anchor
 	_leash_radius = radius
 	_leash_left = seconds
+	_leash_show = show_vine
 	if _leash_vine == null:
 		_leash_vine = MeshInstance3D.new()
 		var box := BoxMesh.new()
@@ -2947,7 +2950,7 @@ func leash(anchor: Vector3, radius: float, seconds: float) -> void:
 		_leash_vine.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_leash_vine.top_level = true
 		add_child(_leash_vine)
-	_leash_vine.visible = true
+	_leash_vine.visible = show_vine
 
 func is_leashed() -> bool:
 	return _leash_left > 0.0
@@ -3000,7 +3003,7 @@ func _tick_swamp_effects(delta: float) -> void:
 			if length > 0.06:
 				_leash_vine.look_at_from_position((from + to) * 0.5, to, Vector3.UP if absf((to - from).normalized().y) < 0.95 else Vector3.RIGHT)
 			_leash_vine.scale = Vector3(1.0, 1.0, length)
-			_leash_vine.visible = _leash_left > 0.0
+			_leash_vine.visible = _leash_left > 0.0 and _leash_show
 
 ## Зимна Цитадель Півночі: ожеледь (героя несе з інерцією), обмороження
 ## (перезарядка здібностей і перекату довшає), замет (закопаний —

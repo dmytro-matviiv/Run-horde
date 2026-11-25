@@ -307,6 +307,22 @@ static func rune_glyph(color: Color, size: float) -> MeshInstance3D:
 	tween.tween_property(glyph, "rotation:y", TAU, 6.0).from(0.0)
 	return glyph
 
+## Знак на героєві, поки Володар Рун чаклує: руна крутиться над головою й
+## під ногами, наливається світлом і за seconds гасне.
+static func hero_rune_mark(hero: Node3D, color: Color, seconds: float) -> void:
+	if hero == null or not is_instance_valid(hero):
+		return
+	for spot: float in [2.55, 0.06]:
+		var glyph := rune_glyph(Color(color, 0.0), 1.1 if spot > 1.0 else 1.6)
+		hero.add_child(glyph)
+		glyph.position = Vector3.UP * spot
+		var material := glyph.material_override as StandardMaterial3D
+		var tween := glyph.create_tween()
+		tween.tween_property(material, "albedo_color:a", 0.95, seconds * 0.7)
+		tween.parallel().tween_property(glyph, "scale", glyph.scale * 0.75, seconds)
+		tween.tween_property(material, "albedo_color:a", 0.0, 0.25)
+		tween.tween_callback(glyph.queue_free)
+
 static func void_material() -> ShaderMaterial:
 	return water_material(Color(0.02, 0.0, 0.05, 0.9), Color(0.35, 0.12, 0.6, 0.85), Vector2(0.0, 0.3), 0.6)
 

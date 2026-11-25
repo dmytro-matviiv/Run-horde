@@ -174,6 +174,10 @@ const SCRIPTS := {
 	"shadow_hands": preload("res://scenes/dungeon/abilities/shadow_hands_ability.gd"),
 	"shadow_scythe": preload("res://scenes/dungeon/abilities/shadow_scythe_ability.gd"),
 	"shadow_split": preload("res://scenes/dungeon/abilities/shadow_split_ability.gd"),
+	"rune_brand": preload("res://scenes/dungeon/abilities/rune_brand_ability.gd"),
+	"rune_waves": preload("res://scenes/dungeon/abilities/rune_waves_ability.gd"),
+	"abyss_chains": preload("res://scenes/dungeon/abilities/abyss_chains_ability.gd"),
+	"abyss_realm": preload("res://scenes/dungeon/abilities/abyss_realm_ability.gd"),
 	"eclipse": preload("res://scenes/dungeon/abilities/eclipse_ability.gd"),
 }
 

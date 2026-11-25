@@ -1061,16 +1061,20 @@ const LEVELS := [
 					"abilities": [{"id": "revive", "range": 7.0, "delay": 3.0, "hp": 0.6}]},
 			],
 		},
-		# Володар Рун: рунна послідовність (стань на руни в показаному порядку),
-		# стіни порожнечі хрестом через залу, відлуння — тінь біжить слідом героя.
+		# Володар Рун: поки чаклує — руна на героєві. Клеймо (руна падає на
+		# місце героя), рунні хвилі з проходом, ланцюги Безодні (не втечеш,
+		# а наприкінці — вибух довкола нього). Фаза 3 — Безодня: він і копія
+		# з таким самим здоров'ям.
 		"boss": {"name": "Володар Рун", "model": "res://assets/models/monsters/abyss/boss.glb", "style": "rune_lord",
 			"hp": 1050.0, "damage": 30.0, "speed": 2.8, "height": 4.4, "xp": 180,
 			"attack_anims": ["Weapon"],
-			"special_anims": {"rune_sequence": ["Cast"], "void_walls": ["Slam"], "echo": ["Cast"]},
+			"phase_thresholds": [0.6, 0.3],
+			"special_anims": {"rune_brand": ["Cast"], "rune_waves": ["Slam"], "abyss_chains": ["Cast"], "abyss_realm": ["Cast"]},
 			"abilities": [
-				{"id": "rune_sequence", "cooldown": 20.0, "first": 4.0, "count": 4, "show": 0.6, "time": 6.0, "damage": 1.8, "stun": 3.0, "uninterruptible": true},
-				{"id": "void_walls", "cooldown": 18.0, "first": 11.0, "length": 10.0, "step": 1.8, "time": 6.0},
-				{"id": "echo", "cooldown": 16.0, "first": 8.0, "time": 8.0, "delay": 1.2, "damage": 0.9},
+				{"id": "rune_brand", "cooldown": 9.0, "first": 3.0, "windup": 1.1, "warn": 1.1, "radius": 2.3, "slow": 0.6, "damage": 1.4},
+				{"id": "rune_waves", "cooldown": 13.0, "first": 7.0, "count": 3, "interval": 1.1, "speed": 6.5, "reach": 17.0, "gap": 55.0, "damage": 0.9},
+				{"id": "abyss_chains", "phase": 2, "cooldown": 15.0, "first": 1.0, "windup": 0.9, "radius": 5.0, "time": 4.5, "burst_radius": 3.6, "burst_warn": 1.3, "damage": 1.5, "uninterruptible": true},
+				{"id": "abyss_realm", "phase": 3, "first": 0.5, "windup": 1.8, "copy_damage": 0.7},
 			]},
 		"map": [
 			"################################################",
