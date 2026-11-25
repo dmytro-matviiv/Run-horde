@@ -7,7 +7,7 @@ extends EnemyAbility
 ## жаровні запаленими — інакше сховатись ніде.
 ## Налаштування: warn, time, damage.
 
-const SHADOW := Color(0.3, 0.1, 0.55)
+const SHADOW := Color(0.1, 0.09, 0.1)
 
 var _warn_left := 0.0
 var _dark_left := 0.0
@@ -38,7 +38,7 @@ func resolve() -> void:
 		_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_layer.add_child(_rect)
-	_rect.color = Color(0.02, 0.0, 0.05, 0.0)
+	_rect.color = Color(0.0, 0.0, 0.0, 0.0)
 	_layer.visible = true
 	_label = Label3D.new()
 	_label.font_size = 80

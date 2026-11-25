@@ -6,7 +6,7 @@ extends EnemyAbility
 ## й стріляти вже не вийде: ухиляйся вбік від смуги.
 ## Налаштування: min, windup, damage.
 
-const SHADOW := Color(0.35, 0.12, 0.6)
+const SHADOW := Color(0.08, 0.07, 0.08)
 
 var _strip: MeshInstance3D
 var _from := Vector3.ZERO
@@ -34,7 +34,7 @@ func try_use(distance: float) -> bool:
 	# Вилітає за 1.4 м до героя — по прямій, тож убік можна ухилитись.
 	_to = _from + _dir * maxf(to.length() - 1.4, 0.5)
 	var length := _from.distance_to(_to)
-	_strip = BossFx.floor_plane(BossFx.void_material(), Vector2(1.1, length))
+	_strip = BossFx.floor_plane(BossFx.smoke_material(), Vector2(1.1, length))
 	(_strip.material_override as ShaderMaterial).set_shader_parameter(&"alpha", 0.0)
 	world().add_child(_strip)
 	_strip.global_position = Vector3(_from.x, DungeonBuilder.FLOOR_TOP + 0.04, _from.z) + _dir * length * 0.5
@@ -62,7 +62,7 @@ func resolve() -> void:
 	_clear()
 	enemy.teleport_to(Vector3(_to.x, enemy.global_position.y, _to.z))
 	CombatVfx.smoke_puff(world(), _to + Vector3.UP * 1.0, SHADOW, 1.8)
-	BossFx.dark_effect(world(), BossFx.DARK_AREA, _to, 0.9, 0.8)
+	BossFx.shadow_burst(world(), _to)
 	var hero := player()
 	if hero == null or not is_instance_valid(hero):
 		return

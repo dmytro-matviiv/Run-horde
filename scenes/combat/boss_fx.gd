@@ -344,6 +344,60 @@ static func dark_close(node: Node3D) -> void:
 	tween.tween_interval(1.2)
 	tween.tween_callback(node.queue_free)
 
+# --- Тіньовий Володар: тінь — чорний дим, світло — тепле золото ---
+
+## Димна смуга на підлозі (шлях ривка): густий чорний дим, що тече.
+static func smoke_material() -> ShaderMaterial:
+	return water_material(Color(0.0, 0.0, 0.0, 0.92), Color(0.12, 0.11, 0.11, 0.85), Vector2(0.0, 0.6), 0.0)
+
+## Калюжа тіні на підлозі (тут виросте рука): чорне коло з димом угору.
+static func shadow_pool(parent: Node, spot: Vector3) -> Node3D:
+	var root := Node3D.new()
+	parent.add_child(root)
+	root.global_position = spot
+	var disc := floor_disc(smoke_material(), 0.9)
+	root.add_child(disc)
+	disc.position.y = 0.04
+	var smoke := Fx.make_particles("smoke_07", Color(0.04, 0.035, 0.04, 0.7), 10, 1.1, 0.9)
+	smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	smoke.emission_sphere_radius = 0.6
+	smoke.direction = Vector3.UP
+	smoke.initial_velocity_min = 0.4
+	smoke.initial_velocity_max = 0.9
+	smoke.gravity = Vector3(0, 0.4, 0)
+	root.add_child(smoke)
+	return root
+
+## Вихід із тіні: клуб чорного диму й іскри золотого попелу.
+static func shadow_burst(parent: Node, spot: Vector3) -> void:
+	Fx.puff(parent, spot + Vector3.UP * 0.8, Color(0.05, 0.045, 0.05), 2.0, 0.0)
+	var ash := Fx.make_particles("spark_02", Color(1.0, 0.75, 0.35), 14, 0.8, 0.1, true)
+	ash.one_shot = true
+	ash.explosiveness = 0.9
+	ash.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	ash.emission_sphere_radius = 0.6
+	ash.direction = Vector3.UP
+	ash.spread = 70.0
+	ash.initial_velocity_min = 1.5
+	ash.initial_velocity_max = 3.0
+	parent.add_child(ash)
+	ash.global_position = spot + Vector3.UP * 1.0
+	ash.emitting = true
+	parent.get_tree().create_timer(1.5, false).timeout.connect(ash.queue_free)
+
+## Дим, що повільно здіймається з плечей Володаря (замість сяйва).
+static func shadow_mantle(height: float) -> CPUParticles3D:
+	var smoke := Fx.make_particles("smoke_07", Color(0.03, 0.028, 0.03, 0.55), 18, 1.8, 0.9, false, true)
+	smoke.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	smoke.emission_sphere_radius = height * 0.18
+	smoke.direction = Vector3.UP
+	smoke.spread = 25.0
+	smoke.initial_velocity_min = 0.3
+	smoke.initial_velocity_max = 0.7
+	smoke.gravity = Vector3(0, 0.25, 0)
+	smoke.position = Vector3.UP * height * 0.78
+	return smoke
+
 ## Тінь героя: копія його моделі з темним світним матеріалом, що біжить.
 static func hero_shadow(hero: Node3D, rim: Color) -> Node3D:
 	var source: Node3D = hero.get("model")

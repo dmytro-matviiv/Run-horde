@@ -6,7 +6,7 @@ extends EnemyAbility
 ## лінії між ним і Володарем.
 ## Налаштування: reach, speed, damage.
 
-const SHADOW := Color(0.55, 0.25, 1.0)
+const SHADOW := Color(0.12, 0.1, 0.1)
 
 var _blade: Node3D
 var _out := true
@@ -41,7 +41,7 @@ func resolve() -> void:
 	ring.ring_segments = 4
 	var mesh := MeshInstance3D.new()
 	mesh.mesh = ring
-	mesh.material_override = BossFx.ghost_material(Color(0.75, 0.45, 1.0), Color(0.08, 0.0, 0.15, 0.9))
+	mesh.material_override = BossFx.ghost_material(Color(1.0, 0.8, 0.45), Color(0.04, 0.03, 0.03, 0.95))
 	mesh.scale = Vector3(1.0, 0.25, 1.0)
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_blade.add_child(mesh)

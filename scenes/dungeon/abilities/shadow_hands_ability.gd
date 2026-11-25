@@ -7,7 +7,7 @@ extends EnemyAbility
 ## карається — міняй напрямок.
 ## Налаштування: count, warn, root, damage.
 
-const SHADOW := Color(0.4, 0.15, 0.7)
+const SHADOW := Color(0.08, 0.07, 0.08)
 const GRAB := 1.1
 
 var _queue := 0
@@ -44,7 +44,7 @@ func tick(delta: float) -> void:
 				run.y = 0.0
 				spot += run * 0.9
 			spot.y = DungeonBuilder.FLOOR_TOP
-			var pool := BossFx.dark_effect(world(), BossFx.DARK_AREA, spot, 0.5, 0.0)
+			var pool := BossFx.shadow_pool(world(), spot)
 			_hands.append({"spot": spot, "left": float(config.get("warn", 0.8)), "pool": pool, "hand": null, "up": 0.0})
 	for i in range(_hands.size() - 1, -1, -1):
 		var h: Dictionary = _hands[i]
@@ -60,13 +60,14 @@ func tick(delta: float) -> void:
 					var tween := hand.create_tween()
 					tween.tween_property(hand, "position:y", hand.position.y - 2.5, 0.35)
 					tween.tween_callback(hand.queue_free)
-				BossFx.dark_close(h.pool)
+				if is_instance_valid(h.pool):
+					h.pool.queue_free()
 				_hands.remove_at(i)
 
 func _grab(h: Dictionary) -> void:
 	# Темна кам'яна долоня вистрибує з підлоги пальцями вгору й стискається.
 	var hand := BossFx.stone_hand(0.9)
-	var material := BossFx.ghost_material(Color(0.6, 0.3, 1.0), Color(0.05, 0.0, 0.1, 0.9))
+	var material := BossFx.ghost_material(Color(1.0, 0.78, 0.4), Color(0.03, 0.02, 0.02, 0.95))
 	for mesh: MeshInstance3D in hand.find_children("*", "MeshInstance3D", true, false):
 		mesh.material_override = material
 	world().add_child(hand)
@@ -92,5 +93,6 @@ func on_death() -> void:
 	for h: Dictionary in _hands:
 		if h.hand != null and is_instance_valid(h.hand):
 			h.hand.queue_free()
-		BossFx.dark_close(h.pool)
+		if is_instance_valid(h.pool):
+			h.pool.queue_free()
 	_hands.clear()

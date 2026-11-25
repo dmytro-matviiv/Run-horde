@@ -33,7 +33,7 @@ const STYLES := {
 	# Мега-боси (з кіно BossIntro на рівні):
 	"doom": {"color": Color(1.0, 0.4, 0.1), "rage": "кличе метеори", "frenzy": "рве небо навпіл"},
 	"abyssal": {"color": Color(0.55, 0.2, 0.85), "rage": "розкриває Безодню", "frenzy": "тоне в Безодні"},
-	"shadow": {"color": Color(0.35, 0.1, 0.5), "rage": "розколюється", "frenzy": "губиться у тінях"},
+	"shadow": {"color": Color(1.0, 0.78, 0.42), "rage": "кличе руки тіні", "frenzy": "розколюється в тінях"},
 	"keeper": {"color": Color(1.0, 0.7, 0.3), "rage": "відмикає саркофаги", "frenzy": "гасить факели"},
 	"frost_dragon": {"color": Color(0.55, 0.9, 1.0), "rage": "злітає в небо", "frenzy": "кличе вічну зиму"},
 	"bone_lord": {"color": Color(0.45, 1.0, 0.5), "rage": "кличе армію мертвих", "frenzy": "стає вічним"},

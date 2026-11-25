@@ -1676,12 +1676,12 @@ const LEVELS := [
 		"difficulty": 15,
 		"stats": {"hp": 12.5, "damage": 7.2, "gold": 14.0},
 		"theme": {
-			"stone": Color(0.22, 0.16, 0.28),
-			"floor": Color(0.16, 0.11, 0.22),
-			"fog": Color(0.03, 0.01, 0.05), "fog_density": 0.045,
-			"ambient": Color(0.3, 0.18, 0.42), "ambient_energy": 1.5,
-			"torch": Color(0.7, 0.35, 1.0),
-			"background": Color(0.01, 0.0, 0.02),
+			"stone": Color(0.24, 0.23, 0.25),
+			"floor": Color(0.17, 0.16, 0.18),
+			"fog": Color(0.02, 0.02, 0.025), "fog_density": 0.045,
+			"ambient": Color(0.32, 0.3, 0.34), "ambient_energy": 1.5,
+			"torch": Color(1.0, 0.7, 0.35),
+			"background": Color(0.01, 0.01, 0.012),
 			"decor": "abyss",
 		},
 		"enemies": {},
@@ -1698,10 +1698,7 @@ const LEVELS := [
 			"special_anims": {"shadow_split": ["Summon"], "shadow_hands": ["Cast"], "eclipse": ["Roar"], "shadow_scythe": ["Weapon2"],
 				"shadow_dash": ["Jump"], "braziers": ["Cast"]},
 			"phase_thresholds": [0.65, 0.3],
-			"aura": {"color": Color(0.75, 0.55, 1.0), "rage_color": Color(1.0, 0.25, 0.85), "radius": 2.0},
-			"telegraph_color": Color(0.8, 0.35, 1.0, 0.9),
-			"transform_tints": [Color(0.95, 0.9, 1.0), Color(0.9, 0.82, 1.0)],
-			"transform_glows": [Color(0.35, 0.1, 0.6), Color(0.6, 0.15, 0.9)],
+			"telegraph_color": Color(1.0, 0.78, 0.42, 0.9),
 			"abilities": [
 				# Жаровні: у темряві бос майже невразливий і лікується; у колі
 				# світла запаленої жаровні — вразливий. Герой запалює, бос гасить.

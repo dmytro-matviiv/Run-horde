@@ -12,7 +12,7 @@ extends EnemyAbility
 ## dark_factor, regen, light_time.
 
 const FIRE := Color(1.0, 0.6, 0.2)
-const SHADOW := Color(0.45, 0.2, 0.75)
+const SHADOW := Color(0.55, 0.5, 0.48)
 
 var _braziers: Array = []
 var _started := false
@@ -89,6 +89,8 @@ func _start() -> void:
 		ring_mark.visible = false
 		var b := {"node": node, "lit": true, "progress": 0.0, "ring": ring_mark, "cell": cell}
 		_braziers.append(b)
+	# Замість сяйва — чорний дим, що здіймається з плечей.
+	enemy.add_child(BossFx.shadow_mantle(enemy.target_height))
 	_mark = Label3D.new()
 	_mark.font_size = 56
 	_mark.pixel_size = 0.005

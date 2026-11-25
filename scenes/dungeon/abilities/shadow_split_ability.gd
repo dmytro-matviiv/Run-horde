@@ -7,7 +7,7 @@ extends EnemyAbility
 ## зникнуть. Упаде справжній — зникнуть усі.
 ## Налаштування: count.
 
-const SHADOW := Color(0.45, 0.2, 0.75)
+const SHADOW := Color(0.1, 0.09, 0.1)
 
 var _shadow: MeshInstance3D
 var _hint_left := 0.0
@@ -42,7 +42,13 @@ func resolve() -> void:
 	var base := randf() * TAU
 	for i in count:
 		var angle := base + TAU * i / count
-		spots.append(enemy.global_position + Vector3(cos(angle), 0.0, sin(angle)) * 3.5)
+		# Розходяться широко (а не купою біля Володаря), лише на прохідні клітинки.
+		var spot := enemy.global_position + Vector3(cos(angle), 0.0, sin(angle)) * 6.0
+		var cell := DungeonBuilder.cell_of(spot)
+		var hero := player()
+		if hero != null and is_instance_valid(hero) and not DungeonBuilder.is_walkable(hero.get_parent().get("_map_rows"), cell.x, cell.y):
+			spot = enemy.global_position + Vector3(cos(angle), 0.0, sin(angle)) * 3.0
+		spots.append(spot)
 	spots.shuffle()
 	# Справжній — на випадковому з місць, двійники — на решті.
 	enemy.teleport_to(spots[0])
@@ -65,7 +71,7 @@ func resolve() -> void:
 		_hint.outline_size = 14
 		_hint.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		_hint.no_depth_test = true
-		_hint.modulate = Color(0.85, 0.75, 1.0)
+		_hint.modulate = Color(1.0, 0.85, 0.55)
 		_hint.text = "Справжній відкидає тінь"
 		world().add_child(_hint)
 
