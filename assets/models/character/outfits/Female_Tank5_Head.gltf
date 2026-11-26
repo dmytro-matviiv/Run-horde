@@ -1375,18 +1375,18 @@
 	"images":[
 		{
 			"mimeType":"image/jpeg",
-			"name":"Female_Tank1_Head_normal",
-			"uri":"Female_Tank1_Head_normal.jpg"
+			"name":"Female_Tank5_Head_normal",
+			"uri":"Female_Tank5_Head_normal.jpg"
 		},
 		{
 			"mimeType":"image/jpeg",
-			"name":"Female_Tank1_Head_diffuse",
+			"name":"Female_Tank5_Head_diffuse",
 			"uri":"Female_Tank5_Head_diffuse.jpg"
 		},
 		{
 			"mimeType":"image/jpeg",
-			"name":"Female_Tank1_Head_orm",
-			"uri":"Female_Tank1_Head_orm.jpg"
+			"name":"Female_Tank5_Head_orm",
+			"uri":"Female_Tank5_Head_orm.jpg"
 		}
 	],
 	"skins":[
@@ -1466,47 +1466,47 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":3508,
+			"count":2280,
 			"max":[
-				0.10959554463624954,
-				1.7903530597686768,
-				0.11069575697183609
+				0.12131307274103165,
+				1.789146065711975,
+				0.13975146412849426
 			],
 			"min":[
-				-0.10952658951282501,
-				1.5507817268371582,
-				-0.13206255435943604
+				-0.12052468955516815,
+				1.5991443395614624,
+				-0.15310457348823547
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":3508,
+			"count":2280,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":3508,
+			"count":2280,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":3508,
+			"count":2280,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":3508,
+			"count":2280,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":10497,
+			"count":6564,
 			"type":"SCALAR"
 		},
 		{
@@ -1519,44 +1519,44 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":42096,
+			"byteLength":27360,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":42096,
-			"byteOffset":42096,
+			"byteLength":27360,
+			"byteOffset":27360,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":28064,
-			"byteOffset":84192,
+			"byteLength":18240,
+			"byteOffset":54720,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":14032,
-			"byteOffset":112256,
+			"byteLength":9120,
+			"byteOffset":72960,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":56128,
-			"byteOffset":126288,
+			"byteLength":36480,
+			"byteOffset":82080,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":20994,
-			"byteOffset":182416,
+			"byteLength":13128,
+			"byteOffset":118560,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":203412
+			"byteOffset":131688
 		}
 	],
 	"samplers":[
@@ -1567,8 +1567,8 @@
 	],
 	"buffers":[
 		{
-			"byteLength":207572,
-			"uri":"Female_Tank1_Head.bin"
+			"byteLength":135848,
+			"uri":"Female_Tank5_Head.bin"
 		}
 	]
 }

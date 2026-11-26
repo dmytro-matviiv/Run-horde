@@ -200,9 +200,15 @@ static func _tint(mesh: MeshInstance3D, tint: Color, rarity: String = "", skin: 
 				material.albedo_texture = load(atlas)
 		material.albedo_color = source.albedo_color * tint
 		if rarity == "legendary":
+			# Легендарне: світиться сам візерунок (текстура як сяйво) і
+			# золотий обідок по контуру — видно здалеку навіть у темряві.
 			material.emission_enabled = true
-			material.emission = Color(1.0, 0.75, 0.3)
-			material.emission_energy_multiplier = 0.05
+			material.emission = Color(1.0, 0.8, 0.45)
+			material.emission_texture = material.albedo_texture
+			material.emission_energy_multiplier = 0.22
+			material.rim_enabled = true
+			material.rim = 0.8
+			material.rim_tint = 0.3
 		elif rarity == "epic":
 			material.rim_enabled = true
 			material.rim = 0.6
