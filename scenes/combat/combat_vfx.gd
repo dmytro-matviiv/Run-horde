@@ -1003,6 +1003,7 @@ static func flash_model(model: Node, color: Color = Color.WHITE, duration: float
 ## показує ним свій майбутній удар). Повертає вузол; progress задається
 ## через CombatVfx.set_param.
 static func make_ground_marker(color: Color, radius: float, half_arc: float = PI) -> MeshInstance3D:
+	color = themed(color)
 	var instance := MeshInstance3D.new()
 	instance.mesh = _get_ring_mesh()
 	instance.material_override = _get_material(_ring_materials, RING_SHADER, color)
@@ -1014,6 +1015,9 @@ static func make_ground_marker(color: Color, radius: float, half_arc: float = PI
 
 ## Смуга-попередження для тарана. length — довжина ривку, width — ширина.
 static func make_line_marker(color: Color, length: float, width: float) -> MeshInstance3D:
+	# Червона смуга — у тематичну (стрілки з арту під стихію данжу).
+	if themed(color) != color:
+		return make_line_telegraph(color, length, width, "chevrons")
 	var instance := MeshInstance3D.new()
 	instance.mesh = _get_ring_mesh()
 	instance.material_override = _get_material(_line_materials, LINE_SHADER, color)
@@ -1022,12 +1026,23 @@ static func make_line_marker(color: Color, length: float, width: float) -> MeshI
 	CombatVfx.set_param(instance, &"progress", 0.0)
 	return instance
 
+## Колір попереджень поточного данжу (dungeon.gd ставить з теми). Будь-яке
+## червоне попередження (стара стандартна смуга й коло) перефарбовується
+## в нього — тож у крижаному данжі іній, у Безодні руни, у Кузні лава.
+static var danger := Color(0, 0, 0, 0)
+
+static func themed(color: Color) -> Color:
+	if danger.a <= 0.0 or color.s < 0.45 or not (color.h < 0.035 or color.h > 0.955):
+		return color
+	return Color(danger.r, danger.g, danger.b, color.a)
+
 ## Попередження ворожого удару з арту: коло (half_arc = PI) або віяло.
 ## Тепле — розпечене кільце з каменю, інших кольорів — рунне коло. embers —
 ## іскри, що здіймаються з краю (для великих ударів; звичайним ударам
 ## орди не треба — їх буває багато одночасно).
 ## Керується так само, як make_ground_marker: progress 0..1.
 static func make_telegraph(color: Color, radius: float, half_arc: float = PI, embers: bool = false) -> MeshInstance3D:
+	color = themed(color)
 	var instance := MeshInstance3D.new()
 	instance.mesh = _get_ring_mesh()
 	var shape := 0 if half_arc >= PI - 0.01 else 1
@@ -1070,6 +1085,7 @@ static func make_telegraph(color: Color, radius: float, half_arc: float = PI, em
 ## "flames" — промінь боса. Смуга лежить від ворога вперед по +Z.
 static func make_line_telegraph(color: Color, length: float, width: float, art: String = "chevrons",
 		embers: bool = false) -> MeshInstance3D:
+	color = themed(color)
 	var instance := MeshInstance3D.new()
 	instance.mesh = _get_ring_mesh()
 	art = _themed_art(color, art)
