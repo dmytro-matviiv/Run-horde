@@ -70,7 +70,7 @@ func tick(delta: float) -> void:
 		if rows is Array and not DungeonBuilder.is_walkable(rows, cell.x, cell.y):
 			_rush_left = 0.0
 			return
-		enemy.teleport_to(Vector3(step.x, enemy.global_position.y, step.z))
+		enemy.global_position = Vector3(step.x, enemy.global_position.y, step.z)
 		var off := hero.global_position - enemy.global_position
 		off.y = 0.0
 		if off.length() < 1.0:

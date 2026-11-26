@@ -1341,32 +1341,49 @@ const LEVELS := [
 			"decor": "vault",
 		},
 		"enemies": {
-			# Берсерк Півночі — кожен удар сокирою лишає ожеледь: героя несе.
+			# Берсерк Півночі — вихор сокири (крутиться й суне, потім хитається);
+			# кожен удар лишає ожеледь: героя несе.
 			"m": [
 				{"name": "Берсерк Півночі", "model": "res://assets/models/monsters/north/viking.glb", "kind": "melee",
 					"hp": 115.0, "damage": 26.0, "speed": 3.0, "height": 1.95, "xp": 11, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "ice_slick", "radius": 1.6, "life": 7.0, "max": 3}]},
+					"special_anims": {"axe_whirl": ["Weapon"]},
+					"abilities": [{"id": "axe_whirl", "cooldown": 11.0, "first": 3.0, "windup": 0.6, "time": 2.4, "speed": 2.6, "radius": 1.9,
+						"every": 0.4, "dizzy": 1.2, "damage": 0.45},
+						{"id": "ice_slick", "radius": 1.6, "life": 7.0, "max": 3}]},
 			],
-			# Снігові вовки — зграя; укус у спину вдвічі сильніший.
+			# Снігові вовки — зграя: оточують по колу, наскакують стрибком збоку
+			# й зі спини, виють (зграя швидша, лапи лишають слизьку кригу);
+			# укус у спину вдвічі сильніший.
 			"w": [
 				{"name": "Сніговий вовк", "model": "res://assets/models/monsters/north/wolf.glb", "kind": "melee",
 					"hp": 42.0, "damage": 13.0, "speed": 4.6, "height": 1.5, "xp": 3, "group": 3,
 					"attack_range": 1.4, "cooldown": 0.9, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "flank", "factor": 2.0, "angle": 70.0}]},
+					"special_anims": {"wolf_pounce": ["Weapon"], "pack_howl": ["Idle"]},
+					"abilities": [{"id": "wolf_circle", "cooldown": 8.0, "first": 0.5, "radius": 3.6, "time": 1.8, "speed": 5.5},
+						{"id": "wolf_pounce", "cooldown": 5.0, "first": 2.5, "min": 2.2, "max": 7.0, "windup": 0.45, "flight": 0.45, "knock": 0.35, "damage": 1.2},
+						{"id": "pack_howl", "frost": true, "cooldown": 16.0, "first": 4.0, "windup": 0.8, "range": 10.0, "time": 5.0, "haste": 1.35, "damage": 0.2},
+						{"id": "flank", "factor": 2.0, "angle": 70.0}]},
 			],
-			# Шаман Півночі — кулі, що влучили, подовжують перезарядку здібностей.
+			# Шаман Півночі — крижаний оберіг союзникам, крижана хвиля й відліт,
+			# коли герой поруч; кулі подовжують перезарядку здібностей героя.
 			"r": [
 				{"name": "Шаман Півночі", "model": "res://assets/models/monsters/north/shaman.glb", "kind": "ranged",
-					"hp": 62.0, "damage": 16.0, "speed": 2.4, "height": 1.85, "xp": 9, "attack_anims": ["Weapon"],
+					"hp": 95.0, "damage": 16.0, "speed": 2.4, "height": 1.85, "xp": 9, "attack_anims": ["Weapon"],
 					"projectile": {"color": Color(0.6, 0.85, 1.0), "speed": 10.0, "volley": 1},
-					"abilities": [{"id": "numb", "seconds": 2.5, "cap": 8.0}]},
+					"special_anims": {"frost_ward": ["Weapon"], "frost_nova": ["Weapon"]},
+					"abilities": [{"id": "frost_nova", "cooldown": 7.0, "first": 0.5, "near": 3.0, "radius": 3.2, "slow": 0.5, "time": 2.0, "distance": 6.0, "damage": 0.6},
+						{"id": "frost_ward", "cooldown": 9.0, "first": 2.0, "range": 9.0, "windup": 0.7, "share": 0.4, "time": 6.0},
+						{"id": "numb", "seconds": 2.5, "cap": 8.0}]},
 			],
-			# Сніговий велетень — гупає й замітає героя снігом: відкопуйся рухом.
+			# Сніговий велетень — котить сніжну брилу, що росте; гупає й замітає
+			# героя снігом: відкопуйся рухом.
 			"c": [
 				{"name": "Сніговий велетень", "model": "res://assets/models/monsters/north/giant.glb", "kind": "melee",
 					"hp": 230.0, "damage": 30.0, "speed": 2.3, "height": 2.8, "xp": 14, "attack_anims": ["Weapon"],
-					"special_anims": {"snow_bury": ["Slam"]},
-					"abilities": [{"id": "snow_bury", "cooldown": 9.0, "first": 1.5, "trigger": 3.0, "radius": 2.6, "windup": 1.0,
+					"special_anims": {"snow_bury": ["Slam"], "snowball": ["Slam"]},
+					"abilities": [{"id": "snowball", "cooldown": 8.0, "first": 2.0, "min": 3.5, "windup": 0.9, "speed": 7.0, "reach": 16.0,
+						"size": 0.9, "grow": 0.08, "knock": 0.5, "damage": 1.0},
+						{"id": "snow_bury", "cooldown": 9.0, "first": 1.5, "trigger": 3.0, "radius": 2.6, "windup": 1.0,
 						"time": 3.0, "damage": 0.8}]},
 			],
 			# Вартовий ріг — побачив героя: сурмить, і збігається вся зала.

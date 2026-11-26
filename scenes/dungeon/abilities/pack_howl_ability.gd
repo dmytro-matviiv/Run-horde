@@ -5,9 +5,12 @@ extends EnemyAbility
 ## і він сам) на time секунд швидші (haste), а лапи в них палають: за
 ## кожним лишаються вогняні сліди, що печуть героя. Бий того, хто виє,
 ## поки не довив, — або тікай від слідів, а не по них.
-## Налаштування: windup, range, time, haste, damage.
+## "frost": true — зграя Півночі: кільця інею, лапи в снігу, сліди —
+## слизька крига (героя несе) з легким морозом замість жару.
+## Налаштування: windup, range, time, haste, frost, damage.
 
 const COLOR := Color(1.0, 0.45, 0.12)
+const FROST := Color(0.7, 0.92, 1.0)
 const STEP := 0.45
 const PATCH_LIFE := 2.2
 const PATCH_RADIUS := 0.75
@@ -16,6 +19,12 @@ var _pack: Array = []
 var _patches: Array = []
 var _time_left := 0.0
 var _step_left := 0.0
+
+func _frost() -> bool:
+	return bool(config.get("frost", false))
+
+func _color() -> Color:
+	return FROST if _frost() else COLOR
 
 func _init() -> void:
 	id = "pack_howl"
@@ -32,7 +41,7 @@ func try_use(distance: float) -> bool:
 	for i in 3:
 		enemy.get_tree().create_timer(i * windup * 0.3).timeout.connect(func() -> void:
 			if is_instance_valid(enemy) and enemy.is_alive():
-				CombatVfx.shockwave(world(), enemy.global_position, 3.5 + i, COLOR, 0.35))
+				CombatVfx.shockwave(world(), enemy.global_position, 3.5 + i, _color(), 0.35))
 	return true
 
 func resolve() -> void:
@@ -50,7 +59,8 @@ func resolve() -> void:
 		other.move_speed *= haste
 		other.alert()
 		other.hunting = true
-		var paws := Fx.make_particles("flame_06", Color(1.0, 0.55, 0.15, 0.9), 12, 0.4, 0.4, true)
+		var paws := Fx.make_particles("circle_05" if _frost() else "flame_06",
+			Color(0.9, 0.97, 1.0, 0.9) if _frost() else Color(1.0, 0.55, 0.15, 0.9), 12, 0.4, 0.15 if _frost() else 0.4, true)
 		paws.direction = Vector3.UP
 		paws.gravity = Vector3.ZERO
 		paws.initial_velocity_min = 0.8
@@ -83,12 +93,17 @@ func tick(delta: float) -> void:
 		p.tick = float(p.tick) - delta
 		var node: MeshInstance3D = p.node
 		if is_instance_valid(node):
-			BossFx.set_heat(node, clampf(float(p.left) / PATCH_LIFE, 0.0, 1.0), clampf(float(p.left) / 0.6, 0.0, 0.9))
+			if _frost():
+				CombatVfx.set_param(node, &"alpha", clampf(float(p.left) / 0.6, 0.0, 0.85))
+			else:
+				BossFx.set_heat(node, clampf(float(p.left) / PATCH_LIFE, 0.0, 1.0), clampf(float(p.left) / 0.6, 0.0, 0.9))
 		if hero != null and is_instance_valid(hero) and float(p.tick) <= 0.0:
 			var off: Vector3 = hero.global_position - (p.spot as Vector3)
 			off.y = 0.0
 			if off.length() < PATCH_RADIUS:
 				p.tick = 0.5
+				if _frost() and hero.has_method("set_slick"):
+					hero.set_slick(1.0)
 				hero.take_damage(damage())
 		if float(p.left) <= 0.0:
 			if is_instance_valid(node):
@@ -101,7 +116,8 @@ func _add_patch(position: Vector3) -> void:
 	for p: Dictionary in _patches:
 		if (p.spot as Vector3).distance_to(spot) < 0.6:
 			return
-	var node := BossFx.floor_disc(BossFx.lava_material(1.0, 0.9), PATCH_RADIUS)
+	var material: Material = BossFx.ice_material(Color(0.8, 0.95, 1.0, 0.85)) if _frost() else BossFx.lava_material(1.0, 0.9)
+	var node := BossFx.floor_disc(material, PATCH_RADIUS)
 	world().add_child(node)
 	node.global_position = spot
 	_patches.append({"node": node, "spot": spot, "left": PATCH_LIFE, "tick": 0.0})

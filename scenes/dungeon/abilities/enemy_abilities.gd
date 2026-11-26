@@ -186,6 +186,12 @@ const SCRIPTS := {
 	"lava_slam": preload("res://scenes/dungeon/abilities/lava_slam_ability.gd"),
 	"cleave_leap": preload("res://scenes/dungeon/abilities/cleave_leap_ability.gd"),
 	"pack_howl": preload("res://scenes/dungeon/abilities/pack_howl_ability.gd"),
+	"wolf_pounce": preload("res://scenes/dungeon/abilities/wolf_pounce_ability.gd"),
+	"wolf_circle": preload("res://scenes/dungeon/abilities/wolf_circle_ability.gd"),
+	"frost_ward": preload("res://scenes/dungeon/abilities/frost_ward_ability.gd"),
+	"frost_nova": preload("res://scenes/dungeon/abilities/frost_nova_ability.gd"),
+	"snowball": preload("res://scenes/dungeon/abilities/snowball_ability.gd"),
+	"axe_whirl": preload("res://scenes/dungeon/abilities/axe_whirl_ability.gd"),
 	"eclipse": preload("res://scenes/dungeon/abilities/eclipse_ability.gd"),
 }
 

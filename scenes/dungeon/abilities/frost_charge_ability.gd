@@ -89,7 +89,7 @@ func tick(delta: float) -> void:
 		_slide_left -= delta
 		var t := 1.0 - clampf(_slide_left / float(config.get("slide", 0.35)), 0.0, 1.0)
 		var point := _from.lerp(_to, t)
-		enemy.teleport_to(Vector3(point.x, enemy.global_position.y, point.z))
+		enemy.global_position = Vector3(point.x, enemy.global_position.y, point.z)
 		_check_hit(point)
 		if _slide_left <= 0.0:
 			_finish()
