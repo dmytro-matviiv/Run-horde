@@ -1153,11 +1153,17 @@ const LEVELS := [
 		"boss": {"name": "Володар Крижаної Безодні", "model": "res://assets/models/monsters/dark_knight.glb", "style": "abyssal",
 			"hp": 1280.0, "damage": 35.0, "speed": 3.1, "height": 4.6, "xp": 320,
 			"special_anim": ["Cast"],
+			# Проти кайту: ривок по кризі до героя, що тікає; списи на
+			# випередження; клітка з криги, в яку він стрибає.
+			"special_anims": {"frost_charge": ["Weapon"], "frost_spears": ["Cast"], "ice_cage": ["Cast"], "void_rift": ["Cast"]},
 			"transform_tints": [Color(0.85, 0.85, 1.0), Color(0.7, 0.7, 0.95)],
 			"transform_glows": [Color(0.1, 0.35, 0.8), Color(0.25, 0.55, 1.0)],
 			"abilities": [
-				{"id": "void_rift", "cooldown": 12.0, "first": 5.0, "radius": 4.5, "pull_speed": 3.4, "lifetime": 6.5},
+				{"id": "frost_charge", "cooldown": 6.0, "first": 2.0, "min": 6.0, "windup": 0.7, "lead": 0.6, "trail": 6.0, "damage": 1.1},
+				{"id": "void_rift", "cooldown": 13.0, "first": 6.0, "radius": 4.5, "pull_speed": 3.4, "lifetime": 6.5},
 				{"id": "leap", "cooldown": 8.0, "first": 6.0},
+				{"id": "frost_spears", "phase": 2, "cooldown": 8.0, "first": 2.0, "count": 5, "spread": 9.0, "lead": 0.55, "speed": 15.0, "damage": 0.6},
+				{"id": "ice_cage", "phase": 2, "cooldown": 16.0, "first": 5.0, "min": 5.0, "radius": 3.4, "time": 4.0},
 			]},
 		"map": [
 			"##########################################",

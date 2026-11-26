@@ -178,6 +178,9 @@ const SCRIPTS := {
 	"rune_waves": preload("res://scenes/dungeon/abilities/rune_waves_ability.gd"),
 	"abyss_chains": preload("res://scenes/dungeon/abilities/abyss_chains_ability.gd"),
 	"abyss_realm": preload("res://scenes/dungeon/abilities/abyss_realm_ability.gd"),
+	"frost_charge": preload("res://scenes/dungeon/abilities/frost_charge_ability.gd"),
+	"ice_cage": preload("res://scenes/dungeon/abilities/ice_cage_ability.gd"),
+	"frost_spears": preload("res://scenes/dungeon/abilities/frost_spears_ability.gd"),
 	"eclipse": preload("res://scenes/dungeon/abilities/eclipse_ability.gd"),
 }
 
