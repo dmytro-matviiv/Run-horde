@@ -40,7 +40,8 @@ const RARITY_TINTS := {
 ## Колір тканини сетів: ним фарбується "гола шкіра", вшита в рукави й
 ## штани Quaternius (смужка біля пахви), — у сеті там тканина.
 const SKIN_CLOTH := {"Sword1": Color(0.36, 0.25, 0.16), "Archer1": Color(0.2, 0.36, 0.15), "Mage1": Color(0.33, 0.15, 0.48),
-	"Tank1": Color(0.18, 0.23, 0.35), "Druid1": Color(0.34, 0.24, 0.15)}
+	"Tank1": Color(0.18, 0.23, 0.35), "Druid1": Color(0.34, 0.24, 0.15),
+	"Sword2": Color(0.16, 0.26, 0.48), "Sword3": Color(0.36, 0.25, 0.14), "Sword4": Color(0.19, 0.10, 0.10), "Sword5": Color(0.46, 0.35, 0.16), "Tank2": Color(0.25, 0.19, 0.15), "Tank3": Color(0.30, 0.27, 0.24), "Tank4": Color(0.12, 0.19, 0.36), "Tank5": Color(0.35, 0.25, 0.12), "Mage2": Color(0.10, 0.16, 0.37), "Mage3": Color(0.46, 0.37, 0.21), "Mage4": Color(0.19, 0.12, 0.11), "Mage5": Color(0.30, 0.14, 0.46), "Archer2": Color(0.30, 0.21, 0.13), "Archer3": Color(0.35, 0.25, 0.15), "Archer4": Color(0.10, 0.19, 0.37), "Archer5": Color(0.30, 0.09, 0.07), "Druid2": Color(0.25, 0.35, 0.14), "Druid3": Color(0.30, 0.21, 0.13), "Druid4": Color(0.25, 0.21, 0.19), "Druid5": Color(0.41, 0.30, 0.13)}
 
 ## Тіло з прихованими ділянками: (стать|ділянки) -> ArrayMesh.
 static var _masked := {}
