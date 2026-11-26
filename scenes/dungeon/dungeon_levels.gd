@@ -1583,12 +1583,15 @@ const LEVELS := [
 					"special_anims": {"hurl": ["Slam"]},
 					"abilities": [{"id": "hurl", "cooldown": 10.0, "first": 1.5, "reach": 2.4, "windup": 0.8, "power": 16.0, "stun": 1.3, "damage": 1.0}]},
 			],
-			# Безликі послушники — гурт; загиблий віддає силу решті.
+			# Безликі послушники — гурт; кидаються й чіпляються на спину (скинь
+			# перекатом); загиблий віддає силу решті.
 			"w": [
 				{"name": "Безликий послушник", "model": "res://assets/models/monsters/gods/acolyte.glb", "kind": "melee",
 					"hp": 40.0, "damage": 13.0, "speed": 3.6, "height": 1.5, "xp": 3, "group": 4,
 					"attack_range": 1.4, "cooldown": 0.9, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "martyr", "range": 12.0, "power": 0.3, "heal": 0.25, "grow": 0.12}]},
+					"special_anims": {"cling": ["Run"]},
+					"abilities": [{"id": "cling", "cooldown": 7.0, "first": 0.8, "min": 0.0, "max": 7.0, "windup": 0.7, "speed": 14.0, "hold": 3.0, "slow": 0.6, "damage": 0.5},
+						{"id": "martyr", "range": 12.0, "power": 0.3, "heal": 0.25, "grow": 0.12}]},
 			],
 			# Жрець Забутих — табу: перекотився під забороною — кара.
 			"r": [

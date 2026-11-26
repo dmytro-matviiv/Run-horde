@@ -181,6 +181,7 @@ const SCRIPTS := {
 	"frost_charge": preload("res://scenes/dungeon/abilities/frost_charge_ability.gd"),
 	"ice_cage": preload("res://scenes/dungeon/abilities/ice_cage_ability.gd"),
 	"frost_spears": preload("res://scenes/dungeon/abilities/frost_spears_ability.gd"),
+	"cling": preload("res://scenes/dungeon/abilities/cling_ability.gd"),
 	"eclipse": preload("res://scenes/dungeon/abilities/eclipse_ability.gd"),
 }
 
