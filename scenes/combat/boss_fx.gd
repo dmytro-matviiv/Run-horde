@@ -667,3 +667,50 @@ static func falling_sand() -> CPUParticles3D:
 	sand.initial_velocity_max = 0.6
 	sand.gravity = Vector3(0, -1.0, 0)
 	return sand
+
+# --- Пекельна Кузня: жести мобів і вогонь ---
+
+## Жест без окремої анімації: модель відхиляється назад (tilt, градуси;
+## мінус — уперед) і стискається/витягується (squash, частка висоти) за
+## t_in секунд, тоді різко повертається за t_out. Так кат заносить сокиру,
+## голем — кулак, жрець здіймається.
+static func gesture(model: Node3D, tilt: float, squash: float, t_in: float, t_out: float) -> void:
+	if model == null or not is_instance_valid(model):
+		return
+	var rest_x := model.rotation.x
+	var rest_scale := model.scale
+	var tween := model.create_tween()
+	tween.tween_property(model, "rotation:x", rest_x - deg_to_rad(tilt), t_in).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.parallel().tween_property(model, "scale", Vector3(rest_scale.x, rest_scale.y * (1.0 + squash), rest_scale.z), t_in)
+	tween.tween_property(model, "rotation:x", rest_x + deg_to_rad(tilt * 0.35), t_out * 0.5).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(model, "scale", rest_scale, t_out * 0.5)
+	tween.tween_property(model, "rotation:x", rest_x, t_out * 0.5)
+
+## Стовп вогню: язики полум'я б'ють угору з кола radius, seconds секунд.
+static func fire_column(parent: Node, spot: Vector3, radius: float, height: float, seconds: float) -> void:
+	var flames := Fx.make_particles("flame_05", Color(1.0, 0.55, 0.15, 0.95), 40, 0.6, 0.9, true)
+	flames.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+	flames.emission_sphere_radius = radius * 0.6
+	flames.direction = Vector3.UP
+	flames.spread = 12.0
+	flames.gravity = Vector3.ZERO
+	flames.initial_velocity_min = height * 1.2
+	flames.initial_velocity_max = height * 1.8
+	flames.local_coords = false
+	parent.add_child(flames)
+	flames.global_position = spot + Vector3.UP * 0.2
+	var smoke := Fx.make_particles("smoke_07", Color(0.15, 0.08, 0.05, 0.6), 12, 1.4, 1.6)
+	smoke.direction = Vector3.UP
+	smoke.spread = 25.0
+	smoke.gravity = Vector3.ZERO
+	smoke.initial_velocity_min = 2.0
+	smoke.initial_velocity_max = 3.5
+	smoke.local_coords = false
+	parent.add_child(smoke)
+	smoke.global_position = spot + Vector3.UP * height * 0.6
+	for node: CPUParticles3D in [flames, smoke]:
+		var timer := node.get_tree().create_timer(seconds)
+		timer.timeout.connect(func() -> void:
+			if is_instance_valid(node):
+				node.emitting = false
+				node.get_tree().create_timer(1.6).timeout.connect(node.queue_free))

@@ -1463,27 +1463,36 @@ const LEVELS := [
 			"m": [
 				{"name": "Демон-кат", "model": "res://assets/models/monsters/hell/executioner.glb", "kind": "melee",
 					"hp": 125.0, "damage": 28.0, "speed": 3.0, "height": 2.1, "xp": 12, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "execute", "below": 0.35, "factor": 2.0}]},
+					"special_anims": {"cleave_leap": ["Weapon"]},
+					"abilities": [{"id": "cleave_leap", "cooldown": 8.0, "first": 1.5, "min": 3.0, "max": 9.0, "windup": 0.7, "flight": 0.5,
+						"radius": 1.7, "length": 5.0, "burn": 3.0, "damage": 1.2},
+						{"id": "execute", "below": 0.35, "factor": 2.0}]},
 			],
 			# Пекельні пси — зграя; укус пече рану: 5 с ніщо не лікує.
 			"w": [
 				{"name": "Пекельний пес", "model": "res://assets/models/monsters/hell/hound.glb", "kind": "melee",
 					"hp": 46.0, "damage": 14.0, "speed": 4.8, "height": 1.5, "xp": 3, "group": 3,
 					"attack_range": 1.4, "cooldown": 0.9, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "sear", "time": 5.0}]},
+					"special_anims": {"pack_howl": ["Idle"]},
+					"abilities": [{"id": "pack_howl", "cooldown": 14.0, "first": 2.0, "windup": 0.8, "range": 10.0, "time": 5.0, "haste": 1.4, "damage": 0.35},
+						{"id": "sear", "time": 5.0}]},
 			],
 			# Жерці Полум'я — парами; між ними ланцюг вогню.
 			"r": [
 				{"name": "Жрець Полум'я", "model": "res://assets/models/monsters/hell/priest.glb", "kind": "ranged",
 					"hp": 66.0, "damage": 17.0, "speed": 2.6, "height": 1.9, "xp": 9, "group": 2, "attack_anims": ["Weapon"],
 					"projectile": {"color": Color(1.0, 0.5, 0.1), "speed": 10.0, "volley": 1},
-					"abilities": [{"id": "fire_tether", "range": 10.0, "width": 0.55, "every": 0.4, "damage": 0.5}]},
+					"special_anims": {"flame_pillar": ["Weapon"]},
+					"abilities": [{"id": "flame_pillar", "cooldown": 8.0, "first": 3.0, "range": 11.0, "windup": 0.6, "warn": 1.0, "radius": 1.8, "burn": 3.0, "damage": 1.1},
+						{"id": "fire_tether", "range": 10.0, "width": 0.55, "every": 0.4, "damage": 0.5}]},
 			],
 			# Обсидіановий голем — твердне від кожного удару; бий серіями з паузами.
 			"c": [
 				{"name": "Обсидіановий голем", "model": "res://assets/models/monsters/hell/golem.glb", "kind": "melee",
 					"hp": 165.0, "damage": 32.0, "speed": 2.3, "height": 2.4, "xp": 14, "attack_anims": ["Weapon"],
-					"abilities": [{"id": "harden", "step": 0.08, "max": 0.45, "calm": 1.2}]},
+					"special_anims": {"lava_slam": ["Weapon"]},
+					"abilities": [{"id": "lava_slam", "cooldown": 9.0, "first": 2.5, "windup": 0.9, "count": 3, "length": 8.0, "spread": 28.0, "warn": 0.6, "burn": 2.5, "damage": 0.9},
+						{"id": "harden", "step": 0.08, "max": 0.45, "calm": 1.2}]},
 			],
 			# Сірчаний котел — не ходить; пускає чад, у якому удари промахуються.
 			"t": [

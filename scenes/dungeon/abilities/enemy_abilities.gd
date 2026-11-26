@@ -182,6 +182,10 @@ const SCRIPTS := {
 	"ice_cage": preload("res://scenes/dungeon/abilities/ice_cage_ability.gd"),
 	"frost_spears": preload("res://scenes/dungeon/abilities/frost_spears_ability.gd"),
 	"cling": preload("res://scenes/dungeon/abilities/cling_ability.gd"),
+	"flame_pillar": preload("res://scenes/dungeon/abilities/flame_pillar_ability.gd"),
+	"lava_slam": preload("res://scenes/dungeon/abilities/lava_slam_ability.gd"),
+	"cleave_leap": preload("res://scenes/dungeon/abilities/cleave_leap_ability.gd"),
+	"pack_howl": preload("res://scenes/dungeon/abilities/pack_howl_ability.gd"),
 	"eclipse": preload("res://scenes/dungeon/abilities/eclipse_ability.gd"),
 }
 
