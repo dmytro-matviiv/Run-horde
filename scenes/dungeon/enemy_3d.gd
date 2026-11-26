@@ -219,6 +219,13 @@ var untargetable := false
 ## Колір попередження звичайних ударів у цьому данжі (тема рівня "danger");
 ## прозорий — звичайний червоний. Задає Dungeon на старті.
 static var danger_color := Color(0, 0, 0, 0)
+## Розумна поведінка (з 5-го данжу; dungeon.gd вмикає): вороги біжать на
+## перехоплення, заходять з різних боків, наздоганяють ривком того, хто
+## тікає, а стрільці цілять на випередження.
+static var smart := false
+const KITE_TIME := 2.2
+const SPRINT_TIME := 2.0
+const SPRINT_SPEED := 1.6
 ## Яку анімацію грати, падаючи (бос, що вже лежить купою кісток, — "Down").
 var death_anims: Array = ["Death"]
 ## Висота моделі в стійці (після _normalize_size) — сюди вертається emerge().
@@ -256,6 +263,9 @@ var _health_bar: HealthBar3D
 var _sleeping := false
 
 var _repath_left := 0.0
+var _kite_time := 0.0
+var _sprint_left := 0.0
+var _last_distance := 0.0
 var _sight_left := 0.0
 var _can_see := false
 var _on_screen := true
@@ -928,6 +938,7 @@ func _physics_process(delta: float) -> void:
 	if definition.has("frost_aura"):
 		_tick_frost_aura(delta, distance)
 	_update_aggro(distance)
+	_track_kite(distance, delta)
 	_attack_left -= delta * _pace()
 	_repath_left -= delta
 	_sight_left -= delta
@@ -1054,7 +1065,7 @@ func _chase_direct(delta: float) -> void:
 	if direction.length() < 0.05:
 		return
 	direction = direction.normalized()
-	var speed := move_toward(Vector2(velocity.x, velocity.z).length(), move_speed, 12.0 * delta)
+	var speed := move_toward(Vector2(velocity.x, velocity.z).length(), move_speed * _speed_mul(), 12.0 * delta)
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
 	_face(direction, 10.0)
@@ -1194,7 +1205,7 @@ func _process_ranged(distance: float, delta: float) -> void:
 func _move_along_path(delta: float) -> void:
 	if _repath_left <= 0.0:
 		_repath_left = REPATH_INTERVAL
-		_agent.target_position = _player.global_position
+		_agent.target_position = _chase_point()
 	if _agent.is_navigation_finished():
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -1208,12 +1219,77 @@ func _move_along_path(delta: float) -> void:
 	# Напрямок — точно на наступну точку маршруту, плавно набирається лише
 	# швидкість. Так ворог іде рівно по лінії маршруту, яка вже обходить
 	# стіни з запасом, і не зрізає кутів (поворот моделі й так плавний).
-	var speed := move_toward(Vector2(velocity.x, velocity.z).length(), move_speed, 12.0 * delta)
+	var speed := move_toward(Vector2(velocity.x, velocity.z).length(), move_speed * _speed_mul(), 12.0 * delta)
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
 	_path_step = true
 	_face(direction, 10.0)
-	_play("Walk")
+	_play("Run" if _sprint_left > 0.0 else "Walk")
+
+## Куди бігти: без розумної поведінки — просто до героя. З нею — туди,
+## де герой буде (перехоплення), і кожен заходить зі свого боку (кут за
+## номером ворога), а не всі чергою в лоб.
+func _chase_point() -> Vector3:
+	var target := _player.global_position
+	if not smart or kind == Kind.RANGED:
+		return target
+	var to := target - global_position
+	to.y = 0.0
+	var gap := to.length()
+	if _player is CharacterBody3D:
+		var run := (_player as CharacterBody3D).velocity
+		run.y = 0.0
+		target += run * clampf(gap / maxf(move_speed, 0.5), 0.0, 1.2) * 0.7
+	if kind != Kind.BOSS and gap < 7.0:
+		var slot := float(get_instance_id() % 6) / 6.0 * TAU
+		target += Vector3(cos(slot), 0.0, sin(slot)) * minf(gap * 0.3, 1.4)
+	return target
+
+## Проти кайту: герой довго тримається далі за удар і не підпускає —
+## ворог наздоганяє ривком (швидше на SPRINT_SPEED, з пилом з-під ніг).
+func _track_kite(distance: float, delta: float) -> void:
+	_sprint_left -= delta
+	if not smart or not _aggro or stationary or kind == Kind.RANGED or kind == Kind.EXPLODER:
+		_last_distance = distance
+		return
+	var far := distance > attack_range + 2.5
+	if far and distance >= _last_distance - 0.02:
+		_kite_time += delta
+	else:
+		_kite_time = maxf(_kite_time - delta * 2.0, 0.0)
+	_last_distance = distance
+	var limit := KITE_TIME * (0.7 if kind == Kind.BOSS else 1.0)
+	if _kite_time >= limit and _sprint_left <= 0.0:
+		_kite_time = 0.0
+		_sprint_left = SPRINT_TIME
+		_repath_left = 0.0
+		CombatVfx.smoke_puff(get_parent(), global_position + Vector3.UP * 0.3, Color(0.7, 0.66, 0.6, 0.7), 1.0)
+		var dust := CombatVfx.make_trail(Color(0.8, 0.75, 0.7), 0.4)
+		dust.amount = 8
+		add_child(dust)
+		dust.position = Vector3.UP * 0.3
+		get_tree().create_timer(SPRINT_TIME).timeout.connect(dust.queue_free)
+
+## Поранений кличе підмогу: вороги поруч, що ще не помітили героя,
+## збігаються (не частіше, ніж раз на 2 с).
+var _help_left := 0.0
+func _call_help() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now < _help_left:
+		return
+	_help_left = now + 2.0
+	for node in get_parent().get_children():
+		if node == self or not node is Enemy3D:
+			continue
+		var other := node as Enemy3D
+		if other._aggro or not other.is_alive() or other.stationary:
+			continue
+		if other.global_position.distance_to(global_position) < 9.0:
+			other.alert()
+			other.hunting = true
+
+func _speed_mul() -> float:
+	return SPRINT_SPEED if _sprint_left > 0.0 else 1.0
 
 ## Видимість героя з кешем: промінь кілька разів на секунду.
 func _sees_player() -> bool:
@@ -1376,7 +1452,7 @@ func _release_shot() -> void:
 	_charging_shot = null
 	var target := _player.global_position + Vector3.UP * 1.0
 	# Мисливець ("lead" у "projectile") цілить туди, де герой БУДЕ.
-	var lead := float(definition.get("projectile", {}).get("lead", 0.0))
+	var lead := float(definition.get("projectile", {}).get("lead", 0.6 if smart else 0.0))
 	if lead > 0.0 and _player is CharacterBody3D:
 		var flight := shot.global_position.distance_to(target) / maxf(projectile_speed, 1.0)
 		var run := (_player as CharacterBody3D).velocity
@@ -1794,6 +1870,8 @@ func _show_ice(shown: bool) -> void:
 ## Удар героя. knockback — напрямок і сила відкидання, heavy — сильний
 ## удар, що збиває замах.
 func take_damage(amount: float, knockback: Vector3 = Vector3.ZERO, crit: bool = false, heavy: bool = false) -> void:
+	if smart and not _dying:
+		_call_help()
 	if _dying or _hidden or invulnerable:
 		return
 	if _dormant:
@@ -2176,6 +2254,8 @@ func _play(wanted: String) -> void:
 		candidates = ["Run", "Walk"]
 	if wanted == "Walk":
 		candidates.append_array(["Fast_Flying", "Run"])
+	if wanted == "Run":
+		candidates.append_array(["Fast_Flying", "Walk"])
 	candidates.append_array(["Idle", "Flying_Idle"])
 	var name := _find_animation(candidates)
 	if name != "" and _animation.current_animation != name:

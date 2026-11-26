@@ -223,6 +223,8 @@ func _ready() -> void:
 	var torch: Color = _theme.get("torch", Color(1.0, 0.7, 0.35))
 	Enemy3D.danger_color = _theme.get("danger", Color(torch, 0.88))
 	CombatVfx.danger = Enemy3D.danger_color
+	# Розумні вороги (перехоплення, оточення, ривок за втікачем) — з 5-го данжу.
+	Enemy3D.smart = _level_index >= 4
 	_hp_scale = float(level.stats.hp)
 	_damage_scale = float(level.stats.damage)
 	_gold_scale = float(level.stats.gold)
