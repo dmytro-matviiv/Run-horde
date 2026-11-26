@@ -1583,6 +1583,37 @@ func _warm_up_rendering() -> void:
 	holder.add_child(bar)
 	bar.setup(Color(0.95, 0.25, 0.25), 0.5, true)
 	bar.global_position = center
+	# Шейдери ефектів босів і мобів (лава, лід, вода-порожнеча, примарний
+	# обідок, дим, руни, полум'я): кожен — по зразку.
+	var floor_y := center - Vector3(0, 0.9, 0)
+	for material: Material in [BossFx.lava_material(1.0, 1.0), BossFx.lava_material(0.5, 0.5), BossFx.ice_material(),
+			BossFx.void_material(), BossFx.smoke_material(), BossFx.ghost_material(Color(1.0, 0.8, 0.4), Color(0.05, 0.03, 0.03, 0.9))]:
+		var plane := BossFx.floor_plane(material, Vector2(0.6, 0.6))
+		holder.add_child(plane)
+		plane.global_position = floor_y
+		var disc := BossFx.floor_disc(material, 0.3)
+		holder.add_child(disc)
+		disc.global_position = floor_y
+	var glyph := BossFx.rune_glyph(Color(0.6, 0.35, 1.0, 0.8), 0.5)
+	holder.add_child(glyph)
+	glyph.global_position = floor_y
+	for art in ["flame_05", "flame_06", "circle_05", "smoke_07"]:
+		var particles := Fx.make_particles(art, Color(1.0, 0.6, 0.2, 0.9), 4, 0.5, 0.3, art.begins_with("flame"))
+		holder.add_child(particles)
+		particles.global_position = center
+	Fx.flipbook(holder, floor_y, "fire_ring", 1.0, Color(1.0, 0.45, 0.1), 0.3, true, false, true)
+	var trail := CombatVfx.make_trail(Color(0.8, 0.9, 1.0), 0.3)
+	holder.add_child(trail)
+	trail.global_position = center
+	var themed := CombatVfx.make_telegraph(Enemy3D.danger_color, 1.0, 0.6, true)
+	holder.add_child(themed)
+	themed.global_position = floor_y
+	var themed_line := CombatVfx.make_line_telegraph(Enemy3D.danger_color, 2.0, 1.0)
+	holder.add_child(themed_line)
+	themed_line.global_position = floor_y
+	# Темні вихори з набору Dark Magic — лише там, де вони є (Безодня, фінал).
+	if StringName(_level.get("id", &"")) in [&"abyss", &"shadow_lord"]:
+		BossFx.dark_effect(holder, BossFx.DARK_AREA, floor_y, 0.3, 0.2)
 
 	for i in 4:
 		await get_tree().process_frame
