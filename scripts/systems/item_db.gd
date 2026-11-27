@@ -323,11 +323,11 @@ const BASES := {
 		"set": "knight_uncommon", "rarity": "uncommon", "tint": Color(0.85, 0.95, 1.1), "base": {"armor": 3, "move_speed": 2, "attack_speed": 2}},
 	"knight_rare_helmet": {"slot": "helmet", "title": "Шолом Сталевого Лева", "parts": ["Sword3_Head"], "class": "knight",
 		"set": "knight_rare", "rarity": "rare", "tint": Color(1.1, 1.0, 0.8), "base": {"armor": 3, "hp": 6, "damage": 2}},
-	"knight_rare_chest": {"slot": "chest", "title": "Нагрудник Сталевого Лева", "parts": ["Ranger_Body", "Ranger_Arms", "Ranger_Acc_Pauldron"], "class": "knight",
+	"knight_rare_chest": {"slot": "chest", "title": "Нагрудник Сталевого Лева", "parts": ["Sword3_Body"], "class": "knight",
 		"set": "knight_rare", "rarity": "rare", "tint": Color(1.1, 1.0, 0.8), "base": {"armor": 8, "hp": 14, "damage": 3}},
-	"knight_rare_legs": {"slot": "legs", "title": "Поножі Сталевого Лева", "parts": ["Ranger_Legs"], "class": "knight",
+	"knight_rare_legs": {"slot": "legs", "title": "Поножі Сталевого Лева", "parts": ["Sword3_Legs"], "class": "knight",
 		"set": "knight_rare", "rarity": "rare", "tint": Color(1.1, 1.0, 0.8), "base": {"armor": 5, "hp": 8}},
-	"knight_rare_boots": {"slot": "boots", "title": "Чоботи Сталевого Лева", "parts": ["Ranger_Feet_Boots"], "class": "knight",
+	"knight_rare_boots": {"slot": "boots", "title": "Чоботи Сталевого Лева", "parts": ["Sword3_Feet"], "class": "knight",
 		"set": "knight_rare", "rarity": "rare", "tint": Color(1.1, 1.0, 0.8), "base": {"armor": 3, "move_speed": 2, "attack_speed": 2}},
 	"knight_epic_helmet": {"slot": "helmet", "title": "Шолом Кривавого Місяця", "parts": ["Sword4_Head"], "class": "knight",
 		"set": "knight_epic", "rarity": "epic", "tint": Color(1.15, 0.6, 0.6), "base": {"armor": 3, "hp": 6, "damage": 2}},
@@ -627,8 +627,12 @@ static func gear_look(items: Dictionary = {}) -> Dictionary:
 		var base := base_of(items[slot])
 		if base.has("parts"):
 			gear[slot] = {"parts": base.parts, "rarity": items[slot].rarity}
-			# Свій атлас сету (перефарбований одяг Quaternius) — без тону.
-			if base.has("skin"):
+			# Власні моделі мечника (Sword*) мають свої кольори: без тону й
+			# ефектів рідкості (вони спотворювали броню).
+			if (base.parts as Array).any(func(part: String) -> bool: return part.begins_with("Sword")):
+				gear[slot]["rarity"] = ""
+				gear[slot]["tint"] = Color.WHITE
+			elif base.has("skin"):
 				gear[slot]["skin"] = base.skin
 				gear[slot]["tint"] = Color.WHITE
 			elif base.has("tint"):
