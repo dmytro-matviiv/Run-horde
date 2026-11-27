@@ -982,11 +982,28 @@ static func damage_number(parent: Node, position: Vector3, amount: float, crit: 
 ## перевіряємо — інакше Godot падає з "previously freed instance".
 ## Таймер іде й під час паузи, щоб модель не лишалась білою, поки
 ## відкрите вікно вибору здібності.
+## Лише сітки самого тіла: без частинок, написів, кіл на підлозі, спрайтів
+## і смужок здоров'я. Накладка (спалах, камінь) на пласкому кільці чи
+## частинці малює суцільний квадрат.
+static func body_meshes(model: Node) -> Array:
+	var result: Array = []
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		if mesh.mesh == null or mesh.mesh is PlaneMesh or mesh.mesh is QuadMesh:
+			continue
+		var over := mesh.material_override
+		if over is ShaderMaterial:
+			continue
+		if over is BaseMaterial3D and ((over as BaseMaterial3D).transparency != BaseMaterial3D.TRANSPARENCY_DISABLED 				or (over as BaseMaterial3D).blend_mode != BaseMaterial3D.BLEND_MODE_MIX):
+			continue
+		result.append(mesh)
+	return result
+
 static func flash_model(model: Node, color: Color = Color.WHITE, duration: float = 0.1) -> void:
 	if model == null or not is_instance_valid(model):
 		return
 	var material := _get_material(_flash_materials, FLASH_SHADER, color)
-	var meshes := model.find_children("*", "GeometryInstance3D", true, false)
+	var meshes := body_meshes(model)
 	for mesh: GeometryInstance3D in meshes:
 		mesh.material_overlay = material
 	var tree := model.get_tree()

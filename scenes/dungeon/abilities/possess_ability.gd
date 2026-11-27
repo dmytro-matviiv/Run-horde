@@ -53,7 +53,7 @@ func _enter(host: Enemy3D) -> void:
 		_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		_overlay.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 		_overlay.albedo_color = Color(COLOR, 0.35)
-	for node in host._model.find_children("*", "GeometryInstance3D", true, false):
+	for node in CombatVfx.body_meshes(host._model):
 		(node as GeometryInstance3D).material_overlay = _overlay
 	host.died.connect(_on_host_died, CONNECT_ONE_SHOT)
 	enemy.visible = false

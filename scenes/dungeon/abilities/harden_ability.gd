@@ -46,6 +46,6 @@ func _paint() -> void:
 		_overlay.albedo_color = Color(0.05, 0.05, 0.1, 0.0)
 		_overlay.metallic = 0.8
 		_overlay.roughness = 0.05
-		for node in enemy._model.find_children("*", "GeometryInstance3D", true, false):
+		for node in CombatVfx.body_meshes(enemy._model):
 			(node as GeometryInstance3D).material_overlay = _overlay
 	_overlay.albedo_color.a = 0.75 * t

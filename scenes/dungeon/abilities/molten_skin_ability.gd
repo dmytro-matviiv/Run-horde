@@ -28,7 +28,7 @@ func resolve() -> void:
 	if _overlay == null:
 		# Розплавлена кірка поверх тіла: лава тече по шкірі Владики.
 		_overlay = BossFx.molten_overlay()
-		for node in enemy._model.find_children("*", "GeometryInstance3D", true, false):
+		for node in CombatVfx.body_meshes(enemy._model):
 			(node as GeometryInstance3D).material_overlay = _overlay
 	CombatVfx.smoke_puff(world(), enemy.global_position + Vector3.UP * enemy.target_height * 0.5, Color(0.25, 0.18, 0.15), 1.8)
 

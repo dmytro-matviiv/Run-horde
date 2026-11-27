@@ -2140,7 +2140,7 @@ func _make_dormant() -> void:
 	stone.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	stone.albedo_color = Color(0.72, 0.8, 0.88, 0.78)
 	stone.roughness = 1.0
-	for node in _model.find_children("*", "GeometryInstance3D", true, false):
+	for node in CombatVfx.body_meshes(_model):
 		(node as GeometryInstance3D).material_overlay = stone
 	var dormant: Dictionary = definition.dormant
 	_visor = MeshInstance3D.new()

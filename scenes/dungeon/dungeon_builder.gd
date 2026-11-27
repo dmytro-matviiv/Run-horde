@@ -1543,17 +1543,34 @@ static func _decorate_cell(batcher: MeshBatcher, map_rows: Array, x: int, z: int
 		_place(batcher, decor.clutter[rng.randi() % decor.clutter.size()],
 			position + Vector3(rng.randf_range(-0.25, 0.25), 0.0, rng.randf_range(-0.25, 0.25)),
 			rng.randf_range(0.0, TAU), rng.randf_range(0.8, 1.15), keep_colors)
-	elif open_sides == 4 and rng.randf() < 0.07 and not decor.furniture.is_empty():
+	elif open_sides == 4 and rng.randf() < 0.07 and not decor.furniture.is_empty() and not _near_column(map_rows, x, z, decor):
 		_place(batcher, decor.furniture[rng.randi() % decor.furniture.size()],
 			position, rng.randf_range(0.0, TAU), 1.0, keep_colors)
 
-	if open_sides == 2 and rng.randf() < 0.26 and not decor.has("floor_rules"):
+	if open_sides == 2 and rng.randf() < 0.26 and not decor.has("floor_rules") and not _near_column(map_rows, x, z, decor):
 		_place(batcher, decor.treasure[rng.randi() % decor.treasure.size()],
 			position, rng.randf_range(0.0, TAU), 1.0, keep_colors)
 	# Розкидана цегла — до звичайних плит; на плитках набору свій малюнок.
 	# Число з rng беремо й тут, щоб решта прикрас не зсунулась.
 	if rng.randf() < 0.08 and small_decor and not decor.has("floor_tiles") and not decor.has("floor_rules"):
 		_place(batcher, FLOOR_BRICKS_SCENE, position + Vector3(0, 0.02, 0), 0.0, 1.0)
+
+## Поруч (8 сусідів) стоїть колона — скриню чи меблі не ставимо: вони
+## залазили в колону.
+static func _near_column(map_rows: Array, x: int, z: int, decor: Dictionary) -> bool:
+	if decor.get("no_columns", false):
+		return false
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			if dx == 0 and dz == 0:
+				continue
+			var zz := z + dz
+			var xx := x + dx
+			if zz < 0 or zz >= map_rows.size() or xx < 0 or xx >= String(map_rows[zz]).length():
+				continue
+			if _is_walkable(map_rows, xx, zz) and _is_column_cell(map_rows, map_rows[zz], xx, zz):
+				return true
+	return false
 
 static func _place(batcher: MeshBatcher, scene: PackedScene, position: Vector3, rotation_y: float, scale_factor: float, keep_colors: bool = false) -> void:
 	var basis := Basis(Vector3.UP, rotation_y).scaled(Vector3.ONE * scale_factor)

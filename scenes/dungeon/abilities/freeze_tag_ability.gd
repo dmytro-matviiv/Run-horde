@@ -48,9 +48,7 @@ func tick(delta: float) -> void:
 func _set_frozen(on: bool) -> void:
 	_frozen = on
 	enemy.move_speed = _base_speed
-	for node in enemy.find_children("*", "GeometryInstance3D", true, false):
-		if node is Label3D:
-			continue
+	for node in CombatVfx.body_meshes(enemy):
 		(node as GeometryInstance3D).material_overlay = _stone if on else null
 	if on:
 		enemy.play_loop("Frozen")
