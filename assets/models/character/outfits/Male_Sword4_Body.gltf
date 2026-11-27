@@ -1332,33 +1332,33 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Material_0",
-			"normalTexture":{
-				"index":0
-			},
+			"name":"Male_Sword4_Body",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":1
+					"index":0
 				},
 				"metallicRoughnessTexture":{
-					"index":2
+					"index":1
 				}
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Mesh_0",
+			"name":"cuirass",
 			"primitives":[
 				{
 					"attributes":{
 						"POSITION":0,
 						"NORMAL":1,
 						"TEXCOORD_0":2,
-						"JOINTS_0":3,
-						"WEIGHTS_0":4
+						"COLOR_0":3,
+						"COLOR_1":4,
+						"COLOR_2":5,
+						"JOINTS_0":6,
+						"WEIGHTS_0":7
 					},
-					"indices":5,
+					"indices":8,
 					"material":0
 				}
 			]
@@ -1372,18 +1372,9 @@
 		{
 			"sampler":0,
 			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
 		}
 	],
 	"images":[
-		{
-			"mimeType":"image/jpeg",
-			"name":"Male_Sword4_Body_normal",
-			"uri":"Male_Sword4_Body_normal.jpg"
-		},
 		{
 			"mimeType":"image/jpeg",
 			"name":"Male_Sword4_Body_diffuse",
@@ -1397,7 +1388,7 @@
 	],
 	"skins":[
 		{
-			"inverseBindMatrices":6,
+			"inverseBindMatrices":9,
 			"joints":[
 				64,
 				63,
@@ -1472,51 +1463,72 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":5541,
+			"count":18824,
 			"max":[
-				0.4367777705192566,
-				1.591174602508545,
-				0.1573033332824707
+				0.416511595249176,
+				1.7084192037582397,
+				0.18077366054058075
 			],
 			"min":[
-				-0.43945276737213135,
-				1.0430381298065186,
-				-0.25045642256736755
+				-0.4148882329463959,
+				0.9921889901161194,
+				-0.24495312571525574
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":5541,
+			"count":18824,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":5541,
+			"count":18824,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":5541,
+			"count":18824,
+			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
-			"componentType":5126,
-			"count":5541,
+			"componentType":5123,
+			"count":18824,
+			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":15009,
-			"type":"SCALAR"
+			"count":18824,
+			"normalized":true,
+			"type":"VEC4"
 		},
 		{
 			"bufferView":6,
+			"componentType":5121,
+			"count":18824,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":7,
+			"componentType":5126,
+			"count":18824,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":8,
+			"componentType":5123,
+			"count":56007,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":9,
 			"componentType":5126,
 			"count":65,
 			"type":"MAT4"
@@ -1525,44 +1537,62 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":66492,
+			"byteLength":225888,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":66492,
-			"byteOffset":66492,
+			"byteLength":225888,
+			"byteOffset":225888,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":44328,
-			"byteOffset":132984,
+			"byteLength":150592,
+			"byteOffset":451776,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":22164,
-			"byteOffset":177312,
+			"byteLength":75296,
+			"byteOffset":602368,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":88656,
-			"byteOffset":199476,
+			"byteLength":150592,
+			"byteOffset":677664,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":30018,
-			"byteOffset":288132,
+			"byteLength":150592,
+			"byteOffset":828256,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":75296,
+			"byteOffset":978848,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":301184,
+			"byteOffset":1054144,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":112014,
+			"byteOffset":1355328,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":318152
+			"byteOffset":1467344
 		}
 	],
 	"samplers":[
@@ -1573,7 +1603,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":322312,
+			"byteLength":1471504,
 			"uri":"Male_Sword4_Body.bin"
 		}
 	]
