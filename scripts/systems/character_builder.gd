@@ -93,7 +93,13 @@ static func build(look: Dictionary, gear: Dictionary = {}) -> Node3D:
 	# Шкіра під одягом ховається (інакше м'язисте тіло проступає крізь нього).
 	if body != null and not garments.is_empty():
 		part_names.sort()
-		body.mesh = _masked_body(gender + "|" + ",".join(part_names), body, skeleton, garments)
+		# Чоботи: стопа вся всередині — шкіру стоп ховаємо повністю (інакше
+		# пальці визирають крізь носок чобота).
+		var boots := false
+		for part: String in part_names:
+			if part.contains("Feet") or part.contains("Boots"):
+				boots = true
+		body.mesh = _masked_body(gender + "|" + ",".join(part_names), body, skeleton, garments, boots)
 	return root
 
 ## Деякі частини в чоловічому й жіночому варіанті звуться трохи інакше.
@@ -313,7 +319,7 @@ static func _over_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> bo
 	var q := p - n * ((p - a).dot(n) / n.length_squared())
 	return (b - a).cross(q - a).dot(n) >= 0.0 and (c - b).cross(q - b).dot(n) >= 0.0 and (a - c).cross(q - c).dot(n) >= 0.0
 
-static func _masked_body(key: String, mesh: MeshInstance3D, skeleton: Skeleton3D, garments: Array[MeshInstance3D]) -> ArrayMesh:
+static func _masked_body(key: String, mesh: MeshInstance3D, skeleton: Skeleton3D, garments: Array[MeshInstance3D], boots := false) -> ArrayMesh:
 	if _masked.has(key):
 		return _masked[key]
 	# Трикутники одягу в позі спокою, розкладені по клітинках простору.
@@ -439,6 +445,11 @@ static func _masked_body(key: String, mesh: MeshInstance3D, skeleton: Skeleton3D
 					break
 			if not hit_any:
 				covered[v] = 0
+		if boots:
+			var feet := _foot_vertices(arrays, mesh.skin, skeleton)
+			for v in points.size():
+				if feet[v]:
+					covered[v] = 1
 		var kept := PackedInt32Array()
 		for t in range(0, indices.size(), 3):
 			if covered[indices[t]] and covered[indices[t + 1]] and covered[indices[t + 2]]:
@@ -464,6 +475,30 @@ static func _masked_body(key: String, mesh: MeshInstance3D, skeleton: Skeleton3D
 	return result
 
 ## Вершини меша в позі спокою скелета (як їх і малює гра без анімації).
+## Вершини стоп (вага кісток foot_/ball_ понад половину).
+static func _foot_vertices(arrays: Array, skin: Skin, skeleton: Skeleton3D) -> PackedByteArray:
+	var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var result := PackedByteArray()
+	result.resize(points.size())
+	if arrays[Mesh.ARRAY_BONES] == null or skin == null:
+		return result
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var per := bones.size() / maxi(points.size(), 1)
+	var foot := {}
+	for i in skin.get_bind_count():
+		var n := String(skin.get_bind_name(i))
+		if n == "":
+			n = skeleton.get_bone_name(skin.get_bind_bone(i))
+		foot[i] = n.begins_with("foot") or n.begins_with("ball")
+	for v in points.size():
+		var w := 0.0
+		for j in per:
+			if foot.get(bones[v * per + j], false):
+				w += weights[v * per + j]
+		result[v] = 1 if w > 0.5 else 0
+	return result
+
 ## Нормалі тіла в позі спокою (як _rest_points, лише поворот).
 static func _rest_normals(normals: PackedVector3Array, arrays: Array, skin: Skin, skeleton: Skeleton3D) -> PackedVector3Array:
 	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
