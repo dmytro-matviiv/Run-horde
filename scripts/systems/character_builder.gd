@@ -223,6 +223,8 @@ static func _paint_skin(mesh: MeshInstance3D, tone: Color) -> void:
 ## зникає, а шкіра одразу ЗА краєм одягу лишається — без прозорої щілини
 ## між штанами й голим торсом. Біля самого краю — лише впритул (EDGE).
 const COVER_RADIUS := 0.045
+## Наскільки далеко над шкірою (уздовж нормалі) річ ще вважається накриттям.
+const COVER_RAY := 0.12
 const EDGE_RADIUS := 0.008
 ## Шкіра між краями ДВОХ різних речей (пройма між безрукавкою й рукавом)
 ## ховається, якщо обидва краї ближче за це.
@@ -413,6 +415,30 @@ static func _masked_body(key: String, mesh: MeshInstance3D, skeleton: Skeleton3D
 					covered[v] = 1
 					break
 				edge_of = owners[id]
+		# Ховаємо лише те, що справді НАКРИТО: над точкою шкіри (уздовж її
+		# нормалі) має бути річ ближче за COVER_RAY. Інакше — лишаємо шкіру:
+		# краще видно плече, ніж дірку наскрізь (безрукавка, край чобота).
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var rest_normals := _rest_normals(normals, arrays, mesh.skin, skeleton)
+		for v in points.size():
+			if covered[v] == 0:
+				continue
+			var p := points[v]
+			var cell := Vector3i(floori(p.x / HASH_CELL), floori(p.y / HASH_CELL), floori(p.z / HASH_CELL))
+			var dir := rest_normals[v]
+			var hit_any := false
+			for id: int in grid.get(cell, PackedInt32Array()):
+				var hit: Variant = Geometry3D.ray_intersects_triangle(p - dir * 0.004, dir, tris[id * 3], tris[id * 3 + 1], tris[id * 3 + 2])
+				if hit != null and (hit as Vector3).distance_to(p) < COVER_RAY:
+					hit_any = true
+					break
+				# Шкіра трохи прорізала річ (річ ПІД нею) — теж ховаємо.
+				var back: Variant = Geometry3D.ray_intersects_triangle(p + dir * 0.004, -dir, tris[id * 3], tris[id * 3 + 1], tris[id * 3 + 2])
+				if back != null and (back as Vector3).distance_to(p) < 0.035:
+					hit_any = true
+					break
+			if not hit_any:
+				covered[v] = 0
 		var kept := PackedInt32Array()
 		for t in range(0, indices.size(), 3):
 			if covered[indices[t]] and covered[indices[t + 1]] and covered[indices[t + 2]]:
@@ -438,6 +464,30 @@ static func _masked_body(key: String, mesh: MeshInstance3D, skeleton: Skeleton3D
 	return result
 
 ## Вершини меша в позі спокою скелета (як їх і малює гра без анімації).
+## Нормалі тіла в позі спокою (як _rest_points, лише поворот).
+static func _rest_normals(normals: PackedVector3Array, arrays: Array, skin: Skin, skeleton: Skeleton3D) -> PackedVector3Array:
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	if skin == null or bones.is_empty() or normals.is_empty():
+		return normals
+	var out := PackedVector3Array()
+	out.resize(normals.size())
+	var per := bones.size() / maxi(normals.size(), 1)
+	var bases: Array[Basis] = []
+	for bind in skin.get_bind_count():
+		var bone := skin.get_bind_bone(bind)
+		if bone < 0:
+			bone = skeleton.find_bone(skin.get_bind_name(bind))
+		bases.append((skeleton.get_bone_global_rest(maxi(bone, 0)) * skin.get_bind_pose(bind)).basis)
+	for v in normals.size():
+		var n := Vector3.ZERO
+		for k in per:
+			var w := weights[v * per + k]
+			if w > 0.0:
+				n += (bases[bones[v * per + k]] * normals[v]) * w
+		out[v] = n.normalized() if n.length() > 0.0001 else normals[v]
+	return out
+
 static func _rest_points(arrays: Array, skin: Skin, skeleton: Skeleton3D) -> PackedVector3Array:
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]

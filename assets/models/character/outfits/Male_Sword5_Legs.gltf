@@ -1472,7 +1472,7 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":6203,
+			"count":5942,
 			"max":[
 				0.2097434252500534,
 				1.0932786464691162,
@@ -1480,7 +1480,7 @@
 			],
 			"min":[
 				-0.21005313098430634,
-				0.0750904232263565,
+				0.07588640600442886,
 				-0.17225882411003113
 			],
 			"type":"VEC3"
@@ -1488,31 +1488,31 @@
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":6203,
+			"count":5942,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":6203,
+			"count":5942,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":6203,
+			"count":5942,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":6203,
+			"count":5942,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":17232,
+			"count":16005,
 			"type":"SCALAR"
 		},
 		{
@@ -1525,44 +1525,44 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":74436,
+			"byteLength":71304,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":74436,
-			"byteOffset":74436,
+			"byteLength":71304,
+			"byteOffset":71304,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":49624,
-			"byteOffset":148872,
+			"byteLength":47536,
+			"byteOffset":142608,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":24812,
-			"byteOffset":198496,
+			"byteLength":23768,
+			"byteOffset":190144,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":99248,
-			"byteOffset":223308,
+			"byteLength":95072,
+			"byteOffset":213912,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":34464,
-			"byteOffset":322556,
+			"byteLength":32010,
+			"byteOffset":308984,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":357020
+			"byteOffset":340996
 		}
 	],
 	"samplers":[
@@ -1573,7 +1573,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":361180,
+			"byteLength":345156,
 			"uri":"Male_Sword5_Legs.bin"
 		}
 	]

@@ -1467,7 +1467,7 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":6203,
+			"count":5959,
 			"max":[
 				0.21904705464839935,
 				1.0802346467971802,
@@ -1475,7 +1475,7 @@
 			],
 			"min":[
 				-0.2181822508573532,
-				0.056037504225969315,
+				0.056038469076156616,
 				-0.17726069688796997
 			],
 			"type":"VEC3"
@@ -1483,31 +1483,31 @@
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":6203,
+			"count":5959,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":6203,
+			"count":5959,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":6203,
+			"count":5959,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":6203,
+			"count":5959,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":17232,
+			"count":16245,
 			"type":"SCALAR"
 		},
 		{
@@ -1520,44 +1520,44 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":74436,
+			"byteLength":71508,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":74436,
-			"byteOffset":74436,
+			"byteLength":71508,
+			"byteOffset":71508,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":49624,
-			"byteOffset":148872,
+			"byteLength":47672,
+			"byteOffset":143016,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":24812,
-			"byteOffset":198496,
+			"byteLength":23836,
+			"byteOffset":190688,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":99248,
-			"byteOffset":223308,
+			"byteLength":95344,
+			"byteOffset":214524,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":34464,
-			"byteOffset":322556,
+			"byteLength":32490,
+			"byteOffset":309868,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":357020
+			"byteOffset":342360
 		}
 	],
 	"samplers":[
@@ -1568,7 +1568,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":361180,
+			"byteLength":346520,
 			"uri":"Female_Sword5_Legs.bin"
 		}
 	]
