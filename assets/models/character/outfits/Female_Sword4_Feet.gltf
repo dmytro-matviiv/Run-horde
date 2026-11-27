@@ -1313,7 +1313,7 @@
 		},
 		{
 			"mesh":0,
-			"name":"ArmorFeet",
+			"name":"ArmorBody",
 			"skin":0
 		},
 		{
@@ -1327,23 +1327,20 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Material_0",
-			"normalTexture":{
-				"index":0
-			},
+			"name":"Female_Sword4_Feet",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":1
+					"index":0
 				},
 				"metallicRoughnessTexture":{
-					"index":2
+					"index":1
 				}
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Mesh_0",
+			"name":"shoe",
 			"primitives":[
 				{
 					"attributes":{
@@ -1367,18 +1364,9 @@
 		{
 			"sampler":0,
 			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
 		}
 	],
 	"images":[
-		{
-			"mimeType":"image/jpeg",
-			"name":"Female_Sword4_Feet_normal",
-			"uri":"Female_Sword4_Feet_normal.jpg"
-		},
 		{
 			"mimeType":"image/jpeg",
 			"name":"Female_Sword4_Feet_diffuse",
@@ -1467,47 +1455,47 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":3340,
+			"count":9677,
 			"max":[
-				0.21470557153224945,
-				0.3088432550430298,
-				0.21808820962905884
+				0.2627239227294922,
+				0.4399758279323578,
+				0.15101394057273865
 			],
 			"min":[
-				-0.21470557153224945,
-				-0.008407306857407093,
-				-0.24090419709682465
+				-0.26263779401779175,
+				-0.006000000052154064,
+				-0.21034108102321625
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":3340,
+			"count":9677,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":3340,
+			"count":9677,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":3340,
+			"count":9677,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":3340,
+			"count":9677,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":10500,
+			"count":24624,
 			"type":"SCALAR"
 		},
 		{
@@ -1520,44 +1508,44 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":40080,
+			"byteLength":116124,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":40080,
-			"byteOffset":40080,
+			"byteLength":116124,
+			"byteOffset":116124,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":26720,
-			"byteOffset":80160,
+			"byteLength":77416,
+			"byteOffset":232248,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":13360,
-			"byteOffset":106880,
+			"byteLength":38708,
+			"byteOffset":309664,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":53440,
-			"byteOffset":120240,
+			"byteLength":154832,
+			"byteOffset":348372,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":21000,
-			"byteOffset":173680,
+			"byteLength":49248,
+			"byteOffset":503204,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":194680
+			"byteOffset":552452
 		}
 	],
 	"samplers":[
@@ -1568,7 +1556,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":198840,
+			"byteLength":556612,
 			"uri":"Female_Sword4_Feet.bin"
 		}
 	]

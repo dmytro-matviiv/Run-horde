@@ -1318,7 +1318,7 @@
 		},
 		{
 			"mesh":0,
-			"name":"ArmorLegs",
+			"name":"ArmorBody",
 			"skin":0
 		},
 		{
@@ -1332,33 +1332,33 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Material_0",
-			"normalTexture":{
-				"index":0
-			},
+			"name":"Male_Sword5_Legs",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":1
+					"index":0
 				},
 				"metallicRoughnessTexture":{
-					"index":2
+					"index":1
 				}
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Mesh_0",
+			"name":"Sphere.005_Retopology.001",
 			"primitives":[
 				{
 					"attributes":{
 						"POSITION":0,
 						"NORMAL":1,
 						"TEXCOORD_0":2,
-						"JOINTS_0":3,
-						"WEIGHTS_0":4
+						"COLOR_0":3,
+						"COLOR_1":4,
+						"COLOR_2":5,
+						"JOINTS_0":6,
+						"WEIGHTS_0":7
 					},
-					"indices":5,
+					"indices":8,
 					"material":0
 				}
 			]
@@ -1372,18 +1372,9 @@
 		{
 			"sampler":0,
 			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
 		}
 	],
 	"images":[
-		{
-			"mimeType":"image/jpeg",
-			"name":"Male_Sword5_Legs_normal",
-			"uri":"Male_Sword5_Legs_normal.jpg"
-		},
 		{
 			"mimeType":"image/jpeg",
 			"name":"Male_Sword5_Legs_diffuse",
@@ -1397,7 +1388,7 @@
 	],
 	"skins":[
 		{
-			"inverseBindMatrices":6,
+			"inverseBindMatrices":9,
 			"joints":[
 				64,
 				63,
@@ -1472,51 +1463,72 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":5942,
+			"count":12021,
 			"max":[
-				0.2097434252500534,
-				1.0932786464691162,
-				0.11880221217870712
+				0.22672218084335327,
+				1.0856821537017822,
+				0.15008163452148438
 			],
 			"min":[
-				-0.21005313098430634,
-				0.07588640600442886,
-				-0.17225882411003113
+				-0.22671867907047272,
+				0.10115589201450348,
+				-0.17909015715122223
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":5942,
+			"count":12021,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":5942,
+			"count":12021,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":5942,
+			"count":12021,
+			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
-			"componentType":5126,
-			"count":5942,
+			"componentType":5123,
+			"count":12021,
+			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":16005,
-			"type":"SCALAR"
+			"count":12021,
+			"normalized":true,
+			"type":"VEC4"
 		},
 		{
 			"bufferView":6,
+			"componentType":5121,
+			"count":12021,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":7,
+			"componentType":5126,
+			"count":12021,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":8,
+			"componentType":5123,
+			"count":32475,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":9,
 			"componentType":5126,
 			"count":65,
 			"type":"MAT4"
@@ -1525,44 +1537,62 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":71304,
+			"byteLength":144252,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":71304,
-			"byteOffset":71304,
+			"byteLength":144252,
+			"byteOffset":144252,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":47536,
-			"byteOffset":142608,
+			"byteLength":96168,
+			"byteOffset":288504,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":23768,
-			"byteOffset":190144,
+			"byteLength":48084,
+			"byteOffset":384672,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":95072,
-			"byteOffset":213912,
+			"byteLength":96168,
+			"byteOffset":432756,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":32010,
-			"byteOffset":308984,
+			"byteLength":96168,
+			"byteOffset":528924,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":48084,
+			"byteOffset":625092,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":192336,
+			"byteOffset":673176,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":64950,
+			"byteOffset":865512,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":340996
+			"byteOffset":930464
 		}
 	],
 	"samplers":[
@@ -1573,7 +1603,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":345156,
+			"byteLength":934624,
 			"uri":"Male_Sword5_Legs.bin"
 		}
 	]

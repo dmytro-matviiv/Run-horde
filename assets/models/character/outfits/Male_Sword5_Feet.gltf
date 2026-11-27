@@ -1318,7 +1318,7 @@
 		},
 		{
 			"mesh":0,
-			"name":"ArmorFeet",
+			"name":"ArmorBody",
 			"skin":0
 		},
 		{
@@ -1332,23 +1332,20 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Material_0",
-			"normalTexture":{
-				"index":0
-			},
+			"name":"Male_Sword5_Feet",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":1
+					"index":0
 				},
 				"metallicRoughnessTexture":{
-					"index":2
+					"index":1
 				}
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Mesh_0",
+			"name":"shoe",
 			"primitives":[
 				{
 					"attributes":{
@@ -1372,18 +1369,9 @@
 		{
 			"sampler":0,
 			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
 		}
 	],
 	"images":[
-		{
-			"mimeType":"image/jpeg",
-			"name":"Male_Sword5_Feet_normal",
-			"uri":"Male_Sword5_Feet_normal.jpg"
-		},
 		{
 			"mimeType":"image/jpeg",
 			"name":"Male_Sword5_Feet_diffuse",
@@ -1472,47 +1460,47 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":3442,
+			"count":10532,
 			"max":[
-				0.21448683738708496,
-				0.30246347188949585,
-				0.1485203355550766
+				0.263978511095047,
+				0.3904997408390045,
+				0.14884811639785767
 			],
 			"min":[
-				-0.21448677778244019,
-				-0.009510005824267864,
-				-0.16555656492710114
+				-0.26395127177238464,
+				-0.006000000052154064,
+				-0.22923709452152252
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":3442,
+			"count":10532,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":3442,
+			"count":10532,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":3442,
+			"count":10532,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":3442,
+			"count":10532,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":10500,
+			"count":28398,
 			"type":"SCALAR"
 		},
 		{
@@ -1525,44 +1513,44 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":41304,
+			"byteLength":126384,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":41304,
-			"byteOffset":41304,
+			"byteLength":126384,
+			"byteOffset":126384,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":27536,
-			"byteOffset":82608,
+			"byteLength":84256,
+			"byteOffset":252768,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":13768,
-			"byteOffset":110144,
+			"byteLength":42128,
+			"byteOffset":337024,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":55072,
-			"byteOffset":123912,
+			"byteLength":168512,
+			"byteOffset":379152,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":21000,
-			"byteOffset":178984,
+			"byteLength":56796,
+			"byteOffset":547664,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":199984
+			"byteOffset":604460
 		}
 	],
 	"samplers":[
@@ -1573,7 +1561,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":204144,
+			"byteLength":608620,
 			"uri":"Male_Sword5_Feet.bin"
 		}
 	]
