@@ -337,7 +337,7 @@ const BASES := {
 		"set": "knight_epic", "rarity": "epic", "tint": Color(1.15, 0.6, 0.6), "base": {"armor": 5, "hp": 8}},
 	"knight_epic_boots": {"slot": "boots", "title": "Чоботи Кривавого Місяця", "parts": ["Ranger_Feet_Boots"], "class": "knight",
 		"set": "knight_epic", "rarity": "epic", "tint": Color(1.15, 0.6, 0.6), "base": {"armor": 3, "move_speed": 2, "attack_speed": 2}},
-	"knight_legendary_helmet": {"slot": "helmet", "title": "Шолом Короля Клинків", "parts": ["Ranger_Head_Hood"], "class": "knight",
+	"knight_legendary_helmet": {"slot": "helmet", "title": "Шолом Короля Клинків", "parts": ["Sword5_Head"], "class": "knight",
 		"set": "knight_legendary", "rarity": "legendary", "tint": Color(1.2, 1.05, 0.7), "base": {"armor": 3, "hp": 6, "damage": 2}},
 	"knight_legendary_chest": {"slot": "chest", "title": "Нагрудник Короля Клинків", "parts": ["Ranger_Body", "Ranger_Arms", "Ranger_Acc_Pauldron"], "class": "knight",
 		"set": "knight_legendary", "rarity": "legendary", "tint": Color(1.2, 1.05, 0.7), "base": {"armor": 8, "hp": 14, "damage": 3}},
