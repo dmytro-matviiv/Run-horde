@@ -1327,33 +1327,34 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Material_0",
-			"normalTexture":{
-				"index":0
-			},
+			"name":"Female_Sword5_Body",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":1
+					"index":0
 				},
 				"metallicRoughnessTexture":{
-					"index":2
+					"index":1
 				}
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Mesh_0",
+			"name":"cuirass",
 			"primitives":[
 				{
 					"attributes":{
 						"POSITION":0,
 						"NORMAL":1,
 						"TEXCOORD_0":2,
-						"JOINTS_0":3,
-						"WEIGHTS_0":4
+						"COLOR_0":3,
+						"COLOR_1":4,
+						"COLOR_2":5,
+						"COLOR_3":6,
+						"JOINTS_0":7,
+						"WEIGHTS_0":8
 					},
-					"indices":5,
+					"indices":9,
 					"material":0
 				}
 			]
@@ -1367,18 +1368,9 @@
 		{
 			"sampler":0,
 			"source":1
-		},
-		{
-			"sampler":0,
-			"source":2
 		}
 	],
 	"images":[
-		{
-			"mimeType":"image/jpeg",
-			"name":"Female_Sword5_Body_normal",
-			"uri":"Female_Sword5_Body_normal.jpg"
-		},
 		{
 			"mimeType":"image/jpeg",
 			"name":"Female_Sword5_Body_diffuse",
@@ -1392,7 +1384,7 @@
 	],
 	"skins":[
 		{
-			"inverseBindMatrices":6,
+			"inverseBindMatrices":10,
 			"joints":[
 				64,
 				63,
@@ -1467,51 +1459,79 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":4283,
+			"count":20801,
 			"max":[
-				0.2761886715888977,
-				1.5262585878372192,
-				0.1543976366519928
+				0.3274700343608856,
+				1.5712319612503052,
+				0.20143353939056396
 			],
 			"min":[
-				-0.27416613698005676,
-				1.0414806604385376,
-				-0.14849743247032166
+				-0.32607394456863403,
+				0.996333658695221,
+				-0.18161597847938538
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":4283,
+			"count":20801,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":4283,
+			"count":20801,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5121,
-			"count":4283,
+			"count":20801,
+			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":4,
-			"componentType":5126,
-			"count":4283,
+			"componentType":5123,
+			"count":20801,
+			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":5,
 			"componentType":5123,
-			"count":12195,
-			"type":"SCALAR"
+			"count":20801,
+			"normalized":true,
+			"type":"VEC4"
 		},
 		{
 			"bufferView":6,
+			"componentType":5123,
+			"count":20801,
+			"normalized":true,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":7,
+			"componentType":5121,
+			"count":20801,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":8,
+			"componentType":5126,
+			"count":20801,
+			"type":"VEC4"
+		},
+		{
+			"bufferView":9,
+			"componentType":5123,
+			"count":57969,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":10,
 			"componentType":5126,
 			"count":65,
 			"type":"MAT4"
@@ -1520,44 +1540,68 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":51396,
+			"byteLength":249612,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":51396,
-			"byteOffset":51396,
+			"byteLength":249612,
+			"byteOffset":249612,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":34264,
-			"byteOffset":102792,
+			"byteLength":166408,
+			"byteOffset":499224,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":17132,
-			"byteOffset":137056,
+			"byteLength":83204,
+			"byteOffset":665632,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":68528,
-			"byteOffset":154188,
+			"byteLength":166408,
+			"byteOffset":748836,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":24390,
-			"byteOffset":222716,
+			"byteLength":166408,
+			"byteOffset":915244,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":166408,
+			"byteOffset":1081652,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":83204,
+			"byteOffset":1248060,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":332816,
+			"byteOffset":1331264,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":115938,
+			"byteOffset":1664080,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":4160,
-			"byteOffset":247108
+			"byteOffset":1780020
 		}
 	],
 	"samplers":[
@@ -1568,7 +1612,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":251268,
+			"byteLength":1784180,
 			"uri":"Female_Sword5_Body.bin"
 		}
 	]
